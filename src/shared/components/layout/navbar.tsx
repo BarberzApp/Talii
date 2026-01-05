@@ -80,24 +80,31 @@ export function Navbar() {
   const roleSpecificNavItems = () => {
     if (!user) return []
 
-    if (isAdmin) {
-      return [
-        {
-          href: "/super-admin",
-          icon: User,
-          label: "Admin",
-        },
-      ]
-    }
+    const navItems = []
 
     if (user.role === "barber") {
-      return [
-        {
-          href: "/calendar",
-          icon: Calendar,
-          label: "Calendar",
-        },
-      ]
+      navItems.push({
+        href: "/calendar",
+        icon: Calendar,
+        label: "Calendar",
+      })
+    }
+
+    const canSeeAdminNav = 
+      isAdmin &&
+      user.role !== "client" &&
+      user.role !== "barber"
+
+    if (canSeeAdminNav) {
+      navItems.push({
+        href: "/super-admin",
+        icon: User,
+        label: "Admin",
+      })
+    }
+
+    if (navItems.length > 0) {
+      return navItems
     }
 
     return [
