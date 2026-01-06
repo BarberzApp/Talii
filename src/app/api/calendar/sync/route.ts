@@ -7,7 +7,10 @@ import { logger } from '@/shared/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
-    const { direction = 'bidirectional', force = false } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const force = !!body.force;
+    // Outbound-only (App → Google). Ignore inbound/bidirectional for now.
+    const direction: 'outbound' = 'outbound';
     
     // Get current user
     const supabase = createRouteHandlerClient({ cookies });
@@ -79,8 +82,8 @@ export async function POST(request: NextRequest) {
       errors: [] as string[]
     };
 
-    // Sync bookings to Google Calendar (outbound)
-    if (direction === 'outbound' || direction === 'bidirectional') {
+    // Sync bookings to Google Calendar (outbound only)
+    if (direction === 'outbound') {
       try {
         const { data: bookings } = await supabase
           .from('bookings')
@@ -94,48 +97,61 @@ export async function POST(request: NextRequest) {
 
         for (const booking of bookings || []) {
           try {
-            // Check if already synced
-            const isSynced = await CalendarSyncService.isEventSynced(
+            const event = {
+              summary: `Haircut with ${booking.barbers.name}`,
+              description: `Service: ${booking.services.name}\nNotes: ${booking.notes || 'No notes'}`,
+              location: booking.barbers.location || 'Barber Shop',
+              start: {
+                dateTime: booking.start_time,
+                timeZone: 'UTC'
+              },
+              end: {
+                dateTime: booking.end_time,
+                timeZone: 'UTC'
+              },
+              reminders: {
+                useDefault: false,
+                overrides: [
+                  { method: 'popup' as const, minutes: 30 }
+                ]
+              }
+            };
+
+            // Prefer stable mapping via booking_id to avoid duplicates.
+            const existing = await CalendarSyncService.getSyncedEventByBookingId(
               user.id,
-              `booking_${booking.id}`,
+              booking.id,
               connection.calendar_id
             );
 
-            if (!isSynced || force) {
-              const event = {
-                summary: `Haircut with ${booking.barbers.name}`,
-                description: `Service: ${booking.services.name}\nNotes: ${booking.notes || 'No notes'}`,
-                location: booking.barbers.location || 'Barber Shop',
-                start: {
-                  dateTime: booking.start_time,
-                  timeZone: 'UTC'
-                },
-                end: {
-                  dateTime: booking.end_time,
-                  timeZone: 'UTC'
-                },
-                reminders: {
-                  useDefault: false,
-                  overrides: [
-                    { method: 'popup' as const, minutes: 30 }
-                  ]
-                }
-              };
+            if (existing && !force) {
+              continue;
+            }
 
-              const googleEvent = await api.createEvent(connection.calendar_id, event);
-              
-              // Save synced event
+            if (existing?.external_event_id) {
+              const updated = await api.updateEvent(connection.calendar_id, existing.external_event_id, event);
               await CalendarSyncService.saveSyncedEvent(
                 user.id,
-                googleEvent.id!,
+                existing.external_event_id,
                 connection.calendar_id,
                 booking.id,
-                googleEvent,
+                updated,
                 'outbound'
               );
-
               syncResults.syncedToGoogle++;
+              continue;
             }
+
+            const googleEvent = await api.createEvent(connection.calendar_id, event);
+            await CalendarSyncService.saveSyncedEvent(
+              user.id,
+              googleEvent.id!,
+              connection.calendar_id,
+              booking.id,
+              googleEvent,
+              'outbound'
+            );
+            syncResults.syncedToGoogle++;
           } catch (bookingError) {
             logger.error(`Error syncing booking ${booking.id}`, bookingError);
             syncResults.errors.push(`Failed to sync booking ${booking.id}`);
@@ -144,56 +160,6 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         logger.error('Error syncing bookings to Google', error);
         syncResults.errors.push('Failed to sync bookings to Google Calendar');
-      }
-    }
-
-    // Sync events from Google Calendar (inbound)
-    if (direction === 'inbound' || direction === 'bidirectional') {
-      try {
-        // Get events from last 30 days to next 90 days
-        const timeMin = new Date();
-        timeMin.setDate(timeMin.getDate() - 30);
-        
-        const timeMax = new Date();
-        timeMax.setDate(timeMax.getDate() + 90);
-
-        const googleEvents = await api.getEvents(connection.calendar_id, timeMin, timeMax);
-
-        for (const event of googleEvents) {
-          try {
-            // Skip events that are already synced from our app
-            if (event.description?.includes('Service:') || event.summary?.includes('Haircut with')) {
-              continue;
-            }
-
-            // Check if already synced
-            const isSynced = await CalendarSyncService.isEventSynced(
-              user.id,
-              event.id!,
-              connection.calendar_id
-            );
-
-            if (!isSynced || force) {
-              // Save synced event
-              await CalendarSyncService.saveSyncedEvent(
-                user.id,
-                event.id!,
-                connection.calendar_id,
-                undefined,
-                event,
-                'inbound'
-              );
-
-              syncResults.syncedFromGoogle++;
-            }
-          } catch (eventError) {
-            logger.error(`Error syncing event ${event.id}`, eventError);
-            syncResults.errors.push(`Failed to sync event ${event.id}`);
-          }
-        }
-      } catch (error) {
-        logger.error('Error syncing events from Google', error);
-        syncResults.errors.push('Failed to sync events from Google Calendar');
       }
     }
 

@@ -1,10 +1,9 @@
 "use client"
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Switch } from '@/shared/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { Badge } from '@/shared/components/ui/badge';
 import { Separator } from '@/shared/components/ui/separator';
 import { useCalendarSync } from '@/shared/hooks/useCalendarSync';
@@ -26,21 +25,18 @@ export function CalendarSyncSettings() {
   } = useCalendarSync();
 
   const [localSyncEnabled, setLocalSyncEnabled] = useState(connection?.sync_enabled ?? false);
-  const [localSyncDirection, setLocalSyncDirection] = useState(connection?.sync_direction ?? 'bidirectional');
+
+  useEffect(() => {
+    setLocalSyncEnabled(connection?.sync_enabled ?? false);
+  }, [connection?.sync_enabled]);
 
   const handleSyncEnabledChange = async (enabled: boolean) => {
     setLocalSyncEnabled(enabled);
-    await updateSettings({ sync_enabled: enabled });
+    await updateSettings({ sync_enabled: enabled, sync_direction: 'outbound' });
   };
 
-  const handleSyncDirectionChange = async (direction: 'inbound' | 'outbound' | 'bidirectional') => {
-    setLocalSyncDirection(direction);
-    await updateSettings({ sync_direction: direction });
-  };
-
-  const handleSync = async (direction?: 'inbound' | 'outbound' | 'bidirectional') => {
-    const syncDirection = direction || localSyncDirection;
-    await sync(syncDirection);
+  const handleSync = async () => {
+    await sync('outbound');
   };
 
   const handleDisconnect = async () => {
@@ -149,7 +145,7 @@ export function CalendarSyncSettings() {
           </div>
           {connected && (
             <Button
-              onClick={() => handleSync()}
+              onClick={handleSync}
               disabled={syncing}
               className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl px-6 py-3"
             >
@@ -211,37 +207,6 @@ export function CalendarSyncSettings() {
                     onCheckedChange={handleSyncEnabledChange}
                   />
                 </div>
-
-                {/* Enhanced Sync Direction */}
-                <div className="space-y-3">
-                  <p className="font-semibold text-white text-lg">Sync Direction</p>
-                  <Select
-                    value={localSyncDirection}
-                    onValueChange={(value: 'inbound' | 'outbound' | 'bidirectional') => 
-                      handleSyncDirectionChange(value)
-                    }
-                  >
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-secondary rounded-xl h-12 text-lg">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bidirectional">
-                        Bidirectional (Recommended)
-                      </SelectItem>
-                      <SelectItem value="outbound">
-                        Outbound Only (App → Google)
-                      </SelectItem>
-                      <SelectItem value="inbound">
-                        Inbound Only (Google → App)
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-white/60 bg-white/5 p-3 rounded-lg border border-white/10">
-                    {localSyncDirection === 'bidirectional' && 'Sync appointments both ways'}
-                    {localSyncDirection === 'outbound' && 'Only sync your appointments to Google Calendar'}
-                    {localSyncDirection === 'inbound' && 'Only sync Google Calendar events to your app'}
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -250,30 +215,14 @@ export function CalendarSyncSettings() {
             {/* Enhanced Sync Actions */}
             <div className="space-y-4 p-6 bg-white/5 rounded-2xl border border-white/10">
               <h4 className="text-xl font-bebas text-white tracking-wide">Manual Sync</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <Button
-                  onClick={() => handleSync('bidirectional')}
-                  disabled={syncing}
-                  className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl py-3"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                  Full Sync
-                </Button>
-                <Button
-                  onClick={() => handleSync('outbound')}
+                  onClick={handleSync}
                   disabled={syncing}
                   className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl py-3"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  To Google
-                </Button>
-                <Button
-                  onClick={() => handleSync('inbound')}
-                  disabled={syncing}
-                  className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl py-3"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2 rotate-180" />
-                  From Google
+                  Sync Bookings to Google
                 </Button>
               </div>
             </div>

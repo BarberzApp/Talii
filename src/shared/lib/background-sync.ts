@@ -192,48 +192,49 @@ export class BackgroundSyncService {
 
       for (const booking of bookings || []) {
         try {
-          // Check if already synced
-          const isSynced = await CalendarSyncService.isEventSynced(
+          const event = {
+            summary: `Haircut with ${booking.barbers.name}`,
+            description: `Service: ${booking.services.name}\nNotes: ${booking.notes || 'No notes'}`,
+            location: booking.barbers.location || 'Barber Shop',
+            start: {
+              dateTime: booking.start_time,
+              timeZone: 'UTC'
+            },
+            end: {
+              dateTime: booking.end_time,
+              timeZone: 'UTC'
+            },
+            reminders: {
+              useDefault: false,
+              overrides: [
+                { method: 'popup' as const, minutes: 30 }
+              ]
+            }
+          };
+
+          // Prefer stable mapping via booking_id to avoid duplicates.
+          const existing = await CalendarSyncService.getSyncedEventByBookingId(
             connection.user_id,
-            `booking_${booking.id}`,
+            booking.id,
             connection.calendar_id
           );
 
-          if (!isSynced) {
-            const event = {
-              summary: `Haircut with ${booking.barbers.name}`,
-              description: `Service: ${booking.services.name}\nNotes: ${booking.notes || 'No notes'}`,
-              location: booking.barbers.location || 'Barber Shop',
-              start: {
-                dateTime: booking.start_time,
-                timeZone: 'UTC'
-              },
-              end: {
-                dateTime: booking.end_time,
-                timeZone: 'UTC'
-              },
-              reminders: {
-                useDefault: false,
-                overrides: [
-                  { method: 'popup' as const, minutes: 30 }
-                ]
-              }
-            };
-
-            const googleEvent = await api.createEvent(connection.calendar_id, event);
-            
-            // Save synced event
-            await CalendarSyncService.saveSyncedEvent(
-              connection.user_id,
-              googleEvent.id!,
-              connection.calendar_id,
-              booking.id,
-              googleEvent,
-              'outbound'
-            );
-
-            results.syncedToGoogle++;
+          if (existing?.external_event_id) {
+            // If we have a mapping, avoid duplicating by default.
+            continue;
           }
+
+          const googleEvent = await api.createEvent(connection.calendar_id, event);
+          await CalendarSyncService.saveSyncedEvent(
+            connection.user_id,
+            googleEvent.id!,
+            connection.calendar_id,
+            booking.id,
+            googleEvent,
+            'outbound'
+          );
+
+          results.syncedToGoogle++;
         } catch (bookingError) {
           logger.error(`Error syncing booking ${booking.id}`, bookingError);
           results.errors.push(`Failed to sync booking ${booking.id}`);

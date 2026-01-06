@@ -302,6 +302,24 @@ export class CalendarSyncService {
     return !!data;
   }
 
+  // Get synced event mapping for a booking (preferred for outbound sync)
+  static async getSyncedEventByBookingId(userId: string, bookingId: string, externalCalendarId: string) {
+    const { data, error } = await supabase
+      .from('synced_events')
+      .select('external_event_id, event_data, booking_id')
+      .eq('user_id', userId)
+      .eq('booking_id', bookingId)
+      .eq('external_calendar_id', externalCalendarId)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('Error fetching synced event by booking id', error);
+      return null;
+    }
+
+    return data as { external_event_id: string; event_data?: any; booking_id: string } | null;
+  }
+
   // Update sync status
   static async updateSyncStatus(
     userId: string,

@@ -1,14 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { CalendarSyncService } from '@/shared/lib/google-calendar-api';
 import { logger } from '@/shared/lib/logger';
 
+async function getAuthenticatedSupabaseClient(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.replace('Bearer ', '');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      }
+    );
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    return { supabase, user, userError };
+  }
+
+  // Fallback: cookie-based auth (browser session)
+  const supabase = createRouteHandlerClient({ cookies });
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  return { supabase, user, userError };
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Get current user
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { user, userError } = await getAuthenticatedSupabaseClient(request);
     
     if (userError || !user) {
       return NextResponse.json(
@@ -50,9 +75,7 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Get current user
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { supabase, user, userError } = await getAuthenticatedSupabaseClient(request);
     
     if (userError || !user) {
       return NextResponse.json(
@@ -107,9 +130,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const { sync_enabled, sync_direction } = await request.json();
     
-    // Get current user
-    const supabase = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { supabase, user, userError } = await getAuthenticatedSupabaseClient(request);
     
     if (userError || !user) {
       return NextResponse.json(

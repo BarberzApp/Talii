@@ -43,22 +43,16 @@ export const useCalendarSync = () => {
     recentLogs: []
   });
 
-  // Fetch connection status
-  const fetchStatus = useCallback(async () => {
+  // Fast connection check (lightweight endpoint)
+  const fetchConnection = useCallback(async () => {
     if (!user) {
-      logger.debug('Calendar sync: No user, skipping fetch');
+      logger.debug('Calendar sync: No user, skipping connection fetch');
       setStatus(prev => ({ ...prev, loading: false, connected: false }));
       return;
     }
 
-    // Prevent multiple simultaneous calls
-    if (status.loading) {
-      logger.debug('Calendar sync: Already loading, skipping fetch');
-      return;
-    }
-
     try {
-      logger.debug('Calendar sync: Fetching status for user', { userId: user.id });
+      logger.debug('Calendar sync: Fetching connection for user', { userId: user.id });
       setStatus(prev => ({ ...prev, loading: true }));
 
       // Get the current session
@@ -70,7 +64,7 @@ export const useCalendarSync = () => {
         return;
       }
 
-      const response = await fetch('/api/calendar/sync', {
+      const response = await fetch('/api/calendar/connection', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
@@ -79,18 +73,6 @@ export const useCalendarSync = () => {
       logger.debug('Calendar sync: Response status', { status: response.status });
       
       if (!response.ok) {
-        if (response.status === 404) {
-          // No connection found
-          logger.debug('Calendar sync: No connection found (404)');
-          setStatus(prev => ({
-            ...prev,
-            loading: false,
-            connected: false,
-            connection: null
-          }));
-          return;
-        }
-        
         if (response.status === 401) {
           logger.error('Calendar sync: Authentication error (401)');
           setStatus(prev => ({ ...prev, loading: false, connected: false }));
@@ -100,33 +82,62 @@ export const useCalendarSync = () => {
         
         const errorText = await response.text();
         logger.error('Calendar sync: API error', { status: response.status, errorText });
-        throw new Error(`Failed to fetch calendar status: ${response.status}`);
+        throw new Error(`Failed to fetch calendar connection: ${response.status}`);
       }
 
       const data = await response.json();
-      logger.debug('Calendar sync: Success', { data });
+      logger.debug('Calendar sync: Connection fetch success', { data });
       
       setStatus(prev => ({
         ...prev,
         loading: false,
-        connected: true,
+        connected: !!data.connected,
         connection: data.connection,
-        stats: data.stats,
-        recentLogs: data.recentLogs
+        // Defer heavy stats/logs until explicitly fetched
+        stats: prev.stats,
+        recentLogs: prev.recentLogs
       }));
 
     } catch (error) {
-      logger.error('Error fetching calendar status', error);
+      logger.error('Error fetching calendar connection', error);
       setStatus(prev => ({ ...prev, loading: false }));
       toast.error('Failed to load calendar status');
+    }
+  }, [user]);
+
+  // Heavy status fetch (logs + counts) - only call when connected
+  const fetchSyncStatus = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const response = await fetch('/api/calendar/sync', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (!response.ok) return;
+      const data = await response.json();
+
+      setStatus(prev => ({
+        ...prev,
+        connection: data.connection ?? prev.connection,
+        stats: data.stats ?? prev.stats,
+        recentLogs: data.recentLogs ?? prev.recentLogs
+      }));
+    } catch (error) {
+      logger.error('Error fetching calendar sync status', error);
     }
   }, [user]);
 
   // Only fetch status when user is authenticated
   useEffect(() => {
     if (authStatus === 'authenticated' && user) {
-      logger.debug('Calendar sync: User authenticated, fetching status');
-      fetchStatus();
+      logger.debug('Calendar sync: User authenticated, fetching connection');
+      fetchConnection();
     } else if (authStatus === 'unauthenticated') {
       logger.debug('Calendar sync: User not authenticated, clearing status');
       setStatus(prev => ({ 
@@ -136,7 +147,14 @@ export const useCalendarSync = () => {
         connection: null 
       }));
     }
-  }, [authStatus, user, fetchStatus]);
+  }, [authStatus, user, fetchConnection]);
+
+  // Once connected, fetch heavy status in the background
+  useEffect(() => {
+    if (status.connected) {
+      fetchSyncStatus();
+    }
+  }, [status.connected, fetchSyncStatus]);
 
   // Connect to Google Calendar
   const connect = useCallback(async () => {
@@ -236,7 +254,7 @@ export const useCalendarSync = () => {
   }, [user]);
 
   // Sync calendar
-  const sync = useCallback(async (direction: 'inbound' | 'outbound' | 'bidirectional' = 'bidirectional', force: boolean = false): Promise<SyncResults | null> => {
+  const sync = useCallback(async (direction: 'inbound' | 'outbound' | 'bidirectional' = 'outbound', force: boolean = false): Promise<SyncResults | null> => {
     if (!user || !status.connected) {
       toast.error('Please connect your calendar first');
       return null;
@@ -275,8 +293,9 @@ export const useCalendarSync = () => {
 
       const data = await response.json();
       
-      // Refresh status after sync
-      await fetchStatus();
+      // Refresh connection + status after sync
+      await fetchConnection();
+      await fetchSyncStatus();
 
       const results = data.results as SyncResults;
       
@@ -295,7 +314,7 @@ export const useCalendarSync = () => {
     } finally {
       setStatus(prev => ({ ...prev, syncing: false }));
     }
-  }, [user, status.connected, fetchStatus]);
+  }, [user, status.connected, fetchConnection, fetchSyncStatus]);
 
   // Update connection settings
   const updateSettings = useCallback(async (settings: { sync_enabled?: boolean; sync_direction?: 'inbound' | 'outbound' | 'bidirectional' }) => {
@@ -307,10 +326,18 @@ export const useCalendarSync = () => {
     try {
       setStatus(prev => ({ ...prev, loading: true }));
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Authentication required. Please log in again.');
+        setStatus(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
       const response = await fetch('/api/calendar/connection', {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify(settings)
       });
@@ -344,7 +371,8 @@ export const useCalendarSync = () => {
 
     if (success === 'calendar_connected') {
       toast.success('Google Calendar connected successfully!');
-      fetchStatus();
+      fetchConnection();
+      fetchSyncStatus();
       
       // Clean up URL
       const newUrl = new URL(window.location.href);
@@ -373,7 +401,7 @@ export const useCalendarSync = () => {
       newUrl.searchParams.delete('message');
       window.history.replaceState({}, '', newUrl.toString());
     }
-  }, [fetchStatus]);
+  }, [fetchConnection, fetchSyncStatus]);
 
 
 
@@ -383,6 +411,7 @@ export const useCalendarSync = () => {
     disconnect,
     sync,
     updateSettings,
-    refresh: fetchStatus
+    refresh: fetchConnection,
+    refreshDetails: fetchSyncStatus
   };
 }; 

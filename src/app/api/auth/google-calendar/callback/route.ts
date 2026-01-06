@@ -115,6 +115,20 @@ export async function GET(request: NextRequest) {
     const { supabaseAdmin } = await import('@/shared/lib/supabase');
     
     logger.debug('OAuth Callback - Using service role for database operations');
+
+    // Preserve existing refresh token if Google doesn't return one on subsequent connects
+    let existingRefreshToken: string | null = null;
+    try {
+      const { data: existing } = await supabaseAdmin
+        .from('user_calendar_connections')
+        .select('refresh_token')
+        .eq('user_id', user.id)
+        .eq('provider', 'google_calendar')
+        .maybeSingle();
+      existingRefreshToken = existing?.refresh_token ?? null;
+    } catch {
+      // best-effort; proceed without blocking
+    }
     
     const { data: connection, error: connectionError } = await supabaseAdmin
       .from('user_calendar_connections')
@@ -122,11 +136,12 @@ export async function GET(request: NextRequest) {
         user_id: user.id,
         provider: 'google_calendar',
         access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        refresh_token: tokens.refresh_token ?? existingRefreshToken,
         expires_at: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
         calendar_id: 'primary',
         sync_enabled: true,
-        sync_direction: 'bidirectional',
+        // Outbound-only for now
+        sync_direction: 'outbound',
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id,provider' })
       .select()

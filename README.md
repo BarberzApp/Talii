@@ -1,180 +1,133 @@
-# Barber App
+# Cosmetology App
 
-A modern booking platform connecting barbers with clients.
+A unified platform that serves cosmetologists and clients through a Next.js (web) experience, an Expo-powered mobile dashboard, and a Supabase backend with Stripe Connect payments.
 
-## Core Features (MVP)
+## Apps & APIs
 
-### Authentication
-- Client and barber account creation
-- Secure login system
-- Profile management
+- **Web (`/src/app`)**: Next.js 14 (App Router) with server actions, Supabase auth, NextAuth sessions, Stripe Connect, and a PWA-ready UI controlled by `NEXT_PUBLIC_ENABLE_SW`.
+- **Mobile (`/BocmApp`)**: Expo 53 app (React Native) that mirrors cosmetologist-facing flows; see `BocmApp/docs/README.md` plus the EAS guides under `BocmApp/docs/build/`.
+- **Supabase (`/supabase`)**: Postgres schema + migrations plus Deno-powered Edge functions that back Stripe webhooks, developer booking utilities, and webhook helpers.
+- **Scripts (`/scripts`)**: Helpers for provisioning the super admin, verifying Stripe state, running migrations, and bootstrapping test data.
 
-### Booking System
-- Clean, intuitive calendar interface
-- Real-time availability checking
-- Instant booking confirmation
-- Appointment management
+## Key Features
 
-### Payment Processing
-- Secure Stripe integration
-- Instant payment processing
-- Receipt generation
-- Payment history
+- **Role-aware flows** for clients, cosmetologists, and admin with dedicated onboarding, booking, and profile surfaces (`/src/app/(client)`, `/src/app/(barber)`, `/src/app/super-admin`).
+- **Stripe Connect + subscription-safe payouts** with platform fee, developer mode toggles, and live webhook handling under `/src/app/api/webhooks/stripe`.
+- **Supabase-backed data** with row-level security, fine-grained policies (`src/docs/database/rowlevelsecurity.txt`), and curated migrations (`/supabase/migrations`).
+- **Super Admin panel** at `/super-admin` for managing accounts, visibility, developer fees, review moderation, and analytics (see `scripts/create-super-admin.js` for setup).
+- **Booking link + QR flow**: every cosmetologist dashboard surfaces a shareable booking link/QR code to grow client bookings.
 
-## Technical Stack
-- Next.js 14
-- TypeScript
-- Tailwind CSS
-- Supabase
-- Stripe
+## Directory Layout
 
-## Project Structure
-```
-src/
-├── features/
-│   ├── auth/
-│   ├── booking/
-│   ├── profile/
-│   └── payment/
-├── shared/
-│   ├── components/
-│   ├── hooks/
-│   ├── utils/
-│   └── types/
-└── app/
-    ├── (auth)/
-    ├── (client)/
-    ├── (barber)/
-    └── api/
-```
+- `src/`: Next.js web app (`app` routes, `features`, shared components, hooks, instrumentation, and docs).
+- `BocmApp/`: Expo (React Native) mobile shell with its own docs, assets, and components.
+- `supabase/`: Supabase CLI project with `migrations`, `functions`, and `config.toml`.
+- `scripts/`: Node helpers (super admin creation, testing utilities, Stripe checks, etc.).
+- `public/`: Static assets (logos, service worker, icons).
+- `docs/` & `src/docs/`: Deeper write-ups on architecture, testing, hiring, release checklists, and production readiness.
 
-## Documentation
+## Documentation Reference
 
-- [App Breakdown](src/docs/development/APP_BREAKDOWN.md): High-level overview of the app's architecture, main flows (onboarding, booking, payments), and where to find key logic.
-- [Local Development Guide](src/docs/development/LOCAL_DEVELOPMENT.md): Step-by-step instructions for running the app locally, Stripe Connect/ngrok setup, troubleshooting, and useful links.
-- [Database Schema](src/docs/database/database-schema.txt): Full schema reference for all tables and relationships.
-- [Row Level Security Policies](src/docs/database/rowlevelsecurity.txt): Supabase RLS policies for all tables.
-- [Constraints](src/docs/database/constraints.txt): Database constraints and keys.
+- `src/docs/development/APP_BREAKDOWN.md`: Architecture + flow map (onboarding, booking, payments).
+- `src/docs/development/LOCAL_DEVELOPMENT.md`: Expanded local dev checklist (node, npm, ngrok/Stripe CLI, Supabase, troubleshooting).
+- `src/docs/development/ARCHITECTURE_OVERVIEW.md`: System design notes and integration touchpoints.
+- `src/docs/database/database-schema.txt`: Table/column reference for Postgres.
+- `src/docs/database/rowlevelsecurity.txt`: Supabase policy rules per table.
+- `src/docs/database/constraints.txt`: Keys and constraint coverage.
+- `BocmApp/docs/README.md` + `BocmApp/docs/build/*.md`: Mobile-specific workflows and EAS build guides.
 
 ## Getting Started
 
-1. Clone the repository
-2. Install dependencies:
+1. Clone the repo and install root deps:
    ```bash
    npm install
    ```
-3. Set up environment variables:
-   ```env
-   # Supabase
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
-   
-   # Stripe
-   STRIPE_SECRET_KEY=your_stripe_secret
-   STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-   
-   # App Configuration
-   NEXT_PUBLIC_APP_URL=https://bocmstyle.com
-   
-   # Sentry Error Monitoring (Optional but recommended for production)
-   NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
-   SENTRY_DSN=your_sentry_dsn  # Server-side (optional, can use NEXT_PUBLIC_SENTRY_DSN)
-   SENTRY_ORG=your_sentry_org  # For source maps upload
-   SENTRY_PROJECT=your_sentry_project  # For source maps upload
-   SENTRY_AUTH_TOKEN=your_sentry_auth_token  # For source maps upload (optional)
-   
-   # Security
-   WAITLIST_PASSWORD=your_waitlist_password
-   SUPER_ADMIN_PASSWORD=your_super_admin_password
-   SUPER_ADMIN_EMAIL=primbocm@gmail.com
-   
-   # Email/SMS
-   GMAIL_USER=your_gmail_user
-   GMAIL_PASS=your_gmail_app_password
-   ```
-4. Run development server:
+2. Create a `.env.local` (and `.env` for Docker if needed) with the values below. A `.env.example` is not provided, so keep this list for reference.
+
+### Required environment variables
+
+- **Supabase:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- **Stripe:** `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
+- **App & NextAuth:** `NEXT_PUBLIC_APP_URL` (typically `http://localhost:3002`), `NEXT_PUBLIC_BASE_URL`, `NEXTAUTH_URL=http://localhost:3002`, `NEXTAUTH_SECRET`, `NEXT_PUBLIC_ENABLE_SW=false`
+- **Google OAuth / Calendar:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+- **Security:** `WAITLIST_PASSWORD`, `SUPER_ADMIN_EMAIL=primbocm@gmail.com`, `SUPER_ADMIN_PASSWORD`
+
+### Optional / production helpers
+
+- **Sentry:** `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`, `EXPO_PUBLIC_SENTRY_DSN`
+- **Email/SMS:** `GMAIL_USER`, `GMAIL_PASS`
+- **Support & moderation:** `SLACK_WEBHOOK_URL`, `OPENAI_API_KEY`
+
+## Running the Web App
+
+1. Start the Next dev server:
    ```bash
    npm run dev -- -p 3002
    ```
+   The app expects `NEXT_PUBLIC_APP_URL`/`NEXT_PUBLIC_BASE_URL` to match `http://localhost:3002` so API calls and redirects resolve correctly.
+2. Build for production:
+   ```bash
+   npm run build
+   npm run start
+   ```
+3. Lint:
+```bash
+   npm run lint
+```
 
-## Development
+Stripe Connect webhooks rely on a public tunnel (ngrok or `stripe listen`) pointed at `http://localhost:3002/api/webhooks/stripe`. See `src/docs/development/LOCAL_DEVELOPMENT.md`.
 
-### Code Organization
-- Feature-based architecture
-- Clear separation of concerns
-- Modular components
-- Type-safe development
+## Running the Mobile App
 
-### Best Practices
-- Follow TypeScript best practices
-- Use proper error handling
-- Write clean, maintainable code
-- Document complex logic
+1. Install mobile deps:
+```bash
+   cd BocmApp
+   npm install
+```
+2. Start Expo:
+```bash
+   npx expo start
+   ```
+3. Follow `BocmApp/docs/build/EAS_QUICK_START.md` or `EAS_BUILD_GUIDE.md` for production builds.
 
-### Testing (adding soon)
-- Unit tests for components
-- Integration tests for features
-- End-to-end testing
-- Performance testing
+## Docker Setup
+
+Use `scripts/docker.sh` to orchestrate the stack (Next + Postgres + Redis). The script wraps `docker-compose.dev.yml` (dev mode) and `docker-compose.yml` (production-like).
+
+- Development (hot reload): `./scripts/docker.sh dev`
+- Production-like: `./scripts/docker.sh start`
+- Stop everything: `./scripts/docker.sh stop`
+
+Compose maps port `3002` ➜ container `3000`. Postgres & Redis listen on `5432`/`6379` with the default `postgres` user/password/db. Supply your env vars via the host shell or a `.env` file before launching.
+
+## Testing
+
+- Unit/integration: `npm run test`
+- Watch tests: `npm run test:watch`
+- CI/coverage: `npm run test:ci`
+- Targeted suites: `npm run test:api`, `npm run test:components`, `npm run test:integration`
+- E2E (Cypress): `npm run test:e2e` / `npm run test:e2e:open`
+- Static typing: `npm run lint`
 
 ## Super Admin Panel
 
-The app includes a super admin panel for managing developer accounts. Only the specified super admin can access this panel.
+The `/super-admin` route is the gatekeeper for platform-level controls. Only the super admin account (`primbocm@gmail.com`) can log in, inspect stats, moderate reviews, toggle developer mode, and manage public/disabled visibility.
 
-### Accessing the Super Admin Panel
+- Create/reset the super admin via: `node scripts/create-super-admin.js`
+- Developer mode bypasses Stripe platform fees so the cosmetologist keeps 100% of service revenue; it should only be enabled for testing or onboarding.
+- Stats, review moderation, profile management, and quick actions (export logs, refresh status, backup) are all exposed inside the panel.
 
-1. Navigate to `/super-admin` in your browser
-2. Login with the super admin credentials:
-   - **Email:** primbocm@gmail.com
-   - **Password:** Yasaddybocm123!
+## Booking Link Visibility
 
-### Features
+Every cosmetologist dashboard and settings page keeps a prominent booking link banner that can be copied, shared, or exported as a QR code. The goal is to make sharing the booking URL the fastest path to a new client.
 
-- **View All Barbers:** See a list of all registered barbers with their details
-- **Search Barbers:** Search by name, business name, or email
-- **Toggle Developer Status:** Enable/disable developer mode for any barber
-- **Statistics:** View total barbers, developers, and regular barbers count
+## Supabase Functions & Migrations
 
-### Developer Mode
+- Edge functions live under `/supabase/functions` and power utilities such as developer bookings, payment intents, Stripe Connect helpers, and webhook proxies.
+- Run migrations with the Supabase CLI (`supabase/db push` or similar) using the SQL files under `/supabase/migrations`.
 
-When a barber has developer mode enabled:
-- They bypass all Stripe platform fees ($3.38)
-- They receive 100% of the service price
-- This is intended for development and testing purposes only
+## Additional Resources
 
-### Setting Up Super Admin
-
-To create the super admin account, run:
-
-```bash
-node scripts/create-super-admin.js
-```
-
-This script will:
-- Create the super admin user account if it doesn't exist
-- Set the correct password
-- Create the necessary profile record
-
-## Contributing
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-MIT License - see LICENSE file for details
-
-## 📣 Prominent Booking Link for Barbers
-
-Barbers now see a highly visible, easy-to-share booking link banner at the top of their dashboard and settings. This link is the main way for clients to book appointments. Barbers are encouraged to copy, share, or download a QR code for their booking link and send it to clients via text, social media, or in person.
-
-**How it works:**
-- The booking link is always visible at the top of the dashboard and settings.
-- Barbers can copy the link, share it using their device's share menu, or download a QR code for print or digital sharing.
-- This feature is designed to maximize bookings and make it easy for barbers to grow their business.
-
-**Why this matters:**
-- The booking link is the main entry point for new clients.
-- Making it prominent ensures every barber knows to share it as much as possible.
-- More shared links = more bookings! 
+- `src/docs/development/CURRENT_STATUS_ANALYSIS.md`, `FUTURE_DEVELOPMENT.md`, and `SETTINGS_IMPROVEMENTS.md` capture ongoing work.
+- `src/shared/lib/supabase.ts`, `src/app/api/connect`, and `src/shared/lib/stripe-service.ts` hold the integration logic that pairs the UI with Stripe/Supabase.
+- `src/features` contains composable UI flows to kick off new bookings, manage services, and orchestrate notifications.
