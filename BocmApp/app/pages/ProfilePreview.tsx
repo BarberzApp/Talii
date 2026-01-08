@@ -123,6 +123,7 @@ export default function ProfilePreview() {
   const { barberId } = route.params;
   const { user } = useAuth();
   const { blockUser } = useReporting();
+  const isGuest = !user;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
@@ -144,6 +145,18 @@ export default function ProfilePreview() {
   useEffect(() => {
     fetchProfileData();
   }, [barberId]);
+
+  const promptAuth = (context: string = 'continue') => {
+    Alert.alert(
+      'Sign in required',
+      `Please log in or create an account to ${context}.`,
+      [
+        { text: 'Log In', onPress: () => navigation.navigate('Login') },
+        { text: 'Sign Up', onPress: () => navigation.navigate('SignUp') },
+        { text: 'Not now', style: 'cancel' },
+      ]
+    );
+  };
 
   const fetchProfileData = async () => {
     try {
@@ -397,6 +410,10 @@ export default function ProfilePreview() {
                       onPress={() => {
                         // Navigate to cuts page for this specific video from this barber
                         if (barberProfile?.id) {
+                          if (isGuest) {
+                            promptAuth('view cuts');
+                            return;
+                          }
                           navigation.navigate('Cuts', { cutId: cut.id, barberId: barberProfile.id });
                         }
                       }}
@@ -585,6 +602,10 @@ export default function ProfilePreview() {
                          onPress={() => {
                            // Navigate to booking calendar for this specific service
                            if (!profile) return;
+                         if (isGuest) {
+                           promptAuth('book an appointment');
+                           return;
+                         }
                            navigation.navigate('BookingCalendar', {
                              barberId: route.params.barberId,
                              barberName: profile.name,
@@ -726,6 +747,10 @@ export default function ProfilePreview() {
             onPress={() => {
               // Navigate to booking calendar
               if (!profile) return;
+              if (isGuest) {
+                promptAuth('book an appointment');
+                return;
+              }
               navigation.navigate('BookingCalendar', {
                 barberId: route.params.barberId,
                 barberName: profile.name,
@@ -745,6 +770,10 @@ export default function ProfilePreview() {
                   { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
                 ]}
                 onPress={() => {
+                  if (isGuest) {
+                    promptAuth('report or block users');
+                    return;
+                  }
                   Alert.alert(
                     'Profile Actions',
                     'What would you like to do?',

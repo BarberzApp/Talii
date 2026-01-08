@@ -32,6 +32,11 @@ import { ROUTE_MAPPING, isRouteProtected, getRouteRole } from '../shared/config/
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+function GuestBrowseScreen() {
+  // Guests should only be able to browse + view public barber portfolios (no booking/tools).
+  return <BrowsePage isGuest />;
+}
+
 function GlassyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { width: screenWidth } = Dimensions.get('window');
   const insets = useSafeAreaInsets();
@@ -356,6 +361,7 @@ export const AppNavigator = () => {
         <Stack.Screen name="EmailConfirmation" component={EmailConfirmationScreen} />
         <Stack.Screen name="Terms" component={TermsPage} />
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyPage} />
+        <Stack.Screen name="GuestBrowse" component={GuestBrowseScreen} />
         
         {/* Protected screens - auth required */}
         <Stack.Screen name="MainTabs" component={MainTabs} />

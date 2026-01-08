@@ -12,6 +12,7 @@ import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 import { AnimatedLogo } from '../shared/components/AnimatedLogo';
 import { AnimatedText } from '../shared/components/AnimatedText';
 import { ActionButton } from '../shared/components/ActionButton';
+import type { RootStackParamList } from '../shared/types';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -109,6 +110,12 @@ export default function HomePage() {
             >
               Log In
             </ActionButton>
+
+            <ActionButton 
+              variant="tertiary"
+              onPress={() => navigation.navigate('GuestBrowse' as never)}>
+              Continue as Guest
+            </ActionButton>
           </View>
         )}
 
@@ -153,11 +160,3 @@ export default function HomePage() {
     </SafeAreaView>
   );
 }
-
-// Type definitions
-type RootStackParamList = {
-  Home: undefined;
-  Login: undefined;
-  SignUp: undefined;
-  MainTabs: undefined;
-};

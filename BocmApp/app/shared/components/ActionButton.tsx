@@ -8,7 +8,7 @@ import { theme } from '../lib/theme';
 
 interface ActionButtonProps {
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'tertiary';
   onPress?: () => void;
   icon?: boolean;
   style?: any;
@@ -27,6 +27,8 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   const glowOpacity = useRef(new Animated.Value(0)).current;
   
   const isPrimary = variant === 'primary';
+  const isSecondary = variant === 'secondary';
+  const isTertiary = variant === 'tertiary';
 
   const handlePressIn = () => {
     if (disabled) return;
@@ -141,7 +143,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
               </Animated.View>
             )}
           </LinearGradient>
-        ) : (
+        ) : isSecondary ? (
           // Secondary button with glass effect
           <View style={{ flex: 1, borderRadius: 20, overflow: 'hidden' }}>
             <View
@@ -182,6 +184,27 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
                 </Animated.View>
               )}
             </View>
+          </View>
+        ) : (
+          // Tertiary button for subtle actions like "Continue as guest"
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingHorizontal: 24,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: '500',
+                color: theme.colors.muted,
+                textDecorationLine: 'underline',
+              }}
+            >
+              {children}
+            </Text>
           </View>
         )}
 

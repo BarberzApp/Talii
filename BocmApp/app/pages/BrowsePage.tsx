@@ -52,7 +52,7 @@ import {
 
 const { width } = Dimensions.get('window');
 
-type BrowseNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Browse'>;
+type BrowseNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 // Types matching the database structure
 type BarberFromDB = {
@@ -329,9 +329,10 @@ function ReviewsList({
   );
 }
 
-export default function BrowsePage() {
+export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   const navigation = useNavigation<BrowseNavigationProp>();
   const { user } = useAuth();
+  const guestMode = Boolean(isGuest || !user);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -381,6 +382,18 @@ export default function BrowsePage() {
   
   // Location accuracy state
   const [locationAccuracy, setLocationAccuracy] = useState<'high' | 'medium' | 'low' | 'error' | null>(null);
+
+  const promptAuth = useCallback((context: string = 'continue') => {
+    Alert.alert(
+      'Sign in required',
+      `Please log in or create an account to ${context}.`,
+      [
+        { text: 'Log In', onPress: () => navigation.navigate('Login') },
+        { text: 'Sign Up', onPress: () => navigation.navigate('SignUp') },
+        { text: 'Not now', style: 'cancel' },
+      ]
+    );
+  }, [navigation]);
 
   useEffect(() => {
     fetchPosts();
@@ -1019,6 +1032,15 @@ export default function BrowsePage() {
 
   // Navigation handlers
   const handleVideoPress = (post: any) => {
+    if (guestMode) {
+      // Guests can view barber profiles/portfolios, but should not enter protected tools/tabs.
+      if (post?.barberId) {
+        navigation.navigate('ProfilePreview', { barberId: post.barberId });
+        return;
+      }
+      promptAuth('view this content');
+      return;
+    }
     // Navigate to CutsPage with the specific video
     // Store the selected cut ID in a global way that CutsPage can access
     (global as any).selectedCutId = post.id;
@@ -1034,6 +1056,14 @@ export default function BrowsePage() {
   };
 
   const handleBookBarber = (post: any) => {
+    if (guestMode) {
+      // Guests should be able to view the barber profile, but booking is blocked in ProfilePreview.
+      if (post?.barberId) {
+        navigation.navigate('ProfilePreview', { barberId: post.barberId });
+        return;
+      }
+      return;
+    }
     if (post.barberId) {
       setSelectedBarber(post);
       setShowBookingForm(true);
@@ -1535,14 +1565,14 @@ export default function BrowsePage() {
                               { backgroundColor: theme.colors.secondary }
                             ]}
                             onPress={() => {
-                              
+                              // Always allow opening the profile. ProfilePreview will block booking for guests.
                               setSelectedBarber({
                                 barberId: barber.id,
                                 barberName: barber.name,
                                 name: barber.name
                               });
                               navigation.navigate('ProfilePreview', { barberId: barber.id});
-                             // setShowBookingForm(true);
+                              // setShowBookingForm(true);
                             }}
                           >
                             <Text style={[tw`font-semibold text-sm`, { color: theme.colors.primary }]}>
@@ -1663,7 +1693,7 @@ export default function BrowsePage() {
       )}
 
       {/* Booking Form Modal */}
-      {selectedBarber && (
+      {!guestMode && selectedBarber && (
         <BookingForm
           isVisible={showBookingForm}
           onClose={() => {
