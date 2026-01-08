@@ -274,11 +274,8 @@ export default function BookingForm({
       case 2:
         return !!selectedDate && !!selectedTime;
       case 3:
-        if (user) return true;
-        if (isDeveloperAccount) {
-          return !!(guestInfo.name && guestInfo.email && guestInfo.phone);
-        }
-        return false;
+        // Guests may enter a note here, but must sign in to proceed.
+        return true;
       case 4:
         return true;
       case 5:
@@ -290,6 +287,21 @@ export default function BookingForm({
   };
 
   const handleNextStep = () => {
+    // Guest preview: allow guests to view services + availability (steps 1-2),
+    // and optionally enter a note (step 3), but require sign-in before proceeding.
+    if (currentStep === 3 && !user) {
+      Alert.alert(
+        'Sign in required',
+        'You can view availability as a guest, but you need an account to book an appointment.',
+        [
+          { text: 'Log In', onPress: () => navigation.navigate('Login' as never) },
+          { text: 'Sign Up', onPress: () => navigation.navigate('SignUp' as never) },
+          { text: 'Not now', style: 'cancel' },
+        ]
+      );
+      return;
+    }
+
     if (validateStep() && currentStep < totalSteps) {
       // For developer accounts, skip step 5 (payment) and go directly to booking
       if (currentStep === 4 && isDeveloperAccount) {
@@ -312,13 +324,9 @@ export default function BookingForm({
       return;
     }
 
-    if (!user && !isDeveloperAccount) {
+    // No guest booking in production: must be authenticated to create a booking.
+    if (!user) {
       Alert.alert('Error', 'Please sign in to book with this barber.');
-      return;
-    }
-
-    if (!user && isDeveloperAccount && (!guestInfo.name || !guestInfo.email || !guestInfo.phone)) {
-      Alert.alert('Error', 'Please fill in all guest information.');
       return;
     }
 
@@ -929,72 +937,33 @@ export default function BookingForm({
                 </View>
 
                 {!user ? (
-                  isDeveloperAccount ? (
-                    <View style={tw`space-y-4`}>
-                      <View>
-                        <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
-                          Full Name *
-                        </Text>
-                        <TextInput
-                          style={[
-                            tw`px-4 py-3 rounded-xl`,
-                            { backgroundColor: 'rgba(255,255,255,0.1)', color: theme.colors.foreground }
-                          ]}
-                          placeholder="Enter your full name"
-                          placeholderTextColor={theme.colors.mutedForeground}
-                          value={guestInfo.name}
-                          onChangeText={(text) => setGuestInfo({ ...guestInfo, name: text })}
-                        />
+                  <View style={[tw`p-6 rounded-2xl`, { backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' }]}>
+                    <View style={tw`items-center`}>
+                      <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-4`, { backgroundColor: 'rgba(239,68,68,0.2)' }]}>
+                        <Icon name="lock" size={24} color="#ef4444" />
                       </View>
-                      <View>
-                        <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
-                          Email Address *
-                        </Text>
-                        <TextInput
-                          style={[
-                            tw`px-4 py-3 rounded-xl`,
-                            { backgroundColor: 'rgba(255,255,255,0.1)', color: theme.colors.foreground }
-                          ]}
-                          placeholder="Enter your email"
-                          placeholderTextColor={theme.colors.mutedForeground}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          value={guestInfo.email}
-                          onChangeText={(text) => setGuestInfo({ ...guestInfo, email: text })}
-                        />
-                      </View>
-                      <View>
-                        <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
-                          Phone Number *
-                        </Text>
-                        <TextInput
-                          style={[
-                            tw`px-4 py-3 rounded-xl`,
-                            { backgroundColor: 'rgba(255,255,255,0.1)', color: theme.colors.foreground }
-                          ]}
-                          placeholder="Enter your phone number"
-                          placeholderTextColor={theme.colors.mutedForeground}
-                          keyboardType="phone-pad"
-                          value={guestInfo.phone}
-                          onChangeText={(text) => setGuestInfo({ ...guestInfo, phone: text })}
-                        />
+                      <Text style={[tw`text-lg font-semibold mb-2`, { color: theme.colors.foreground }]}>
+                        Sign In Required
+                      </Text>
+                      <Text style={[tw`text-center mb-4`, { color: theme.colors.mutedForeground }]}>
+                        You can add a note below, but you must sign in to complete your booking.
+                      </Text>
+                      <View style={tw`w-full flex-row gap-3`}>
+                        <TouchableOpacity
+                          style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: theme.colors.secondary }]}
+                          onPress={() => navigation.navigate('Login' as never)}
+                        >
+                          <Text style={[tw`font-semibold`, { color: theme.colors.background }]}>Log In</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }]}
+                          onPress={() => navigation.navigate('SignUp' as never)}
+                        >
+                          <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>Sign Up</Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
-                  ) : (
-                    <View style={[tw`p-6 rounded-2xl`, { backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' }]}>
-                      <View style={tw`items-center`}>
-                        <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-4`, { backgroundColor: 'rgba(239,68,68,0.2)' }]}>
-                          <Icon name="x" size={24} color="#ef4444" />
-                        </View>
-                        <Text style={[tw`text-lg font-semibold mb-2`, { color: theme.colors.foreground }]}>
-                          Sign In Required
-                        </Text>
-                        <Text style={[tw`text-center`, { color: theme.colors.mutedForeground }]}>
-                          Please sign in to book with this barber
-                        </Text>
-                      </View>
-                    </View>
-                  )
+                  </View>
                 ) : (
                   <View style={[tw`p-6 rounded-2xl`, { backgroundColor: `${theme.colors.secondary}10`, borderWidth: 1, borderColor: `${theme.colors.secondary}20` }]}>
                     <View style={tw`items-center`}>

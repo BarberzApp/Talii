@@ -22,7 +22,7 @@ type BookingPageRouteProp = RouteProp<RootStackParamList, 'BookingCalendar'>;
 export default function BookingCalendarPage() {
     const navigation = useNavigation<BookingPageNavigationProp>();
     const route = useRoute<BookingPageRouteProp>();
-    const { barberId, barberName, preSelectedService } = route.params;
+    const { barberId, barberName, preSelectedService, guestMode } = route.params;
 
     const [showBookingForm, setShowBookingForm] = useState(false);
 
@@ -95,7 +95,9 @@ export default function BookingCalendarPage() {
                 {/* Start Booking Button */}
                 <View style={tw`px-5 pb-8`}>
                     <TouchableOpacity
-                        onPress={() => setShowBookingForm(true)}
+                        onPress={() => {
+                            setShowBookingForm(true);
+                        }}
                     >
                         <View style={[
                             tw`py-4 rounded-full items-center`,

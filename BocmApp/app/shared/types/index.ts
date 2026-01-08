@@ -22,6 +22,7 @@ export type RootStackParamList = {
     barberId: string;
     barberName: string;
     preSelectedService?: Service;
+    guestMode?: boolean;
   };
   BookingConfirmation: {
     bookingId: string;

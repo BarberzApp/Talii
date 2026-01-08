@@ -602,14 +602,11 @@ export default function ProfilePreview() {
                          onPress={() => {
                            // Navigate to booking calendar for this specific service
                            if (!profile) return;
-                         if (isGuest) {
-                           promptAuth('book an appointment');
-                           return;
-                         }
                            navigation.navigate('BookingCalendar', {
                              barberId: route.params.barberId,
                              barberName: profile.name,
                              preSelectedService: service,
+                             guestMode: isGuest,
                            });
                          }}
                        >
@@ -747,13 +744,10 @@ export default function ProfilePreview() {
             onPress={() => {
               // Navigate to booking calendar
               if (!profile) return;
-              if (isGuest) {
-                promptAuth('book an appointment');
-                return;
-              }
               navigation.navigate('BookingCalendar', {
                 barberId: route.params.barberId,
                 barberName: profile.name,
+                guestMode: isGuest,
               });
             }}
           >
