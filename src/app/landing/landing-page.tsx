@@ -105,7 +105,7 @@ export default function LandingPage() {
       location: "Princeton, NJ",
       revenue: "$50K/year",
       image: "/api/placeholder/60/60",
-      quote: "BOCM made running my business so much easier. My clients love the booking experience, and I've seen my revenue grow every month.",
+      quote: "Talii made running my business so much easier. My clients love the booking experience, and I've seen my revenue grow every month.",
       rating: 5
     },
     {
@@ -114,7 +114,7 @@ export default function LandingPage() {
       location: "Blacksburg, VA",
       revenue: "$65K/year",
       image: "/api/placeholder/60/60",
-      quote: "Since switching to BOCM, I spend less time on admin and more time with my clients. The reminders and scheduling are a game changer!",
+      quote: "Since switching to Talii, I spend less time on admin and more time with my clients. The reminders and scheduling are a game changer!",
       rating: 5
     }
   ];
@@ -184,8 +184,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center w-full md:w-auto justify-between md:justify-start">
               <Link href="/" className="flex items-center gap-2 text-xl sm:text-2xl font-bebas font-bold text-secondary">
-              <img src="/BocmLogo.png" alt="BOCM Logo" className="h-8 w-8 sm:h-10 sm:w-10" />
-                <span className="font-bebas text-2xl font-bold text-secondary ml-2">BOCM</span>
+              <img src="/Talii_Logo.png" alt="Talii Logo" className="h-12 sm:h-14 w-auto" />
+                <span className="sr-only">Talii</span>
             </Link>
             <div className="md:hidden flex items-center">
               <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -203,8 +203,8 @@ export default function LandingPage() {
                   <div className="flex flex-col h-full">
                       <div className="flex items-center justify-center mb-8">
                         <span className="flex items-center gap-2 text-2xl font-bebas font-bold text-secondary">
-                        <img src="/BocmLogo.png" alt="BOCM Logo" className="h-8 w-8 sm:h-10 sm:w-10" />
-                        BOCM
+                        <img src="/Talii_Logo.png" alt="Talii Logo" className="h-12 sm:h-14 w-auto" />
+                        
                       </span>
                     </div>
                     <nav className="flex-1">
@@ -272,7 +272,7 @@ export default function LandingPage() {
                 </h1>
                 
                 <p className="text-lg sm:text-xl text-white/80 leading-relaxed max-w-2xl">
-                    <span className="font-pacifico">Connect, showcase, and grow.</span> BOCM is the first social booking platform that lets cosmetologists share their work, build their brand, and book clients seamlessly.
+                    <span className="font-pacifico">Connect, showcase, and grow.</span> Talii is the first social booking platform that lets cosmetologists share their work, build their brand, and book clients seamlessly.
                 </p>
               </div>
               
@@ -287,9 +287,9 @@ export default function LandingPage() {
                 </Link>
               </div>
 
-              {/* Why Choose BOCM */}
+              {/* Why Choose Talii */}
               <div className="space-y-4 pt-6 sm:pt-8">
-                <h3 className="text-lg sm:text-xl font-bold text-white text-center mb-4">Why Choose BOCM?</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-white text-center mb-4">Why Choose Talii?</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-3 sm:px-4 py-2 sm:py-3">
                     <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-secondary mr-2 sm:mr-3 flex-shrink-0" />
@@ -351,7 +351,7 @@ export default function LandingPage() {
               The "Holy Sh*t" Moment
             </h2>
             <p className="text-lg sm:text-xl text-white/80 max-w-2xl mx-auto">
-              See exactly how much more you could be earning with BOCM's revenue optimization tools.
+              See exactly how much more you could be earning with Talii's revenue optimization tools.
             </p>
           </div>
 
@@ -448,7 +448,7 @@ export default function LandingPage() {
               Everything You Need to Scale
             </h2>
             <p className="text-lg sm:text-xl text-white/80 max-w-3xl mx-auto">
-              From booking automation to revenue optimization, BOCM gives you the tools to transform your cosmetology business.
+              From booking automation to revenue optimization, Talii gives you the tools to transform your cosmetology business.
             </p>
           </div>
 
@@ -491,7 +491,7 @@ export default function LandingPage() {
               Success Stories
             </h2>
             <p className="text-lg sm:text-xl text-white/80 max-w-3xl mx-auto">
-              See how cosmetologists are transforming their businesses with BOCM.
+              See how cosmetologists are transforming their businesses with Talii.
             </p>
           </div>
 
@@ -535,7 +535,7 @@ export default function LandingPage() {
                 Ready to Transform Your Business?
             </h2>
               <p className="text-lg sm:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-                Join cosmetologists who are already growing their business with BOCM. Start your journey today.
+                Join cosmetologists who are already growing their business with Talii. Start your journey today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/register" className="bg-secondary text-black px-8 py-4 rounded-xl font-semibold text-lg hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-secondary/25">
@@ -566,7 +566,7 @@ export default function LandingPage() {
             </div>
             
             <p className="text-white/60 text-sm">
-              © 2025 BOCM. All rights reserved. The future of booking.
+              © 2025 Talii. All rights reserved. The future of booking.
             </p>
           </div>
         </div>

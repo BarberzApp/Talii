@@ -21,7 +21,7 @@ export function LoadingSpinner({ size = 'md', className, text }: LoadingSpinnerP
         <div className="absolute inset-0 rounded-full animate-bocm-glow z-0" style={{ filter: 'blur(16px)', background: 'radial-gradient(circle at 60% 40%, #c98f42 0%, #fff9f0 40%, #262b2e 100%)', opacity: 0.7 }} />
         {/* Floating Animation */}
         <img
-          src="/BocmLogo.png"
+          src="/Talii_Logo.png"
           alt="Loading..."
           width={logoSize}
           height={logoSize}

@@ -77,7 +77,7 @@ export default function HomePage() {
 
             <View style={{ marginBottom: 32 }}>
               <AnimatedText
-                text="BOCM"
+                text="Talii"
                 type="title"
                 delay={600}
               />
@@ -143,7 +143,7 @@ export default function HomePage() {
                 marginBottom: 4,
               }}
             >
-              BOCM
+              Talii
             </Animated.Text>
             <Animated.Text
               style={{
@@ -152,7 +152,7 @@ export default function HomePage() {
                 textAlign: 'center',
               }}
             >
-              © 2025 BOCM. All rights reserved.
+              © 2025 Talii. All rights reserved.
             </Animated.Text>
           </View>
         </View>

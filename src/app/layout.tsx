@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'BOCM',
+  title: 'Talii',
   description: 'Book your next haircut with ease',
   themeColor: '#000000',
   viewport: {
@@ -50,7 +50,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="BOCM" />
+        <meta name="apple-mobile-web-app-title" content="Talii" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

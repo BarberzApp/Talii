@@ -84,7 +84,7 @@ export default function UITestPage() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <Scissors className="h-8 w-8 text-saffron" />
-              <h1 className="text-2xl font-bebas text-white tracking-wide">BOCM UI Test</h1>
+              <h1 className="text-2xl font-bebas text-white tracking-wide">Talii UI Test</h1>
             </div>
             <div className="flex items-center gap-4">
               <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">

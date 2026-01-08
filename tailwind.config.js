@@ -52,7 +52,7 @@ module.exports = {
           DEFAULT: "hsl(var(--card) / <alpha-value>)",
           foreground: "hsl(var(--card-foreground) / <alpha-value>)",
         },
-        saffron: '#F8C662',
+        saffron: '#F47A2A',
         darkpurple: '#2C263F',
         darkgreen: '#213722',
         huntergreen: '#41644A',

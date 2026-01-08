@@ -11,7 +11,7 @@ export const theme = {
     popoverForeground: '#272a2f',
     primary: '#272a2f', // Dark grey primary
     primaryForeground: '#fff',
-    secondary: '#c78e3f', // Saffron brown (vibrant) - for buttons
+    secondary: '#F47A2A', // Talii orange (primary logo color) - for buttons
     secondaryForeground: '#fff',
     muted: '#f5f5f5', // Light grey muted
     mutedForeground: '#b0b0b0', // Medium grey text
@@ -21,12 +21,12 @@ export const theme = {
     destructiveForeground: '#fff',
     border: '#e5e7eb', // Light grey border
     input: '#e5e7eb',
-    ring: '#c78e3f', // Saffron brown ring
+    ring: '#F47A2A', // Talii orange ring
     radius: '0.5rem', // 8px equivalent
     
     // 4 Main Brand Colors
     grey: '#272a2f', // Dark grey
-    saffronBrown: '#c78e3f', // Vibrant saffron brown (for buttons)
+    saffronBrown: '#F47A2A', // Talii orange (for buttons)
     coffeeBrown: '#8d7250', // Coffee brown
     beige: '#f5f5f5', // Beige/light grey
     
@@ -51,13 +51,13 @@ export const theme = {
   
   // Enhanced gradient definitions
   gradients: {
-    primary: ['#c78e3f', '#8d7250'],
+    primary: ['#F47A2A', '#8d7250'],
     background: ['#272a2f', '#2d2a26'],
     glass: ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)'],
-    logo: ['#c78e3f', '#8d7250'],
-    text: ['#c78e3f', '#8d7250'],
-    button: ['#c78e3f', '#8d7250'],
-    glow: ['rgba(199, 142, 63, 0.3)', 'rgba(199, 142, 63, 0.1)'],
+    logo: ['#F47A2A', '#8d7250'],
+    text: ['#F47A2A', '#8d7250'],
+    button: ['#F47A2A', '#8d7250'],
+    glow: ['rgba(244, 122, 42, 0.3)', 'rgba(244, 122, 42, 0.1)'],
   },
 
   // Animation configuration

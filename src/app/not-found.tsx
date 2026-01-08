@@ -147,10 +147,10 @@ export default function NotFound() {
         {/* Logo and Brand */}
         <div className="flex items-center justify-center mb-8">
           <div className="relative">
-            <img src="/BocmLogo.png" alt="BOCM Logo" className="h-16 w-16 sm:h-20 sm:w-20" />
+            <img src="/Talii_Logo.png" alt="Talii Logo" className="h-20 w-20 sm:h-24 sm:w-24" />
             <div className="absolute inset-0 bg-saffron/20 rounded-full blur-xl opacity-50" />
           </div>
-          <span className="font-bebas text-4xl sm:text-5xl font-bold text-saffron ml-4">BOCM</span>
+          <span className="sr-only">Talii</span>
         </div>
 
         {/* 404 Animation */}

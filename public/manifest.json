@@ -1,6 +1,6 @@
 {
-  "name": "BOCM",
-  "short_name": "BOCM",
+  "name": "Talii",
+  "short_name": "Talii",
   "description": "Book and manage barber appointments",
   "start_url": "/",
   "scope": "/",
@@ -12,13 +12,13 @@
   "lang": "en",
   "icons": [
     {
-      "src": "/BocmLogo.png",
+      "src": "/Talii_Logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/BocmLogo.png",
+      "src": "/Talii_Logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -32,7 +32,7 @@
       "url": "/browse",
       "icons": [
         {
-          "src": "/BocmLogo.png",
+          "src": "/Talii_Logo.png",
           "sizes": "192x192"
         }
       ]

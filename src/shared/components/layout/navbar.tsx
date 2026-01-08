@@ -116,10 +116,10 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center group">
             <div className="relative">
-              <img src="/BocmLogo.png" alt="BOCM Logo" className="h-8 w-8 sm:h-10 sm:w-10 transition-transform duration-300 group-hover:scale-110" />
+              <img src="/Talii_Logo.png" alt="Talii Logo" className="h-12 sm:h-14 w-auto transition-transform duration-300 group-hover:scale-110" />
               <div className="absolute inset-0 bg-saffron/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
-            <span className="font-bebas text-2xl font-bold text-saffron ml-3 group-hover:text-saffron/90 transition-colors duration-300">BOCM</span>
+            <span className="sr-only">Talii</span>
           </Link>
         </div>
         
