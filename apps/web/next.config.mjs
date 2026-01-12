@@ -1,4 +1,9 @@
 import { withSentryConfig } from '@sentry/nextjs'
+import dotenv from 'dotenv'
+
+// After moving to apps/web, `next dev` runs with cwd=apps/web.
+// Load env from repo root (../../.env) so existing local setups keep working.
+dotenv.config({ path: new URL('../../.env', import.meta.url) })
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

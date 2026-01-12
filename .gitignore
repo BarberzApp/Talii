@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules/
 /.pnp
 .pnp.js
 
@@ -26,8 +27,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
-.env
+.env*
+!.env.example
 
 # vercel
 .vercel
@@ -41,6 +42,9 @@ next-env.d.ts
 
 # barber-app
 barber-app.zip
+
+# Expo (some local tooling may create this at repo root)
+.expo/
 
 # BocmApp specific ignores (but keep the source code)
 /BocmApp/node_modules/
@@ -64,51 +68,8 @@ barber-app.zip
 /BocmApp/tmp/
 /BocmApp/temp/
 
-# future features
-/future-features/
-
-# Move the directories to future-features
-mv app/marketplace future-features/
-mv app/jobs future-features/
-mv app/gallery future-features/
-mv app/calendar future-features/
-mv app/wallet future-features/
-mv app/business future-features/
-mv app/offline future-features/
-
-# Src Structure Rules
-# Prevent files from being created outside of designated directories
-/src/*
-!/src/app/
-!/src/lib/
-!/src/features/
-!/src/shared/
-!/src/docs/
-
-# Prevent feature-specific code outside of features directory
-/src/features/*
-!/src/features/calendar/
-!/src/features/notifications/
-!/src/features/booking/
-!/src/features/auth/
-!/src/features/settings/
-
-# Prevent shared code outside of shared directory
-/src/shared/*
-!/src/shared/types/
-!/src/shared/hooks/
-!/src/shared/lib/
-!/src/shared/components/
-!/src/shared/constants/
-!/src/shared/contexts/
-!/src/shared/notifications/
-!/src/shared/pwa/
-!/src/shared/services/
-!/src/shared/utils/
-!/src/shared/stores/
-
-# Prevent lib code outside of lib directory
-/src/lib/*
-!/src/lib/utils.ts
-!/src/lib/supabase/
-!/src/lib/config.ts
+# Monorepo apps/package build artifacts
+apps/**/.next/
+apps/**/dist/
+apps/**/.expo/
+apps/**/web-build/

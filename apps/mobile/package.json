@@ -20,6 +20,7 @@
     "test:ci": "jest --ci --coverage --watchAll=false"
   },
   "dependencies": {
+    "@barber-app/shared": "workspace:*",
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-picker/picker": "^2.11.1",
