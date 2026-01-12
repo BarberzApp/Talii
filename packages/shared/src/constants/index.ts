@@ -8,14 +8,9 @@ export const USER_ROLES = {
 
 export type BookingStatus =
   | 'pending'
-  | 'payment_pending'
   | 'confirmed'
   | 'completed'
-  | 'cancelled'
-  | 'refunded'
-  | 'partially_refunded'
-  | 'failed'
-  | 'expired';
+  | 'cancelled';
 
 export type PaymentStatus =
   | 'pending'
@@ -23,4 +18,5 @@ export type PaymentStatus =
   | 'failed'
   | 'refunded'
   | 'partially_refunded';
+
 

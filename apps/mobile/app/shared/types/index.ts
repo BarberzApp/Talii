@@ -487,37 +487,6 @@ export interface DateTimeSelection {
   timeSlot: TimeSlot | null;
 }
 
-// Job Types
-export interface JobPost {
-  id: string;
-  businessId: string;
-  businessName: string;
-  businessImage: string;
-  title: string;
-  description: string;
-  requirements: string[];
-  location: string;
-  salary: string;
-  postedDate: string;
-  status: "open" | "closed";
-}
-
-export interface JobApplication {
-  id: string;
-  jobId: string;
-  barberId: string;
-  barber: {
-    id: string;
-    name: string;
-    image: string;
-    experience: string;
-    location: string;
-  };
-  status: "pending" | "reviewing" | "accepted" | "rejected";
-  appliedDate: string;
-  coverLetter: string;
-}
-
 // Calendar Types
 export interface CalendarEvent {
   id: string;
@@ -540,32 +509,6 @@ export interface CalendarDay {
   monthName: string;
   isToday: boolean;
   dateString: string;
-}
-
-// Message Types
-export interface Message {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  text: string;
-  timestamp: Date;
-  status: 'sent' | 'delivered' | 'read';
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Conversation Types
-export interface Conversation {
-  id: string;
-  participants: string[];
-  lastMessage: {
-    text: string;
-    timestamp: Date;
-    senderId: string;
-  };
-  unreadCount: number;
-  createdAt: string;
-  updatedAt: string;
 }
 
 // API Response types

@@ -8,18 +8,6 @@ import type { CalendarEvent } from "@/shared/types/calendar"
 import type { Barber, Booking, Service } from '@/shared/types'
 import { logger } from '@/shared/lib/logger'
 
-// Database-specific types that match the actual database schema
-interface BarberFromDB {
-  id: string
-  user_id: string
-  bio?: string
-  specialties: string[]
-  price_range?: string
-  next_available?: string
-  created_at: string
-  updated_at: string
-}
-
 // Types
 export type JobPost = {
   id: string
@@ -52,7 +40,7 @@ export type Application = {
 }
 
 interface DataContextType {
-  barbers: BarberFromDB[]
+  barbers: Barber[]
   services: Service[]
   bookings: Booking[]
   loading: boolean
@@ -61,11 +49,11 @@ interface DataContextType {
   setEvents: React.Dispatch<React.SetStateAction<CalendarEvent[]>>
 
   // Barber methods
-  getBarberById: (user_id: string) => BarberFromDB | undefined
-  updateBarber: (id: string, data: Partial<BarberFromDB>) => void
+  getBarberById: (user_id: string) => Barber | undefined
+  updateBarber: (id: string, data: Partial<Barber>) => void
 
   // Booking methods
-  createBooking: (booking: Omit<Booking, "id">) => Promise<string>
+  createBooking: (booking: Partial<Booking>) => Promise<string>
   updateBookingStatus: (id: string, status: Booking["status"]) => void
   updatePaymentStatus: (id: string, status: Booking["payment_status"]) => void
   getBookingsByBarberId: (barberId: string) => Booking[]
@@ -75,7 +63,7 @@ interface DataContextType {
   fetchBarbers: () => Promise<void>
   fetchBookings: () => Promise<void>
   fetchServices: () => Promise<void>
-  addBooking: (booking: Omit<Booking, 'id'>) => Promise<void>
+  addBooking: (booking: Partial<Booking>) => Promise<void>
   updateBooking: (id: string, data: Partial<Booking>) => Promise<void>
   addService: (service: Omit<Service, 'id'>) => Promise<void>
   updateService: (id: string, data: Partial<Service>) => Promise<void>
@@ -85,7 +73,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined)
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const [barbers, setBarbers] = useState<BarberFromDB[]>([])
+  const [barbers, setBarbers] = useState<Barber[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -149,10 +137,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   // Barber methods
   const getBarberById = (user_id: string) => barbers.find(barber => barber.user_id === user_id)
 
-  const updateBarber = async (user_id: string, data: Partial<BarberFromDB>) => {
+  const updateBarber = async (user_id: string, data: Partial<Barber>) => {
     try {
       // Only include barber-specific fields that exist in the BarberFromDB type
-      const barberData: Partial<BarberFromDB> = {
+      const barberData: Partial<Barber> = {
         bio: data.bio,
         specialties: data.specialties,
         updated_at: new Date().toISOString()
@@ -174,7 +162,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Booking methods
-  const createBooking = async (booking: Omit<Booking, "id">): Promise<string> => {
+  const createBooking = async (booking: Partial<Booking>): Promise<string> => {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -296,7 +284,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const addBooking = async (booking: Omit<Booking, 'id'>) => {
+  const addBooking = async (booking: Partial<Booking>) => {
     setLoading(true)
     try {
       const { error } = await supabase

@@ -11,11 +11,31 @@ import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/shared/hooks/use-auth-zustand"
 import { useRouter } from "next/navigation"
-import { Service, Barber } from "@/shared/types"
 import { SocialMediaLinks } from "@/shared/components/social-media-links"
 
+type BarberCardBarber = {
+  id: string
+  name: string
+  username?: string
+  image?: string
+  businessName?: string
+  location?: string
+  bio?: string
+  specialties: string[]
+  portfolio?: string[]
+  trending?: boolean
+  openToHire?: boolean
+  priceRange?: string
+  totalLikes?: number
+  distance?: number
+  instagram?: string
+  twitter?: string
+  tiktok?: string
+  facebook?: string
+}
+
 interface BarberCardProps {
-  barber: Barber
+  barber: BarberCardBarber
   className?: string
 }
 

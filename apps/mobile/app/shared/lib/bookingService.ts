@@ -19,7 +19,7 @@ export interface Booking {
   date: string;
   price: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
+  payment_status: 'pending' | 'succeeded' | 'failed' | 'refunded' | 'partially_refunded';
   payment_intent_id?: string;
   platform_fee?: number;
   barber_payout?: number;
@@ -159,7 +159,7 @@ class BookingService {
       .insert({
         ...bookingData,
         status: 'confirmed',
-        payment_status: 'paid'
+        payment_status: 'succeeded'
       })
       .select()
       .single();

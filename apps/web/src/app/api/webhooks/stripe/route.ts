@@ -19,36 +19,38 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 const supabase = supabaseAdmin
 
-// Helper function to update booking status
-async function updateBookingStatus(
+type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled'
+type PaymentStatus =
+  | 'pending'
+  | 'succeeded'
+  | 'failed'
+  | 'refunded'
+  | 'partially_refunded'
+
+// Helper function to update booking status/payment status (DB-aligned)
+async function updateBooking(
   bookingId: string,
-  status: string,
-  paymentStatus: string,
-  paymentIntentId?: string
+  patch: {
+    status?: BookingStatus
+    payment_status?: PaymentStatus
+    payment_intent_id?: string
+  }
 ) {
   // Validate inputs
   if (!bookingId || typeof bookingId !== 'string') {
     throw new Error('Invalid booking ID')
   }
 
-  if (!status || typeof status !== 'string') {
-    throw new Error('Invalid status')
-  }
-
-  if (!paymentStatus || typeof paymentStatus !== 'string') {
-    throw new Error('Invalid payment status')
-  }
-
-  if (paymentIntentId !== undefined && typeof paymentIntentId !== 'string') {
-    throw new Error('Invalid payment intent ID')
+  if (!patch || typeof patch !== 'object') {
+    throw new Error('Invalid patch')
   }
 
   const { error } = await supabase
     .from('bookings')
     .update({
-      status,
-      payment_status: paymentStatus,
-      payment_intent_id: paymentIntentId,
+      ...(patch.status ? { status: patch.status } : {}),
+      ...(patch.payment_status ? { payment_status: patch.payment_status } : {}),
+      ...(patch.payment_intent_id ? { payment_intent_id: patch.payment_intent_id } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', bookingId)
@@ -256,12 +258,11 @@ export async function POST(request: Request) {
           )
         }
 
-        await updateBookingStatus(
-          session.metadata.bookingId,
-          'confirmed',
-          'succeeded',
-          session.payment_intent as string
-        )
+        await updateBooking(session.metadata.bookingId, {
+          status: 'confirmed',
+          payment_status: 'succeeded',
+          payment_intent_id: session.payment_intent as string,
+        })
 
         break
       }
@@ -286,11 +287,11 @@ export async function POST(request: Request) {
           )
         }
 
-        await updateBookingStatus(
-          session.metadata.bookingId,
-          'expired',
-          'failed'
-        )
+        // DB constraint: bookings.status cannot be "expired" (use payment_status failed + cancel booking)
+        await updateBooking(session.metadata.bookingId, {
+          status: 'cancelled',
+          payment_status: 'failed',
+        })
         break
       }
 
@@ -489,12 +490,11 @@ export async function POST(request: Request) {
         } else {
           // Booking already exists, just update status
           bookingId = existingBooking.id
-          await updateBookingStatus(
-            existingBooking.id,
-            'confirmed',
-            'succeeded',
-            paymentIntent.id
-          )
+          await updateBooking(existingBooking.id, {
+            status: 'confirmed',
+            payment_status: 'succeeded',
+            payment_intent_id: paymentIntent.id,
+          })
         }
 
         // Store the successful payment in Supabase with all required fields
@@ -506,10 +506,8 @@ export async function POST(request: Request) {
             status: paymentIntent.status,
             barber_stripe_account_id: paymentIntent.transfer_data?.destination,
             platform_fee: paymentIntent.application_fee_amount || 0,
-            barber_payout: paymentIntent.amount - (paymentIntent.application_fee_amount || 0),
             booking_id: bookingId, // ✅ Now properly set
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(), // ✅ Now properly set
           })
 
           if (paymentError) {
@@ -557,12 +555,12 @@ export async function POST(request: Request) {
           )
         }
 
-        await updateBookingStatus(
-          booking.id,
-          'failed',
-          'failed',
-          paymentIntent.id
-        )
+        // DB constraint: bookings.status cannot be "failed" (use payment_status failed + cancel booking)
+        await updateBooking(booking.id, {
+          status: 'cancelled',
+          payment_status: 'failed',
+          payment_intent_id: paymentIntent.id,
+        })
 
         // Handle retry logic if needed
         if (paymentIntent.next_action) {
@@ -617,12 +615,11 @@ export async function POST(request: Request) {
         const isPartialRefund = charge.amount_refunded < charge.amount
         const refundStatus = isPartialRefund ? 'partially_refunded' : 'refunded'
         
-        await updateBookingStatus(
-          booking.id,
-          refundStatus,
-          refundStatus,
-          charge.payment_intent as string
-        )
+        // DB constraint: bookings.status cannot be "refunded" (keep status; update payment_status only)
+        await updateBooking(booking.id, {
+          payment_status: refundStatus,
+          payment_intent_id: charge.payment_intent as string,
+        })
 
         // Create a refund payment record
         const { error: refundError } = await supabase.from('payments').insert({
@@ -632,10 +629,8 @@ export async function POST(request: Request) {
           status: refundStatus,
           barber_stripe_account_id: typeof charge.transfer === 'string' ? charge.transfer : charge.transfer?.destination,
           platform_fee: 0, // No platform fee on refunds
-          barber_payout: -charge.amount_refunded, // Negative payout for refunds
           booking_id: booking.id,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         })
 
         if (refundError) {

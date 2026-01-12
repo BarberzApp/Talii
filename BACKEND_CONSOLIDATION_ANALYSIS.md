@@ -30,6 +30,36 @@ We are executing **Option A (Shared package for domain logic)** *plus* the **Nex
 - **Next.js Gateway** ensures both clients execute the same logic and provides a stable API contract for mobile.
 - **Edge Functions remain**, but are treated as backend helpers that the gateway (and/or trusted server code) can call—not as a separate “mobile-only backend”.
 
+## Recent implementation updates (tracked)
+
+### 2026-01-12 — Supabase schema ↔ TypeScript type alignment + drift cleanup
+
+The following changes were implemented to reduce schema drift and prevent runtime Postgres errors caused by mismatched column names / CHECK constraints:
+
+- **DB-aligned shared types are now the source of truth**
+  - Canonical DB types live in `packages/shared/src/types/index.ts`.
+  - Canonical enums live in `packages/shared/src/constants/index.ts`.
+  - Added/standardized DB-backed types for: `Notification`, `Payment`, `SchedulingSlot`, `OnDemandRequest`, `BookingTexts`, `Cut`, `CutComment`, `CutAnalytics`, calendar sync types, `Report`, `BlockedUser`.
+  - Updated core domain shapes (`User`/`Barber`/`Booking`) to match actual Supabase column names and nullability.
+
+- **Critical booking status constraint mismatch fixed (cause, not symptoms)**
+  - Live DB CHECK constraint for `public.bookings.status` only permits: `pending | confirmed | completed | cancelled`.
+  - Legacy app-only states like `payment_pending`, `expired`, `failed`, `refunded`, `partially_refunded` are not valid as `bookings.status` and are now represented under `payment_status` (or mapped to DB-valid states) instead.
+
+- **Stripe webhook hardened to match DB schema**
+  - Webhook was updated so it does not write invalid `bookings.status` values.
+  - `payments` inserts were corrected to only include columns that exist in the live `public.payments` table.
+
+- **Web type drift reduced**
+  - `apps/web/src/shared/types/index.ts` now re-exports the shared DB-aligned types (implemented via a relative-path shim to avoid relying on workspace linking at runtime).
+  - A conflicting legacy declaration file (`apps/web/src/shared/types/index.d.ts`) that overrode exports was removed.
+  - `apps/web/src/shared/types/booking.ts` now re-exports shared booking types instead of maintaining a divergent copy.
+  - Note: some UI components still use UI-only “view model” shapes (camelCase); these are explicitly typed locally so DB-aligned interfaces remain strict.
+
+- **Mobile type drift cleanup**
+  - Removed unused legacy/non-DB types from `apps/mobile/app/shared/types/index.ts` (`JobPost`, `JobApplication`, `Message`, `Conversation`).
+  - Updated mobile booking code to use DB-valid `payment_status` values (e.g. `succeeded` instead of `paid`).
+
 #### 0) Repo hygiene + monorepo foundation (must be clean before deeper work)
 
 - [x] Create monorepo folders: `apps/web`, `apps/mobile`, `packages/shared`
@@ -57,9 +87,9 @@ We are executing **Option A (Shared package for domain logic)** *plus* the **Nex
 #### 2) Canonical types (single source of truth)
 
 - [x] Establish shared TS types in `packages/shared/src/types` and shared constants in `packages/shared/src/constants`
-- [ ] Replace platform-local type definitions with imports from `@barber-app/shared` (incrementally):
-  - [ ] Web: migrate from `apps/web/src/shared/types/**`
-  - [ ] Mobile: migrate from `apps/mobile/app/shared/types/**`
+- [~] Replace platform-local type definitions with imports from `@barber-app/shared` (incrementally):
+  - [x] Web: `apps/web/src/shared/types/index.ts` now re-exports shared DB-aligned types; `apps/web/src/shared/types/booking.ts` re-exports shared booking types
+  - [~] Mobile: removed legacy/non-DB types from `apps/mobile/app/shared/types/index.ts`; remaining step is to replace remaining platform-local DB types with imports from the shared package
 - [ ] Add automated type generation from Supabase schema as the longer-term source of truth:
   - [ ] Generate types (or use `supabase gen types`) and ensure shared package consumes them
   - [ ] Add a documented workflow for keeping types current

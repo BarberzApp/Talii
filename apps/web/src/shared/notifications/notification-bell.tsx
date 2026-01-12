@@ -16,7 +16,6 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/components/ui/popover'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
 import { supabase } from '@/shared/lib/supabase'
-import { Notification as NotificationType } from '@/shared/types'
 import { cn } from '@/shared/lib/utils'
 import { logger } from '@/shared/lib/logger'
 

@@ -66,7 +66,7 @@ export async function GET(request: Request) {
       supabase
         .from('bookings')
         .select('*', { count: 'exact', head: true })
-        .in('status', ['confirmed', 'payment_pending']),
+        .in('status', ['confirmed']),
       
       // Revenue data (all bookings)
       supabaseAdmin
