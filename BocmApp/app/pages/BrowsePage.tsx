@@ -25,6 +25,7 @@ import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
 import ProfilePreview from './ProfilePreview';
 import {
+  ChevronLeft,
   Search,
   MapPin,
   Filter,
@@ -1111,10 +1112,27 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
       {/* Header */}
       <View style={tw`px-4 pt-4 pb-2`}>
         <View style={tw`flex-row items-center justify-between mb-4`}>
-          <Text style={[tw`text-2xl font-bold`, { color: theme.colors.foreground }]}>
-            Browse
-          </Text>
-          
+          <View style={tw`flex-row items-center`}>
+            {guestMode && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Home')}
+                style={[tw`flex-row items-center mr-3 rounded-full px-3 py-1`, {
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.15)',
+                }]}
+              >
+                <ChevronLeft size={16} color={theme.colors.foreground} />
+                <Text style={[tw`ml-1 text-sm font-medium`, { color: theme.colors.foreground }]}>
+                  Home
+                </Text>
+              </TouchableOpacity>
+            )}
+            <Text style={[tw`text-2xl font-bold`, { color: theme.colors.foreground }]}>
+              Browse
+            </Text>
+          </View>
+
           {/* View Toggle Buttons - Explore tab hidden but code preserved */}
           <View style={tw`flex-row bg-white/10 rounded-lg p-1`}>
             {/* Explore tab - hidden but code preserved for future use */}

@@ -68,6 +68,14 @@ export default function BookingForm({
   const navigation = useNavigation<BookingFormNavigationProp>();
   const { user, userProfile } = useAuth();
 
+  const closeAndNavigateToAuth = (screen: 'Login' | 'SignUp') => {
+    // Close the booking modal first to avoid leaving it open behind auth screens.
+    onClose();
+    requestAnimationFrame(() => {
+      navigation.navigate(screen as never);
+    });
+  };
+
   // State management
   const [currentStep, setCurrentStep] = useState(1);
   const [services, setServices] = useState<Service[]>([]);
@@ -294,8 +302,8 @@ export default function BookingForm({
         'Sign in required',
         'You can view availability as a guest, but you need an account to book an appointment.',
         [
-          { text: 'Log In', onPress: () => navigation.navigate('Login' as never) },
-          { text: 'Sign Up', onPress: () => navigation.navigate('SignUp' as never) },
+          { text: 'Log In', onPress: () => closeAndNavigateToAuth('Login') },
+          { text: 'Sign Up', onPress: () => closeAndNavigateToAuth('SignUp') },
           { text: 'Not now', style: 'cancel' },
         ]
       );
@@ -951,13 +959,13 @@ export default function BookingForm({
                       <View style={tw`w-full flex-row gap-3`}>
                         <TouchableOpacity
                           style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: theme.colors.secondary }]}
-                          onPress={() => navigation.navigate('Login' as never)}
+                          onPress={() => closeAndNavigateToAuth('Login')}
                         >
                           <Text style={[tw`font-semibold`, { color: theme.colors.background }]}>Log In</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }]}
-                          onPress={() => navigation.navigate('SignUp' as never)}
+                          onPress={() => closeAndNavigateToAuth('SignUp')}
                         >
                           <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>Sign Up</Text>
                         </TouchableOpacity>

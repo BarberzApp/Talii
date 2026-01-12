@@ -671,27 +671,30 @@ export default function SignUpPage() {
                                 </BlurView>
                             </View>
                         )}
-                            {/* Sign In Link */}
-                            <View style={{ alignItems: 'center', marginTop: 32 }}>
-                                <Text style={{
-                                    fontSize: 14,
-                                    color: 'rgba(255, 255, 255, 0.8)',
-                                    textAlign: 'center',
-                                }}>
-                                    Already have an account?{' '}
-                                    <Text
-                                        onPress={handleSignIn}
-                                        style={{
-                                            color: theme.colors.secondary,
-                                            textDecorationLine: 'underline',
-                                            fontWeight: '600',
-                                        }}
-                                    >
-                                        Sign in
+                        {showContent && (
+                            <>
+                                {/* Sign In Link */}
+                                <View style={{ alignItems: 'center', marginTop: 32 }}>
+                                    <Text style={{
+                                        fontSize: 14,
+                                        color: 'rgba(255, 255, 255, 0.8)',
+                                        textAlign: 'center',
+                                    }}>
+                                        Already have an account?{' '}
+                                        <Text
+                                            onPress={handleSignIn}
+                                            style={{
+                                                color: theme.colors.secondary,
+                                                textDecorationLine: 'underline',
+                                                fontWeight: '600',
+                                            }}
+                                        >
+                                            Sign in
+                                        </Text>
                                     </Text>
-                                </Text>
-                            </View>
-                        )
+                                </View>
+                            </>
+                        )}
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
