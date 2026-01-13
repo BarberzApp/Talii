@@ -8,7 +8,7 @@ const DEVELOPER_EMAIL = 'bocmtexter@gmail.com'
 async function sendErrorEmail(to: string, subject: string, htmlContent: string, textContent: string) {
   try {
     // Use absolute URL for server-side fetch
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'
     const response = await fetch(`${baseUrl}/api/send-error-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

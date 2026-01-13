@@ -1,4 +1,5 @@
 import type { BookingStatus, PaymentStatus, UserRole } from '../constants';
+export type { Database, Json } from './database';
 
 export interface User {
   id: string;

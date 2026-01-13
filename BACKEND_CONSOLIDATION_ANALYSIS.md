@@ -67,20 +67,20 @@ The following changes were implemented to reduce schema drift and prevent runtim
 - [x] Move mobile app into `apps/mobile`
 - [x] Create `packages/shared` with `src/types` + `src/constants`
 - [x] Ensure `apps/web` can load root env (`/.env`) when running from `apps/web`
-- [ ] **Fix repo tracking of generated artifacts** (critical):
-  - [ ] Ensure `node_modules/`, `.expo/`, `dist/`, etc. are **not tracked by git** anywhere (some were previously committed)
-  - [ ] Run `git rm -r --cached` for any committed build artifacts / `node_modules` and commit the cleanup
-  - [ ] Verify `git status` becomes small/meaningful (currently extremely noisy because of tracked deletions)
+- [x] **Fix repo tracking of generated artifacts** (critical):
+  - [x] Ensure `node_modules/`, `.expo/`, `dist/`, etc. are **not tracked by git** anywhere (some were previously committed)
+  - [x] Run `git rm -r --cached` for any committed build artifacts / `node_modules` and commit the cleanup
+  - [x] Verify `git status` becomes small/meaningful (currently extremely noisy because of tracked deletions)
 
 #### 1) Env + config contracts (web + mobile must agree)
 
 - [x] Create client-exposed env keys for both platforms:
   - Web: `NEXT_PUBLIC_*`
   - Mobile: `EXPO_PUBLIC_*`
-- [ ] Define and document a single “env contract” table (names + which side can read them):
-  - [ ] **Shared**: Supabase URL/anon key (client), App URL, feature flags
-  - [ ] **Server-only**: Stripe secret keys, Supabase service role, webhook secrets, Slack webhook, etc.
-- [ ] Verify that mobile’s `EXPO_PUBLIC_API_URL` (or similar) points to the gateway:
+- [x] Define and document a single “env contract” table (names + which side can read them):
+  - [x] **Shared**: Supabase URL/anon key (client), App URL, feature flags
+  - [x] **Server-only**: Stripe secret keys, Supabase service role, webhook secrets, Slack webhook, etc.
+- [x] Verify that mobile’s `EXPO_PUBLIC_API_URL` (or similar) points to the gateway:
   - `https://yourapp.com` for prod
   - `http://<LAN-IP>:<port>` for local device testing
 
@@ -90,9 +90,9 @@ The following changes were implemented to reduce schema drift and prevent runtim
 - [~] Replace platform-local type definitions with imports from `@barber-app/shared` (incrementally):
   - [x] Web: `apps/web/src/shared/types/index.ts` now re-exports shared DB-aligned types; `apps/web/src/shared/types/booking.ts` re-exports shared booking types
   - [~] Mobile: removed legacy/non-DB types from `apps/mobile/app/shared/types/index.ts`; remaining step is to replace remaining platform-local DB types with imports from the shared package
-- [ ] Add automated type generation from Supabase schema as the longer-term source of truth:
-  - [ ] Generate types (or use `supabase gen types`) and ensure shared package consumes them
-  - [ ] Add a documented workflow for keeping types current
+- [x] Add automated type generation from Supabase schema as the longer-term source of truth:
+  - [x] Generate types (or use `supabase gen types`) and ensure shared package consumes them
+  - [x] Add a documented workflow for keeping types current
 
 #### 3) API Gateway contract (mobile must call Next.js, not Supabase directly)
 

@@ -55,6 +55,7 @@ src/
 - [Database Schema](src/docs/database/database-schema.txt): Full schema reference for all tables and relationships.
 - [Row Level Security Policies](src/docs/database/rowlevelsecurity.txt): Supabase RLS policies for all tables.
 - [Constraints](src/docs/database/constraints.txt): Database constraints and keys.
+- [Supabase Type Generation](docs/development/TYPE_GENERATION.md): How to generate and use schema-derived `Database` types.
 
 ## Getting Started
 

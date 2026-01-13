@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   try {
     // Example: using Resend (uncomment and configure if you have credentials)
     // import { Resend } from 'resend';
-    // const resend = new Resend(process.env.RESEND_API_KEY);
+    // const resend = new Resend('<your_api_key>');
     // await resend.emails.send({
     //   from: 'noreply@bocm.app',
     //   to: email,

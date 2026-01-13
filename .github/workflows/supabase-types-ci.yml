@@ -1,0 +1,61 @@
+name: Supabase Types - Drift Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/config.toml"
+      - "scripts/generate-types.ts"
+      - "packages/shared/src/types/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/supabase-types-ci.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/config.toml"
+      - "scripts/generate-types.ts"
+      - "packages/shared/src/types/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/supabase-types-ci.yml"
+
+env:
+  NODE_VERSION: "18"
+
+jobs:
+  drift-check:
+    name: Verify generated Supabase types are up to date
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate types (remote)
+        env:
+          # Required by the Supabase CLI for non-interactive auth.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          # Used by our generator script to know which project to introspect.
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: npm run types:generate
+
+      - name: Fail if generated types changed
+        run: |
+          if ! git diff --exit-code -- packages/shared/src/types/database.ts; then
+            echo "Detected schema/type drift: packages/shared/src/types/database.ts is not up to date."
+            echo "Run: npm run types:generate"
+            echo "Then commit the updated file."
+            exit 1
+          fi
+
