@@ -119,11 +119,11 @@ reset([{ name: fallbackRoute }]);
 
 ## 📝 **Files Changed:**
 
-1. **`/BocmApp/app/shared/hooks/useAuth.tsx`**
+1. **`/apps/mobile/app/shared/hooks/useAuth.tsx`**
    - Removed blocking alert
    - Silent state clear on timeout
 
-2. **`/BocmApp/app/shared/components/auth/AuthGuard.tsx`**
+2. **`/apps/mobile/app/shared/components/auth/AuthGuard.tsx`**
    - Changed from `push()` to `reset()`
    - Guarantees clean navigation state
 

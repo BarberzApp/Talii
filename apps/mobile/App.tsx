@@ -22,52 +22,6 @@ const App = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Function to create booking from Stripe session
-  const createBookingFromSession = async (sessionId: string) => {
-    try {
-      logger.log('Creating booking from session:', sessionId);
-      
-      const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-booking-after-checkout`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          sessionId: sessionId
-        })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create booking');
-      }
-
-      logger.log('Booking created successfully:', data);
-      
-      Alert.alert(
-        'Booking Confirmed!',
-        'Your payment was successful and your booking has been created.',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      logger.error('Error creating booking from session:', error);
-      
-      // Capture error in Sentry
-      const { captureException } = require('./app/shared/lib/sentry');
-      captureException(error as Error, {
-        context: 'createBookingFromSession',
-        sessionId,
-      });
-      
-      Alert.alert(
-        'Error',
-        'Failed to create booking. Please contact support.',
-        [{ text: 'OK' }]
-      );
-    }
-  };
-
   useEffect(() => {
     async function loadFonts() {
       try {
@@ -158,10 +112,8 @@ const App = () => {
               const sessionId = urlParams.searchParams.get('session_id');
               logger.log('Session ID from deep link:', sessionId);
               
-              if (sessionId) {
-                // Create booking using the session ID
-                createBookingFromSession(sessionId);
-              }
+              // Legacy flow removed: there is no longer a create-booking-after-checkout edge function.
+              // Current flow: PaymentIntent confirmation triggers the Stripe webhook which creates the booking.
             } catch (urlError) {
               logger.error('Error parsing booking success URL:', urlError);
               Alert.alert(

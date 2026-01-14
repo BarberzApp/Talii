@@ -34,6 +34,7 @@ interface ServiceAddon {
 import { useAuth } from '../hooks/useAuth';
 import { theme } from '../lib/theme';
 import { supabase } from '../lib/supabase';
+import { apiFetch } from '../lib/api-client';
 import { notificationService, formatAppointmentTime } from '../lib/notifications';
 import { logger } from '../lib/logger';
 
@@ -185,15 +186,8 @@ export default function BookingForm({
 
   const fetchAddons = async (): Promise<ServiceAddon[]> => {
     try {
-      const { data, error } = await supabase
-        .from('service_addons')
-        .select('*')
-        .eq('barber_id', barberId)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      return data || [];
+      const addons = await bookingService.getBarberAddons(barberId);
+      return (addons || []) as ServiceAddon[];
     } catch (error) {
       logger.error('Error fetching add-ons:', error);
       return [];
@@ -203,19 +197,8 @@ export default function BookingForm({
   const fetchBarberStatus = async () => {
     try {
       logger.log('🔍 Checking if barber is developer account:', barberId);
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('is_developer')
-        .eq('id', barberId)
-        .single();
-
-      if (error) {
-        logger.error('❌ Error fetching barber status:', error);
-        setIsDeveloperAccount(false);
-        return;
-      }
-
-      const isDev = data?.is_developer || false;
+      const res = await apiFetch<{ barber: any }>(`/api/mobile/barbers/${barberId}`, { method: 'GET', auth: false });
+      const isDev = res?.barber?.is_developer === true;
       logger.log(`✅ Barber developer status: ${isDev ? 'DEVELOPER' : 'REGULAR'}`);
       setIsDeveloperAccount(isDev);
     } catch (error) {
@@ -345,128 +328,31 @@ export default function BookingForm({
       const [hours, minutes] = selectedTime.split(':');
       bookingDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      // Double-check barber status before using developer booking
-      // This ensures we don't accidentally use developer booking for non-developer barbers
-      const { data: barberCheck, error: barberCheckError } = await supabase
-        .from('barbers')
-        .select('is_developer')
-        .eq('id', barberId)
-        .single();
-      
-      const isActuallyDeveloper = barberCheck?.is_developer === true;
-      
-      if (isDeveloperAccount && isActuallyDeveloper) {
-        logger.log('🔧 Developer account confirmed - using create-developer-booking endpoint');
-        logger.log('📦 Request data:', {
-          barberId,
-          serviceId: selectedService.id,
-          date: bookingDate.toISOString(),
-          clientId: user?.id,
-          guestName: user ? undefined : guestInfo.name,
-        });
-        
-        // Use the developer booking Edge Function (same as rest of app)
-        const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-developer-booking`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-            barberId,
-            serviceId: selectedService.id,
-            date: bookingDate.toISOString(),
-            notes: guestInfo.notes,
-            guestName: user ? undefined : guestInfo.name,
-            guestEmail: user ? undefined : guestInfo.email,
-            guestPhone: user ? undefined : guestInfo.phone,
-            clientId: user?.id || null,
-            paymentType: 'fee',
-            addonIds: selectedAddonIds
-          })
-        });
+      logger.log('📞 Calling API gateway booking endpoint...');
+      const result = await bookingService.createBooking({
+        barberId,
+        serviceId: selectedService.id,
+        date: bookingDate.toISOString(),
+        notes: guestInfo.notes,
+        addonIds: selectedAddonIds,
+      });
 
-        logger.log('📡 Response status:', response.status, response.statusText);
-        
-        const data = await response.json();
-        logger.log('📥 Response data:', data);
-        
-        if (!response.ok) {
-          logger.error('❌ Developer booking failed:', {
-            status: response.status,
-            error: data.error,
-            details: data
-          });
-          throw new Error(data.error || 'Failed to create developer booking');
-        }
+      // Developer barber: booking created immediately
+      if (result?.booking) {
+        Alert.alert('Success!', 'Your booking has been created successfully.', [
+          { text: 'OK', onPress: () => onBookingCreated(result.booking) },
+        ]);
+        onClose();
+        return;
+      }
 
-        logger.log('✅ Developer booking created successfully');
-        Alert.alert(
-          'Success!',
-          'Your booking has been created successfully (developer mode - no payment required).',
-          [{ text: 'OK', onPress: () => onBookingCreated(data.booking) }]
-        );
-      } else {
-        // Barber is NOT a developer - must use Stripe payment flow
-        logger.log('💳 Regular barber account - using Stripe payment flow');
-        logger.log('⚠️ Developer booking was requested but barber is not a developer account');
-        
-        if (!user) {
-          Alert.alert('Error', 'Please sign in to book with this barber.');
-          return;
-        }
-        
-        // Initialize Stripe
+      // Regular barber: confirm payment with Stripe, booking created by webhook
+      if (result?.clientSecret) {
         await initStripe({
           publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
         });
 
-        // Create payment intent using Edge Function
-        logger.log('📞 Calling create-payment-intent endpoint...');
-        logger.log('📦 Request data:', {
-          barberId,
-          serviceId: selectedService.id,
-          date: bookingDate.toISOString(),
-          clientId: user.id,
-          paymentType: 'fee',
-          addonIds: selectedAddonIds
-        });
-        
-        const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-payment-intent`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-            barberId,
-            serviceId: selectedService.id,
-            date: bookingDate.toISOString(),
-            notes: guestInfo.notes,
-            clientId: user.id,
-            paymentType: 'fee',
-            addonIds: selectedAddonIds
-          })
-        });
-
-        logger.log('📡 Response status:', response.status, response.statusText);
-        
-        const data = await response.json();
-        logger.log('📥 Response data:', data);
-        
-        if (!response.ok) {
-          logger.error('❌ Payment intent failed:', {
-            status: response.status,
-            error: data.error,
-            details: data
-          });
-          throw new Error(data.error || 'Failed to create payment intent');
-        }
-
-        logger.log('Payment intent created');
-
-        // Confirm payment in-app (secure)
-        const { error: paymentError } = await confirmPayment(data.clientSecret, {
+        const { error: paymentError } = await confirmPayment(result.clientSecret, {
           paymentMethodType: 'Card',
         });
 
@@ -476,24 +362,18 @@ export default function BookingForm({
           return;
         }
 
-        // Payment successful - booking will be created by webhook
-        logger.log('Payment successful - booking will be created via webhook');
-        
-        Alert.alert(
-          'Payment Successful!',
-          'Your payment has been processed. Your booking will be confirmed shortly.',
-          [{ 
-            text: 'OK', 
-            onPress: () => {
-              // Navigate to success page or close form
-              // The booking will be created by the webhook, so we pass null
-              onBookingCreated(null);
-            }
-          }]
-        );
+        Alert.alert('Payment Successful!', 'Your payment has been processed. Your booking will be confirmed shortly.', [
+          {
+            text: 'OK',
+            onPress: () => onBookingCreated(null),
+          },
+        ]);
+        onClose();
+        return;
       }
 
-      onClose();
+      throw new Error('Unexpected response from booking endpoint');
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('❌ Error creating booking:', {

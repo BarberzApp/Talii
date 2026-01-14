@@ -1,6 +1,6 @@
 # App Store Connect – Metadata + Review Notes (iOS)
 
-This document is written to match the **actual mobile app behavior** in `BocmApp/`:
+This document is written to match the **actual mobile app behavior** in `apps/mobile/`:
 - Marketplace for **real-world beauty services** (booking + Stripe payments)
 - Location-based discovery (foreground location)
 - UGC (profiles, reviews, portfolio photos, short videos “cuts” feed)
@@ -106,7 +106,7 @@ Apple will likely need a working test account (or you can create one during revi
 
 ## App Privacy (Data Collection / Sharing) – Suggested Mapping
 
-You’ll answer this in App Store Connect → **App Privacy**. Based on the code and policies in `BocmApp/`:
+You’ll answer this in App Store Connect → **App Privacy**. Based on the code and policies in `apps/mobile/`:
 
 ### Data collected
 Likely collected:

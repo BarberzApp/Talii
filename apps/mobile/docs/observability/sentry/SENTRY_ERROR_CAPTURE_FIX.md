@@ -148,16 +148,16 @@ Stack Trace:
 
 ## ✅ **Files Updated:**
 
-1. **`/BocmApp/app/shared/components/BookingForm.tsx`**
+1. **`/apps/mobile/app/shared/components/BookingForm.tsx`**
    - Added Sentry capture with booking context
 
-2. **`/BocmApp/app/shared/lib/bookingService.ts`**
+2. **`/apps/mobile/app/shared/lib/bookingService.ts`**
    - Added Sentry capture with service context
 
-3. **`/BocmApp/App.tsx`**
+3. **`/apps/mobile/App.tsx`**
    - Added Sentry capture for deep link bookings
 
-4. **`/BocmApp/app/shared/contexts/data-context.tsx`**
+4. **`/apps/mobile/app/shared/contexts/data-context.tsx`**
    - Added Sentry capture for context API bookings
 
 ---

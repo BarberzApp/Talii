@@ -175,7 +175,7 @@ This evaluation analyzes the booking details calculation flow to identify incons
 
 ## Calculation Helper Functions Analysis
 
-### File: `BocmApp/app/shared/lib/bookingDetailsHelper.ts`
+### File: `apps/mobile/app/shared/lib/bookingDetailsHelper.ts`
 
 ### Function: `getBookingPricingData()`
 
@@ -221,7 +221,7 @@ This evaluation analyzes the booking details calculation flow to identify incons
 
 ## CalendarPage Processing Analysis
 
-### File: `BocmApp/app/pages/CalendarPage.tsx`
+### File: `apps/mobile/app/pages/CalendarPage.tsx`
 
 ### Function: `processBookings()` (lines 399-545)
 

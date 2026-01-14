@@ -13,7 +13,7 @@ All console statements in `app/shared/lib/` have been replaced with the logger u
 |------|--------|-------|
 | ✅ `bookingService.ts` | **FIXED** | 0 console statements |
 | ✅ `supabase.ts` | **FIXED** | 0 console statements |
-| ✅ `stripePaymentService.ts` | **FIXED** | 0 console statements |
+| (removed) `stripePaymentService.ts` | legacy helper deleted | n/a |
 | ✅ `mobile-security.ts` | **FIXED** | 0 console statements |
 | ✅ `secure-auth.ts` | **FIXED** | 0 console statements |
 | ✅ `mobile-security-config.ts` | **FIXED** | 0 console statements |

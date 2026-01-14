@@ -18,7 +18,7 @@ npm install --save @sentry/react-native
 
 ### **2. Sentry Configuration File Created** ✅
 
-**File:** `/BocmApp/app/shared/lib/sentry.ts`
+**File:** `/apps/mobile/app/shared/lib/sentry.ts`
 
 **Features:**
 - ✅ Production-only mode (disabled in development)
@@ -44,7 +44,7 @@ withSentry()             // Wrap functions
 
 ### **3. App Integration** ✅
 
-**File:** `/BocmApp/App.tsx`
+**File:** `/apps/mobile/App.tsx`
 
 **Changes:**
 - ✅ Import Sentry initialization
@@ -64,7 +64,7 @@ initSentry();
 
 ### **4. Auth Hook Integration** ✅
 
-**File:** `/BocmApp/app/shared/hooks/useAuth.tsx`
+**File:** `/apps/mobile/app/shared/hooks/useAuth.tsx`
 
 **Changes:**
 - ✅ Import `setUserContext`
@@ -90,7 +90,7 @@ setUserContext(null);
 
 ### **5. Configuration Files** ✅
 
-**File:** `/BocmApp/sentry.properties`
+**File:** `/apps/mobile/sentry.properties`
 
 **Content:**
 ```properties
@@ -115,11 +115,11 @@ defaults.project=bocm-app
 2. Copy the DSN (looks like: `https://abc123@o123.ingest.sentry.io/456`)
 
 ### **Step 3: Add DSN to App** (2 min)
-1. Open `/BocmApp/.env`
+1. Open `/apps/mobile/.env`
 2. Add: `EXPO_PUBLIC_SENTRY_DSN=your-dsn-here`
 
 ### **Step 4: Update sentry.properties** (2 min)
-1. Open `/BocmApp/sentry.properties`
+1. Open `/apps/mobile/sentry.properties`
 2. Replace `your-org-name` with your Sentry org name
 
 ### **Step 5: Test** (3 min)
@@ -271,10 +271,10 @@ addBreadcrumb('User clicked book button', 'user-action', {
 **Detailed Setup Guide:** [SENTRY_INTEGRATION_SUMMARY.md](./SENTRY_INTEGRATION_SUMMARY.md)
 
 **Quick Reference:**
-- Sentry config: `/BocmApp/app/shared/lib/sentry.ts`
-- App integration: `/BocmApp/App.tsx`
-- Auth integration: `/BocmApp/app/shared/hooks/useAuth.tsx`
-- Properties file: `/BocmApp/sentry.properties`
+- Sentry config: `/apps/mobile/app/shared/lib/sentry.ts`
+- App integration: `/apps/mobile/App.tsx`
+- Auth integration: `/apps/mobile/app/shared/hooks/useAuth.tsx`
+- Properties file: `/apps/mobile/sentry.properties`
 
 ---
 
@@ -301,11 +301,11 @@ Just need to:
 ---
 
 **Files Changed:**
-- ✅ `/BocmApp/app/shared/lib/sentry.ts` (new)
-- ✅ `/BocmApp/App.tsx` (modified)
-- ✅ `/BocmApp/app/shared/hooks/useAuth.tsx` (modified)
-- ✅ `/BocmApp/sentry.properties` (new)
-- ✅ `/BocmApp/package.json` (updated)
+- ✅ `/apps/mobile/app/shared/lib/sentry.ts` (new)
+- ✅ `/apps/mobile/App.tsx` (modified)
+- ✅ `/apps/mobile/app/shared/hooks/useAuth.tsx` (modified)
+- ✅ `/apps/mobile/sentry.properties` (new)
+- ✅ `/apps/mobile/package.json` (updated)
 
 **Total Lines Added:** ~250 lines of production-ready code
 

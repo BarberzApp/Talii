@@ -1,6 +1,7 @@
 // lib/bookingService.ts
 import { supabase } from './supabase';
 import { logger } from './logger';
+import { apiFetch } from './api-client';
 
 export type { Service } from '../types';
 import type { Service } from '../types';
@@ -34,145 +35,58 @@ export interface Booking {
 }
 
 export interface CreateBookingData {
-  barber_id: string;
-  service_id: string;
-  date: string;
-  price: number;
-  client_id?: string;
-  guest_name?: string;
-  guest_email?: string;
-  guest_phone?: string;
-  payment_intent_id: string;
-  platform_fee: number;
-  barber_payout: number;
+  barberId: string;
+  serviceId: string;
+  date: string; // ISO
   notes?: string;
+  addonIds?: string[];
 }
 
 class BookingService {
   // Fetch services for a specific barber (using barber ID directly)
   async getBarberServices(barberId: string): Promise<Service[]> {
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .eq('barber_id', barberId)
-      .order('price', { ascending: true });
+    const data = await apiFetch<{ services: Service[] }>(`/api/mobile/barbers/${barberId}/services`, {
+      method: 'GET',
+      auth: false,
+    });
+    return data.services || [];
+  }
 
-    if (error) {
-      logger.error('Error fetching services:', error);
-      throw error;
-    }
-
-    return data || [];
+  // Fetch active add-ons for a specific barber
+  async getBarberAddons(barberId: string): Promise<any[]> {
+    const data = await apiFetch<{ addons: any[] }>(`/api/mobile/barbers/${barberId}/services`, {
+      method: 'GET',
+      auth: false,
+    });
+    return data.addons || [];
   }
 
   // Get available time slots for a specific date (using barber ID directly)
   async getAvailableSlots(barberId: string, date: string, serviceDuration: number): Promise<TimeSlot[]> {
-
-    // Get existing bookings for the date
-    const startOfDay = `${date}T00:00:00`;
-    const endOfDay = `${date}T23:59:59`;
-
-    const { data: bookings, error } = await supabase
-      .from('bookings')
-      .select('date')
-      .eq('barber_id', barberId)
-      .gte('date', startOfDay)
-      .lte('date', endOfDay)
-      .neq('status', 'cancelled');
-
-    if (error) {
-      logger.error('Error fetching bookings:', error);
-      throw error;
-    }
-
-    // Generate time slots based on service duration
-    const slots: TimeSlot[] = [];
-    const bookedTimes = new Set((bookings || []).map(b => new Date(b.date).toISOString()));
-
-    // Calculate slot interval based on service duration
-    // Use the service duration as the interval, but minimum 10 minutes
-    const slotInterval = Math.max(serviceDuration, 10);
-    
-    // Start from 9 AM and go until 6 PM
-    const startHour = 9;
-    const endHour = 18;
-    
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += slotInterval) {
-        const slotTime = new Date(date);
-        slotTime.setHours(hour, minute, 0, 0);
-        
-        // Skip if this would go past 6 PM
-        const endTime = new Date(slotTime);
-        endTime.setMinutes(endTime.getMinutes() + serviceDuration);
-        if (endTime.getHours() >= endHour) {
-          continue;
-        }
-        
-        const slotISO = slotTime.toISOString();
-        const isBooked = bookedTimes.has(slotISO);
-        
-        // Check if there's enough time for the service
-        let hasEnoughTime = true;
-        if (!isBooked) {
-          const serviceEndTime = new Date(slotTime);
-          serviceEndTime.setMinutes(serviceEndTime.getMinutes() + serviceDuration);
-          
-          for (const bookedTime of bookedTimes) {
-            const booked = new Date(bookedTime);
-            if (booked >= slotTime && booked < serviceEndTime) {
-              hasEnoughTime = false;
-              break;
-            }
-          }
-        }
-
-        slots.push({
-          date: date,
-          time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-          available: !isBooked && hasEnoughTime && slotTime > new Date()
-        });
-      }
-    }
-
-    return slots;
+    const res = await apiFetch<{ slots: TimeSlot[] }>(
+      `/api/mobile/availability/slots?barberId=${encodeURIComponent(barberId)}&date=${encodeURIComponent(
+        date
+      )}&duration=${encodeURIComponent(String(serviceDuration))}`,
+      { method: 'GET', auth: false }
+    );
+    return res.slots || [];
   }
 
-  // Create a booking after payment
-  async createBooking(bookingData: CreateBookingData): Promise<Booking> {
+  // Create a booking (developer: immediate booking, regular: PaymentIntent + webhook booking creation)
+  async createBooking(bookingData: CreateBookingData): Promise<any> {
     try {
-      // Use advisory lock to prevent race conditions (additional protection)
-      const { data: lockAcquired, error: lockError } = await supabase
-        .rpc('acquire_booking_slot_lock', {
-          p_barber_id: bookingData.barber_id,
-          p_date: bookingData.date
-        });
-
-      if (lockError) {
-        logger.warn('Advisory lock error (non-fatal):', lockError);
-        // Continue anyway - the database trigger will still prevent conflicts
-      }
-
-      // Insert booking (end_time will be calculated by database trigger)
-    const { data, error } = await supabase
-      .from('bookings')
-      .insert({
-        ...bookingData,
-        status: 'confirmed',
-        payment_status: 'succeeded'
-      })
-      .select()
-      .single();
-
-    if (error) {
-      // Check if error is due to conflict (database trigger)
-        if (error.message?.includes('conflicts') || error.message?.includes('slot')) {
-        throw new Error('This time slot is no longer available. Please select another time.')
-      }
-      throw error;
-    }
-
-    return data;
+      return await apiFetch('/api/mobile/bookings', {
+        method: 'POST',
+        auth: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          barberId: bookingData.barberId,
+          serviceId: bookingData.serviceId,
+          date: bookingData.date,
+          notes: bookingData.notes,
+          addonIds: bookingData.addonIds || [],
+        }),
+      });
     } catch (err) {
       logger.error('Error creating booking:', err);
       
@@ -192,32 +106,13 @@ class BookingService {
 
   // Get user's bookings
   async getUserBookings(userId: string): Promise<Booking[]> {
-    const { data, error } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        barber:barbers!inner(
-          id,
-          business_name,
-          user:profiles!barbers_user_id_fkey(
-            name,
-            avatar_url
-          )
-        ),
-        service:services(
-          name,
-          duration
-        )
-      `)
-      .eq('client_id', userId)
-      .order('date', { ascending: false });
-
-    if (error) {
-      logger.error('Error fetching user bookings:', error);
-      throw error;
-    }
-
-    return data || [];
+    // userId is kept for backwards compatibility, but the gateway derives it from the access token.
+    void userId;
+    const res = await apiFetch<{ bookings: Booking[] }>('/api/mobile/bookings', {
+      method: 'GET',
+      auth: true,
+    });
+    return res.bookings || [];
   }
 
   // Cancel a booking

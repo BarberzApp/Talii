@@ -1,6 +1,6 @@
-# BocmApp Documentation
+# Mobile App Documentation (`apps/mobile`)
 
-This folder contains **mobile app** documentation for `BocmApp/` (Expo / React Native).
+This folder contains **mobile app** documentation for the canonical mobile app at `apps/mobile/` (Expo / React Native).
 
 ## Index
 

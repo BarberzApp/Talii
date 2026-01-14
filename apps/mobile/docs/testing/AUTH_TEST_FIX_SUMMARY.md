@@ -174,13 +174,13 @@ Tests:       6 passed
 
 ## 🔧 Files Changed
 
-1. `/BocmApp/__tests__/auth-pages.test.tsx`
+1. `apps/mobile/__tests__/auth/`
    - Added Platform mock
    - Fixed navigation mocks
    - Simplified test cases
    - **Result:** 6/6 tests passing
 
-2. `BocmApp/docs/release/PRODUCTION_READINESS_ASSESSMENT.md`
+2. `apps/mobile/docs/release/PRODUCTION_READINESS_ASSESSMENT.md`
    - Updated test status
    - Updated beta readiness
    - Updated timeline

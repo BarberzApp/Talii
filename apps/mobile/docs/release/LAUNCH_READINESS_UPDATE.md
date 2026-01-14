@@ -35,10 +35,10 @@
 - ✅ Network error filtering
 
 **Files Created/Modified:**
-- `/BocmApp/app/shared/lib/sentry.ts` (new, 200+ lines)
-- `/BocmApp/App.tsx` (modified, Sentry init + logger)
-- `/BocmApp/app/shared/hooks/useAuth.tsx` (modified, user tracking)
-- `/BocmApp/sentry.properties` (new, config file)
+- `/apps/mobile/app/shared/lib/sentry.ts` (new, 200+ lines)
+- `/apps/mobile/App.tsx` (modified, Sentry init + logger)
+- `/apps/mobile/app/shared/hooks/useAuth.tsx` (modified, user tracking)
+- `/apps/mobile/sentry.properties` (new, config file)
 
 **Features:**
 - ✅ Automatic error tracking

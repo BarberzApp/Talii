@@ -5,7 +5,7 @@
 This repository ships **two client applications** that are intended to provide the **same user-facing functionality**:
 
 - **Web**: Next.js app under `src/` (target: `apps/web/`)
-- **Mobile**: Expo / React Native app under `BocmApp/` (target: `apps/mobile/`)
+- **Mobile**: Expo / React Native app (target: `apps/mobile/`)
 
 ### Target direction (decision)
 
@@ -96,31 +96,34 @@ The following changes were implemented to reduce schema drift and prevent runtim
 
 #### 3) API Gateway contract (mobile must call Next.js, not Supabase directly)
 
-- [ ] Define API route contracts for mobile (inputs/outputs + auth) and implement as Next.js route handlers:
-  - [ ] `GET /api/health` (baseline)
-  - [ ] `GET /api/mobile/me` (session validation + profile payload)
-  - [ ] `GET /api/mobile/bookings` (client bookings list)
-  - [ ] `GET /api/mobile/barbers/:id` (barber profile payload)
-  - [ ] `GET /api/mobile/barbers/:id/services` (services + addons)
-  - [ ] `GET /api/mobile/availability/slots` (barberId + date + duration → slots)
-  - [ ] `POST /api/mobile/bookings` (create booking request)
-- [ ] Implement gateway auth strategy:
-  - [ ] Mobile sends Supabase access token
-  - [ ] Gateway validates token and derives `user_id` + role
-  - [ ] Gateway applies authorization checks and returns sanitized JSON
-- [ ] Update mobile service layer to call the gateway:
-  - [ ] Replace direct Supabase reads for bookings/services/availability with `fetch` calls to `/api/mobile/*`
-  - [ ] Keep direct Supabase use only where explicitly safe/desired (or eliminate fully for parity)
+- [x] Define API route contracts for mobile (inputs/outputs + auth) and implement as Next.js route handlers:
+  - [x] `GET /api/health` (baseline) → `apps/web/src/app/api/health/route.ts`
+  - [x] `GET /api/mobile/me` (session validation + profile payload) → `apps/web/src/app/api/mobile/me/route.ts`
+  - [x] `GET /api/mobile/bookings` (client bookings list) → `apps/web/src/app/api/mobile/bookings/route.ts`
+  - [x] `POST /api/mobile/bookings` (create booking request) → `apps/web/src/app/api/mobile/bookings/route.ts`
+  - [x] `GET /api/mobile/barbers/:id` (barber profile payload) → `apps/web/src/app/api/mobile/barbers/[id]/route.ts`
+  - [x] `GET /api/mobile/barbers/:id/services` (services + addons) → `apps/web/src/app/api/mobile/barbers/[id]/services/route.ts`
+  - [x] `GET /api/mobile/availability/slots` (barberId + date + duration → slots) → `apps/web/src/app/api/mobile/availability/slots/route.ts`
+- [x] Implement gateway auth strategy:
+  - [x] Mobile sends Supabase access token (`Authorization: Bearer <access_token>`)
+  - [x] Gateway validates token and derives `user_id` via `supabase.auth.getUser(token)` (shared helper: `apps/web/src/shared/lib/api-auth.ts`)
+  - [x] Gateway applies authorization checks and returns sanitized JSON (server-side enforced)
+- [x] Update mobile service layer to call the gateway:
+  - [x] Replace direct Supabase reads for bookings/services/availability with gateway calls
+    - `apps/mobile/app/shared/lib/bookingService.ts` now calls `/api/mobile/*` via `apps/mobile/app/shared/lib/api-client.ts`
+  - [x] Replace Edge Function booking/payment initiation with gateway booking creation
+    - `apps/mobile/app/shared/components/BookingForm.tsx` now calls `bookingService.createBooking()` which hits `POST /api/mobile/bookings`
+  - [~] Keep direct Supabase use only where explicitly safe/desired (ongoing cleanup outside Part 3)
 
 #### 4) Booking parity: availability + conflict rules (Critical: D1)
 
-- [ ] Define a single **availability engine** API:
+- [x] Define a single **availability engine** API:
   - Inputs: `barber_id`, `date`, `service_duration_minutes`, (optional) timezone, buffers, restrictions
   - Output: list of slots + “unavailable reasons”
-- [ ] Implement the availability engine as **shared domain logic** in `packages/shared` and call it from the gateway
-  - [ ] Use web’s canonical data sources: `availability` + `special_hours` + existing bookings
-- [ ] Update both clients to display the same slots (web + mobile)
-- [ ] Add tests for edge cases: special hours closed, overlaps, duration rounding, day boundaries
+- [x] Implement the availability engine as **shared domain logic** in `packages/shared` and call it from the gateway
+  - [x] Use web’s canonical data sources: `availability` + `special_hours` + existing bookings
+- [x] Update both clients to display the same slots (web + mobile)
+- [x] Add tests for edge cases: special hours closed, overlaps, duration rounding, day boundaries
 
 #### 5) Fee model parity (High: D3)
 
@@ -133,8 +136,8 @@ The following changes were implemented to reduce schema drift and prevent runtim
 - [ ] Define the canonical metadata contract required by the webhook booking-creation logic:
   - Required fields: `barber_id`, `service_id`, `date`, `client_id`, `addon_ids`, fee breakdown, etc.
 - [ ] Ensure **all payment initiation paths** attach metadata to the **PaymentIntent** (not just the Checkout Session):
-  - [ ] Web Checkout Session (`/api/create-checkout-session`): ensure `payment_intent_data.metadata` is set
-  - [ ] Mobile PaymentIntent creation (Edge Fn): ensure metadata matches the same contract
+  - [x] Web Checkout Session (`/api/create-checkout-session`): ensure `payment_intent_data.metadata` is set (implemented)
+  - [~] Mobile PaymentIntent creation (Edge Fn): ensure metadata matches the same contract (mobile booking flow now prefers `POST /api/mobile/bookings`, but Edge Fn cleanup is still pending)
 - [ ] Add verification logging/alerts when webhook receives a PaymentIntent without required metadata
 - [ ] Add automated tests around the webhook metadata parsing and booking insert
 
@@ -291,24 +294,24 @@ sequenceDiagram
 #### Mobile booking flow (what happens)
 
 Primary UI implementation:
-- `BocmApp/app/shared/components/BookingForm.tsx`
-- `BocmApp/app/pages/BookingCalendarPage.tsx` opens the modal
+- `apps/mobile/app/shared/components/BookingForm.tsx`
+- `apps/mobile/app/pages/BookingCalendarPage.tsx` opens the modal
 
 Key behaviors:
 - Fetches services via a mobile service wrapper:
-  - `bookingService.getBarberServices()` in `BocmApp/app/shared/lib/bookingService.ts`
+  - `bookingService.getBarberServices()` in `apps/mobile/app/shared/lib/bookingService.ts`
 - Fetches add-ons directly from Supabase (separate query):
-  - `service_addons` query inside `fetchAddons()` in `BocmApp/app/shared/components/BookingForm.tsx`
+  - `service_addons` query inside `fetchAddons()` in `apps/mobile/app/shared/components/BookingForm.tsx`
 - Computes time slots via mobile booking service:
   - `bookingService.getAvailableSlots(barberId,date,serviceDuration)`
   - Current algorithm uses a fixed day window (9–18) and **does not read** `availability` / `special_hours`
-  - Evidence: `BocmApp/app/shared/lib/bookingService.ts` (fixed startHour/endHour) and usage in `fetchTimeSlots()` in `BocmApp/app/shared/components/BookingForm.tsx`
+  - Evidence: `apps/mobile/app/shared/lib/bookingService.ts` (fixed startHour/endHour) and usage in `fetchTimeSlots()` in `apps/mobile/app/shared/components/BookingForm.tsx`
 - Booking creation:
   - Mobile explicitly blocks “guest booking”: `handleCreateBooking()` requires `user` (authenticated)
   - For **developer barber**: calls Supabase Edge function `functions/v1/create-developer-booking`
   - For **non-developer barber**: calls Supabase Edge function `functions/v1/create-payment-intent`, then confirms payment in-app via `confirmPayment()`
   - Mobile expects “booking will be created via webhook” after payment
-  - Evidence: `handleCreateBooking()` in `BocmApp/app/shared/components/BookingForm.tsx`
+  - Evidence: `handleCreateBooking()` in `apps/mobile/app/shared/components/BookingForm.tsx`
 
 ```mermaid
 sequenceDiagram
@@ -346,7 +349,8 @@ Commonality:
 
 Key implementations:
 - Web auth store: `src/shared/stores/auth-store.ts`
-- Mobile auth store: `BocmApp/app/shared/stores/auth-store.ts`
+- Mobile auth store: `apps/mobile/app/shared/hooks/useAuth.tsx`
+- Mobile auth store: `apps/mobile/app/shared/hooks/useAuth.tsx` (current)
 
 Parity notes:
 - Both implement: session initialization, login, register, logout, profile fetch.
@@ -376,13 +380,15 @@ Model:
 #### Divergent/legacy fee logic (risk)
 
 Found in:
-- `BocmApp/app/shared/lib/bookingService.ts` → `calculateFees()` returns 203/135 (sums to 338 but doesn’t match “net-after-stripe” split)
+- `apps/mobile/app/shared/lib/bookingService.ts` → `calculateFees()` returns 203/135 (sums to 338 but doesn’t match “net-after-stripe” split)
+- `apps/mobile/app/shared/lib/bookingService.ts` → `calculateFees()` returns 203/135 (sums to 338 but doesn’t match “net-after-stripe” split)
 
 This is a **consistency hazard**: even if this helper isn’t currently used for Stripe transfers, it can leak into UI totals, metadata, receipts, or future refactors.
 
 #### Additional drift indicators
 
-- `BocmApp/app/shared/lib/stripePaymentService.ts` calls an endpoint that does not appear in this repo:
+- (removed) legacy `stripePaymentService.ts` previously called an endpoint that does not appear in this repo:
+- `apps/mobile/app/shared/lib/stripePaymentService.ts` calls an endpoint that does not appear in this repo:
   - It calls `${API_URL}/api/payments/create-booking-intent`
   - This suggests dead code, a removed route, or an environment-specific backend not represented in the repo.
 - `src/shared/lib/stripe-service.ts` is largely “demo/simulated” functionality and is not aligned with the production fee-only flow.
@@ -394,7 +400,8 @@ Web:
   - Submits reviews tied to a `booking_id` and assumes a toast-based UI.
 
 Mobile:
-- `BocmApp/app/shared/hooks/useReviews.ts`
+- `apps/mobile/app/shared/hooks/useReviews.ts`
+- `apps/mobile/app/shared/hooks/useReviews.ts`
   - Allows `bookingId` to be null and sets moderation fields differently.
 
 Parity impact:
@@ -416,10 +423,10 @@ Mobile consumes these flows indirectly via:
 
 | Area | Web | Mobile | Notes |
 |---|---|---|---|
-| Auth store | `src/shared/stores/auth-store.ts` | `BocmApp/app/shared/stores/auth-store.ts` | Similar structure; behavior drift exists |
-| Reviews hook | `src/shared/hooks/use-reviews.tsx` | `BocmApp/app/shared/hooks/useReviews.ts` | Similar logic; UI feedback differs |
-| Supabase client wrapper | `src/shared/lib/supabase.ts` | `BocmApp/app/shared/lib/supabase.ts` | Must remain platform-specific (storage) |
-| Types | `src/shared/types/**` | `BocmApp/app/shared/types/**` | Mobile types are more complete; unify source-of-truth |
+| Auth store | `src/shared/stores/auth-store.ts` | `apps/mobile/app/shared/hooks/useAuth.tsx` | Similar intent; behavior drift exists |
+| Reviews hook | `src/shared/hooks/use-reviews.tsx` | `apps/mobile/app/shared/hooks/useReviews.ts` | Similar logic; UI feedback differs |
+| Supabase client wrapper | `src/shared/lib/supabase.ts` | `apps/mobile/app/shared/lib/supabase.ts` | Must remain platform-specific (storage) |
+| Types | `src/shared/types/**` | `apps/mobile/app/shared/types/**` | Mobile types are more complete; unify source-of-truth |
 
 ### Lower-duplication / platform-specific areas
 
@@ -428,18 +435,18 @@ Mobile consumes these flows indirectly via:
   - Likely should unify *interface* and keep implementations per platform.
 - Logging:
   - Web logger has Sentry integration (`src/shared/lib/logger.ts`)
-  - Mobile logger is minimal (`BocmApp/app/shared/lib/logger.ts`)
+  - Mobile logger is minimal (`apps/mobile/app/shared/lib/logger.ts`)
 
 ## Discrepancy register (must resolve before consolidation)
 
 | ID | Severity | What diverges | Evidence | Why it matters | Suggested resolution direction |
 |---|---:|---|---|---|---|
-| D1 | Critical | Time-slot generation ignores `availability`/`special_hours` on mobile | Web: `src/shared/components/booking/booking-form.tsx` (queries `availability`/`special_hours`); Mobile: `BocmApp/app/shared/lib/bookingService.ts` fixed 9–18 | Users see different availability and can book times web would not allow (or vice versa) | Create a single “availability engine” (Edge Fn or shared lib) used by both |
+| D1 | Critical | Time-slot generation ignores `availability`/`special_hours` on mobile | Web: `src/shared/components/booking/booking-form.tsx` (queries `availability`/`special_hours`); Mobile: `apps/mobile/app/shared/lib/bookingService.ts` fixed 9–18 | Users see different availability and can book times web would not allow (or vice versa) | Create a single “availability engine” (Edge Fn or shared lib) used by both |
 | D2 | Critical | Web Checkout flow may not provide metadata to webhook booking-creation path | Web: `src/app/api/create-checkout-session/route.ts` sets session metadata but doesn’t set `payment_intent_data.metadata`; Webhook creates bookings from `paymentIntent.metadata` in `src/app/api/webhooks/stripe/route.ts` | Booking creation after checkout can fail if metadata isn’t present on PaymentIntent | Standardize payment creation to one path or ensure metadata propagation is explicit everywhere |
-| D3 | High | Multiple fee calculators disagree | Canonical: `supabase/functions/create-payment-intent/index.ts`, `src/shared/lib/fee-calculator.ts`; Divergent: `BocmApp/app/shared/lib/bookingService.ts` | Money movement/receipts/analytics can drift; increases audit/debug cost | One canonical fee module + tests; delete/mark legacy helpers |
+| D3 | High | Multiple fee calculators disagree | Canonical: `supabase/functions/create-payment-intent/index.ts`, `src/shared/lib/fee-calculator.ts`; Divergent: `apps/mobile/app/shared/lib/bookingService.ts` | Money movement/receipts/analytics can drift; increases audit/debug cost | One canonical fee module + tests; delete/mark legacy helpers |
 | D4 | Medium | Guest booking policy differs (esp. developer bookings) | Web dev booking accepts guest fields; Mobile booking requires auth even for dev booking | Different user experience and different data shapes (guest_* vs client_id) | Decide policy and enforce via shared backend validation |
-| D5 | Medium | Mobile uses Edge Fn for payment intents; Web uses Checkout sessions | `BocmApp/app/shared/components/BookingForm.tsx` vs `src/app/api/create-checkout-session/route.ts` | Different payment UX, harder to test parity, more codepaths to maintain | Pick a single payment initiation pattern per platform or unify behind a shared API |
-| D6 | Medium | Mobile references a booking intent endpoint not present in repo | `BocmApp/app/shared/lib/stripePaymentService.ts` | Dead code and confusion when refactoring; possible hidden backend dependency | Verify usage; remove or align to actual endpoints |
+| D5 | Medium | Mobile uses Edge Fn for payment intents; Web uses Checkout sessions | `apps/mobile/app/shared/components/BookingForm.tsx` vs `src/app/api/create-checkout-session/route.ts` | Different payment UX, harder to test parity, more codepaths to maintain | Pick a single payment initiation pattern per platform or unify behind a shared API |
+| D6 | Medium | Mobile referenced a booking intent endpoint not present in repo | (removed) legacy `stripePaymentService.ts` | Dead code and confusion when refactoring; possible hidden backend dependency | ✅ Removed legacy helper; gateway booking flow is canonical |
 
 ## Is backend consolidation necessary/beneficial?
 

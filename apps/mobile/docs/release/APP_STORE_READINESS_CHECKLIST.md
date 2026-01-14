@@ -94,7 +94,7 @@ eas secret:list
 **Check:**
 ```bash
 # Review eas.json
-cat BocmApp/eas.json
+cat apps/mobile/eas.json
 ```
 
 **Status:** ✅ Should be configured

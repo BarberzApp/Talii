@@ -1,8 +1,8 @@
 # Production Readiness Analysis
-## What Would Happen If You Released BocmApp to the Public?
+## What Would Happen If You Released the Mobile App (`apps/mobile`) to the Public?
 
 **Date:** December 7, 2025  
-**Analysis Scope:** Current state of BocmApp codebase  
+**Analysis Scope:** Current state of `apps/mobile` codebase  
 **Severity Levels:** 🔴 CRITICAL | 🟠 HIGH | 🟡 MEDIUM | 🟢 LOW
 
 ---
@@ -141,9 +141,9 @@ $$ LANGUAGE plpgsql;
 
 **Files Changed:**
 - ✅ `supabase/migrations/20250107100001_fix_booking_race_condition.sql` (migration)
-- ✅ `BocmApp/app/shared/lib/bookingService.ts` (application code)
-- ✅ `BocmApp/__tests__/bookingRaceCondition.test.ts` (unit tests)
-- ✅ `BocmApp/docs/BOOKING_RACE_CONDITION_FIX.md` (full documentation)
+- ✅ `apps/mobile/app/shared/lib/bookingService.ts` (application code)
+- ✅ `apps/mobile/__tests__/booking/` (unit tests)
+- ✅ `apps/mobile/docs/BOOKING_RACE_CONDITION_FIX.md` (full documentation)
 
 **Testing:**
 - ✅ Unit tests created for lock acquisition and conflict detection
@@ -169,23 +169,23 @@ WHERE trigger_name = 'check_booking_conflicts_trigger';
 SELECT proname FROM pg_proc WHERE proname = 'acquire_booking_slot_lock';
 ```
 
-**Documentation:** See `BocmApp/docs/BOOKING_RACE_CONDITION_FIX.md` for detailed explanation.
+**Documentation:** See `apps/mobile/docs/BOOKING_RACE_CONDITION_FIX.md` for detailed explanation.
 
 ---
 
-### 2. **Console.log Statements in Production** (HIGH - ✅ COMPLETE FOR BocmApp)
+### 2. **Console.log Statements in Production** (HIGH - ✅ COMPLETE FOR mobile app)
 
 **Problem:** Console statements can cause performance issues and security risks in production.
 
-**Status:** ✅ **COMPLETE** for BocmApp (React Native mobile app)
+**Status:** ✅ **COMPLETE** for `apps/mobile` (React Native mobile app)
 
 **Current Status:**
-- ✅ **BocmApp (Mobile):** 100% complete - 0 console statements (except logger.ts)
+- ✅ **Mobile app:** 100% complete - 0 console statements (except logger.ts)
 - ✅ **Logger Utility:** Production-ready logging with dev/prod modes
 - ✅ **All Files Converted:** All app files now use logger instead of console
 - ⚠️ **src/ (Web App):** 1,062 statements remaining (separate Next.js codebase)
 
-**BocmApp Achievement:**
+**Mobile app achievement:**
 ```
 Before: ~590 console statements across app
 After:  3 (intentional in logger.ts utility)
@@ -200,8 +200,8 @@ Final Count:
 
 **Verification:**
 ```bash
-# BocmApp is clean
-grep -r "console\.\(log\|error\|warn\)" BocmApp/app/ | grep -v logger.ts | wc -l
+# Mobile app is clean
+grep -r "console\.\(log\|error\|warn\)" apps/mobile/app/ | grep -v logger.ts | wc -l
 # Result: 0 ✅
 ```
 
@@ -210,7 +210,7 @@ grep -r "console\.\(log\|error\|warn\)" BocmApp/app/ | grep -v logger.ts | wc -l
 Core Services (100%):
 - ✅ bookingService.ts - uses logger
 - ✅ supabase.ts - uses logger
-- ✅ stripePaymentService.ts - uses logger
+- (removed) stripePaymentService.ts - legacy helper referencing non-existent endpoint
 - ✅ mobile-security.ts - uses logger
 - ✅ secure-auth.ts - uses logger
 - ✅ notifications.ts - uses logger
@@ -225,7 +225,7 @@ Pages (100%):
 - ✅ SettingsPage.tsx - uses logger
 ```
 
-**Impact on BocmApp:**
+**Impact on the mobile app:**
 - ✅ **Performance:** Zero console logging overhead in production
 - ✅ **Battery:** No logging-related battery drain
 - ✅ **Memory:** Reduced memory footprint
@@ -234,12 +234,12 @@ Pages (100%):
 
 **Note on src/ (Web App):**
 The `src/` folder contains a separate Next.js web application with 1,062 console statements remaining. This is a lower priority since:
-1. BocmApp (mobile) is the primary product
+1. Mobile app is the primary product
 2. Web app console logs are less critical (users expect browser dev tools)
 3. Can be addressed in future sprint
 
 **Fix Status:**
-- ✅ **BocmApp (Mobile):** COMPLETE - Production ready
+- ✅ **Mobile app:** COMPLETE - Production ready
 - ⚠️ **src/ (Web):** Not started - Optional future improvement
 
 ---
@@ -685,12 +685,12 @@ const endHour = 18;   // Hardcoded
    - ✅ Created unit tests and documentation
    - **Status:** ✅ PRODUCTION READY
 
-2. ✅ **Remove Console.log Statements** (COMPLETE FOR BocmApp)
-   - ✅ Fixed: All BocmApp files (100%)
+2. ✅ **Remove Console.log Statements** (COMPLETE FOR mobile app)
+   - ✅ Fixed: All `apps/mobile` files (100%)
    - ✅ Removed: ~587 console statements from mobile app
    - ✅ Logger utility created and tested (7 tests passing)
    - ⚠️ Note: src/ (web app) has 1,062 remaining (separate codebase, lower priority)
-   - **Status:** ✅ BocmApp PRODUCTION READY
+   - **Status:** ✅ Mobile app production ready
    - **Remaining Work:** None for mobile app
 
 3. ✅ **Add Error Recovery** (INFRASTRUCTURE COMPLETE - 90%)
@@ -837,7 +837,7 @@ The app is **significantly better** and **ready for beta/soft launch**:
 - Core library files converted to logger
 - **All app files converted** - 100% complete
 - Production mode automatically disables debug logs
-- **587 console statements removed** from BocmApp
+- **587 console statements removed** from the mobile app
 - Zero production logging overhead
 
 ### **Code Quality:**
@@ -918,7 +918,7 @@ These improvements are not blocking for production launch but should be addresse
 ---
 
 **Next Steps:**
-1. ✅ Review race condition fix (see `BocmApp/docs/BOOKING_RACE_CONDITION_FIX.md`)
+1. ✅ Review race condition fix (see `apps/mobile/docs/BOOKING_RACE_CONDITION_FIX.md`)
 2. ✅ Deploy migration: `supabase db push`
 3. 🟡 **Optional:** Add Sentry for error tracking
 4. 🟡 **Optional:** Complete console.log removal

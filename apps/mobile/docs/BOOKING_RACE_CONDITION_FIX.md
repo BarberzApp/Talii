@@ -93,7 +93,7 @@ Changes:
 4. ✅ Added performance index on `(barber_id, date, end_time)`
 
 ### Application Code
-File: `BocmApp/app/shared/lib/bookingService.ts`
+File: `apps/mobile/app/shared/lib/bookingService.ts`
 
 Changes:
 ```typescript
@@ -149,7 +149,7 @@ async createBooking(bookingData: CreateBookingData): Promise<Booking> {
 ## Testing
 
 ### Unit Tests
-File: `BocmApp/__tests__/bookingRaceCondition.test.ts`
+File: `apps/mobile/__tests__/booking/bookingRaceCondition.test.ts`
 
 Tests cover:
 1. ✅ Advisory lock is called before booking
@@ -159,7 +159,7 @@ Tests cover:
 
 Run tests:
 ```bash
-cd BocmApp
+cd apps/mobile
 npm test bookingRaceCondition.test.ts
 ```
 

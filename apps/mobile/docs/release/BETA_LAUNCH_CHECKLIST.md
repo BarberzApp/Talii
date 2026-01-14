@@ -335,7 +335,7 @@ Week 3-4:     Public launch!
 ### **Critical Links:**
 - Production Readiness: [PRODUCTION_READINESS_ASSESSMENT.md](./PRODUCTION_READINESS_ASSESSMENT.md)
 - Auth Test Fix: [AUTH_TEST_FIX_SUMMARY.md](../testing/AUTH_TEST_FIX_SUMMARY.md)
-- Test Results: Run `npm test` in BocmApp/
+- Test Results: Run `npm test` in `apps/mobile/`
 
 ### **Support:**
 - Error Logs: Check Sentry after setup
