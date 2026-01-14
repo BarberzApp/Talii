@@ -18,7 +18,7 @@ We've successfully extracted and tested the foundation for the Calendar feature 
 ### **Phase 1: Services Layer** ✅
 
 #### **calendarDataService.ts** (556 lines)
-**Location:** `BocmApp/app/shared/lib/calendar/calendarDataService.ts`
+**Location:** `apps/mobile/app/shared/lib/calendar/calendarDataService.ts`
 
 **Functions Extracted (13):**
 ```typescript
@@ -48,7 +48,7 @@ We've successfully extracted and tested the foundation for the Calendar feature 
 ---
 
 #### **calendarUtils.ts** (386 lines)
-**Location:** `BocmApp/app/shared/lib/calendar/calendarUtils.ts`
+**Location:** `apps/mobile/app/shared/lib/calendar/calendarUtils.ts`
 
 **Functions Extracted (20):**
 ```typescript
@@ -85,7 +85,7 @@ We've successfully extracted and tested the foundation for the Calendar feature 
 ### **Phase 2: Hooks Layer** ✅
 
 #### **useCalendarState.ts** (204 lines)
-**Location:** `BocmApp/app/shared/hooks/useCalendarState.ts`
+**Location:** `apps/mobile/app/shared/hooks/useCalendarState.ts`
 
 **Purpose:** Centralized state management for calendar feature
 
@@ -131,7 +131,7 @@ manualFormData, services, timeSlots, reviewFormData
 ---
 
 #### **useCalendarData.ts** (204 lines)
-**Location:** `BocmApp/app/shared/hooks/useCalendarData.ts`
+**Location:** `apps/mobile/app/shared/hooks/useCalendarData.ts`
 
 **Purpose:** Handle all data operations using calendarDataService
 

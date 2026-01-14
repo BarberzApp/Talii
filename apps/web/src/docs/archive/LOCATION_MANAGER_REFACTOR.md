@@ -224,7 +224,7 @@ const [useLocation, setUseLocation] = useState(false);
 
 ### **Test the Hook:**
 
-Create `/BocmApp/__tests__/useLocationManager.test.ts`:
+Create `apps/mobile/__tests__/utils/useLocationManager.test.ts`:
 
 ```typescript
 import { renderHook, act } from '@testing-library/react-hooks';
@@ -310,8 +310,8 @@ describe('useLocationManager', () => {
 **Status:** ✅ **COMPLETE** - Location logic successfully extracted into reusable hook!
 
 **Files Modified:**
-1. `BocmApp/app/pages/BrowsePage.tsx` (refactored)
-2. `BocmApp/app/shared/hooks/useLocationManager.ts` (new)
+1. `apps/mobile/app/pages/BrowsePage.tsx` (refactored)
+2. `apps/mobile/app/shared/hooks/useLocationManager.ts` (new)
 
 **Next Steps:** The hook is ready to use in other components that need location features!
 

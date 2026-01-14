@@ -26,8 +26,8 @@ Root Directory: 50+ files
 Root Directory: 21 files/folders (58% reduction!)
 ├── 1 README.md (main project readme)
 ├── 10 config files (necessary only)
-├── BocmApp/ (mobile app)
-├── src/ (web app)
+├── apps/mobile/ (mobile app)
+├── apps/web/ (web app)
 ├── docs/ (organized documentation)
 ├── supabase/ (database)
 ├── scripts/ (utility scripts)
@@ -47,9 +47,9 @@ Root Directory: 21 files/folders (58% reduction!)
 - ✅ `data/` (contained 1 email address)
 
 ### **Duplicate Config Files:**
-- ✅ `jest.config.js` (kept version in BocmApp/)
-- ✅ `jest.setup.js` (kept version in BocmApp/)
-- ✅ `eas.json` (kept version in BocmApp/)
+- ✅ `jest.config.js` (kept version in apps/mobile/)
+- ✅ `jest.setup.js` (kept version in apps/mobile/)
+- ✅ `eas.json` (kept version in apps/mobile/)
 
 ### **Random/Temporary Files:**
 - ✅ `tiktok.txt` (React component code, not needed)
@@ -122,7 +122,7 @@ docs/
 
 ```
 barber-app-main/
-├── 📱 BocmApp/                    ← Mobile app (React Native/Expo)
+├── 📱 apps/mobile/                ← Mobile app (React Native/Expo)
 │   ├── app/
 │   ├── assets/
 │   ├── docs/                      ← Mobile-specific docs
@@ -132,11 +132,8 @@ barber-app-main/
 │   ├── eas.json                   ← Mobile build config
 │   └── README.md
 │
-├── 🌐 src/                        ← Web app (Next.js)
-│   ├── app/
-│   ├── features/
-│   ├── shared/
-│   └── ... (web app files)
+├── 🌐 apps/web/                   ← Web app (Next.js)
+│   └── src/                       ← Web source
 │
 ├── 📚 docs/                       ← ALL documentation (organized!)
 │   ├── architecture/
@@ -247,7 +244,7 @@ barber-app-main/
 ### **What Was Kept:**
 
 - ✅ All necessary config files
-- ✅ All source code (BocmApp/, src/)
+- ✅ All source code (apps/mobile, apps/web)
 - ✅ All documentation (now organized)
 - ✅ All scripts
 - ✅ All database files (supabase/)

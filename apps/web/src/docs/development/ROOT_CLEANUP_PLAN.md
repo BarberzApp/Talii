@@ -16,7 +16,7 @@
 
 ```
 barber-app-main/
-├── 📱 BocmApp/                    ← Mobile app (React Native/Expo)
+├── 📱 apps/mobile/                ← Mobile app (React Native/Expo)
 ├── 🌐 src/                        ← Web app (Next.js)
 ├── 📂 barberApp/                  ← ??? Unknown folder
 ├── 📚 docs/                       ← Documentation folder 1
@@ -104,11 +104,11 @@ barber-app-main/
 | File | Location | Status | Action |
 |------|----------|--------|--------|
 | **jest.config.js** | Root | 🔴 Duplicate | Delete (keep BocmApp version) |
-| **jest.config.js** | BocmApp/ | ✅ Active | Keep |
+| **jest.config.js** | apps/mobile/ | ✅ Active | Keep |
 | **jest.setup.js** | Root | 🔴 Duplicate | Delete (keep BocmApp version) |
-| **jest.setup.js** | BocmApp/ | ✅ Active | Keep |
+| **jest.setup.js** | apps/mobile/ | ✅ Active | Keep |
 | **eas.json** | Root | 🔴 Duplicate | Delete (keep BocmApp version) |
-| **eas.json** | BocmApp/ | ✅ Active | Keep |
+| **eas.json** | apps/mobile/ | ✅ Active | Keep |
 
 ---
 
@@ -129,7 +129,7 @@ barber-app-main/
 
 ```
 barber-app-main/
-├── 📱 BocmApp/                    ← Mobile app (React Native/Expo)
+├── 📱 apps/mobile/                ← Mobile app (React Native/Expo)
 │   ├── app/
 │   ├── assets/
 │   ├── docs/                      ← Mobile-specific docs
@@ -139,7 +139,7 @@ barber-app-main/
 │   ├── eas.json
 │   └── README.md
 │
-├── 🌐 src/                        ← Web app (Next.js)
+├── 🌐 apps/web/                   ← Web app (Next.js)
 │   ├── app/
 │   ├── features/
 │   ├── shared/
@@ -238,9 +238,9 @@ rm -rf DBDocs/                     # Duplicate of docs/
 
 ### **2. Duplicate Config Files:**
 ```bash
-rm jest.config.js                  # Keep BocmApp/jest.config.js
-rm jest.setup.js                   # Keep BocmApp/jest.setup.js
-rm eas.json                        # Keep BocmApp/eas.json
+rm jest.config.js                  # Keep apps/mobile/jest.config.js
+rm jest.setup.js                   # Keep apps/mobile/jest.setup.js
+rm eas.json                        # Keep apps/mobile/eas.json
 ```
 
 ### **3. Random/Unknown Files:**
@@ -330,7 +330,7 @@ mv Landing_layout.md docs/design/
 ### **Phase 5: Update References**
 - [ ] Update any imports/references to moved files
 - [ ] Update README.md links
-- [ ] Update BocmApp/README.md if needed
+- [ ] Update apps/mobile/README.md if needed
 
 ### **Phase 6: Update .gitignore**
 - [ ] Add `coverage/` to .gitignore
@@ -340,7 +340,7 @@ mv Landing_layout.md docs/design/
 ### **Phase 7: Verify**
 - [ ] Run tests: `npm test`
 - [ ] Build web app: `npm run build`
-- [ ] Build mobile app: `cd BocmApp && npx expo start`
+- [ ] Build mobile app: `cd apps/mobile && npx expo start`
 - [ ] Check all documentation links work
 
 ---
@@ -363,7 +363,7 @@ Root: ~15 files
 - 1 README.md
 - ~10 config files (necessary)
 - Clean, organized docs/ folder
-- Clear separation: BocmApp/ (mobile), src/ (web), docs/ (documentation)
+- Clear separation: apps/mobile (mobile), apps/web (web), docs/ (documentation)
 - Professional structure
 ```
 

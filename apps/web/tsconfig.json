@@ -28,7 +28,6 @@
   "exclude": [
     "node_modules",
     "future-features/**/*",
-    "BocmApp/**/*",
     "supabase/functions/**/*",
     "**/__tests__/**/*",
     "**/*.test.*",

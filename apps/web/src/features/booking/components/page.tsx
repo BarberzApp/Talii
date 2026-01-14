@@ -51,45 +51,29 @@ export default function BookingsPage() {
             barber:barber_id (
               id,
               user_id,
+              business_name,
+              city,
+              state,
+              user:profiles!barbers_user_id_fkey(
+                id,
+                username,
+                name,
+                avatar_url,
+                location
+              )
+            ),
+            service:service_id (
+              id,
               name,
-              image,
-              location
+              duration
             )
           `)
           .eq('client_id', user.id)
-          .order('booking_date', { ascending: true })
+          .order('date', { ascending: true })
 
         if (error) throw error
 
-        // Get usernames for all barbers
-        const userIds = (data || []).map(booking => booking.barber?.user_id).filter(Boolean)
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, username')
-          .in('id', userIds)
-
-        if (profileError) {
-          logger.error('Error fetching usernames', profileError)
-        }
-
-        // Create a map of user_id to username
-        const usernameMap = new Map(profileData?.map(profile => [profile.id, profile.username]) || [])
-
-        // Transform the data to include proper Date objects and barber info
-        const transformedBookings = (data || []).map(booking => ({
-          ...booking,
-          date: new Date(booking.booking_date),
-          services: booking.services || [],
-          barber: {
-            id: booking.barber.id,
-            name: booking.barber.name,
-            username: usernameMap.get(booking.barber.user_id),
-            image: booking.barber.image,
-            location: booking.barber.location
-          }
-        }))
-
-        setBookings(transformedBookings)
+        setBookings((data || []) as unknown as Booking[])
       } catch (error) {
         logger.error('Error fetching bookings', error)
         toast({
@@ -178,10 +162,10 @@ export default function BookingsPage() {
             upcomingBookings.map((booking) => (
               <div key={booking.id} className="relative rounded-2xl overflow-hidden shadow-2xl min-h-[320px] flex flex-col justify-end bg-black">
                 {/* Full-bleed barber/service image */}
-                {booking.barber.image ? (
+                {booking.barber?.user?.avatar_url ? (
                   <img
-                    src={booking.barber.image}
-                    alt={booking.barber.name}
+                    src={booking.barber?.user?.avatar_url || ''}
+                    alt={booking.barber?.user?.name || booking.barber?.business_name || 'Barber'}
                     className="absolute inset-0 w-full h-full object-cover z-0"
                   />
                 ) : (
@@ -194,7 +178,9 @@ export default function BookingsPage() {
                   <div className="max-w-xl mx-auto bg-white/10 border border-white/30 rounded-2xl shadow-2xl backdrop-blur-xl p-5 flex flex-col gap-2 animate-fade-in">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="text-xl font-bebas text-white font-bold tracking-wide mb-1">{booking.barber.name}</h3>
+                        <h3 className="text-xl font-bebas text-white font-bold tracking-wide mb-1">
+                          {booking.barber?.user?.name || booking.barber?.business_name || 'Barber'}
+                        </h3>
                         <div className="text-white/80 text-base mb-2">No description available.</div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -226,7 +212,7 @@ export default function BookingsPage() {
                     <div className="flex items-start gap-2 mb-1">
                       <MapPin className="h-4 w-4 text-saffron mt-0.5" />
                       <div className="flex-1 text-saffron font-semibold text-sm leading-tight whitespace-pre-line">
-                        {booking.barber.location || 'Barber Shop'}
+                        {booking.barber?.user?.location || booking.barber?.city || booking.barber?.state || 'Barber Shop'}
                       </div>
                       <div className="text-white/60 text-xs ml-2 text-right min-w-[60px]">0.6 miles away</div>
                     </div>
@@ -271,11 +257,11 @@ export default function BookingsPage() {
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row md:items-center gap-4">
                     <Avatar className="h-16 w-16">
-                      <AvatarFallback>{booking.barber.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{(booking.barber?.user?.name || booking.barber?.business_name || 'B').charAt(0)}</AvatarFallback>
                     </Avatar>
 
                     <div className="flex-1">
-                      <h3 className="font-bold text-lg">{booking.barber.name}</h3>
+                      <h3 className="font-bold text-lg">{booking.barber?.user?.name || booking.barber?.business_name || 'Barber'}</h3>
 
                       <div className="flex flex-col sm:flex-row sm:gap-6 mt-2">
                         <div className="flex items-center text-sm">
@@ -299,7 +285,7 @@ export default function BookingsPage() {
 
                         <div className="flex items-center text-sm mt-1 sm:mt-0">
                           <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                          <span>{booking.barber.location}</span>
+                          <span>{booking.barber?.user?.location || booking.barber?.city || booking.barber?.state || 'Barber Shop'}</span>
                         </div>
                       </div>
 
@@ -307,7 +293,7 @@ export default function BookingsPage() {
                         <p className="text-sm font-medium">Services:</p>
                         <div className="flex flex-wrap gap-2 mt-1">
                           <Badge variant="secondary">
-                            {booking.service.name}
+                            {booking.service?.name ?? 'Service'}
                           </Badge>
                         </div>
                       </div>

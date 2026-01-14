@@ -16,7 +16,7 @@ We successfully refactored the Calendar feature following **SOLID** and **DRY** 
 ## ✅ **Completed Components**
 
 ### **1. calendarDataService.ts** (556 lines) ✅
-**Location:** `BocmApp/app/shared/lib/calendar/calendarDataService.ts`
+**Location:** `apps/mobile/app/shared/lib/calendar/calendarDataService.ts`
 
 **13 API Functions:**
 - `fetchUserRole()` - Get user role
@@ -38,7 +38,7 @@ We successfully refactored the Calendar feature following **SOLID** and **DRY** 
 ---
 
 ### **2. calendarUtils.ts** (386 lines) ✅
-**Location:** `BocmApp/app/shared/lib/calendar/calendarUtils.ts`
+**Location:** `apps/mobile/app/shared/lib/calendar/calendarUtils.ts`
 
 **20 Utility Functions:**
 - `getStatusColors()` - Status color scheme
@@ -65,7 +65,7 @@ We successfully refactored the Calendar feature following **SOLID** and **DRY** 
 ---
 
 ### **3. useCalendarState.ts** (204 lines) ✅
-**Location:** `BocmApp/app/shared/hooks/useCalendarState.ts`
+**Location:** `apps/mobile/app/shared/hooks/useCalendarState.ts`
 
 **State Management Hook:**
 Replaces 26 individual `useState` calls with one organized hook!
@@ -84,7 +84,7 @@ Replaces 26 individual `useState` calls with one organized hook!
 ---
 
 ### **4. useCalendarData.ts** (204 lines) ✅
-**Location:** `BocmApp/app/shared/hooks/useCalendarData.ts`
+**Location:** `apps/mobile/app/shared/hooks/useCalendarData.ts`
 
 **Data Operations Hook:**
 Connects UI to services layer

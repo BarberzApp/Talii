@@ -5,7 +5,7 @@
 ### **Current Organization (Hybrid Type-Based):**
 
 ```
-BocmApp/app/
+apps/mobile/app/
 ├── pages/              ← 🔴 Problem: 18 pages, some 1,500+ lines
 ├── shared/
 │   ├── components/     ← Type-based
@@ -35,7 +35,7 @@ BocmApp/app/
 **Best for:** Large apps, multiple features
 
 ```
-BocmApp/app/
+apps/mobile/app/
 ├── features/
 │   ├── calendar/
 │   │   ├── components/
@@ -326,12 +326,12 @@ return (
 
 ---
 
-## 🎯 Proposed New Structure for BocmApp
+## 🎯 Proposed New Structure for the Mobile App (`apps/mobile`)
 
 ### **Complete Feature-Based Architecture:**
 
 ```
-BocmApp/app/
+apps/mobile/app/
 ├── features/                      ← NEW: Feature modules
 │   ├── calendar/
 │   │   ├── CalendarPage.tsx                   (300 lines)

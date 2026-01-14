@@ -121,78 +121,20 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
 
     try {
       const selectedDate = date.toISOString().split('T')[0]
-      const timeSlotInterval = selectedService.duration // Use service duration as interval
-      
-      // Get existing bookings for the selected date (treat any non-cancelled as taken)
-      const { data: bookings, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('date')
-        .eq('barber_id', barberId)
-        .gte('date', `${selectedDate}T00:00:00`)
-        .lt('date', `${selectedDate}T23:59:59`)
-        .neq('status', 'cancelled')
+      const apiUrl = `/api/mobile/availability/slots?barberId=${encodeURIComponent(barberId)}&date=${encodeURIComponent(selectedDate)}&duration=${encodeURIComponent(String(selectedService.duration))}`
+      const res = await fetch(apiUrl, { method: 'GET' })
+      const payload = await res.json()
 
-      if (bookingsError) throw bookingsError
-
-      // Log fetched bookings
-      logger.debug('Fetched bookings', { bookings })
-
-      // Set bookedTimes based on fetched bookings
-      const newBookedTimes = new Set(bookings?.map(b => new Date(b.date).toTimeString().slice(0, 5)) || [])
-      setBookedTimes(newBookedTimes)
-
-      // First check for special hours
-      const { data: specialHours, error: specialHoursError } = await supabase
-        .from('special_hours')
-        .select('*')
-        .eq('barber_id', barberId)
-        .eq('date', selectedDate)
-
-      if (specialHoursError) {
-        throw specialHoursError
+      if (!res.ok) {
+        throw new Error(payload?.error || 'Failed to load slots')
       }
 
-      // If there are special hours and the barber is closed, return no slots
-      if (specialHours?.[0]?.is_closed) {
-        setAvailableTimeSlots([])
-        return
-      }
+      const slots = (payload?.slots || []) as Array<{ time: string; available: boolean }>
+      const availableTimes = slots.filter(s => s.available).map(s => s.time)
+      const bookedTimesSet = new Set(slots.filter(s => !s.available).map(s => s.time))
 
-      // Build slots from either special hours or regular availability
-      const slots: string[] = []
-
-      if (specialHours?.[0]) {
-        const start = new Date(`2000-01-01T${specialHours[0].start_time}`)
-        const end = new Date(`2000-01-01T${specialHours[0].end_time}`)
-        for (let time = new Date(start); time < end; time.setMinutes(time.getMinutes() + timeSlotInterval)) {
-          const timeStr = time.toTimeString().slice(0, 5)
-          slots.push(timeStr)
-        }
-      } else {
-        // If no special hours, use regular availability
-        const dayOfWeek = date.getDay()
-        const { data: availability, error: availabilityError } = await supabase
-          .from('availability')
-          .select('*')
-          .eq('barber_id', barberId)
-          .eq('day_of_week', dayOfWeek)
-
-        if (availabilityError) throw availabilityError
-
-        if (availability?.[0]) {
-          const start = new Date(`2000-01-01T${availability[0].start_time}`)
-          const end = new Date(`2000-01-01T${availability[0].end_time}`)
-          for (let time = new Date(start); time < end; time.setMinutes(time.getMinutes() + timeSlotInterval)) {
-            const timeStr = time.toTimeString().slice(0, 5)
-            slots.push(timeStr)
-          }
-        }
-      }
-
-      // Log generated slots
-      logger.debug('Generated slots', { slots })
-
-      setAvailableTimeSlots(slots)
+      setBookedTimes(bookedTimesSet)
+      setAvailableTimeSlots(availableTimes)
     } catch (error) {
       logger.error('Error fetching availability', error)
       toast({

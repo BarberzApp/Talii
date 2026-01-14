@@ -14,7 +14,7 @@
 
 #### **1. calendarDataService.ts** ✅
 - **Lines:** 556
-- **Location:** `BocmApp/app/shared/lib/calendar/calendarDataService.ts`
+- **Location:** `apps/mobile/app/shared/lib/calendar/calendarDataService.ts`
 - **Purpose:** All API/database calls (Single Responsibility Principle)
 - **Functions Extracted:** 13
   - `fetchUserRole()` - Get user role from profiles
@@ -39,7 +39,7 @@
 
 #### **2. calendarUtils.ts** ✅
 - **Lines:** 386
-- **Location:** `BocmApp/app/shared/lib/calendar/calendarUtils.ts`
+- **Location:** `apps/mobile/app/shared/lib/calendar/calendarUtils.ts`
 - **Purpose:** Pure utility functions (no side effects)
 - **Functions Extracted:** 20
   - `getStatusColors()` - Get colors for booking status

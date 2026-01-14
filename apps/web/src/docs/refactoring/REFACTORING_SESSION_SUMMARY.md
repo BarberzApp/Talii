@@ -105,19 +105,19 @@ features/calendar/
 ### **New Files Created (8):**
 
 **Services:**
-1. `BocmApp/app/shared/lib/calendar/calendarDataService.ts` (556 lines)
-2. `BocmApp/app/shared/lib/calendar/calendarUtils.ts` (386 lines)
-3. `BocmApp/app/shared/lib/calendar/index.ts` (barrel export)
+1. `apps/mobile/app/shared/lib/calendar/calendarDataService.ts` (556 lines)
+2. `apps/mobile/app/shared/lib/calendar/calendarUtils.ts` (386 lines)
+3. `apps/mobile/app/shared/lib/calendar/index.ts` (barrel export)
 
 **Hooks:**
-4. `BocmApp/app/shared/hooks/useCalendarState.ts` (204 lines)
-5. `BocmApp/app/shared/hooks/useCalendarData.ts` (204 lines)
+4. `apps/mobile/app/shared/hooks/useCalendarState.ts` (204 lines)
+5. `apps/mobile/app/shared/hooks/useCalendarData.ts` (204 lines)
 
 **Tests:**
-6. `BocmApp/__tests__/calendarDataService.test.ts` (21 tests)
-7. `BocmApp/__tests__/calendarUtils.test.ts` (37 tests)
-8. `BocmApp/__tests__/useCalendarState.test.ts` (integration tested)
-9. `BocmApp/__tests__/useCalendarData.test.ts` (integration tested)
+6. `apps/mobile/__tests__/calendar/calendarDataService.test.ts` (21 tests)
+7. `apps/mobile/__tests__/calendar/calendarUtils.test.ts` (37 tests)
+8. `apps/mobile/__tests__/calendar/useCalendarState.test.ts` (integration tested)
+9. `apps/mobile/__tests__/calendar/useCalendarData.test.ts` (integration tested)
 
 ### **Documentation Created (9):**
 1. `src/docs/refactoring/COMPLETE_FILE_ANALYSIS.md` - All files analysis

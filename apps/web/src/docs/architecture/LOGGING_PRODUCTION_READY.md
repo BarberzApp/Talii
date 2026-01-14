@@ -242,14 +242,14 @@ Production:  ~8 error logs only (when errors occur)
 ### **Verification:**
 ```bash
 # Count logger calls
-grep -r "logger\.\(log\|warn\)" BocmApp/app/shared/hooks/useAuth.tsx | wc -l
+grep -r "logger\.\(log\|warn\)" apps/mobile/app/shared/hooks/useAuth.tsx | wc -l
 # Result: 52 (all silenced in production)
 
-grep -r "logger\.error" BocmApp/app/shared/hooks/useAuth.tsx | wc -l
+grep -r "logger\.error" apps/mobile/app/shared/hooks/useAuth.tsx | wc -l
 # Result: 8 (only these appear in production)
 
 # Check for direct console calls
-grep -r "console\.\(log\|warn\|error\)" BocmApp/app/shared/hooks/useAuth.tsx
+grep -r "console\.\(log\|warn\|error\)" apps/mobile/app/shared/hooks/useAuth.tsx
 # Result: 0 (perfect!)
 ```
 

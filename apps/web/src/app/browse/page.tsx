@@ -771,24 +771,19 @@ export default function BrowsePage() {
                     id: barber.id,
                     name: barber.name,
                     username: barber.username,
-                    email: '', // Email not available in browse view
                     businessName: barber.businessName,
                     location: barber.location,
                     bio: barber.bio,
                     specialties: barber.specialties,
                     priceRange: barber.priceRange,
-                    services: [],
                     instagram: barber.instagram,
                     twitter: barber.twitter,
                     tiktok: barber.tiktok,
                     facebook: barber.facebook,
-                    rating: 4.5,
                     image: barber.avatarUrl,
                     portfolio: [],
                     trending: false,
                     openToHire: false,
-                    isPublic: barber.isPublic,
-                    nextAvailable: undefined,
                     totalLikes: barberLikes[barber.id] || 0
                   }}
                   className="hover:-translate-y-2 transition-all duration-300"

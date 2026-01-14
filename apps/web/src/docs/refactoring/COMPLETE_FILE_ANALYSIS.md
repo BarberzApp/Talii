@@ -78,7 +78,7 @@
 ### **ALL Features Mapped:**
 
 ```
-BocmApp/app/
+apps/mobile/app/
 ├── features/
 │   ├── calendar/                      ← CalendarPage (1,896 lines)
 │   │   ├── CalendarPage.tsx           (300 lines)

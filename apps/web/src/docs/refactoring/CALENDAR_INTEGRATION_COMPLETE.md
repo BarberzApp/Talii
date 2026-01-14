@@ -66,30 +66,30 @@ Total: 61/61 tests passing ✅
 ## 📁 Files Created/Modified
 
 ### **Created:**
-1. `/BocmApp/app/shared/lib/calendar/calendarDataService.ts` (544 lines)
+1. `/apps/mobile/app/shared/lib/calendar/calendarDataService.ts` (544 lines)
    - 13 data fetching/mutation functions
    - Full error handling and logging
    - 21 unit tests
 
-2. `/BocmApp/app/shared/lib/calendar/calendarUtils.ts` (386 lines)
+2. `/apps/mobile/app/shared/lib/calendar/calendarUtils.ts` (386 lines)
    - 20 pure utility functions
    - Date/time manipulation
    - Event filtering and formatting
    - 37 unit tests
 
-3. `/BocmApp/app/shared/hooks/useCalendarState.ts` (248 lines)
+3. `/apps/mobile/app/shared/hooks/useCalendarState.ts` (248 lines)
    - Manages all 22 state variables
    - Animation refs
    - Helper functions for state updates
 
-4. `/BocmApp/app/shared/lib/calendar/index.ts` (10 lines)
+4. `/apps/mobile/app/shared/lib/calendar/index.ts` (10 lines)
    - Barrel export for easy imports
 
-5. `/BocmApp/__tests__/calendarDataService.test.ts` (21 tests)
-6. `/BocmApp/__tests__/calendarUtils.test.ts` (37 tests)
+5. `/apps/mobile/__tests__/calendar/calendarDataService.test.ts` (21 tests)
+6. `/apps/mobile/__tests__/calendar/calendarUtils.test.ts` (37 tests)
 
 ### **Modified:**
-1. `/BocmApp/app/pages/CalendarPage.tsx`
+1. `/apps/mobile/app/pages/CalendarPage.tsx`
    - Reduced from 1,890 → 1,683 lines
    - Now imports and uses extracted code
    - Focuses on UI rendering

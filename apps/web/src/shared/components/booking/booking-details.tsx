@@ -97,7 +97,7 @@ export function BookingDetails({ booking, isOpen, onClose, onBookingCancelled }:
             </div>
             <div>
               <h4 className="text-sm font-medium text-muted-foreground">Service</h4>
-              <p className="capitalize">{booking.service.name}</p>
+              <p className="capitalize">{booking.service?.name ?? 'Service'}</p>
             </div>
             <div>
               <h4 className="text-sm font-medium text-muted-foreground">Status</h4>

@@ -7,6 +7,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20" as any,
 })
 
+function getBearerToken(request: Request): string | null {
+  const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null
+  const token = authHeader.slice('Bearer '.length).trim()
+  return token.length > 0 ? token : null
+}
+
 // Define required metadata fields
 const REQUIRED_METADATA = {
   ALL: ['barberId', 'serviceId', 'date', 'basePrice'],
@@ -53,6 +60,17 @@ export async function POST(request: Request) {
       paymentType,
       addonIds = []
     } = body
+
+    // If a Supabase access token is provided (mobile / API callers), use it to derive the clientId.
+    // This keeps guests working for web while allowing authenticated mobile callers to be consistent.
+    let derivedClientId: string | null | undefined = clientId
+    const bearerToken = getBearerToken(request)
+    if (bearerToken) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(bearerToken)
+      if (!authError && user?.id) {
+        derivedClientId = user.id
+      }
+    }
 
     // Validate required fields
     if (!barberId || !serviceId || !date) {
@@ -176,6 +194,29 @@ export async function POST(request: Request) {
     const cancelUrl = `${baseUrl}/booking/cancel`
 
     // Create Stripe Checkout session
+    const metadata = {
+      barberId,
+      serviceId,
+      date,
+      notes: notes || '',
+      guestName: guestName || '',
+      guestEmail: guestEmail || '',
+      guestPhone: guestPhone || '',
+      clientId: derivedClientId || 'guest',
+      serviceName: service.name,
+      servicePrice: servicePrice.toString(),
+      addonTotal: Math.round(addonTotal * 100).toString(),
+      addonIds: [...new Set(addonIds)].join(','),
+      platformFee: platformFee.toString(),
+      paymentType: 'fee', // Always fee-only payment model
+      feeType: 'fee_only',
+      bocmShare: bocmShare.toString(),
+      barberShare: barberShare.toString(),
+      isDeveloper: barber.is_developer ? 'true' : 'false',
+      // Add flag to indicate if add-ons need separate payment
+      addonsPaidSeparately: (paymentType === 'fee' && addonIds.length > 0).toString(),
+    } satisfies Stripe.MetadataParam
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems,
@@ -187,29 +228,10 @@ export async function POST(request: Request) {
           destination: barber.stripe_account_id,
         },
         application_fee_amount: bocmShare, // Platform net after absorbing Stripe fee = $1.42 (or 0 for developer)
+        // Critical: webhook creates bookings from PaymentIntent.metadata for mobile parity
+        metadata,
       },
-      metadata: {
-        barberId,
-        serviceId,
-        date,
-        notes: notes || '',
-        guestName: guestName || '',
-        guestEmail: guestEmail || '',
-        guestPhone: guestPhone || '',
-        clientId: clientId || 'guest',
-        serviceName: service.name,
-        servicePrice: servicePrice.toString(),
-        addonTotal: Math.round(addonTotal * 100).toString(),
-        addonIds: [...new Set(addonIds)].join(','),
-        platformFee: platformFee.toString(),
-        paymentType: 'fee', // Always fee-only payment model
-        feeType: 'fee_only',
-        bocmShare: bocmShare.toString(),
-        barberShare: barberShare.toString(),
-        isDeveloper: barber.is_developer ? 'true' : 'false',
-        // Add flag to indicate if add-ons need separate payment
-        addonsPaidSeparately: (paymentType === 'fee' && addonIds.length > 0).toString(),
-      },
+      metadata,
     })
 
     logger.debug('Checkout session created successfully', {

@@ -197,10 +197,10 @@ Ready to integrate into:
 ## ✅ Files Created/Modified
 
 ### **New Files:**
-1. `/BocmApp/app/shared/lib/errorRecovery.ts` - Core utilities (280 lines)
-2. `/BocmApp/app/shared/hooks/useErrorRecovery.ts` - React hooks (300 lines)
-3. `/BocmApp/__tests__/errorRecovery.test.ts` - Tests (200 lines)
-4. `/BocmApp/docs/ERROR_RECOVERY_IMPLEMENTATION.md` - Documentation (450 lines)
+1. `/apps/mobile/app/shared/lib/errorRecovery.ts` - Core utilities (280 lines)
+2. `/apps/mobile/app/shared/hooks/useErrorRecovery.ts` - React hooks (300 lines)
+3. `/apps/mobile/__tests__/utils/errorRecovery.test.ts` - Tests (200 lines)
+4. `/apps/mobile/docs/ERROR_RECOVERY_IMPLEMENTATION.md` - Documentation (450 lines)
 
 ### **Total:** ~1,230 lines of production-ready code + tests + documentation
 
@@ -210,7 +210,7 @@ Ready to integrate into:
 
 ### **Run Tests:**
 ```bash
-cd BocmApp
+cd apps/mobile
 npm test -- errorRecovery.test.ts
 ```
 

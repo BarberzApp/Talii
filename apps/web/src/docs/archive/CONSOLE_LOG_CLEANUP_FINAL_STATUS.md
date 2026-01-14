@@ -9,7 +9,7 @@
 
 ### **Final Count:**
 ```bash
-Total console statements in BocmApp/app/: 3
+Total console statements in apps/mobile/app/: 3
 Location: app/shared/lib/logger.ts (intentional - part of logger utility)
 ```
 
