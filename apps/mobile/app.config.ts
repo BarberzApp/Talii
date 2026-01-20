@@ -21,6 +21,9 @@ export default ({}: ConfigContext): ExpoConfig => {
 
   return {
     ...base,
+    plugins: Array.from(
+      new Set([...(base.plugins ?? []), "expo-secure-store", "expo-web-browser"])
+    ),
     ios: {
       ...base.ios,
       // Ensure we always have an initial build number (EAS can auto-increment from here).
