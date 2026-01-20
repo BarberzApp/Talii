@@ -32,6 +32,19 @@ We are executing **Option A (Shared package for domain logic)** *plus* the **Nex
 
 ## Recent implementation updates (tracked)
 
+### 2026-01-20 — Package Management Standardized + React 19 Alignment
+
+- **Standardized on npm workspaces**
+  - Removed all `yarn.lock` files to prevent dependency resolution conflicts.
+  - Standardized on `npm` as the single package manager for the monorepo.
+- **Unified React 19 alignment**
+  - Upgraded `apps/web` to React 19.0.0 and Next.js 15.3.4.
+  - Aligned `apps/mobile` to React 19.0.0 via Expo SDK 53 and React Native 0.79.6.
+  - Resolved peer dependency chain (nodemailer, next-auth, react-day-picker, vaul, etc.).
+- **Cleaned web app architecture**
+  - Removed unused React Native and Expo dependencies from `apps/web` to eliminate peer constraint blockers and reduce bundle size.
+  - Removed stray type definitions for removed packages.
+
 ### 2026-01-12 — Supabase schema ↔ TypeScript type alignment + drift cleanup
 
 The following changes were implemented to reduce schema drift and prevent runtime Postgres errors caused by mismatched column names / CHECK constraints:
@@ -71,6 +84,7 @@ The following changes were implemented to reduce schema drift and prevent runtim
   - [x] Ensure `node_modules/`, `.expo/`, `dist/`, etc. are **not tracked by git** anywhere (some were previously committed)
   - [x] Run `git rm -r --cached` for any committed build artifacts / `node_modules` and commit the cleanup
   - [x] Verify `git status` becomes small/meaningful (currently extremely noisy because of tracked deletions)
+- [x] **Unify package management and align React versions** (2026-01-20): Standardized on npm workspaces, removed Yarn locks, and aligned both apps to React 19.
 
 #### 1) Env + config contracts (web + mobile must agree)
 

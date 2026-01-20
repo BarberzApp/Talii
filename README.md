@@ -1,181 +1,98 @@
-# Barber App
+# Barber App (Monorepo)
 
-A modern booking platform connecting barbers with clients.
+A modern, full-stack booking platform connecting Cosmetologists with clients, featuring a unified backend gateway and cross-platform clients.
 
-## Core Features (MVP)
+## Architecture & Frameworks
 
-### Authentication
-- Client and barber account creation
-- Secure login system
-- Profile management
+This project is organized as an **npm monorepo** using workspaces to share logic and types between the web and mobile applications.
 
-### Booking System
-- Clean, intuitive calendar interface
-- Real-time availability checking
-- Instant booking confirmation
-- Appointment management
-
-### Payment Processing
-- Secure Stripe integration
-- Instant payment processing
-- Receipt generation
-- Payment history
-
-## Technical Stack
-- Next.js 14
-- TypeScript
-- Tailwind CSS
-- Supabase
-- Stripe
+- **Frontend (Web)**: Next.js 15.3 (App Router) / React 19
+- **Mobile (iOS/Android)**: Expo SDK 53 / React 19 / React Native 0.79
+- **Shared Logic**: TypeScript monorepo package for types, constants, and domain logic
+- **Backend**: Supabase (Auth, Postgres, Storage) + Next.js API Gateway + Edge Functions
+- **Payments**: Stripe (Connect, Checkout, and Payment Intents)
+- **Monitoring**: Sentry (Web & Mobile)
 
 ## Project Structure
-```
-src/
-├── features/
-│   ├── auth/
-│   ├── booking/
-│   ├── profile/
-│   └── payment/
-├── shared/
-│   ├── components/
-│   ├── hooks/
-│   ├── utils/
-│   └── types/
-└── app/
-    ├── (auth)/
-    ├── (client)/
-    ├── (barber)/
-    └── api/
-```
 
-## Documentation
-
-- [App Breakdown](src/docs/development/APP_BREAKDOWN.md): High-level overview of the app's architecture, main flows (onboarding, booking, payments), and where to find key logic.
-- [Local Development Guide](src/docs/development/LOCAL_DEVELOPMENT.md): Step-by-step instructions for running the app locally, Stripe Connect/ngrok setup, troubleshooting, and useful links.
-- [Database Schema](src/docs/database/database-schema.txt): Full schema reference for all tables and relationships.
-- [Row Level Security Policies](src/docs/database/rowlevelsecurity.txt): Supabase RLS policies for all tables.
-- [Constraints](src/docs/database/constraints.txt): Database constraints and keys.
-- [Supabase Type Generation](docs/development/TYPE_GENERATION.md): How to generate and use schema-derived `Database` types.
+```bash
+barber-app/
+├── apps/
+│   ├── web/          # Next.js web application (React 19)
+│   └── mobile/       # Expo/React Native mobile application (React 19)
+├── packages/
+│   └── shared/       # Shared business logic, types, and constants
+├── supabase/         # Database migrations and Edge Functions
+└── scripts/          # Administrative and maintenance scripts
+```
 
 ## Getting Started
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up environment variables:
-   ```env
-   # Supabase
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
-   
-   # Stripe
-   STRIPE_SECRET_KEY=your_stripe_secret
-   STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-   
-   # App Configuration
-   NEXT_PUBLIC_APP_URL=https://bocmstyle.com
-   
-   # Sentry Error Monitoring (Optional but recommended for production)
-   NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
-   SENTRY_DSN=your_sentry_dsn  # Server-side (optional, can use NEXT_PUBLIC_SENTRY_DSN)
-   SENTRY_ORG=your_sentry_org  # For source maps upload
-   SENTRY_PROJECT=your_sentry_project  # For source maps upload
-   SENTRY_AUTH_TOKEN=your_sentry_auth_token  # For source maps upload (optional)
-   
-   # Security
-   WAITLIST_PASSWORD=your_waitlist_password
-   SUPER_ADMIN_PASSWORD=your_super_admin_password
-   SUPER_ADMIN_EMAIL=primbocm@gmail.com
-   
-   # Email/SMS
-   GMAIL_USER=your_gmail_user
-   GMAIL_PASS=your_gmail_app_password
-   ```
-4. Run development server:
-   ```bash
-   npm run dev -- -p 3002
-   ```
+### 1. Prerequisites
+- Node.js (Latest LTS)
+- npm (Standardized package manager)
+- [Expo Go](https://expo.dev/go) (for mobile development)
 
-## Development
-
-### Code Organization
-- Feature-based architecture
-- Clear separation of concerns
-- Modular components
-- Type-safe development
-
-### Best Practices
-- Follow TypeScript best practices
-- Use proper error handling
-- Write clean, maintainable code
-- Document complex logic
-
-### Testing (adding soon)
-- Unit tests for components
-- Integration tests for features
-- End-to-end testing
-- Performance testing
-
-## Super Admin Panel
-
-The app includes a super admin panel for managing developer accounts. Only the specified super admin can access this panel.
-
-### Accessing the Super Admin Panel
-
-1. Navigate to `/super-admin` in your browser
-2. Login with the super admin credentials:
-   - **Email:** primbocm@gmail.com
-   - **Password:** Yasaddybocm123!
-
-### Features
-
-- **View All Barbers:** See a list of all registered barbers with their details
-- **Search Barbers:** Search by name, business name, or email
-- **Toggle Developer Status:** Enable/disable developer mode for any barber
-- **Statistics:** View total barbers, developers, and regular barbers count
-
-### Developer Mode
-
-When a barber has developer mode enabled:
-- They bypass all Stripe platform fees ($3.38)
-- They receive 100% of the service price
-- This is intended for development and testing purposes only
-
-### Setting Up Super Admin
-
-To create the super admin account, run:
-
+### 2. Installation
+Install all dependencies for the entire monorepo from the root directory:
 ```bash
-node scripts/create-super-admin.js
+npm install
+```
+*Note: Do not use Yarn; the project is standardized on npm workspaces.*
+
+### 3. Environment Setup
+Create a `.env` file in the root (and/or inside `apps/web` and `apps/mobile` as required) with the following core keys:
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
+
+# Stripe
+STRIPE_SECRET_KEY=your_stripe_secret
+STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+
+# App Configuration
+NEXT_PUBLIC_APP_URL=https://bocmstyle.com
+```
+See `ENV.md` for a full breakdown of the environment contract.
+
+### 4. Running Development Servers
+
+**Web App:**
+```bash
+npm run dev
 ```
 
-This script will:
-- Create the super admin user account if it doesn't exist
-- Set the correct password
-- Create the necessary profile record
+**Mobile App:**
+```bash
+# Start Expo development server
+npm -w apps/mobile start
 
-## Contributing
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+# Or run directly on devices/simulators
+npm run ios
+npm run android
+```
 
-## License
-MIT License - see LICENSE file for details
+## Key Documentation
+
+- [Consolidation Analysis](BACKEND_CONSOLIDATION_ANALYSIS.md): The master plan for alignment between Web and Mobile, tracking recent architectural changes.
+- [App Breakdown](apps/web/src/docs/development/APP_BREAKDOWN.md): High-level overview of main flows (onboarding, booking, payments).
+- [Local Development](apps/web/src/docs/development/LOCAL_DEVELOPMENT.md): Detailed setup for Stripe Connect, ngrok, and troubleshooting.
+- [Type Generation](docs/development/TYPE_GENERATION.md): How to keep `@barber-app/shared` types in sync with the Supabase schema.
+
+## Development Workflow
+
+- **Shared Changes**: If you modify `packages/shared`, you may need to restart the development servers to pick up type changes.
+- **Database Migrations**: Managed via the Supabase CLI in the `/supabase` directory.
+- **Super Admin**: Access the management panel at `/super-admin` (see README for credentials).
 
 ## 📣 Prominent Booking Link for Barbers
 
-Barbers now see a highly visible, easy-to-share booking link banner at the top of their dashboard and settings. This link is the main way for clients to book appointments. Barbers are encouraged to copy, share, or download a QR code for their booking link and send it to clients via text, social media, or in person.
-
-**How it works:**
-- The booking link is always visible at the top of the dashboard and settings.
-- Barbers can copy the link, share it using their device's share menu, or download a QR code for print or digital sharing.
-- This feature is designed to maximize bookings and make it easy for barbers to grow their business.
-
-**Why this matters:**
-- The booking link is the main entry point for new clients.
-- Making it prominent ensures every barber knows to share it as much as possible.
-- More shared links = more bookings! 
+Barbers see a highly visible booking link banner at the top of their dashboard. This is the primary entry point for clients. Barbers can:
+- Copy the direct booking URL.
+- Share via the native device share menu.
+- Download a QR code for physical/digital marketing.
