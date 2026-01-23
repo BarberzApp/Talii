@@ -2,6 +2,10 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import packageJson from "./package.json";
+
+const release = `web@${packageJson.version}`;
+const environment = process.env.NODE_ENV || 'development';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -12,7 +16,8 @@ Sentry.init({
   // Only send errors in production
   enabled: process.env.NODE_ENV === 'production' && !!(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN),
 
-  environment: process.env.NODE_ENV || 'development',
+  environment,
+  release,
 
   // Filter out sensitive data
   beforeSend(event, hint) {
@@ -36,3 +41,6 @@ Sentry.init({
   },
 });
 
+Sentry.setTag('platform', 'web');
+Sentry.setTag('release', release);
+Sentry.setTag('environment', environment);

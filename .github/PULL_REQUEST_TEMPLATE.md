@@ -20,7 +20,7 @@
 - [ ] Booking/availability
 - [ ] Payments/Stripe metadata
 - [ ] Fees/payout logic
-- [ ] Notifications/observability
+- [ ] Notifications/observability *hold off due to change to twillio or other services*
 
 ## Verification
 - [ ] Tests run (list commands or mark N/A)
