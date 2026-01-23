@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/react-native';
+import Constants from 'expo-constants';
 import { logger } from './logger';
 
 /**
@@ -9,6 +10,10 @@ export const initSentry = () => {
   // Only initialize in production or when explicitly enabled
   const isProduction = process.env.NODE_ENV === 'production';
   const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
+  const appVersion = Constants.expoConfig?.version ?? 'unknown';
+  const appName = Constants.expoConfig?.slug ?? Constants.expoConfig?.name ?? 'mobile';
+  const release = `${appName}@${appVersion}`;
+  const environment = isProduction ? 'production' : 'development';
 
   if (!sentryDsn) {
     logger.log('⚠️ Sentry DSN not configured. Error monitoring disabled.');
@@ -23,13 +28,14 @@ export const initSentry = () => {
   try {
     Sentry.init({
       dsn: sentryDsn,
+      release,
       
       // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
       // We recommend adjusting this value in production
       tracesSampleRate: 0.2, // 20% of transactions
       
       // Set environment
-      environment: isProduction ? 'production' : 'development',
+      environment,
       
       // Privacy: Do NOT send default PII (personally identifiable information) by default
       // We explicitly control what user data is sent via setUserContext()
@@ -69,10 +75,29 @@ export const initSentry = () => {
                 key.toLowerCase().includes('token') ||
                 key.toLowerCase().includes('secret') ||
                 key.toLowerCase().includes('api_key') ||
+                key.toLowerCase().includes('apikey') ||
+                key.toLowerCase().includes('auth') ||
+                key.toLowerCase().includes('stripe') ||
+                key.toLowerCase().includes('supabase') ||
                 key.toLowerCase().includes('private')) {
               delete event.extra![key];
             }
           });
+        }
+
+        if (event.request?.url) {
+          try {
+            const url = new URL(event.request.url);
+            const sensitiveParams = ['token', 'key', 'password', 'secret', 'api_key', 'apikey'];
+            sensitiveParams.forEach(param => {
+              if (url.searchParams.has(param)) {
+                url.searchParams.delete(param);
+              }
+            });
+            event.request.url = url.toString();
+          } catch {
+            // Invalid URL, skip
+          }
         }
         
         // Filter user data from contexts unless explicitly set via setUserContext
@@ -105,6 +130,10 @@ export const initSentry = () => {
         'cancelled',
       ],
     });
+
+    Sentry.setTag('platform', 'mobile');
+    Sentry.setTag('release', release);
+    Sentry.setTag('environment', environment);
 
     logger.log('✅ Sentry initialized successfully');
   } catch (error) {
@@ -181,6 +210,18 @@ export const addBreadcrumb = (message: string, category: string, data?: Record<s
     });
   } else {
     logger.log(`[Breadcrumb] ${category}: ${message}`, data);
+  }
+};
+
+/**
+ * Set current route context for Sentry
+ */
+export const setRouteContext = (routeName: string) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (isProduction && process.env.EXPO_PUBLIC_SENTRY_DSN) {
+    Sentry.setTag('route_name', routeName);
+    Sentry.setContext('navigation', { route_name: routeName });
   }
 };
 

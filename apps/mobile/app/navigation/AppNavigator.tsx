@@ -1,6 +1,7 @@
 // navigation/AppNavigator.tsx
-import React from 'react';
+import React, { useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import type { NavigationContainerRef, ParamListBase } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Platform, TouchableOpacity, Dimensions } from 'react-native';
@@ -28,6 +29,7 @@ import CutsPage from '../pages/CutsPage';
 import { linking } from '../shared/config/deepLinking';
 import { AuthGuard, BarberGuard } from '../shared/components/auth/AuthGuard';
 import { ROUTE_MAPPING, isRouteProtected, getRouteRole } from '../shared/config/routeMapping';
+import { setRouteContext } from '../shared/lib/sentry';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -351,8 +353,28 @@ function RoleBasedRoute({
 }
 
 export const AppNavigator = () => {
+  const navigationRef = useRef<NavigationContainerRef<ParamListBase> | null>(null);
+  const routeNameRef = useRef<string | undefined>(undefined);
+
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer
+      linking={linking}
+      ref={navigationRef}
+      onReady={() => {
+        const routeName = navigationRef.current?.getCurrentRoute()?.name;
+        if (routeName) {
+          setRouteContext(routeName);
+          routeNameRef.current = routeName;
+        }
+      }}
+      onStateChange={() => {
+        const routeName = navigationRef.current?.getCurrentRoute()?.name;
+        if (routeName && routeName !== routeNameRef.current) {
+          setRouteContext(routeName);
+          routeNameRef.current = routeName;
+        }
+      }}
+    >
       <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
         {/* Public screens - no auth required */}
         <Stack.Screen name="Home" component={HomePage} />

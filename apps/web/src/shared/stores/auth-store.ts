@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { logger } from '@/shared/lib/logger'
+import * as Sentry from '@sentry/nextjs'
 import {
   AuthController,
   type AuthProfile,
@@ -86,6 +87,19 @@ function mapProfileToUser(profile: AuthProfile): User {
   }
 }
 
+function syncSentryUser(profile: AuthProfile | null) {
+  if (typeof window === 'undefined') return
+
+  if (profile?.id) {
+    Sentry.setUser({
+      id: profile.id,
+      email: profile.email || undefined,
+    })
+  } else {
+    Sentry.setUser(null)
+  }
+}
+
 function applySharedState(set: (state: Partial<AuthState>) => void, shared: SharedAuthState) {
   set({
     status: shared.status,
@@ -94,6 +108,8 @@ function applySharedState(set: (state: Partial<AuthState>) => void, shared: Shar
     profile: shared.profile,
     user: shared.profile ? mapProfileToUser(shared.profile) : null,
   })
+
+  syncSentryUser(shared.profile)
 }
 
 function buildSharedState(get: () => AuthStore): SharedAuthState {

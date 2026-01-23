@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { supabase } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
+import { redactContext } from '@/shared/lib/api-errors'
 
 export class ApiAuthError extends Error {
   status: number
@@ -34,7 +35,7 @@ export async function validateBearerToken(request: Request): Promise<User> {
   if (token) {
     const { data, error } = await supabase.auth.getUser(token)
     if (error || !data?.user) {
-      logger.warn('Bearer auth failed', { hasError: !!error })
+      logger.warn('Bearer auth failed', redactContext({ hasError: !!error }))
       throw new ApiAuthError('Unauthorized', 401)
     }
     return data.user

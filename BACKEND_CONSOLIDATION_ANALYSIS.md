@@ -171,22 +171,22 @@ The following changes were implemented to reduce schema drift and prevent runtim
 
 #### 8) Remove dead/legacy code paths (Medium: D6 and general cleanup)
 
-- [ ] Verify mobile references to non-existent endpoints (e.g. `create-booking-intent`) and remove/align
-- [ ] Delete or quarantine demo/simulated Stripe service code that conflicts with production “fee-only” flow
+- [x] Verify mobile references to non-existent endpoints (e.g. `create-booking-intent`) and remove/align
+- [x] Delete or quarantine demo/simulated Stripe service code that conflicts with production “fee-only” flow
 
 #### 9) Observability parity (Sentry + logs)
 
-- [ ] Confirm Sentry is enabled for **both** `apps/web` and `apps/mobile` with consistent tagging:
+- [x] Confirm Sentry is enabled for **both** `apps/web` and `apps/mobile` with consistent tagging:
   - release/version, environment, user id (when available), route name
-- [ ] Add gateway-side logging for API errors that mobile depends on (structured + redacted)
+- [x] Add gateway-side logging for API errors that mobile depends on (structured + redacted)
 
 #### 10) CI + regression prevention
 
-- [ ] Add parity test coverage for the “shared domains”:
+- [x] Add parity test coverage for the “shared domains”:
   - availability engine
   - fee calculator
   - webhook metadata contract
-- [ ] Add a “parity checklist” to PR template (prevents drift reappearing)
+- [x] Add a “parity checklist” to PR template (prevents drift reappearing)
 
 Both apps share a common data backend (**Supabase Postgres + Auth**) and a common payments backend (**Stripe**), but the “backend compute” is currently split across:
 

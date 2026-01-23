@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/shared/lib/supabase'
-import { logger } from '@/shared/lib/logger'
-import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
+import { validateBearerToken } from '@/shared/lib/api-auth'
+import { handleApiError } from '@/shared/lib/api-errors'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
+  let userId: string | null = null
+
   try {
     const user = await validateBearerToken(request)
+    userId = user.id
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -16,8 +19,12 @@ export async function GET(request: Request) {
       .maybeSingle()
 
     if (profileError) {
-      logger.error('Failed to load profile', profileError, { userId: user.id })
-      return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 })
+      return handleApiError(
+        profileError,
+        request,
+        { route: 'mobile/me', userId, step: 'load_profile' },
+        { status: 500, fallbackMessage: 'Failed to load profile' }
+      )
     }
 
     let barber: any = null
@@ -29,8 +36,12 @@ export async function GET(request: Request) {
         .maybeSingle()
 
       if (barberError) {
-        logger.error('Failed to load barber row', barberError, { userId: user.id })
-        return NextResponse.json({ error: 'Failed to load barber data' }, { status: 500 })
+        return handleApiError(
+          barberError,
+          request,
+          { route: 'mobile/me', userId, step: 'load_barber' },
+          { status: 500, fallbackMessage: 'Failed to load barber data' }
+        )
       }
 
       barber = barberRow
@@ -42,11 +53,7 @@ export async function GET(request: Request) {
       barber,
     })
   } catch (err) {
-    if (err instanceof ApiAuthError) {
-      return NextResponse.json({ error: err.message }, { status: err.status })
-    }
-    logger.error('Mobile /me error', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleApiError(err, request, { route: 'mobile/me', userId })
   }
 }
 

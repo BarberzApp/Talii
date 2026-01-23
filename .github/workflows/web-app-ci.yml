@@ -68,7 +68,7 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npm run test:ci
+        run: npm run test:ci && npm run test:shared
 # Build Test
   build-test:
     name: Build Test
