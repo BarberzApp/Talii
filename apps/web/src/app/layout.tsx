@@ -8,7 +8,6 @@ import { TooltipProvider } from "@/shared/components/ui/tooltip"
 import { Navbar } from "@/shared/components/layout/navbar"
 import { EnhancedErrorBoundary } from "@/shared/components/ui/enhanced-error-boundary"
 import { LoadingProvider } from "@/shared/components/ui/loading-provider"
-import { PWARegistration } from "@/shared/components/pwa/pwa-registration"
 import { LoadingSpinner } from "@/shared/components/ui/loading-spinner"
 import { SMSPopupWrapper } from "@/shared/components/ui/sms-popup-wrapper"
 import { ErrorReportingProvider } from "@/shared/components/error-reporting-provider"
@@ -45,39 +44,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="BOCM" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              // Conservative PWA registration - only in production and HTTPS
-              if ('serviceWorker' in navigator && window.location.hostname !== 'localhost' && window.location.protocol === 'https:') {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/service-worker.js')
-                    .then(function(registration) {
-                      // Service worker registered successfully
-                    })
-                    .catch(function(registrationError) {
-                      // Service worker registration failed - silent in production
-                    });
-                });
-              }
-              
-              // Add beforeinstallprompt event listener for PWA install
-              let deferredPrompt;
-              window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                // PWA install prompt ready
-              });
-            `
-          }}
-        />
-      </head>
+      <head />
       <body className={cn(inter.className, "bg-background min-h-screen")}> 
         <ErrorReportingProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
@@ -88,7 +55,6 @@ export default function RootLayout({
                 <ClientNavWrapper>{children}</ClientNavWrapper>
               </React.Suspense>
               <Toaster />
-              <PWARegistration />
               <SMSPopupWrapper />
               </LoadingProvider>
             </EnhancedErrorBoundary>

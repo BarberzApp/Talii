@@ -1,7 +1,6 @@
 'use client';
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogDescription } from '@/shared/components/ui/dialog';
 import { Button } from '@/shared/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/shared/components/ui/sheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -34,11 +33,6 @@ import {
 } from 'lucide-react';
 
 export default function LandingPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [averageMonthlyAmount, setAverageMonthlyAmount] = useState("5000");
   const [cutCost, setCutCost] = useState("50");
   const [numberOfCuts, setNumberOfCuts] = useState(100);
@@ -76,27 +70,6 @@ export default function LandingPage() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSubmitted(false);
-    try {
-      const res = await fetch("/api/send-booking-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) throw new Error("Failed to send email");
-      setSubmitted(true);
-      setEmail("");
-    } catch (err) {
-      setError("Failed to send. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const testimonials = [
     {
@@ -572,43 +545,6 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* Email Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="bg-black/95 border border-white/20 backdrop-blur-xl rounded-2xl">
-          <DialogDescription className="text-white/80">
-            {submitted ? (
-              <div className="text-center py-8">
-                <CheckCircle className="h-12 w-12 text-secondary mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">Thank you!</h3>
-                <p className="text-white/70">We'll be in touch soon with exclusive early access.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-white">Get Early Access</h3>
-                <p className="text-white/70">Be among the first to experience the future of Cosmetology booking.</p>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                <input
-                  type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-secondary"
-                  required
-                />
-                  {error && <p className="text-red-400 text-sm">{error}</p>}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-secondary text-black py-3 rounded-xl font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-50"
-                  >
-                    {loading ? "Sending..." : "Get Early Access"}
-                  </button>
-                </form>
-                </div>
-            )}
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
     </div>
     </>
   );

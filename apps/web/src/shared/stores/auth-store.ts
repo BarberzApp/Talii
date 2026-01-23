@@ -1,7 +1,12 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
-import { supabase } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
+import {
+  AuthController,
+  type AuthProfile,
+  type AuthState as SharedAuthState,
+} from '@barber-app/shared'
+import { createWebAuthAdapter } from '@/shared/lib/auth-adapter'
 
 // Types
 export type UserRole = "client" | "barber"
@@ -29,6 +34,7 @@ export type User = {
 
 interface AuthState {
   user: User | null
+  profile: AuthProfile | null
   isLoading: boolean
   status: "loading" | "authenticated" | "unauthenticated"
   isInitialized: boolean
@@ -58,10 +64,54 @@ interface AuthActions {
 
 type AuthStore = AuthState & AuthActions
 
+const authAdapter = createWebAuthAdapter()
+const authController = new AuthController(authAdapter)
+
+function mapProfileToUser(profile: AuthProfile): User {
+  return {
+    id: profile.id,
+    name: profile.name || '',
+    email: profile.email || '',
+    role: (profile.role as UserRole) || undefined,
+    username: profile.username || undefined,
+    phone: profile.phone || undefined,
+    location: profile.location || undefined,
+    description: profile.bio || undefined,
+    bio: profile.bio || undefined,
+    favorites: profile.favorites || undefined,
+    joinDate: profile.join_date || undefined,
+    createdAt: profile.created_at || undefined,
+    updatedAt: profile.updated_at || undefined,
+    avatar_url: profile.avatar_url || undefined,
+  }
+}
+
+function applySharedState(set: (state: Partial<AuthState>) => void, shared: SharedAuthState) {
+  set({
+    status: shared.status,
+    isLoading: shared.isLoading,
+    isInitialized: shared.isInitialized,
+    profile: shared.profile,
+    user: shared.profile ? mapProfileToUser(shared.profile) : null,
+  })
+}
+
+function buildSharedState(get: () => AuthStore): SharedAuthState {
+  const state = get()
+  return {
+    status: state.status,
+    isLoading: state.isLoading,
+    isInitialized: state.isInitialized,
+    user: state.user ? { id: state.user.id, email: state.user.email } : null,
+    profile: state.profile,
+  }
+}
+
 export const useAuthStore = create<AuthStore>()(
   subscribeWithSelector((set, get) => ({
     // Initial state
     user: null,
+    profile: null,
     isLoading: true,
     status: "loading",
     isInitialized: false,
@@ -79,56 +129,19 @@ export const useAuthStore = create<AuthStore>()(
       try {
         logger.debug('[AUTH] initialize: starting')
         set({ isLoading: true, status: "loading" })
-        
-        // Check current session from Supabase
-        const { data: { session } } = await supabase.auth.getSession()
-        logger.debug('[AUTH] initialize: session', { hasSession: !!session, userEmail: session?.user?.email })
-        
-        if (session?.user) {
-          logger.debug('[AUTH] initialize: found session for user', { email: session.user.email })
-          await get().fetchUserProfile(session.user.id)
-        } else {
-          logger.debug('[AUTH] initialize: no active session found')
-          set({ 
-            user: null, 
-            isLoading: false, 
-            status: "unauthenticated",
-            isInitialized: true 
-          })
-        }
 
-        // Listen for auth state changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          logger.debug('[AUTH] onAuthStateChange', { event, userEmail: session?.user?.email })
+        const state = await authController.initialize()
+        applySharedState(set, state)
 
-          if (event === 'SIGNED_IN' && session?.user) {
-            logger.debug('[AUTH] onAuthStateChange: user signed in', { email: session.user.email })
-            await get().fetchUserProfile(session.user.id)
-          } else if (event === 'SIGNED_OUT') {
-            logger.debug('[AUTH] onAuthStateChange: user signed out')
-            set({ 
-              user: null, 
-              isLoading: false, 
-              status: "unauthenticated" 
-            })
-          } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-            logger.debug('[AUTH] onAuthStateChange: token refreshed for user', { email: session.user.email })
-            if (!get().user) {
-              await get().fetchUserProfile(session.user.id)
-            }
-          } else if (event === 'USER_UPDATED' && session?.user) {
-            logger.debug('[AUTH] onAuthStateChange: user updated', { email: session.user.email })
-            await get().fetchUserProfile(session.user.id)
-          }
+        authAdapter.onAuthStateChange(async (user) => {
+          const next = await authController.handleAuthChange(user)
+          applySharedState(set, next)
         })
-
-        // Note: Supabase handles subscription cleanup automatically
-        logger.debug('[AUTH] initialize: complete')
-        
       } catch (error) {
         logger.error('[AUTH] initialize: error', error)
         set({ 
           user: null, 
+          profile: null,
           isLoading: false, 
           status: "unauthenticated",
           isInitialized: true 
@@ -139,102 +152,13 @@ export const useAuthStore = create<AuthStore>()(
     // Fetch user profile
     fetchUserProfile: async (userId: string) => {
       try {
-        logger.debug('[AUTH] fetchUserProfile: start', { userId })
-        let profile = null;
-        let profileError = null;
-        const maxRetries = 3;
-        const retryDelay = 1000;
-
-        for (let i = 0; i < maxRetries; i++) {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-
-          logger.debug(`[AUTH] fetchUserProfile: attempt ${i+1}`, { hasData: !!data, error: error?.message })
-
-          if (data) {
-            profile = data;
-            break;
-          }
-
-          if (error) {
-            profileError = error;
-            if (error.code !== 'PGRST116') {
-              break;
-            }
-          }
-
-          if (i < maxRetries - 1) {
-            logger.debug(`[AUTH] fetchUserProfile: retrying in ${retryDelay}ms`)
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-          }
-        }
-
-        if (!profile) {
-          logger.error('[AUTH] fetchUserProfile: failed after retries', profileError)
-          set({ 
-            user: null, 
-            isLoading: false, 
-            status: "unauthenticated" 
-          });
-          return;
-        }
-
-        const user: User = {
-          id: profile.id,
-          name: profile.name,
-          email: profile.email,
-          role: profile.role || undefined, // Handle null/empty role
-          username: profile.username,
-          phone: profile.phone,
-          location: profile.location,
-          description: profile.bio,
-          bio: profile.bio,
-          favorites: profile.favorites,
-          joinDate: profile.join_date,
-          createdAt: profile.created_at,
-          updatedAt: profile.updated_at,
-          avatar_url: profile.avatar_url
-        };
-
-        set({ 
-          user, 
-          isLoading: false, 
-          status: "authenticated",
-          isInitialized: true 
-        });
-        logger.debug('[AUTH] fetchUserProfile: success', { userId: user.id, email: user.email, role: user.role })
-
-        // Ensure barber row exists after confirmation
-        if (profile.role === 'barber') {
-          const { data: barber, error: barberError } = await supabase
-            .from('barbers')
-            .select('id')
-            .eq('user_id', userId)
-            .maybeSingle();
-          if (!barber) {
-            const { data: sessionData } = await supabase.auth.getSession();
-            logger.debug('Creating barber profile', { sessionUserId: sessionData?.session?.user?.id, userId })
-            const { error: insertError } = await supabase
-              .from('barbers')
-              .insert({
-                user_id: userId,
-                business_name: profile.business_name || '',
-                status: 'pending',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              });
-            if (insertError) {
-              logger.error('Failed to create barber profile after confirmation', insertError)
-            }
-          }
-        }
+        const next = await authController.refreshProfile(userId)
+        applySharedState(set, next)
       } catch (error) {
         logger.error('Error in fetchUserProfile', error)
         set({ 
           user: null, 
+          profile: null,
           isLoading: false, 
           status: "unauthenticated" 
         });
@@ -245,132 +169,9 @@ export const useAuthStore = create<AuthStore>()(
     login: async (email: string, password: string): Promise<boolean> => {
       try {
         set({ isLoading: true, status: "loading" })
-        logger.debug('Starting login process', { email })
-        
-        // Step 1: Authenticate with Supabase
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ 
-          email, 
-          password 
-        });
-
-        if (authError) {
-          logger.error('Auth error', authError)
-          set({ isLoading: false, status: "unauthenticated" })
-          return false;
-        }
-
-        if (!authData.user) {
-          logger.error('No user data returned from auth')
-          set({ isLoading: false, status: "unauthenticated" })
-          return false;
-        }
-
-        logger.debug('Authentication successful', { userId: authData.user.id })
-
-        // Step 2: Fetch profile with retry mechanism
-        let profile = null;
-        let profileError = null;
-        let retries = 3;
-        
-        while (retries > 0) {
-          logger.debug(`Fetching profile - Attempt ${4 - retries}/3`)
-          const result = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', authData.user.id)
-            .maybeSingle();
-            
-          if (result.data) {
-            profile = result.data;
-            logger.debug('Profile fetched successfully', { userId: profile.id })
-            break;
-          }
-          
-          profileError = result.error;
-          logger.debug('Profile fetch attempt failed', { error: profileError?.message })
-          retries--;
-          if (retries > 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-
-        if (profileError || !profile) {
-          logger.error('Profile fetch error after all retries', profileError)
-          set({ isLoading: false, status: "unauthenticated" })
-          return false;
-        }
-
-        // Step 3: Check if profile is complete
-        if (!profile.role || !profile.username) {
-          logger.debug('Profile incomplete, user needs to complete registration')
-          set({ isLoading: false, status: "unauthenticated" })
-          return false;
-        }
-
-        // Step 4: Ensure barber row exists if user is a barber
-        if (profile.role === 'barber') {
-          logger.debug('Checking for barber row')
-          const { data: existingBarber, error: barberCheckError } = await supabase
-            .from('barbers')
-            .select('id')
-            .eq('user_id', authData.user.id)
-            .maybeSingle();
-
-          if (barberCheckError) {
-            logger.error('Error checking barber row', barberCheckError)
-            // Continue anyway, don't fail login for this
-          }
-
-          if (!existingBarber) {
-            logger.debug('Creating barber row')
-            const { error: insertError } = await supabase
-              .from('barbers')
-              .insert({
-                user_id: authData.user.id,
-                business_name: profile.business_name || '',
-                status: 'pending',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              });
-
-            if (insertError) {
-              logger.error('Failed to create barber row', insertError)
-              // Continue anyway, don't fail login for this
-            } else {
-              logger.debug('Barber row created successfully')
-            }
-          } else {
-            logger.debug('Barber row already exists')
-          }
-        }
-
-        // Step 5: Set user state
-        const user: User = {
-          id: authData.user.id,
-          name: profile.name,
-          email: profile.email,
-          role: profile.role || undefined,
-          username: profile.username,
-          phone: profile.phone,
-          location: profile.location,
-          description: profile.bio,
-          bio: profile.bio,
-          favorites: profile.favorites,
-          joinDate: profile.join_date,
-          createdAt: profile.created_at,
-          updatedAt: profile.updated_at,
-          avatar_url: profile.avatar_url
-        };
-
-        set({ 
-          user, 
-          isLoading: false, 
-          status: "authenticated",
-          isInitialized: true
-        });
-
-        logger.debug('Login successful', { email: profile.email })
-        return true;
+        const { state, result } = await authController.login(email, password)
+        applySharedState(set, state)
+        return result.ok
       } catch (error) {
         logger.error('Login process failed', error)
         set({ isLoading: false, status: "unauthenticated" })
@@ -381,118 +182,15 @@ export const useAuthStore = create<AuthStore>()(
     // Register
     register: async (name: string, email: string, password: string, role: UserRole, businessName?: string): Promise<boolean> => {
       try {
-        logger.debug('Registration Process Started', { name, email, role, businessName })
-        
-        const { data: authData, error: authError } = await supabase.auth.signUp({
+        const { state, result } = await authController.register({
+          name,
           email,
           password,
-          options: {
-            data: {
-              name,
-              role,
-              business_name: businessName,
-            }
-          },
-        });
-        logger.debug('Raw signUp response', { hasUser: !!authData.user, hasError: !!authError })
-
-        if (authError) {
-          logger.error('Auth Error', authError)
-          return false;
-        }
-
-        logger.debug('Auth Data', { userId: authData.user?.id })
-
-        if (authData.user) {
-          logger.debug('authData.user exists', { userId: authData.user.id })
-          if (authData.user.identities?.length === 0) {
-            logger.debug('Email confirmation required')
-            return true;
-          }
-
-          // Try to fetch the profile with retries
-          let profile = null;
-          let profileError = null;
-          let retries = 3;
-          
-          while (retries > 0) {
-            logger.debug(`Fetching profile - Attempt ${4 - retries}/3`)
-            const result = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', authData.user.id)
-              .single();
-              
-            if (result.data) {
-              profile = result.data;
-              logger.debug('Profile fetched successfully', { userId: profile.id })
-              break;
-            }
-            
-            profileError = result.error;
-            logger.debug('Profile fetch attempt failed', { error: profileError?.message })
-            retries--;
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-          }
-
-          logger.debug('Profile after fetch loop', { hasProfile: !!profile, hasError: !!profileError })
-
-          if (profileError || !profile) {
-            logger.error('Profile Creation Failed', profileError)
-            return false;
-          }
-
-          // For barbers, create a business profile
-          if (role === 'barber' && businessName) {
-            logger.debug('Creating business profile')
-            const { error: businessError } = await supabase
-              .from('barbers')
-              .insert({
-                id: authData.user.id,
-                user_id: authData.user.id,
-                business_name: businessName,
-                status: 'pending',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              });
-
-            if (businessError) {
-              logger.error('Business Profile Creation Failed', businessError)
-            } else {
-              logger.debug('Business profile created successfully')
-            }
-          }
-
-          const user: User = {
-            id: authData.user.id,
-            name: profile.name,
-            email: profile.email,
-            role: profile.role,
-            username: profile.username,
-            phone: profile.phone,
-            location: profile.location,
-            description: profile.bio,
-            bio: profile.bio,
-            favorites: profile.favorites,
-            joinDate: profile.join_date,
-            createdAt: profile.created_at,
-            updatedAt: profile.updated_at
-          };
-
-          set({ 
-            user, 
-            isLoading: false, 
-            status: "authenticated" 
-          });
-
-          logger.debug('Registration completed successfully')
-          return true;
-        }
-
-        logger.debug('No authData.user, returning false')
-        return false;
+          role,
+          businessName,
+        })
+        applySharedState(set, state)
+        return result.ok || !!result.needsConfirmation
       } catch (error) {
         logger.error('Registration Process Failed', error)
         return false;
@@ -502,12 +200,8 @@ export const useAuthStore = create<AuthStore>()(
     // Logout
     logout: async () => {
       try {
-        await supabase.auth.signOut();
-        set({ 
-          user: null, 
-          isLoading: false, 
-          status: "unauthenticated" 
-        });
+        const next = await authController.logout()
+        applySharedState(set, next)
       } catch (error) {
         logger.error('Logout error', error)
       }
@@ -515,29 +209,19 @@ export const useAuthStore = create<AuthStore>()(
 
     // Update profile
     updateProfile: async (data: Partial<User>) => {
-      const { user } = get();
-      if (!user) return;
-
       try {
-        const profileData = {
+        const profilePatch: Partial<AuthProfile> = {
           name: data.name,
           email: data.email,
           phone: data.phone,
           location: data.location,
-          description: data.description,
-          bio: data.bio,
+          bio: data.bio ?? data.description,
           favorites: data.favorites,
-          updated_at: new Date().toISOString(),
-        };
+          avatar_url: data.avatar_url,
+        }
 
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update(profileData)
-          .eq('id', user.id);
-
-        if (profileError) throw profileError;
-
-        set({ user: { ...user, ...data } });
+        const next = await authController.updateProfile(buildSharedState(get), profilePatch)
+        applySharedState(set, next)
       } catch (error) {
         logger.error('Profile update error', error)
         throw error;
@@ -546,15 +230,9 @@ export const useAuthStore = create<AuthStore>()(
 
     // Add to favorites
     addToFavorites: async (barberId: string) => {
-      const { user, updateProfile } = get();
-      if (!user) return;
-
       try {
-        const favorites = user.favorites || [];
-        if (!favorites.includes(barberId)) {
-          const updatedFavorites = [...favorites, barberId];
-          await updateProfile({ favorites: updatedFavorites });
-        }
+        const next = await authController.addToFavorites(buildSharedState(get), barberId)
+        applySharedState(set, next)
       } catch (error) {
         logger.error('Add to favorites error', error)
         throw error;
@@ -563,12 +241,9 @@ export const useAuthStore = create<AuthStore>()(
 
     // Remove from favorites
     removeFromFavorites: async (barberId: string) => {
-      const { user, updateProfile } = get();
-      if (!user || !user.favorites) return;
-
       try {
-        const updatedFavorites = user.favorites.filter((id) => id !== barberId);
-        await updateProfile({ favorites: updatedFavorites });
+        const next = await authController.removeFromFavorites(buildSharedState(get), barberId)
+        applySharedState(set, next)
       } catch (error) {
         logger.error('Remove from favorites error', error)
         throw error;

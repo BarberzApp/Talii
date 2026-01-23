@@ -163,9 +163,11 @@ The following changes were implemented to reduce schema drift and prevent runtim
 
 #### 7) Auth store parity (Medium/High)
 
-- [ ] Consolidate auth store core logic into shared state machine (Option A style):
-  - [ ] Keep storage adapter per platform (localStorage vs AsyncStorage)
-  - [ ] Preserve web’s retry logic for `profiles` fetch (mobile currently does not retry)
+- [x] Consolidate auth store core logic into shared state machine (Option B style):
+  - [x] Implemented shared `AuthController` in `packages/shared/src/domain/auth`
+  - [x] Added platform adapters for web and mobile
+  - [x] Aligned retry logic (3 attempts on PGRST116) and "ensure barber row" behavior
+  - [x] Refactored `apps/web/src/shared/stores/auth-store.ts` and `apps/mobile/app/shared/hooks/useAuth.tsx` to use the shared machine
 
 #### 8) Remove dead/legacy code paths (Medium: D6 and general cleanup)
 

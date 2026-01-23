@@ -31,7 +31,6 @@ This document provides a high-level overview of the Barber App's architecture, m
 ### 3. Payments
 - **Purpose:** Handle payments via Stripe, including platform fees and payouts.
 - **Key Files:**
-  - `src/shared/lib/stripe-service.ts`
   - `src/app/api/webhooks/stripe/`
 - **DB Tables:** `payments`, `bookings`, `barbers`
 - **Logic:**
@@ -41,7 +40,7 @@ This document provides a high-level overview of the Barber App's architecture, m
 ## Where to Find Key Logic
 - **Authentication:** `src/features/auth/`
 - **Profile Management:** `src/features/profile/`, `src/app/(client)/profile/`, `src/app/(barber)/profile/`
-- **Stripe Connect:** `src/app/api/connect/`, `src/shared/lib/stripe-service.ts`
+- **Stripe Connect:** `src/app/api/connect/`
 - **RLS Policies:** `../database/rowlevelsecurity.txt`
 
 ## Additional References

@@ -74,7 +74,6 @@ apps/mobile/app/
 │   │   ├── components/
 │   │   │   ├── BookingForm.tsx          (400 lines)
 │   │   │   ├── ServiceSelector.tsx      (150 lines)
-│   │   │   ├── TimeSlotPicker.tsx       (200 lines)
 │   │   │   └── PaymentStep.tsx          (200 lines)
 │   │   ├── hooks/
 │   │   │   ├── useBookingFlow.ts        (150 lines)

@@ -178,7 +178,6 @@ function BookPageContent() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [showMobileFallback, setShowMobileFallback] = useState(false)
   const [featuredReels, setFeaturedReels] = useState<FeaturedReel[]>([])
   const [showVideoDialog, setShowVideoDialog] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<FeaturedReel | null>(null)
@@ -279,29 +278,7 @@ function BookPageContent() {
     checkMobile();
   }, [])
 
-  // Check if we're in a mobile browser and handle PWA/service worker interference
-  useEffect(() => {
-    const checkMobileAndPWA = () => {
-      // Check for PWA/service worker interference
-      if (isMobile && typeof window !== 'undefined') {
-        const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                     (window.navigator as any).standalone === true;
-        
-        if (isPWA) {
-          // PWA detected, set a timeout for fallback
-          setTimeout(() => {
-            if (loading) {
-              setShowMobileFallback(true);
-            }
-          }, 10000); // 10 second timeout
-        }
-      }
-    }
-    
-    if (isMobile) {
-      checkMobileAndPWA();
-    }
-  }, [isMobile, loading])
+  // Note: PWA interference handling removed with PWA support.
 
   useEffect(() => {
     if (identifier) {
@@ -618,48 +595,6 @@ function BookPageContent() {
         </div>
       </div>
     )
-  }
-
-  // Show mobile fallback if page doesn't load
-  if (showMobileFallback) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center space-y-6">
-          <div className="space-y-4">
-            <h1 className="text-2xl font-bold text-white">Having trouble loading?</h1>
-            <p className="text-gray-400">
-              The profile page seems to be taking longer than expected. Try one of these options:
-            </p>
-          </div>
-          
-          <div className="space-y-3">
-            <Button 
-              onClick={() => window.location.reload()} 
-              className="w-full bg-secondary text-primary"
-            >
-              Try Again
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              onClick={() => window.open(window.location.href, '_blank')}
-              className="w-full"
-            >
-              Open in New Tab
-            </Button>
-            
-            <div className="text-sm text-gray-400">
-              <p>If the problem persists, try:</p>
-              <ul className="mt-2 space-y-1 text-left">
-                <li>• Refreshing the page</li>
-                <li>• Opening in a different browser</li>
-                <li>• Checking your internet connection</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (

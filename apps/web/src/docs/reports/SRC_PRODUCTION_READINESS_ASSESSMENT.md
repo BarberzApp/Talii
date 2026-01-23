@@ -160,7 +160,6 @@ Note: ~2 console statements in src/lib/security-logger.ts are intentional (secur
    - `src/shared/components/booking/booking-details.tsx` - ✅ 4 statements replaced
    - `src/shared/components/ui/enhanced-error-boundary.tsx` - ✅ 4 statements replaced
    - `src/app/api/connect/create-account/route.ts` - ✅ 18 statements replaced
-   - `src/app/api/connect/update-stripe-status/route.ts` - ✅ 2 statements replaced
    - `src/shared/components/calendar/manual-appointment-form.tsx` - ✅ 3 statements replaced
    - `src/shared/components/reviews/review-dialog.tsx` - ✅ 1 statement replaced
    - `src/app/api/connect/update-account-id/route.ts` - ✅ 10 statements replaced
@@ -398,7 +397,7 @@ Note: ~2 console statements in src/lib/security-logger.ts are intentional (secur
 2. ✅ Fixed permissive CORS configuration
    - Created secure CORS utility (`src/shared/lib/cors.ts`)
    - Replaced all `Access-Control-Allow-Origin: *` with origin validation
-   - Updated routes: `nominatim`, `connect/check-status`, `connect/update-stripe-status`, `connect/create-account`
+   - Updated routes: `nominatim`, `connect/check-status`, `connect/create-account`
 
 **Remaining Fixes Required:**
 1. ⏳ Implement global rate limiting middleware

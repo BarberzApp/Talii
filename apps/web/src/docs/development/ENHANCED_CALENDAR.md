@@ -86,7 +86,7 @@ function MyComponent() {
 ```
 
 ### Demo Page
-Visit `/calendar-demo` to see the enhanced calendar in action with sample data.
+The demo page was removed during cleanup. Use a local preview by rendering the component in a feature page as needed.
 
 ## Styling
 
