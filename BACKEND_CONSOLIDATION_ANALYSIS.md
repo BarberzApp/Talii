@@ -141,19 +141,25 @@ The following changes were implemented to reduce schema drift and prevent runtim
 
 #### 5) Fee model parity (High: D3)
 
-- [ ] Make `apps/web/src/shared/lib/fee-calculator.ts` the canonical algorithm (or move to `packages/shared`)
-- [ ] Remove/replace mobile’s divergent `calculateFees()` (currently returns 203/135)
-- [ ] Add unit tests that lock the fee breakdown and prevent drift
+- [x] Make `apps/web/src/shared/lib/fee-calculator.ts` the canonical algorithm (or move to `packages/shared`)
+- [x] Remove/replace mobile’s divergent `calculateFees()` (deprecated helper removed; mobile UI now reflects backend fee-only model)
+- [x] Add unit tests that lock the fee breakdown and prevent drift
 
 #### 6) Payments + booking creation metadata contract (Critical: D2)
 
-- [ ] Define the canonical metadata contract required by the webhook booking-creation logic:
-  - Required fields: `barber_id`, `service_id`, `date`, `client_id`, `addon_ids`, fee breakdown, etc.
-- [ ] Ensure **all payment initiation paths** attach metadata to the **PaymentIntent** (not just the Checkout Session):
-  - [x] Web Checkout Session (`/api/create-checkout-session`): ensure `payment_intent_data.metadata` is set (implemented)
-  - [~] Mobile PaymentIntent creation (Edge Fn): ensure metadata matches the same contract (mobile booking flow now prefers `POST /api/mobile/bookings`, but Edge Fn cleanup is still pending)
-- [ ] Add verification logging/alerts when webhook receives a PaymentIntent without required metadata
-- [ ] Add automated tests around the webhook metadata parsing and booking insert
+- [x] Define the canonical metadata contract required by the webhook booking-creation logic:
+  - Canonical implementation: `apps/web/src/shared/lib/stripe-booking-metadata.ts` (`buildStripeBookingMetadata()` + `parseStripeBookingMetadata()`)
+  - Required fields (Stripe metadata keys): `barberId`, `serviceId`, `date`, `clientId`
+  - Optional fields (kept stable to prevent drift): `addonIds`, fee breakdown (`platformFee`, `bocmShare`, `barberShare`), etc.
+- [x] Ensure **all payment initiation paths** attach metadata to the **PaymentIntent** (not just the Checkout Session):
+  - [x] Web Checkout Session (`/api/create-checkout-session`): sets `payment_intent_data.metadata` using `buildStripeBookingMetadata()`
+  - [x] Mobile PaymentIntent creation (Gateway `POST /api/mobile/bookings`): sets `paymentIntent.metadata` using `buildStripeBookingMetadata()`
+  - [x] Legacy mobile Edge Fn (`supabase/functions/create-payment-intent`): aligned to include the same core metadata fields (kept for compatibility/cleanup)
+- [x] Add verification logging/alerts when webhook receives a PaymentIntent without required metadata
+  - Implemented in `apps/web/src/app/api/webhooks/stripe/route.ts` (logs missing keys + best-effort `payment_events` insert)
+- [~] Add automated tests around the webhook metadata parsing and booking insert
+  - [x] Metadata parsing contract tests added: `apps/web/src/app/api/webhooks/stripe/__tests__/webhook-metadata.test.ts`
+  - [ ] Still missing: integration test that simulates a full webhook event and asserts booking insert behavior end-to-end
 
 #### 7) Auth store parity (Medium/High)
 
@@ -394,8 +400,7 @@ Model:
 #### Divergent/legacy fee logic (risk)
 
 Found in:
-- `apps/mobile/app/shared/lib/bookingService.ts` → `calculateFees()` returns 203/135 (sums to 338 but doesn’t match “net-after-stripe” split)
-- `apps/mobile/app/shared/lib/bookingService.ts` → `calculateFees()` returns 203/135 (sums to 338 but doesn’t match “net-after-stripe” split)
+- (Previously) `apps/mobile/app/shared/lib/bookingService.ts` → legacy `calculateFees()` helper (now removed to prevent drift)
 
 This is a **consistency hazard**: even if this helper isn’t currently used for Stripe transfers, it can leak into UI totals, metadata, receipts, or future refactors.
 

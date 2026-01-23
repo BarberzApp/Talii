@@ -1,8 +1,8 @@
 import { BookingService } from '../booking-service'
-import { supabase } from '@/shared/lib/supabase'
+import { supabase } from '../supabase'
 import type { CreateBookingInput } from '../booking-service'
 
-jest.mock('@/shared/lib/supabase', () => ({
+jest.mock('../supabase', () => ({
   supabase: {
     from: jest.fn(() => ({
       insert: jest.fn(() => ({
@@ -33,8 +33,8 @@ describe('BookingService', () => {
       price: 100,
       client_id: 'client123',
       payment_intent_id: 'pi_123',
-      platform_fee: 203, // $2.028 (60% of $3.38)
-      barber_payout: 1135, // $11.35 (service price + 40% of fee)
+      platform_fee: 1.80, // $1.80 (60% of $3.00 net)
+      barber_payout: 1.20, // $1.20 (40% of $3.00 net)
       status: 'pending',
       payment_status: 'pending',
     })
@@ -46,11 +46,11 @@ describe('BookingService', () => {
       barber_id: 'barber123',
       service_id: 'service123',
       date: new Date().toISOString(),
-      price: 0,
+      price: 3.00,
       client_id: 'client123',
       payment_intent_id: 'pi_123',
-      platform_fee: 203, // $2.028 (60% of $3.38)
-      barber_payout: 135, // $1.352 (40% of fee)
+      platform_fee: 1.80, // $1.80 (60% of $3.00 net)
+      barber_payout: 1.20, // $1.20 (40% of $3.00 net)
       status: 'pending',
       payment_status: 'pending',
     })
@@ -67,8 +67,8 @@ describe('BookingService', () => {
       guest_name: 'John Doe',
       guest_email: 'john@example.com',
       guest_phone: '1234567890',
-      platform_fee: 203,
-      barber_payout: 1135,
+      platform_fee: 1.80,
+      barber_payout: 1.20,
       status: 'pending',
       payment_status: 'pending',
     })

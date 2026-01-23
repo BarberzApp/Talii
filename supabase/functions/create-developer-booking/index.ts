@@ -101,13 +101,17 @@ serve(async (req) => {
       )
     }
 
-    // Calculate add-on total
+    // Calculate add-on total (deduplicate to prevent double-counting)
+    const uniqueAddonIds = Array.isArray(addonIds)
+      ? [...new Set(addonIds.filter((id: unknown) => typeof id === 'string' && id.trim().length > 0))]
+      : []
+
     let addonTotal = 0
-    if (addonIds && addonIds.length > 0) {
+    if (uniqueAddonIds.length > 0) {
       const { data: addons, error: addonsError } = await supabase
         .from('service_addons')
         .select('id, name, price')
-        .in('id', addonIds)
+        .in('id', uniqueAddonIds)
         .eq('is_active', true)
 
       if (!addonsError && addons) {
@@ -134,7 +138,8 @@ serve(async (req) => {
       payment_status: 'succeeded',
       price: totalPrice,
       service_price: service.price, // Store historical service price
-      addon_total: addonTotal,
+      // Keep consistent with gateway + DB triggers: let booking_addons trigger calculate addon_total
+      addon_total: 0,
       platform_fee: platformFee,
       barber_payout: barberPayout,
       payment_intent_id: `dev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -185,17 +190,17 @@ serve(async (req) => {
       )
     }
 
-    // Add add-ons if any are selected
-    if (addonIds && addonIds.length > 0) {
+    // Add add-ons if any are selected (deduplicated)
+    if (uniqueAddonIds.length > 0) {
       // Get add-on details to store correct prices
       const { data: addons, error: addonsError } = await supabase
         .from('service_addons')
         .select('id, name, price')
-        .in('id', addonIds)
+        .in('id', uniqueAddonIds)
         .eq('is_active', true)
 
       if (!addonsError && addons) {
-        const addonBookings = addonIds.map(addonId => {
+        const addonBookings = uniqueAddonIds.map(addonId => {
           const addon = addons.find(a => a.id === addonId)
           return {
             booking_id: booking.id,

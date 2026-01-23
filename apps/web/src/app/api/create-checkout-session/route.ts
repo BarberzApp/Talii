@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { supabase } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
+import { 
+  calculateFeeBreakdown,
+} from '@/shared/lib/fee-calculator'
+import { buildStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20" as any,
@@ -12,34 +16,6 @@ function getBearerToken(request: Request): string | null {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null
   const token = authHeader.slice('Bearer '.length).trim()
   return token.length > 0 ? token : null
-}
-
-// Define required metadata fields
-const REQUIRED_METADATA = {
-  ALL: ['barberId', 'serviceId', 'date', 'basePrice'],
-  GUEST: ['guestName', 'guestEmail', 'guestPhone']
-}
-
-// Type definitions
-interface CheckoutMetadata {
-  barberId: string
-  serviceId: string
-  date: string
-  basePrice: string
-  guestName?: string
-  guestEmail?: string
-  guestPhone?: string
-  notes?: string
-  [key: string]: string | undefined
-}
-
-interface CheckoutSessionRequest {
-  amount: string | number
-  successUrl: string
-  cancelUrl: string
-  metadata: CheckoutMetadata
-  clientId?: string | null
-  customerPaysFee?: boolean
 }
 
 export async function POST(request: Request) {
@@ -152,16 +128,11 @@ export async function POST(request: Request) {
       }))
     }
     
-    // Platform fee calculation (matches mobile app)
-    // Customer pays $3.38, Stripe takes $0.38, net is $3.00
-    // Split $3.00: 60% to BOCM ($1.80), 40% to barber ($1.20)
-    // BOCM absorbs the Stripe fee as a platform cost, so BOCM net = $1.80 - $0.38 = $1.42
-    const platformFee = 338 // $3.38 in cents (what customer pays)
-    const stripeFee = 38 // $0.38 in cents (Stripe's fee - absorbed by platform)
-    const netAfterStripe = platformFee - stripeFee // $3.00 = 300 cents
-    const bocmGrossShare = Math.round(netAfterStripe * 0.60) // 60% = $1.80 = 180 cents
-    let bocmShare = bocmGrossShare - stripeFee // Platform net after absorbing Stripe fee = $1.42 = 142 cents
-    let barberShare = Math.round(netAfterStripe * 0.40) // 40% = $1.20 = 120 cents
+    // Platform fee calculation (unified $3.40 model)
+    const breakdown = calculateFeeBreakdown()
+    const platformFee = breakdown.platformFee
+    let bocmShare = breakdown.bocmGrossShare // $1.80 (Platform net after Stripe will be $1.40)
+    let barberShare = breakdown.barberShare // $1.20
 
     // If barber is a developer, bypass all platform fees
     if (barber.is_developer) {
@@ -172,7 +143,6 @@ export async function POST(request: Request) {
     // Customer only pays the platform fee (fee-only payment model)
     // Service price and addons are paid directly to barber at appointment
     const totalAmount = platformFee
-    const transferAmount = barberShare // Barber gets 40% of fee (or 0 if developer)
     
     const lineItems = [
       {
@@ -194,7 +164,7 @@ export async function POST(request: Request) {
     const cancelUrl = `${baseUrl}/booking/cancel`
 
     // Create Stripe Checkout session
-    const metadata = {
+    const metadata = buildStripeBookingMetadata({
       barberId,
       serviceId,
       date,
@@ -204,18 +174,17 @@ export async function POST(request: Request) {
       guestPhone: guestPhone || '',
       clientId: derivedClientId || 'guest',
       serviceName: service.name,
-      servicePrice: servicePrice.toString(),
-      addonTotal: Math.round(addonTotal * 100).toString(),
-      addonIds: [...new Set(addonIds)].join(','),
-      platformFee: platformFee.toString(),
-      paymentType: 'fee', // Always fee-only payment model
+      servicePriceCents: servicePrice,
+      addonTotalCents: Math.round(addonTotal * 100),
+      addonIds,
+      platformFeeCents: platformFee,
+      paymentType: 'fee',
       feeType: 'fee_only',
-      bocmShare: bocmShare.toString(),
-      barberShare: barberShare.toString(),
-      isDeveloper: barber.is_developer ? 'true' : 'false',
-      // Add flag to indicate if add-ons need separate payment
-      addonsPaidSeparately: (paymentType === 'fee' && addonIds.length > 0).toString(),
-    } satisfies Stripe.MetadataParam
+      bocmShareCents: bocmShare,
+      barberShareCents: barberShare,
+      isDeveloper: !!barber.is_developer,
+      addonsPaidSeparately: addonIds.length > 0,
+    }) satisfies Stripe.MetadataParam
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],

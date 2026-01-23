@@ -3,6 +3,8 @@ import Stripe from 'stripe'
 import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
 import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
+import { calculateFeeBreakdown } from '@/shared/lib/fee-calculator'
+import { buildStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata'
 
 export const dynamic = 'force-dynamic'
 
@@ -194,39 +196,42 @@ export async function POST(request: Request) {
       )
     }
 
-    const platformFee = 338 // cents
-    const stripeFee = 38 // cents (absorbed by platform)
-    const netAfterStripe = platformFee - stripeFee // 300
-    const bocmGrossShare = Math.round(netAfterStripe * 0.6) // 180
-    const bocmShare = bocmGrossShare - stripeFee // 142
-    const barberShare = Math.round(netAfterStripe * 0.4) // 120
+    // Unified fee model ($3.40 total charged to customer; Stripe fee absorbed by platform)
+    // NOTE: application_fee_amount must be the platform's GROSS share of the net amount
+    // so that the barber receives exactly their 40% share via transfer_data.
+    const fee = calculateFeeBreakdown()
+    const platformFee = fee.platformFee // 340
+    const bocmShare = fee.bocmGrossShare // 180
+    const barberShare = fee.barberShare // 120
 
     const servicePriceCents = Math.round(Number(service.price || 0) * 100)
     const addonTotalCents = Math.round(addonTotalDollars * 100)
+
+    const metadata = buildStripeBookingMetadata({
+      barberId,
+      serviceId,
+      date,
+      notes: notes || '',
+      clientId: user.id,
+      serviceName: String(service.name || ''),
+      servicePriceCents,
+      addonTotalCents,
+      addonIds: uniqueAddonIds,
+      platformFeeCents: platformFee,
+      paymentType: 'fee',
+      feeType: 'fee_only',
+      bocmShareCents: bocmShare,
+      barberShareCents: barberShare,
+      isDeveloper: false,
+      addonsPaidSeparately: uniqueAddonIds.length > 0,
+    })
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: platformFee,
       currency: 'usd',
       application_fee_amount: bocmShare,
       transfer_data: { destination: barber.stripe_account_id },
-      metadata: {
-        barberId,
-        serviceId,
-        date,
-        notes: notes || '',
-        clientId: user.id,
-        serviceName: String(service.name || ''),
-        servicePrice: String(servicePriceCents),
-        addonTotal: String(addonTotalCents),
-        addonIds: uniqueAddonIds.join(','),
-        platformFee: String(platformFee),
-        paymentType: 'fee',
-        feeType: 'fee_only',
-        bocmShare: String(bocmShare),
-        barberShare: String(barberShare),
-        isDeveloper: 'false',
-        addonsPaidSeparately: (uniqueAddonIds.length > 0).toString(),
-      },
+      metadata,
       automatic_payment_methods: { enabled: true },
     })
 

@@ -463,9 +463,8 @@ export default function BookingForm({
     return getSelectedAddons().reduce((total, addon) => total + addon.price, 0);
   };
 
-  const getTotalPrice = () => {
-    return isDeveloperAccount ? 0.00 : 3.38; // Return $0.00 for developer accounts
-  };
+  const BOOKING_FEE_AMOUNT = isDeveloperAccount ? 0.0 : 3.4;
+  const BOOKING_FEE_LABEL = isDeveloperAccount ? '$0.00' : '$3.40';
 
   if (!isVisible) return null;
 
@@ -978,13 +977,13 @@ export default function BookingForm({
                         Booking Fee
                       </Text>
                       <Text style={[tw`font-semibold`, { color: theme.colors.secondary }]}>
-                        {isDeveloperAccount ? '$0.00' : '$3.38'}
+                        {BOOKING_FEE_LABEL}
                       </Text>
                     </View>
                     <Text style={[tw`text-sm mt-2`, { color: theme.colors.mutedForeground }]}>
                       {isDeveloperAccount 
                         ? 'Developer account - no platform fees charged. Service cost and any add-ons will be paid directly to the barber at your appointment.'
-                        : 'Pay the remaining amount directly to your barber'
+                        : 'Service cost and any add-ons are paid directly to your barber at your appointment.'
                       }
                     </Text>
                   </View>
@@ -1101,7 +1100,7 @@ export default function BookingForm({
                         Booking Fee
                       </Text>
                       <Text style={[tw`text-base font-medium`, { color: theme.colors.foreground }]}>
-                        $3.38
+                        {BOOKING_FEE_LABEL}
                       </Text>
                     </View>
                     
@@ -1118,6 +1117,9 @@ export default function BookingForm({
                             </Text>
                           </View>
                         ))}
+                        <Text style={[tw`text-xs mt-2`, { color: theme.colors.mutedForeground }]}>
+                          Add-ons are paid at your appointment (not charged now).
+                        </Text>
                       </View>
                     )}
                     
@@ -1130,7 +1132,7 @@ export default function BookingForm({
                           Total
                         </Text>
                         <Text style={[tw`text-xl font-bold`, { color: theme.colors.secondary }]}>
-                          ${(3.38 + getSelectedAddonsTotal()).toFixed(2)}
+                          {BOOKING_FEE_LABEL}
                         </Text>
                       </View>
                     </View>

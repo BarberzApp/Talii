@@ -4,6 +4,8 @@ import { supabaseAdmin } from "@/shared/lib/supabase"
 import { headers } from "next/headers"
 import { sendBookingConfirmationSMS } from '@/shared/utils/sendSMS'
 import { logger } from '@/shared/lib/logger'
+import { calculateFeeBreakdown } from '@/shared/lib/fee-calculator'
+import { parseStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata'
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing STRIPE_SECRET_KEY')
@@ -318,30 +320,125 @@ export async function POST(request: Request) {
 
         if (!existingBooking) {
           // Create the booking using metadata
-          const meta = paymentIntent.metadata || {}
-          const { barberId, serviceId, date, notes, guestName, guestEmail, guestPhone, clientId, addonIds, addonTotal, addonsPaidSeparately } = meta
+          const rawMeta = (paymentIntent.metadata || {}) as Record<string, string>
+          const parsed = parseStripeBookingMetadata(rawMeta)
+
+          if (!parsed.ok) {
+            logger.error('Missing required booking metadata in payment intent', {
+              paymentIntentId: paymentIntent.id,
+              missing: parsed.missing,
+              meta: parsed.raw,
+            })
+
+            // Best-effort telemetry for missing metadata (do not fail the webhook)
+            try {
+              await supabase.from('payment_events').insert({
+                payment_intent_id: paymentIntent.id,
+                event_type: 'payment_intent_missing_metadata',
+                booking_id: null,
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency,
+                metadata: {
+                  missing: parsed.missing,
+                  raw: parsed.raw,
+                },
+                created_at: new Date().toISOString(),
+              } as any)
+            } catch (trackingError) {
+              logger.error('Error tracking missing-metadata event', trackingError)
+            }
+
+            // Returning 200 prevents Stripe retry storms; booking creation is impossible without metadata.
+            break
+          }
+
+          const {
+            barberId,
+            serviceId,
+            date,
+            notes,
+            guestName,
+            guestEmail,
+            guestPhone,
+            clientId,
+            addonIdsCsv,
+            addonTotalCents,
+            addonsPaidSeparately,
+            platformFeeCents,
+            bocmShareCents,
+            barberShareCents,
+            isDeveloper,
+          } = parsed.value
           
           // Debug logging
-          logger.debug('Payment intent metadata', { meta })
-          logger.debug('Extracted values', { barberId, serviceId, date, notes, guestName, guestEmail, guestPhone, clientId })
+          logger.debug('Payment intent metadata (parsed)', {
+            paymentIntentId: paymentIntent.id,
+            barberId,
+            serviceId,
+            date,
+            clientId,
+            hasGuestInfo: !!(guestName || guestEmail || guestPhone),
+            addonIdsCsv,
+            addonTotalCents,
+            addonsPaidSeparately,
+          })
           
-          if (!barberId || !serviceId || !date) {
-            logger.error('Missing required booking metadata in payment intent')
-            return NextResponse.json(
-              { error: 'Missing required booking metadata' },
-              { status: 400 }
-            )
+          // Defensive: if clientId is missing or empty, treat as guest if guest info exists; else bail.
+          const normalizedClientId =
+            clientId && clientId.trim().length > 0
+              ? clientId
+              : (guestName || guestEmail || guestPhone) ? 'guest' : ''
+
+          if (!normalizedClientId) {
+            logger.error('Payment intent missing clientId and no guest info provided; cannot create booking', {
+              paymentIntentId: paymentIntent.id,
+              meta: rawMeta,
+            })
+            break
+          }
+
+          // Fee contract verification (log-only; do not block booking creation)
+          try {
+            const fee = calculateFeeBreakdown()
+            const expectedPlatformFee = String(fee.platformFee)
+            const expectedBocmShare = String(fee.bocmGrossShare)
+            const expectedBarberShare = String(fee.barberShare)
+
+            const mismatches: Record<string, { expected: string; got?: string }> = {}
+            if (platformFeeCents && platformFeeCents !== expectedPlatformFee) {
+              mismatches.platformFee = { expected: expectedPlatformFee, got: platformFeeCents }
+            }
+            if (bocmShareCents && bocmShareCents !== expectedBocmShare) {
+              mismatches.bocmShare = { expected: expectedBocmShare, got: bocmShareCents }
+            }
+            if (barberShareCents && barberShareCents !== expectedBarberShare) {
+              mismatches.barberShare = { expected: expectedBarberShare, got: barberShareCents }
+            }
+            if (isDeveloper && isDeveloper !== 'false' && isDeveloper !== 'true') {
+              mismatches.isDeveloper = { expected: 'true|false', got: isDeveloper }
+            }
+
+            if (Object.keys(mismatches).length > 0) {
+              logger.warn('Payment intent fee metadata mismatch (log-only)', {
+                paymentIntentId: paymentIntent.id,
+                mismatches,
+              })
+            }
+          } catch (feeErr) {
+            logger.error('Failed fee metadata verification', feeErr)
           }
 
           // Convert Stripe cents to dollars for bookings table (which stores NUMERIC dollars)
-          const platform_fee_cents = paymentIntent.application_fee_amount || 0
-          const platform_fee = platform_fee_cents / 100
-          const barber_payout_cents = paymentIntent.amount - platform_fee_cents
-          const barber_payout = barber_payout_cents / 100
+          // We use the shared fee breakdown to ensure consistency
+          const breakdown = calculateFeeBreakdown()
           
-          // Price should be the total amount charged (platform_fee + barber_payout)
-          // This satisfies the check_payment_amounts constraint: platform_fee + barber_payout = price
-          const price = platform_fee + barber_payout
+          // application_fee_amount is the gross platform share (e.g. $1.80)
+          // For the DB, we store the shares of the net amount ($3.00)
+          const platform_fee = breakdown.bocmGrossShare / 100 // $1.80
+          const barber_payout = breakdown.barberShare / 100 // $1.20
+          
+          // Price in DB reflects the net amount split between platform and barber
+          const price = breakdown.netAfterStripe / 100 // $3.00
           
           // Get service price to store historically (so it doesn't change if service price is updated later)
           const { data: service } = await supabase
@@ -355,9 +452,9 @@ export async function POST(request: Request) {
           // Calculate add-on total from add-ons table using addonIds (deduplicate first)
           let addon_total = 0
           let addonIdArray: string[] = []
-          if (addonIds && typeof addonIds === 'string' && addonIds.length > 0) {
+          if (addonIdsCsv && typeof addonIdsCsv === 'string' && addonIdsCsv.length > 0) {
             // Deduplicate addon IDs to prevent double-counting
-            addonIdArray = [...new Set(addonIds.split(',').filter(id => id.trim()))]
+            addonIdArray = [...new Set(addonIdsCsv.split(',').filter(id => id.trim()))]
             if (addonIdArray.length > 0) {
               const { data: addons } = await supabase
                 .from('service_addons')
@@ -386,15 +483,16 @@ export async function POST(request: Request) {
             guest_name: guestName || null,
             guest_email: guestEmail || null,
             guest_phone: guestPhone || null,
-            client_id: clientId === 'guest' ? null : clientId,
+            client_id: normalizedClientId === 'guest' ? null : normalizedClientId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }).select('*, barber:barber_id(*), service:service_id(*), client:client_id(*)').single()
 
           // Debug logging for the insert operation
-          logger.debug('Inserting booking with client_id', { clientId: clientId === 'guest' ? null : clientId })
-          logger.debug('Original clientId from metadata', { clientId })
-          logger.debug('Condition check result', { isGuest: clientId === 'guest' })
+          logger.debug('Inserting booking with client_id', {
+            clientId: normalizedClientId === 'guest' ? null : normalizedClientId,
+            isGuest: normalizedClientId === 'guest',
+          })
 
           if (createError) {
             logger.error('Error creating booking after payment', createError)
@@ -422,7 +520,7 @@ export async function POST(request: Request) {
             bookingId: newBooking.id,
             paymentIntentId: paymentIntent.id,
             barberId,
-            clientId,
+            clientId: normalizedClientId,
             amount: paymentIntent.amount,
             status: newBooking.status
           })
@@ -441,8 +539,8 @@ export async function POST(request: Request) {
                   source: 'mobile_app',
                   barberId,
                   serviceId,
-                  clientId,
-                  addonIds: addonIds || []
+                  clientId: normalizedClientId,
+                  addonIds: addonIdArray
                 },
                 created_at: new Date().toISOString()
               })
@@ -452,8 +550,8 @@ export async function POST(request: Request) {
           }
 
           // Add add-ons to the booking if any were selected (deduplicate first)
-          if (addonIds && addonIds.length > 0) {
-            const addonIdArray = [...new Set(addonIds.split(',').filter(id => id.trim()))]
+          if (addonIdsCsv && addonIdsCsv.length > 0) {
+            const addonIdArray = [...new Set(addonIdsCsv.split(',').filter(id => id.trim()))]
             if (addonIdArray.length > 0) {
               const { data: addons } = await supabase
                 .from('service_addons')

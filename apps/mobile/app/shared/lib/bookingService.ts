@@ -94,9 +94,8 @@ class BookingService {
       const { captureException } = require('./sentry');
       captureException(err as Error, {
         context: 'bookingService.createBooking',
-        barberId: bookingData.barber_id,
-        serviceId: bookingData.service_id,
-        clientId: bookingData.client_id,
+        barberId: bookingData.barberId,
+        serviceId: bookingData.serviceId,
         date: bookingData.date,
       });
       
@@ -129,21 +128,6 @@ class BookingService {
       logger.error('Error cancelling booking:', error);
       throw error;
     }
-  }
-
-  // Calculate fees (fee-only payment model)
-  // Customer only pays platform fee, service price paid directly to barber at appointment
-  calculateFees(servicePrice: number) {
-    const servicePriceCents = Math.round(servicePrice * 100);
-    const platformFee = 203; // $2.03 (60% of $3.38 fee)
-    const barberFeeShare = 135; // $1.35 (40% of $3.38 fee)
-    
-    return {
-      total: 338, // Just the $3.38 platform fee
-      platformFee: platformFee,
-      barberPayout: barberFeeShare,
-      servicePrice: servicePriceCents
-    };
   }
 }
 
