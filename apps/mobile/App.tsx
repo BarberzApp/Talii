@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StatusBar } from 'expo-status-bar';
 import { View, Text, Alert } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Font from 'expo-font';
 import * as Linking from 'expo-linking';
 import { notificationService } from './app/shared/lib/notifications';
@@ -13,7 +10,7 @@ import { theme } from './app/shared/lib/theme';
 import { AppNavigator } from './app/navigation/AppNavigator';
 import { AuthProvider } from './app/shared/hooks/useAuth';
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { ErrorBoundary } from './app/shared/components/ui/ErrorBoundary';
+import { Toaster, useToast } from './app/shared/components/ui';
 // Initialize Sentry as early as possible (using secure configuration from sentry.ts)
 // The initSentry() function handles proper configuration with data privacy protections
 initSentry();
@@ -162,6 +159,8 @@ const App = () => {
     };
   }, []);
 
+  const { toasts, dismiss } = useToast();
+
   if (!fontsLoaded || isLoading) {
     return (
       <View style={[tw`flex-1 justify-center items-center`, { backgroundColor: theme.colors.background }]}>
@@ -186,13 +185,12 @@ const App = () => {
   }
 
   return (
-    <ErrorBoundary>
-      <StripeProvider publishableKey={stripePublishableKey}>
-        <AuthProvider>
-          <AppNavigator />
-        </AuthProvider>
-      </StripeProvider>
-    </ErrorBoundary>
+    <StripeProvider publishableKey={stripePublishableKey}>
+      <AuthProvider>
+        <AppNavigator />
+        <Toaster toasts={toasts} onDismiss={dismiss} />
+      </AuthProvider>
+    </StripeProvider>
   );
 };
 

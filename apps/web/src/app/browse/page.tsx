@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
@@ -170,7 +171,7 @@ export default function BrowsePage() {
         debouncedFetchLocationSuggestions(locationFilter.city);
       }, 300); // 300ms debounce
       
-      debounceTimerRef.current = timer;
+      debounceTimerRef.current = timer as unknown as NodeJS.Timeout;
     } else if (locationFilter.city.length < 3) {
       setLocationSuggestions([]);
     }

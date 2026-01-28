@@ -5,15 +5,12 @@ import { Toaster } from '@/shared/components/ui/toaster'
 import { ThemeProvider } from "@/shared/components/theme/theme-provider"
 import { TooltipProvider } from "@/shared/components/ui/tooltip"
 
-import { Navbar } from "@/shared/components/layout/navbar"
 import { EnhancedErrorBoundary } from "@/shared/components/ui/enhanced-error-boundary"
 import { LoadingProvider } from "@/shared/components/ui/loading-provider"
-import { LoadingSpinner } from "@/shared/components/ui/loading-spinner"
 import { SMSPopupWrapper } from "@/shared/components/ui/sms-popup-wrapper"
 import { ErrorReportingProvider } from "@/shared/components/error-reporting-provider"
 import { cn } from "@/shared/lib/utils"
 import React from 'react'
-import { logger } from "@/shared/lib/logger"
 
 const inter = Inter({ subsets: ['latin'] })
 

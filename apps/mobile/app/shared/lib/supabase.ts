@@ -19,6 +19,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   }
 }
 
+if (__DEV__ && supabaseUrl) {
+  logger.log(`🔗 Mobile Supabase URL: ${supabaseUrl}`);
+}
+
 // Create Supabase client with React Native AsyncStorage
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -26,5 +30,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce',
+    storageKey: 'barber-app-auth',
   },
 });

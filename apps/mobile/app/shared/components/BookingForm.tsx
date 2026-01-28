@@ -126,7 +126,6 @@ export default function BookingForm({
       const matchingService = services.find(service => service.id === preSelectedService.id);
       if (matchingService) {
         setSelectedService(matchingService);
-        logger.log('Auto-selected service:', matchingService.name);
         // Auto-advance to next step if service is pre-selected
         if (currentStep === 1) {
           setTimeout(() => {
@@ -195,14 +194,26 @@ export default function BookingForm({
   };
 
   const fetchBarberStatus = async () => {
+    if (!barberId) {
+      logger.warn('⚠️ No barberId provided to fetchBarberStatus');
+      return;
+    }
+
     try {
-      logger.log('🔍 Checking if barber is developer account:', barberId);
-      const res = await apiFetch<{ barber: any }>(`/api/mobile/barbers/${barberId}`, { method: 'GET', auth: false });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+
+      const res = await Promise.race([
+        apiFetch<{ barber: any }>(`/api/mobile/barbers/${barberId}`, { method: 'GET', auth: false }),
+        timeoutPromise
+      ]) as { barber: any };
+
       const isDev = res?.barber?.is_developer === true;
-      logger.log(`✅ Barber developer status: ${isDev ? 'DEVELOPER' : 'REGULAR'}`);
       setIsDeveloperAccount(isDev);
     } catch (error) {
-      logger.error('❌ Error fetching barber status:', error);
+      const isTimeout = error instanceof Error && error.message === 'Request timeout';
+      logger.error(`❌ Error fetching barber status${isTimeout ? ' (TIMEOUT)' : ''}:`, error);
       setIsDeveloperAccount(false);
     }
   };
@@ -328,7 +339,6 @@ export default function BookingForm({
       const [hours, minutes] = selectedTime.split(':');
       bookingDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      logger.log('📞 Calling API gateway booking endpoint...');
       const result = await bookingService.createBooking({
         barberId,
         serviceId: selectedService.id,
@@ -1079,7 +1089,7 @@ export default function BookingForm({
                   }
                 ]}>
                   <View style={tw`flex-row items-center mb-3`}>
-                    <Icon name="receipt" size={20} color={theme.colors.secondary} />
+                    <Icon name="file-text" size={20} color={theme.colors.secondary} />
                     <Text style={[tw`ml-2 text-lg font-semibold`, { color: theme.colors.foreground }]}>
                       Payment Summary
                     </Text>

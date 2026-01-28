@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Switch,
   Alert,
@@ -14,7 +13,7 @@ import tw from 'twrnc';
 import { theme } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { Button, Card, CardContent, LoadingSpinner, LocationInput } from '../ui';
+import { Button, Card, CardContent, LoadingSpinner, LocationInput, Input, Textarea } from '../ui';
 import { 
   User, 
   Mail, 
@@ -316,50 +315,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     }
   };
 
-  const InputField = ({ 
-    label, 
-    value, 
-    onChangeText, 
-    placeholder, 
-    keyboardType = 'default' as any,
-    icon: Icon,
-    error,
-    multiline = false,
-    description
-  }: any) => (
-    <View style={tw`mb-4`}>
-      <View style={tw`flex-row items-center mb-2`}>
-        {Icon && <Icon size={16} color={theme.colors.secondary} style={tw`mr-2`} />}
-        <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>{label}</Text>
-      </View>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.mutedForeground}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        style={[
-          tw`px-4 py-3 rounded-xl text-base`,
-          multiline && tw`h-24`,
-          { 
-            backgroundColor: 'rgba(255,255,255,0.05)', 
-            color: theme.colors.foreground,
-            borderWidth: 1,
-            borderColor: error ? theme.colors.destructive : 'rgba(255,255,255,0.1)',
-            textAlignVertical: multiline ? 'top' : 'center'
-          }
-        ]}
-      />
-      {description && (
-        <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>{description}</Text>
-      )}
-      {error && (
-        <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>{error}</Text>
-      )}
-    </View>
-  );
-
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -376,7 +331,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               </Text>
             </View>
 
-            <InputField
+            <Input
               label="Full Name *"
               value={formData.name}
               onChangeText={(text: string) => setFormData({ ...formData, name: text })}
@@ -385,7 +340,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               error={validationErrors.name}
             />
 
-            <InputField
+            <Input
               label="Username *"
               value={formData.username}
               onChangeText={(text: string) => setFormData({ ...formData, username: text })}
@@ -396,7 +351,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
             />
 
             {isBarber && (
-              <InputField
+              <Input
                 label="Business Name *"
                 value={formData.businessName}
                 onChangeText={(text: string) => setFormData({ ...formData, businessName: text })}
@@ -406,7 +361,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               />
             )}
 
-            <InputField
+            <Input
               label="Email *"
               value={formData.email}
               onChangeText={(text: string) => setFormData({ ...formData, email: text })}
@@ -416,7 +371,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               error={validationErrors.email}
             />
 
-            <InputField
+            <Input
               label="Phone"
               value={formData.phone}
               onChangeText={(text: string) => setFormData({ ...formData, phone: text })}
@@ -441,12 +396,11 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               />
             </View>
 
-            <InputField
+            <Textarea
               label="Bio"
               value={formData.bio}
               onChangeText={(text: string) => setFormData({ ...formData, bio: text })}
               placeholder="Tell clients about yourself..."
-              multiline
               error={validationErrors.bio}
               description={`${formData.bio.length}/500 characters`}
             />
@@ -508,7 +462,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 </Text>
               </View>
 
-              <InputField
+              <Input
                 label="Instagram"
                 value={formData.socialMedia.instagram}
                 onChangeText={(text: string) => setFormData({ 
@@ -519,7 +473,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 icon={Instagram}
               />
 
-              <InputField
+              <Input
                 label="Twitter/X"
                 value={formData.socialMedia.twitter}
                 onChangeText={(text: string) => setFormData({ 
@@ -530,7 +484,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 icon={Twitter}
               />
 
-              <InputField
+              <Input
                 label="TikTok"
                 value={formData.socialMedia.tiktok}
                 onChangeText={(text: string) => setFormData({ 
@@ -541,7 +495,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 icon={Music}
               />
 
-              <InputField
+              <Input
                 label="Facebook"
                 value={formData.socialMedia.facebook}
                 onChangeText={(text: string) => setFormData({ 
@@ -564,8 +518,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 Push Notifications
               </Text>
             </View>
-
-
 
             <TouchableOpacity
               onPress={handlePushNotificationToggle}
@@ -639,4 +591,4 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       </ScrollView>
     </KeyboardAvoidingView>
   );
-} 
+}

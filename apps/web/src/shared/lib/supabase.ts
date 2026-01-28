@@ -18,6 +18,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   }
 }
 
+if (process.env.NODE_ENV === 'development' && supabaseUrl) {
+  logger.log(`🔗 Web Supabase URL: ${supabaseUrl}`)
+}
+
 // Create a single Supabase client instance for the entire app
 export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   auth: {

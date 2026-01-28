@@ -7,8 +7,6 @@ export { ActionButton } from './ActionButton';
 // Existing Components
 export { AuthGuard } from './auth/AuthGuard';
 export { default as BookingForm } from './BookingForm';
-export { LayoutWrapper } from './layout/LayoutWrapper';
-export { PageHeader } from './layout/PageHeader';
 export { ReviewCard } from './ReviewCard';
 export { ReviewForm } from './ReviewForm';
 export { default as StaircaseGrid } from './StaircaseGrid';

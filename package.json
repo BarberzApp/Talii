@@ -35,6 +35,7 @@
     "test:utils": "jest --testPathPattern=utils",
     "test:integration": "jest --testPathPattern=integration"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "radix-ui": "^1.4.3"
+  }
 }

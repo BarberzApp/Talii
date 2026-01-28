@@ -2,8 +2,15 @@ import { Metadata } from 'next'
 import { supabase } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
 
-export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>
+}): Promise<Metadata> {
+  let username = ''
   try {
+    const resolvedParams = await params
+    username = resolvedParams.username
     // Fetch barber details
     const { data: barberData, error } = await supabase
       .from('barbers')
@@ -19,20 +26,20 @@ export async function generateMetadata({ params }: { params: { username: string 
           coverphoto
         )
       `)
-      .eq('profiles.username', params.username)
+      .eq('profiles.username', username)
       .single()
 
-    const atUsername = params.username ? `@${params.username}` : 'Barber'
+    const atUsername = username ? `@${username}` : 'Barber'
 
     if (error || !barberData) {
-      return {
+       return {
         title: `${atUsername} - BOCM Style`,
         description: 'Book your next haircut with a professional barber on BOCM Style.',
         openGraph: {
           title: `${atUsername} - BOCM Style`,
           description: 'Book your next haircut with a professional barber on BOCM Style.',
           type: 'website',
-          url: `https://bocmstyle.com/book/${params.username}`,
+          url: `https://bocmstyle.com/book/${username}`,
           images: [
             {
               url: 'https://bocmstyle.com/BocmLogo.png',
@@ -72,7 +79,7 @@ export async function generateMetadata({ params }: { params: { username: string 
         title: `${atUsername} - BOCM Style`,
         description: fullDescription,
         type: 'website',
-        url: `https://bocmstyle.com/book/${params.username}`,
+        url: `https://bocmstyle.com/book/${username}`,
         images: [
           {
             url: barberImage,
@@ -102,7 +109,7 @@ export async function generateMetadata({ params }: { params: { username: string 
     logger.error('Error generating metadata', error)
     
     // Fallback metadata
-    const atUsername = params.username ? `@${params.username}` : 'Barber'
+    const atUsername = username ? `@${username}` : 'Barber'
     return {
       title: `${atUsername} - BOCM Style`,
       description: 'Book your next haircut with a professional barber on BOCM Style.',
@@ -110,7 +117,7 @@ export async function generateMetadata({ params }: { params: { username: string 
         title: `${atUsername} - BOCM Style`,
         description: 'Book your next haircut with a professional barber on BOCM Style.',
         type: 'website',
-        url: `https://bocmstyle.com/book/${params.username}`,
+        url: `https://bocmstyle.com/book/${username}`,
         images: [
           {
             url: 'https://bocmstyle.com/BocmLogo.png',

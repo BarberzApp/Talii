@@ -17,6 +17,9 @@ export class ApiAuthError extends Error {
 
 function getBearerToken(request: Request): string | null {
   const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
+  if (process.env.NODE_ENV === 'development') {
+    logger.log(`📥 Incoming Auth Header: ${authHeader ? 'Present' : 'Missing'}`)
+  }
   if (!authHeader) return null
   if (!authHeader.startsWith('Bearer ')) return null
   const token = authHeader.slice('Bearer '.length).trim()
@@ -33,9 +36,19 @@ export async function validateBearerToken(request: Request): Promise<User> {
   // 1) Prefer explicit Bearer tokens (mobile)
   const token = getBearerToken(request)
   if (token) {
+    if (process.env.NODE_ENV === 'development') {
+      logger.log(`🔑 Validating Token: Length=${token.length}, Prefix=${token.substring(0, 10)}...`)
+    }
     const { data, error } = await supabase.auth.getUser(token)
     if (error || !data?.user) {
-      logger.warn('Bearer auth failed', redactContext({ hasError: !!error }))
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn('🔑 Auth failed: Token invalid or Supabase project mismatch', {
+          error: error?.message,
+          code: (error as any)?.code || (error as any)?.status,
+          hint: 'Ensure mobile and web point to the same Supabase URL',
+          url: process.env.NEXT_PUBLIC_SUPABASE_URL
+        })
+      }
       throw new ApiAuthError('Unauthorized', 401)
     }
     return data.user

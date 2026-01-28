@@ -4,9 +4,10 @@ import { logger } from '@/shared/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_request: Request, context: { params: { id: string } }) {
+export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const barberId = context.params.id
+    const params = await context.params
+    const barberId = params.id
 
     if (!barberId) {
       return NextResponse.json({ error: 'Barber ID is required' }, { status: 400 })
@@ -23,8 +24,7 @@ export async function GET(_request: Request, context: { params: { id: string } }
           username,
           avatar_url,
           location,
-          bio,
-          business_name
+          bio
         )
       `
       )

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ToastProps } from './toast';
 
 interface ToastOptions {
@@ -12,35 +12,55 @@ interface ToastOptions {
   duration?: number;
 }
 
+let toastStore: ToastProps[] = [];
+const listeners = new Set<(toasts: ToastProps[]) => void>();
+
+const notifyListeners = () => {
+  listeners.forEach((listener) => listener(toastStore));
+};
+
+const addToast = (options: ToastOptions) => {
+  const id = Math.random().toString(36).substr(2, 9);
+  const newToast: ToastProps = {
+    id,
+    ...options,
+  };
+
+  toastStore = [...toastStore, newToast];
+  notifyListeners();
+
+  if (options.duration !== 0) {
+    setTimeout(() => {
+      dismissToast(id);
+    }, options.duration || 5000);
+  }
+
+  return id;
+};
+
+const dismissToast = (id: string) => {
+  toastStore = toastStore.filter((toast) => toast.id !== id);
+  notifyListeners();
+};
+
+const dismissAllToasts = () => {
+  toastStore = [];
+  notifyListeners();
+};
+
 export const useToast = () => {
-  const [toasts, setToasts] = useState<ToastProps[]>([]);
+  const [toasts, setToasts] = useState<ToastProps[]>(toastStore);
 
-  const toast = useCallback((options: ToastOptions) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    const newToast: ToastProps = {
-      id,
-      ...options,
+  useEffect(() => {
+    listeners.add(setToasts);
+    return () => {
+      listeners.delete(setToasts);
     };
-
-    setToasts((prev) => [...prev, newToast]);
-
-    // Auto dismiss after duration
-    if (options.duration !== 0) {
-      setTimeout(() => {
-        dismiss(id);
-      }, options.duration || 5000);
-    }
-
-    return id;
   }, []);
 
-  const dismiss = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
-
-  const dismissAll = useCallback(() => {
-    setToasts([]);
-  }, []);
+  const toast = useCallback((options: ToastOptions) => addToast(options), []);
+  const dismiss = useCallback((id: string) => dismissToast(id), []);
+  const dismissAll = useCallback(() => dismissAllToasts(), []);
 
   return {
     toasts,

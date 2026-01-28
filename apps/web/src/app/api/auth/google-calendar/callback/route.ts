@@ -4,6 +4,11 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { logger } from '@/shared/lib/logger';
 
+type MinimalUser = {
+  id: string;
+  email?: string | null;
+};
+
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
@@ -51,7 +56,7 @@ export async function GET(request: NextRequest) {
       hasError: !!sessionError 
     });
     
-    let user: any = session?.user || null;
+    let user: MinimalUser | null = session?.user || null;
     let userError = sessionError;
     
     // If no session, try to refresh it
@@ -88,7 +93,7 @@ export async function GET(request: NextRequest) {
       if (profile && !profileError) {
         logger.debug('OAuth Callback - Found user from state parameter', { userId: profile.id });
         // Create a minimal user object for the callback
-        user = { id: profile.id, email: profile.email } as any;
+        user = { id: profile.id, email: profile.email };
         userError = null;
       } else {
         logger.error('OAuth Callback - Could not recover user from state parameter', profileError);

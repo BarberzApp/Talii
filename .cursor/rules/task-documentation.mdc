@@ -1,0 +1,20 @@
+---
+alwaysApply: false
+---
+
+# Task Documentation Format
+
+When creating or updating a task tracking markdown file, use this
+structure in this order:
+
+summary:
+Short context and approach (target <= 50 lines).
+
+checklist:
+Actionable checklist items.
+
+impacted files:
+List the files expected to change (optional but recommended).
+
+results and sanity check:
+Verification steps and results (target <= 30 lines).

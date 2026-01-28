@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { checkReminders } from '@/shared/utils/reminderJob';
-const { logger } = require('@/shared/lib/logger');
+import { logger } from '@/shared/lib/logger';
 
 export async function POST() {
   try {

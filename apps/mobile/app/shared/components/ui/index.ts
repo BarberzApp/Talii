@@ -20,23 +20,12 @@ export { default as Progress } from './progress';
 export { Form, FormField, FormMessage } from './form';
 
 // Advanced UI Components
-export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './accordion';
-export { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from './alert-dialog';
-export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuRadioItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuShortcut } from './dropdown-menu';
 export { Popover, PopoverTrigger, PopoverContent } from './popover';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
 export { Toggle } from './toggle';
-export { Slider, SliderTrack, SliderRange, SliderThumb } from './slider';
-export { Calendar, CalendarHeader, CalendarGrid, CalendarCell } from './calendar';
 
 // New Components
-export { Skeleton, SkeletonItem, SkeletonText, SkeletonAvatar, SkeletonButton, SkeletonCard } from './skeleton';
-export { ScrollArea, ScrollAreaHorizontal, ScrollAreaVertical } from './scroll-area';
 export { Tooltip, TooltipProvider } from './tooltip';
-export { ToggleGroup, ToggleGroupItem } from './toggle-group';
-export { HoverCard, HoverCardTrigger, HoverCardContent } from './hover-card';
-export { Menubar, MenubarItem, MenubarSeparator } from './menubar';
-export { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuTrigger, NavigationMenuContent } from './navigation-menu';
 
 // Upload Components
 export { ImageUpload } from './ImageUpload';
