@@ -10,6 +10,7 @@
 
 import { theme } from '../theme';
 import type { CalendarEvent } from './calendarDataService';
+import { getBarberBookingDetails, getClientBookingDetails } from '../bookingDetailsHelper';
 
 /**
  * Get color scheme for booking status
@@ -94,36 +95,58 @@ export function transformBookingToEvent(
     }
   }
 
-  // Calculate prices
-  const basePrice = service?.price || 0;
-  const storedAddonTotal = booking.addon_total || 0;
-  const platformFee = booking.platform_fee || 0;
-  const barberPayout = typeof booking.barber_payout === 'number' 
-    ? booking.barber_payout 
-    : (basePrice + storedAddonTotal + (platformFee * 0.40));
+  // Use stored addon total for consistency with booking details
+  const storedAddonTotal = typeof booking.addon_total === 'number' ? booking.addon_total : addonTotal;
 
-  // Get status colors
-  const colors = getStatusColors(booking.status);
+  // Use historical service price from booking (not current service price)
+  const historicalServicePrice = booking.service_price || 0;
+
+  // Compute monetary fields using role-specific helpers
+  const isClientView =
+    userRole === 'client' || (userRole === 'barber' && barberViewMode === 'bookings');
+
+  const breakdown = isClientView
+    ? getClientBookingDetails(
+        {
+          price: booking.price,
+          platform_fee: booking.platform_fee,
+          barber_payout: booking.barber_payout,
+          addon_total: storedAddonTotal,
+        },
+        historicalServicePrice
+      )
+    : getBarberBookingDetails(
+        {
+          price: booking.price,
+          platform_fee: booking.platform_fee,
+          barber_payout: booking.barber_payout,
+          addon_total: storedAddonTotal,
+        },
+        historicalServicePrice
+      );
 
   return {
     id: booking.id,
     title,
     start: startDate.toISOString(),
     end: endDate.toISOString(),
-    backgroundColor: colors.backgroundColor,
-    borderColor: colors.borderColor,
-    textColor: colors.textColor,
+    backgroundColor: theme.colors.secondary,
+    borderColor: theme.colors.secondary,
+    textColor: '#FFFFFF',
     extendedProps: {
       status: booking.status,
       serviceName: service?.name || 'Unknown Service',
       clientName: client?.name || booking.guest_name || 'Guest',
       barberName: barber?.name || 'Unknown Barber',
       barberId: booking.barber_id,
-      price: barberPayout,
-      basePrice,
-      addonTotal: storedAddonTotal,
+      price: breakdown.total,
+      basePrice: breakdown.servicePrice,
+      addonTotal: breakdown.addons,
+      platformFee: breakdown.platformFee,
+      barberPayout: breakdown.barberPayout || 0,
+      totalCharged: breakdown.total,
       addonNames,
-      isGuest: booking.is_guest || false,
+      isGuest: !client,
       guestEmail: booking.guest_email || '',
       guestPhone: booking.guest_phone || ''
     }

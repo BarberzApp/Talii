@@ -9,6 +9,7 @@
  */
 
 import { useCallback } from 'react';
+import { Alert } from 'react-native';
 import {
   fetchUserRole,
   fetchBarberId,
@@ -151,6 +152,7 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
       logger.log('✅ Processed', events.length, 'calendar events');
     } catch (error) {
       logger.error('Error processing bookings:', error);
+      Alert.alert('Error', 'Failed to load calendar events');
     }
   }, [barberViewMode, setEvents]);
 
@@ -215,21 +217,21 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
     }
   ) => {
     try {
-      const booking = await createManualAppointment({
+      const result = await createManualAppointment({
         barberId,
         ...appointmentData,
       });
 
-      if (booking) {
+      if (result.booking) {
         logger.log('✅ Manual appointment created successfully');
         // Refresh bookings to show new appointment
         await loadBookings();
-        return true;
+        return { success: true, conflict: false };
       }
-      return false;
+      return { success: false, conflict: result.conflict };
     } catch (error) {
       logger.error('Error creating manual appointment:', error);
-      return false;
+      return { success: false, conflict: false };
     }
   }, [loadBookings]);
 

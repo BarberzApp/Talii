@@ -35,7 +35,9 @@ jobs:
           cache-dependency-path: 'BocmApp/package-lock.json'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
 
       - name: Run ESLint
         run: npm run lint

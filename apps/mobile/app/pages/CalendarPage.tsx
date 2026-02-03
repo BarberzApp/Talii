@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { 
   View, 
@@ -12,107 +12,80 @@ import {
   Animated,
   Vibration,
   TextInput,
-  RefreshControl,
-  Platform
+  RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar as CalendarIcon, 
-  Clock, 
   User, 
   DollarSign,
   X,
   Plus,
   RefreshCw,
   Filter,
-  Search,
-  Calendar,
-  Clock as ClockIcon
+  Search
 } from 'lucide-react-native';
 import tw from 'twrnc';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek, isSameWeek } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { supabase } from '../shared/lib/supabase';
 import { useAuth } from '../shared/hooks/useAuth';
 import { theme } from '../shared/lib/theme';
 import { logger } from '../shared/lib/logger';
 import { ReviewForm } from '../shared/components/ReviewForm';
-import { bookingService } from '../shared/lib/bookingService';
+import { useCalendarData } from '../shared/hooks/useCalendarData';
+import { useCalendarState } from '../shared/hooks/useCalendarState';
 import { formatTimeSlot } from '../shared/lib/calendar/calendarUtils';
-import { getBookingPricingData, getClientBookingDetails, getBarberBookingDetails } from '../shared/lib/bookingDetailsHelper';
-
-interface CalendarEvent {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  backgroundColor: string;
-  borderColor: string;
-  textColor: string;
-  extendedProps: {
-    status: string;
-    serviceName: string;
-    clientName: string;
-    barberName: string;
-    barberId: string;
-    price: number;
-    basePrice: number;
-    addonTotal: number;
-    platformFee: number;
-    barberPayout: number;
-    totalCharged: number;
-    addonNames: string[];
-    isGuest: boolean;
-    guestEmail: string;
-    guestPhone: string;
-  };
-}
+import type { CalendarEvent } from '../shared/lib/calendar';
+import CalendarGrid from './calendar/components/CalendarGrid';
+import EventsPanel from './calendar/components/EventsPanel';
+import EventDetailsModal from './calendar/components/EventDetailsModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function CalendarPage() {
   const { user } = useAuth();
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [showEventDialog, setShowEventDialog] = useState(false);
-  const [showManualAppointmentForm, setShowManualAppointmentForm] = useState(false);
-  const [isMarkingMissed, setIsMarkingMissed] = useState(false);
-  const [isMarkingCompleted, setIsMarkingCompleted] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState<'month'>('month');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [userRole, setUserRole] = useState<'client' | 'barber' | null>(null);
-  const [barberViewMode, setBarberViewMode] = useState<'appointments' | 'bookings'>('appointments');
-  
-  // Manual appointment form state
-  const [manualFormData, setManualFormData] = useState({
-    clientName: '',
-    serviceId: '',
-    price: '',
-    time: '',
-    date: selectedDate || new Date()
-  });
-  const [services, setServices] = useState<Array<{id: string, name: string, price: number, duration: number}>>([]);
-  const [barberId, setBarberId] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [timeSlots, setTimeSlots] = useState<Array<{time: string, available: boolean}>>([]);
-  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  const calendarState = useCalendarState();
+  const calendarData = useCalendarData(calendarState, user?.id);
+
+  const {
+    currentDate,
+    setCurrentDate,
+    selectedDate,
+    setSelectedDate,
+    events,
+    filterStatus,
+    selectedEvent,
+    selectEvent,
+    showEventDialog,
+    showManualAppointmentForm,
+    isMarkingMissed,
+    isMarkingCompleted,
+    loading,
+    refreshing,
+    userRole,
+    barberViewMode,
+    manualFormData,
+    services,
+    barberId,
+    isSubmitting,
+    timeSlots,
+    loadingTimeSlots,
+    reviewFormData,
+    setShowEventDialog,
+    setShowManualAppointmentForm,
+    setIsMarkingMissed,
+    setIsMarkingCompleted,
+    setBarberViewMode,
+    setManualFormData,
+    setServices,
+    setBarberId,
+    setIsSubmitting,
+    setTimeSlots,
+    setShowReviewForm,
+    setReviewFormData,
+  } = calendarState;
+
+  const { loadBookings, refresh, initialize } = calendarData;
   const manualFormScrollRef = useRef<ScrollView>(null);
-  
-  // Review form state
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [reviewFormData, setReviewFormData] = useState<{
-    barberId: string;
-    bookingId: string | null; // Can be null for reviews not tied to a booking
-    isEditing?: boolean;
-    reviewId?: string;
-    initialRating?: number;
-    initialComment?: string;
-  } | null>(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -129,15 +102,7 @@ export default function CalendarPage() {
   useEffect(() => {
     if (!user) return;
     
-    // Fetch user role first, then bookings
-    const initializeData = async () => {
-      const role = await fetchUserRole();
-      if (role) {
-        await fetchBookings(role);
-      }
-    };
-    
-    initializeData();
+    initialize();
     
     // Animate in
     Animated.parallel([
@@ -166,7 +131,7 @@ export default function CalendarPage() {
         ])
       ),
     ]).start();
-  }, [user]);
+  }, [user?.id, initialize]);
 
   // Fetch services when manual appointment modal opens
   useEffect(() => {
@@ -200,76 +165,13 @@ export default function CalendarPage() {
     }
 
     try {
-      setLoadingTimeSlots(true);
       const selectedService = services.find(s => s.id === manualFormData.serviceId);
       if (!selectedService) return;
 
-      const dateStr = format(manualFormData.date, 'yyyy-MM-dd');
-      const { data: bookings, error } = await supabase
-        .from('bookings')
-        .select('date')
-        .eq('barber_id', barberId)
-        .gte('date', `${dateStr}T00:00:00`)
-        .lte('date', `${dateStr}T23:59:59`)
-        .neq('status', 'cancelled');
-
-      if (error) throw error;
-
-      // Generate time slots based on service duration
-      const slots: Array<{time: string, available: boolean}> = [];
-      const bookedTimes = new Set((bookings || []).map(b => new Date(b.date).toISOString()));
-
-      // Calculate slot interval based on service duration
-      // Use the service duration as the interval, but minimum 10 minutes
-      const slotInterval = Math.max(selectedService.duration, 10);
-      
-      // Start from 9 AM and go until 6 PM
-      const startHour = 9;
-      const endHour = 18;
-      
-      for (let hour = startHour; hour < endHour; hour++) {
-        for (let minute = 0; minute < 60; minute += slotInterval) {
-          const slotTime = new Date(manualFormData.date);
-          slotTime.setHours(hour, minute, 0, 0);
-          
-          // Skip if this would go past 6 PM
-          const endTime = new Date(slotTime);
-          endTime.setMinutes(endTime.getMinutes() + selectedService.duration);
-          if (endTime.getHours() >= endHour) {
-            continue;
-          }
-          
-          const slotISO = slotTime.toISOString();
-          const isBooked = bookedTimes.has(slotISO);
-          
-          // Check if there's enough time for the service
-          let hasEnoughTime = true;
-          if (!isBooked) {
-            const serviceEndTime = new Date(slotTime);
-            serviceEndTime.setMinutes(serviceEndTime.getMinutes() + selectedService.duration);
-            
-            for (const bookedTime of bookedTimes) {
-              const booked = new Date(bookedTime);
-              if (booked >= slotTime && booked < serviceEndTime) {
-                hasEnoughTime = false;
-                break;
-              }
-            }
-          }
-
-          slots.push({
-            time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-            available: !isBooked && hasEnoughTime && slotTime > new Date()
-          });
-        }
-      }
-
-      setTimeSlots(slots);
+      await calendarData.loadTimeSlots(barberId, manualFormData.date, selectedService.duration);
     } catch (error) {
       logger.error('Error fetching time slots:', error);
       setTimeSlots([]);
-    } finally {
-      setLoadingTimeSlots(false);
     }
   };
 
@@ -278,271 +180,21 @@ export default function CalendarPage() {
     React.useCallback(() => {
       if (user && userRole) {
         logger.log('🔄 [CALENDAR] Page focused - refreshing data...');
-        fetchBookings(userRole);
+        loadBookings(userRole);
       }
-    }, [user, userRole])
+    }, [user, userRole, loadBookings])
   );
 
-  const fetchUserRole = async () => {
-    try {
-      logger.log('🔍 [CALENDAR] Fetching user role for user ID:', user?.id);
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user?.id)
-        .single();
-      
-      if (error) {
-        logger.error('Error fetching user role:', error);
-        return null;
-      }
-      
-      logger.log('✅ [CALENDAR] User role detected:', profile.role);
-      setUserRole(profile.role as 'client' | 'barber');
-      return profile.role as 'client' | 'barber';
-    } catch (error) {
-      logger.error('Error fetching user role:', error);
-      return null;
-    }
-  };
-
-  const fetchBookings = async (role?: 'client' | 'barber') => {
-    try {
-      setLoading(true);
-      const userRoleToUse = role || userRole;
-      logger.log('Fetching bookings for user:', user?.id, 'with role:', userRoleToUse);
-      
-      if (userRoleToUse === 'barber') {
-        logger.log('🔍 [CALENDAR] Fetching barber data for user ID:', user?.id);
-        // Fetch the barber's ID from the barbers table
-        const { data: barberData, error: barberError } = await supabase
-          .from('barbers')
-          .select('id')
-          .eq('user_id', user?.id)
-          .single();
-        
-        logger.log('📊 [CALENDAR] Barber data result:', { barberData, barberError });
-        
-        if (barberError || !barberData) {
-          logger.log('❌ [CALENDAR] No barber found for user');
-          return;
-        }
-
-        logger.log('✅ [CALENDAR] Barber ID found:', barberData.id);
-        
-        let bookings: any[] = [];
-        
-        if (barberViewMode === 'appointments') {
-          // Fetch appointments where barber is providing service (clients coming to barber)
-          logger.log('📅 [CALENDAR] Fetching barber appointments (clients coming in)');
-          const { data: appointmentsData, error: appointmentsError } = await supabase
-            .from('bookings')
-            .select('*')
-            .eq('barber_id', barberData.id)
-            .order('date', { ascending: true });
-
-          if (appointmentsError) {
-            logger.error('❌ [CALENDAR] Error fetching barber appointments:', appointmentsError);
-            return;
-          }
-          
-          bookings = appointmentsData || [];
-          logger.log('✅ [CALENDAR] Found', bookings.length, 'appointments for barber');
-        } else {
-          // Fetch bookings where barber is the client (barber going somewhere)
-          logger.log('📅 [CALENDAR] Fetching barber bookings (barber going somewhere)');
-          const { data: bookingsData, error: bookingsError } = await supabase
-            .from('bookings')
-            .select('*')
-            .eq('client_id', user?.id)
-            .eq('payment_status', 'succeeded') // Only show successful payments
-            .order('date', { ascending: true });
-
-          if (bookingsError) {
-            logger.error('❌ [CALENDAR] Error fetching barber bookings:', bookingsError);
-            return;
-          }
-          
-          bookings = bookingsData || [];
-          logger.log('✅ [CALENDAR] Found', bookings.length, 'bookings for barber as client');
-        }
-
-        // Process barber bookings
-        await processBookings(bookings, userRoleToUse);
-      } else if (userRoleToUse === 'client') {
-        // Fetch bookings where client is the user (same logic as barber bookings mode)
-        logger.log('📅 [CALENDAR] Fetching client bookings (client going somewhere)');
-        const { data: bookingsData, error: bookingsError } = await supabase
-          .from('bookings')
-          .select('*')
-          .eq('client_id', user?.id)
-          .eq('payment_status', 'succeeded') // Only show successful payments
-          .order('date', { ascending: true });
-
-        if (bookingsError) {
-          logger.error('❌ [CALENDAR] Error fetching client bookings:', bookingsError);
-          return;
-        }
-
-        const bookings = bookingsData || [];
-        logger.log('✅ [CALENDAR] Found', bookings.length, 'bookings for client');
-        // Process client bookings (same as barber bookings mode)
-        await processBookings(bookings, userRoleToUse);
-      }
-    } catch (error) {
-      logger.error('Error in fetchBookings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const processBookings = async (bookings: any[], role?: 'client' | 'barber') => {
-    try {
-      const userRoleToUse = role || userRole;
-      // Process each booking to create calendar events
-      const events = await Promise.all(bookings.map(async (booking) => {
-        // Fetch service details (for name and duration only)
-        // Use booking.service_price for historical price accuracy
-        const { data: service } = await supabase
-          .from('services')
-          .select('name, duration')
-          .eq('id', booking.service_id)
-          .single();
-
-        // Fetch client details
-        let client = null;
-        if (booking.client_id) {
-          const { data: clientData } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('id', booking.client_id)
-            .single();
-          client = clientData;
-        }
-
-        // Fetch barber details for client view or barber bookings view
-        let barber = null;
-        if (userRoleToUse === 'client' || (userRoleToUse === 'barber' && barberViewMode === 'bookings')) {
-          const { data: barberData } = await supabase
-            .from('barbers')
-            .select('user_id')
-            .eq('id', booking.barber_id)
-            .single();
-          
-          if (barberData) {
-            const { data: barberProfile } = await supabase
-              .from('profiles')
-              .select('name')
-              .eq('id', barberData.user_id)
-              .single();
-            barber = barberProfile;
-          }
-        }
-
-        // Fetch add-on names for this booking (addon_total is maintained by database trigger)
-        let addonNames: string[] = [];
-        const { data: bookingAddons } = await supabase
-          .from('booking_addons')
-          .select('addon_id')
-          .eq('booking_id', booking.id);
-
-        if (bookingAddons && bookingAddons.length > 0) {
-          // Get addon names from service_addons table
-          const addonIds = bookingAddons.map((ba) => ba.addon_id);
-          const { data: addons } = await supabase
-            .from('service_addons')
-            .select('id, name')
-            .in('id', addonIds);
-
-          if (addons) {
-            addonNames = addons.map(a => a.name);
-          }
-        }
-
-        const startDate = new Date(booking.date);
-        const endDate = new Date(startDate.getTime() + (service?.duration || 60) * 60000);
-
-        // Create different titles based on user role and view mode
-        let title = '';
-        if (userRoleToUse === 'client') {
-          title = `${service?.name || 'Service'} with ${barber?.name || 'Barber'}`;
-        } else if (userRoleToUse === 'barber') {
-          if (barberViewMode === 'appointments') {
-            title = `${service?.name || 'Service'} - ${client?.name || booking.guest_name || 'Guest'}`;
-          } else {
-            title = `${service?.name || 'Service'} with ${barber?.name || 'Barber'}`;
-          }
-        }
-
-        // Compute monetary fields using role-specific helpers
-        // For clients or barbers viewing "My Bookings" (where they're the client), use client view
-        // For barbers viewing "My Appointments" (where they're providing service), use barber view
-        const isClientView = userRoleToUse === 'client' || (userRoleToUse === 'barber' && barberViewMode === 'bookings');
-        
-        // Use stored service_price from booking (historical price - required field)
-        // Note: service_price is now required (NOT NULL) and set by trigger if not provided
-        const historicalServicePrice = booking.service_price || 0;
-        
-        const breakdown = isClientView
-          ? getClientBookingDetails({
-              price: booking.price,
-              platform_fee: booking.platform_fee,
-              barber_payout: booking.barber_payout, // Needed to detect old bookings
-              addon_total: booking.addon_total || 0, // Use trigger-maintained value
-            }, historicalServicePrice)
-          : getBarberBookingDetails({
-          price: booking.price,
-          platform_fee: booking.platform_fee,
-          barber_payout: booking.barber_payout,
-          addon_total: booking.addon_total || 0, // Use trigger-maintained value
-            }, historicalServicePrice);
-
-        return {
-          id: booking.id,
-          title,
-          start: startDate.toISOString(),
-          end: endDate.toISOString(),
-          backgroundColor: theme.colors.secondary,
-          borderColor: theme.colors.secondary,
-          textColor: '#FFFFFF',
-          extendedProps: {
-            status: booking.status,
-            serviceName: service?.name || '',
-            clientName: client?.name || booking.guest_name || 'Guest',
-            barberName: barber?.name || 'Barber',
-            barberId: booking.barber_id, // Add barber_id for review functionality
-            price: breakdown.total, // Total charged to client or barber payout
-            basePrice: breakdown.servicePrice,
-            addonTotal: breakdown.addons,
-            platformFee: breakdown.platformFee,
-            barberPayout: breakdown.barberPayout || 0,
-            totalCharged: breakdown.total,
-            addonNames,
-            isGuest: !client,
-            guestEmail: booking.guest_email,
-            guestPhone: booking.guest_phone
-          }
-        };
-      }));
-
-      setEvents(events);
-    } catch (error) {
-      logger.error('Error processing bookings:', error);
-      Alert.alert('Error', 'Failed to load calendar events');
-    }
-  };
 
   const handleBarberViewToggle = async (mode: 'appointments' | 'bookings') => {
     setBarberViewMode(mode);
     Vibration.vibrate(30); // Light haptic feedback
-    await fetchBookings(userRole || undefined);
+    await loadBookings(userRole || undefined);
   };
 
   const onRefresh = async () => {
-    setRefreshing(true);
     Vibration.vibrate(50); // Light haptic feedback
-    await fetchBookings(userRole || undefined);
-    setRefreshing(false);
+    await refresh();
   };
 
   const getCalendarDays = () => {
@@ -608,8 +260,7 @@ export default function CalendarPage() {
 
   const handleEventClick = (event: CalendarEvent) => {
     Vibration.vibrate(30); // Light haptic feedback
-    setSelectedEvent(event);
-    setShowEventDialog(true);
+    selectEvent(event);
   };
 
   const handleMarkAsMissed = async () => {
@@ -617,19 +268,14 @@ export default function CalendarPage() {
 
     setIsMarkingMissed(true);
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: 'missed' })
-        .eq('id', selectedEvent.id);
-
-      if (error) throw error;
+      const success = await calendarData.markMissed(selectedEvent.id);
+      if (!success) throw new Error('Failed to mark as missed');
 
       Vibration.vibrate(100); // Success haptic feedback
       const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
       const itemTypeCapitalized = userRole === 'barber' && barberViewMode === 'appointments' ? 'Appointment' : 'Booking';
       Alert.alert('Success', `${itemTypeCapitalized} marked as missed`);
       setShowEventDialog(false);
-      fetchBookings(); // Refresh events
     } catch (error) {
       logger.error('Error marking as missed:', error);
       Vibration.vibrate([100, 100]); // Error haptic feedback
@@ -646,19 +292,14 @@ export default function CalendarPage() {
 
     setIsMarkingCompleted(true);
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: 'completed' })
-        .eq('id', selectedEvent.id);
-
-      if (error) throw error;
+      const success = await calendarData.markCompleted(selectedEvent.id);
+      if (!success) throw new Error('Failed to mark as completed');
 
       Vibration.vibrate(100); // Success haptic feedback
       const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
       const itemTypeCapitalized = userRole === 'barber' && barberViewMode === 'appointments' ? 'Appointment' : 'Booking';
       Alert.alert('Success', `${itemTypeCapitalized} marked as completed`);
       setShowEventDialog(false);
-      fetchBookings(); // Refresh events
     } catch (error) {
       logger.error('Error marking as completed:', error);
       Vibration.vibrate([100, 100]); // Error haptic feedback
@@ -711,11 +352,13 @@ export default function CalendarPage() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await bookingService.cancelBooking(selectedEvent.id);
+              const success = await calendarData.cancelBooking(selectedEvent.id);
+              if (!success) {
+                throw new Error('Failed to cancel booking');
+              }
               Vibration.vibrate(100); // Success haptic feedback
               Alert.alert('Success', `${itemTypeCapitalized} cancelled successfully`);
               setShowEventDialog(false);
-              fetchBookings(); // Refresh events
             } catch (error) {
               logger.error(`Error cancelling ${itemType}:`, error);
               Vibration.vibrate([100, 100]); // Error haptic feedback
@@ -826,72 +469,28 @@ export default function CalendarPage() {
 
     setIsSubmitting(true);
     try {
-      // Get barber ID
-      const { data: barberData, error: barberError } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
+      if (!barberId) {
+        throw new Error('Barber ID not found');
+      }
 
-      if (barberError) throw barberError;
-
-      // Get selected service
       const selectedService = services.find(s => s.id === manualFormData.serviceId);
       if (!selectedService) throw new Error('Service not found');
 
-      // Parse time and create appointment date
-      const [time, period] = manualFormData.time.split(' ');
-      const [hours, minutes] = time.split(':').map(Number);
-      let hour = hours;
-      if (period === 'PM' && hours !== 12) hour += 12;
-      if (period === 'AM' && hours === 12) hour = 0;
-
-      const appointmentDate = new Date(manualFormData.date);
-      appointmentDate.setHours(hour, minutes, 0, 0);
-
-      // Compute end_time using service duration
-      const endTime = new Date(appointmentDate.getTime() + (selectedService.duration || 60) * 60000);
-
-      // Simple conflict check: overlapping non-cancelled bookings
-      const { data: conflicts, error: conflictError } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('barber_id', barberData.id)
-        .neq('status', 'cancelled')
-        .or(`and(date.lt.${endTime.toISOString()},end_time.gt.${appointmentDate.toISOString()})`);
-
-      if (conflictError) throw conflictError;
-      if (conflicts && conflicts.length > 0) {
-        Alert.alert('Time Conflict', 'This time overlaps an existing booking.');
-        return;
-      }
-
-      // Create booking using API to keep behavior consistent (adds notifications)
-      const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "https://www.bocmstyle.com";
-      const response = await fetch(`${API_BASE_URL}/api/bookings/create`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'expo-platform': Platform.OS,
-        },
-        body: JSON.stringify({
-          barber_id: barberData.id,
-          service_id: manualFormData.serviceId,
-          date: appointmentDate.toISOString(),
-          end_time: endTime.toISOString(),
-          status: 'confirmed',
-          payment_status: 'succeeded',
-          price: selectedService.price,
-          guest_name: manualFormData.clientName,
-          guest_email: '',
-          guest_phone: '',
-          notes: 'Manual appointment created by barber'
-        })
+      const result = await calendarData.createAppointment(barberId, {
+        clientName: manualFormData.clientName,
+        serviceId: manualFormData.serviceId,
+        date: manualFormData.date,
+        time: manualFormData.time,
+        price: selectedService.price,
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create appointment');
+      if (!result.success) {
+        if (result.conflict) {
+          Alert.alert('Time Conflict', 'This time overlaps an existing booking.');
+        } else {
+          Alert.alert('Error', 'Failed to create appointment');
+        }
+        return;
       }
 
       Alert.alert('Success', 'Manual appointment created successfully');
@@ -903,7 +502,6 @@ export default function CalendarPage() {
         time: '',
         date: selectedDate || new Date()
       });
-      fetchBookings(); // Refresh calendar
     } catch (error) {
       logger.error('Error creating manual appointment:', error);
       Alert.alert('Error', 'Failed to create appointment');
@@ -929,6 +527,8 @@ export default function CalendarPage() {
       time: '' // Clear time when date changes
     }));
   };
+
+  const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
 
   if (loading) {
     return (
@@ -1066,169 +666,21 @@ export default function CalendarPage() {
               }
             ]}
             >
-            {/* Header with Navigation - Enhanced */}
-            <View style={[tw`flex-row items-center justify-between mb-6 p-4 rounded-2xl`, {
-              backgroundColor: 'rgba(0, 0, 0, 0.2)',
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.3,
-              shadowRadius: 32,
-              elevation: 8
-            }]}>
-            <TouchableOpacity
-                testID="prev-month-button"
-                onPress={prevMonth}
-                style={[tw`p-3 rounded-2xl items-center justify-center`, {
-                  backgroundColor: `${theme.colors.secondary}15`,
-                  borderWidth: 1,
-                  borderColor: `${theme.colors.secondary}30`,
-                  minWidth: 52,
-                  minHeight: 52
-                }]}
-              >
-              <ChevronLeft size={24} color={theme.colors.secondary} />
-            </TouchableOpacity>
-              <Text style={[tw`text-xl font-bold text-center flex-1 mx-6`, { 
-                color: theme.colors.foreground,
-                textShadowColor: 'rgba(0, 0, 0, 0.3)',
-                textShadowOffset: { width: 0, height: 2 },
-                textShadowRadius: 4
-              }]}>
-                {`${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
-            </Text>
-              <TouchableOpacity 
-                testID="next-month-button"
-                onPress={nextMonth}
-                style={[tw`p-3 rounded-2xl items-center justify-center`, {
-                  backgroundColor: `${theme.colors.secondary}15`,
-                  borderWidth: 1,
-                  borderColor: `${theme.colors.secondary}30`,
-                  minWidth: 52,
-                  minHeight: 52
-                }]}
-              >
-              <ChevronRight size={24} color={theme.colors.secondary} />
-            </TouchableOpacity>
-          </View>
-
-            {/* Weekdays Header */}
-            <View style={[tw`flex-row mb-4 px-4`]}>
-            {weekdays.map((day, index) => (
-                <View key={index} style={{ width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 8 }}>
-                  <Text style={[tw`text-xs font-bold uppercase tracking-wider text-center`, { 
-                    color: theme.colors.secondary,
-                    fontSize: 12,
-                    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-                    textShadowOffset: { width: 0, height: 1 },
-                    textShadowRadius: 2
-                  }]}>
-                  {day}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Calendar Grid */}
-            <View style={[tw`flex-row flex-wrap px-4`]}>
-            {getCalendarDays().map((date, index) => {
-              const isCurrentMonth = isSameMonth(date, currentDate);
-              const isSelected = selectedDate && isSameDay(date, selectedDate);
-              const isTodayDate = isToday(date);
-              const dateEvents = getEventsForDate(date);
-              const hasPast = hasPastEvents(date);
-              const hasUpcoming = hasUpcomingEvents(date);
-
-              return (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => handleDateClick(date)}
-                    style={{
-                      width: `${100 / 7}%`,
-                      height: 45,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginVertical: 4,
-                      borderRadius: 14,
-                      backgroundColor: isCurrentMonth 
-                        ? 'rgba(255,255,255,0.02)' 
-                        : 'rgba(255,255,255,0.005)',
-                      borderWidth: isSelected ? 2 : 1,
-                      borderColor: isSelected 
-                        ? theme.colors.secondary 
-                        : 'rgba(255,255,255,0.03)',
-                      transform: [{ scale: isSelected ? 1.02 : 1 }],
-                      shadowColor: isSelected ? theme.colors.secondary : 'transparent',
-                      shadowOffset: { width: 0, height: isSelected ? 1 : 0 },
-                      shadowOpacity: isSelected ? 0.08 : 0,
-                      shadowRadius: isSelected ? 6 : 0,
-                      elevation: isSelected ? 1 : 0,
-                    }}
-                >
-                  <Text style={[
-                      tw`font-semibold`,
-                      {
-                        fontSize: screenWidth < 400 ? 14 : 16,
-                        lineHeight: screenWidth < 400 ? 18 : 20,
-                        textAlign: 'center',
-                        color: isSelected || isTodayDate 
-                          ? theme.colors.secondary 
-                          : isCurrentMonth 
-                            ? theme.colors.foreground 
-                            : 'rgba(255,255,255,0.15)',
-                      }
-                  ]}>
-                    {date.getDate()}
-                  </Text>
-                  
-                    {/* Event indicators */}
-                  {dateEvents.length > 0 && (
-                      <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-                      {hasPast && (
-                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22c55e' }} />
-                      )}
-                      {hasUpcoming && (
-                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.secondary }} />
-                      )}
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-            {/* Today Button - Enhanced with glow */}
-            <Animated.View
-              style={{
-                shadowColor: theme.colors.secondary,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.2,
-                shadowRadius: 15,
-                elevation: 5,
-              }}
-            >
-              <TouchableOpacity
-                onPress={goToToday}
-                style={[tw`mt-6 py-4 rounded-2xl items-center`, {
-                  backgroundColor: theme.colors.secondary,
-                  shadowColor: theme.colors.secondary,
-                  shadowOffset: { width: 0, height: 8 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 25,
-                  elevation: 8
-                }]}
-              >
-                <Text style={[tw`font-bold text-lg`, { 
-                  color: theme.colors.primaryForeground,
-                  textShadowColor: 'rgba(0, 0, 0, 0.2)',
-                  textShadowOffset: { width: 0, height: 1 },
-                  textShadowRadius: 2
-                }]}>
-                  Today
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
+            <CalendarGrid
+              months={months}
+              weekdays={weekdays}
+              currentDate={currentDate}
+              selectedDate={selectedDate}
+              onPrevMonth={prevMonth}
+              onNextMonth={nextMonth}
+              onGoToToday={goToToday}
+              onDateSelect={handleDateClick}
+              getCalendarDays={getCalendarDays}
+              getEventsForDate={getEventsForDate}
+              hasPastEvents={hasPastEvents}
+              hasUpcomingEvents={hasUpcomingEvents}
+              screenWidth={screenWidth}
+            />
 
             {/* Manual Appointment Button - Only for Barbers in Appointments Mode */}
             {/* TODO: Re-enable manual appointment feature later */}
@@ -1266,420 +718,33 @@ export default function CalendarPage() {
             )} */}
 
             {/* Events Panel - Enhanced */}
-        {selectedDate && (
-              <View style={[tw`mt-6 p-6 rounded-2xl`, {
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.3,
-                shadowRadius: 32,
-                elevation: 8
-              }]}>
-              <View style={tw`flex-row items-center mb-4`}>
-                <CalendarIcon size={20} color={theme.colors.secondary} style={tw`mr-2`} />
-                <Text style={[tw`font-bold text-lg`, { color: theme.colors.foreground }]}>
-                  {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-            </Text>
-              </View>
-            
-              <ScrollView style={tw`max-h-80`} showsVerticalScrollIndicator={false}>
-            {getEventsForDate(selectedDate).length === 0 ? (
-                  <View style={tw`items-center py-8`}>
-                    <CalendarIcon size={48} color="rgba(255,255,255,0.3)" style={tw`mb-3`} />
-                    <Text style={[tw`text-sm`, { color: 'rgba(255,255,255,0.6)' }]}>
-                      No events scheduled for this date
-                </Text>
-              </View>
-            ) : (
-              <View style={tw`space-y-3`}>
-                    {getEventsForDate(selectedDate).map((event) => {
-                      const eventEnd = new Date(event.end);
-                      const now = new Date();
-                      const isPast = eventEnd < now;
-                      const isUpcoming = new Date(event.start) > now;
-                      const isMissed = event.extendedProps.status === 'cancelled';
-                      
-                      return (
-                  <TouchableOpacity
-                    key={event.id}
-                    onPress={() => handleEventClick(event)}
-                          style={[tw`p-4 rounded-2xl`, {
-                            backgroundColor: isMissed 
-                              ? 'rgba(239, 68, 68, 0.08)' 
-                              : isPast 
-                                ? 'rgba(34, 197, 94, 0.08)' 
-                                : `${theme.colors.secondary}08`,
-                            borderWidth: 1,
-                            borderColor: isMissed 
-                              ? 'rgba(239, 68, 68, 0.2)' 
-                              : isPast 
-                                ? 'rgba(34, 197, 94, 0.2)' 
-                              : `${theme.colors.secondary}20`
-                          }]}
-                  >
-                          <View style={tw`flex-row items-center justify-between`}>
-                            <View style={tw`flex-1`}>
-                              <Text style={[tw`font-semibold text-sm mb-1`, { color: theme.colors.foreground }]}>
-                        {event.extendedProps.serviceName}
-                      </Text>
-                              <Text style={[tw`text-xs mb-2`, { color: 'rgba(255,255,255,0.8)' }]}>
-                        {event.extendedProps.clientName}
-                      </Text>
-                              <View style={tw`flex-row items-center`}>
-                                <Clock size={12} color={isMissed ? '#ef4444' : isPast ? '#22c55e' : theme.colors.secondary} style={tw`mr-1`} />
-                                <Text style={[tw`text-xs font-medium`, { 
-                                  color: isMissed ? '#ef4444' : isPast ? '#22c55e' : theme.colors.secondary 
-                                }]}>
-                                  {formatTime(new Date(event.start))}
-                      </Text>
-                    </View>
-                            </View>
-                            <View style={[tw`px-2 py-1 rounded-full`, {
-                              backgroundColor: isMissed 
-                                ? 'rgba(239, 68, 68, 0.2)' 
-                                : isPast 
-                                  ? 'rgba(34, 197, 94, 0.2)' 
-                                  : `${theme.colors.secondary}20`,
-                              borderWidth: 1,
-                              borderColor: isMissed 
-                                ? 'rgba(239, 68, 68, 0.3)' 
-                                : isPast 
-                                  ? 'rgba(34, 197, 94, 0.3)' 
-                                  : `${theme.colors.secondary}30`
-                            }]}>
-                              <Text style={[tw`text-xs font-semibold`, { 
-                                color: isMissed ? '#ef4444' : isPast ? '#22c55e' : theme.colors.secondary 
-                              }]}>
-                                ${(() => {
-                                  if (userRole === 'client') {
-                                    // Always recalculate to ensure accuracy
-                                    // Total = service price + addons + platform fee
-                                    let basePrice = event.extendedProps.basePrice || 0;
-                                    const addons = event.extendedProps.addonTotal || 0;
-                                    let platformFee = event.extendedProps.platformFee || 0;
-                                    
-                                    // If basePrice is 0 but we have a platformFee, try to get service price from price field
-                                    // For non-developer bookings: price = platform_fee + barber_payout (platform fee total)
-                                    // If basePrice is missing, we can't calculate accurately, but we'll use what we have
-                                    // The total should be: service_price + addons + (platform_fee + barber_payout)
-                                    // If basePrice is 0, the stored totalCharged might be wrong, so we need to fix it
-                                    const storedTotal = event.extendedProps.totalCharged || 0;
-                                    
-                                    // If stored total seems wrong (equals just platform fee when we should have service price),
-                                    // and we have a platform fee, try to infer service price
-                                    // But actually, if basePrice is 0, we can't fix it here - it should be fixed when creating the event
-                                    // So just use the recalculated total if basePrice exists, otherwise use stored total
-                                    if (basePrice > 0) {
-                                      const recalculatedTotal = basePrice + addons + platformFee;
-                                      return recalculatedTotal.toFixed(2);
-                                    } else {
-                                      // Fallback: use stored total, but log a warning
-                                      logger.warn('Calendar event missing basePrice, using stored totalCharged', {
-                                        eventId: event.id,
-                                        storedTotal,
-                                        platformFee,
-                                        addons
-                                      });
-                                      return storedTotal.toFixed(2);
-                                    }
-                                  } else {
-                                    return event.extendedProps.barberPayout.toFixed(2);
-                                }
-                                })()}
-                      </Text>
-                            </View>
-                    </View>
-                  </TouchableOpacity>
-                      );
-                    })}
-              </View>
-            )}
-              </ScrollView>
-          </View>
-        )}
+            <EventsPanel
+              selectedDate={selectedDate}
+              eventsForSelectedDate={selectedDateEvents}
+              userRole={userRole}
+              barberViewMode={barberViewMode}
+              onEventClick={handleEventClick}
+              formatTime={formatTime}
+            />
           </Animated.View>
       </ScrollView>
       </Animated.View>
 
-      {/* Event Details Modal */}
-      <Modal
+      <EventDetailsModal
         visible={showEventDialog}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowEventDialog(false)}
-      >
-        <View style={tw`flex-1 bg-black/50 justify-end`}>
-          <View style={[tw`rounded-t-3xl p-6`, { 
-            backgroundColor: theme.colors.background,
-            borderTopWidth: 1,
-            borderColor: 'rgba(255,255,255,0.1)'
-          }]}>
-            <View style={tw`flex-row items-center justify-between mb-6`}>
-              <Text style={[tw`text-xl font-bold`, { color: theme.colors.foreground }]}>
-                {userRole === 'barber' && barberViewMode === 'appointments' 
-                  ? 'Appointment Details' 
-                  : 'Booking Details'
-                }
-              </Text>
-              <TouchableOpacity onPress={() => setShowEventDialog(false)}>
-                <X size={24} color={theme.colors.mutedForeground} />
-              </TouchableOpacity>
-            </View>
-
-            {selectedEvent && (
-              <View style={tw`space-y-4`}>
-                {/* Header Section */}
-                <View style={tw`items-center mb-4`}>
-                  <Text style={[tw`text-xl font-bold mb-1`, { color: theme.colors.foreground }]}>
-                    {userRole === 'barber' && barberViewMode === 'appointments' 
-                      ? 'Appointment Details' 
-                      : 'Booking Details'
-                    }
-                  </Text>
-                  <Text style={[tw`text-lg font-semibold mb-1`, { color: theme.colors.foreground }]}>
-                    {userRole === 'client' 
-                      ? selectedEvent.extendedProps.barberName 
-                      : userRole === 'barber' && barberViewMode === 'appointments'
-                      ? selectedEvent.extendedProps.clientName
-                      : selectedEvent.extendedProps.barberName
-                    }
-                  </Text>
-                  <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
-                    {userRole === 'barber' && barberViewMode === 'appointments' 
-                      ? `Appointment #${selectedEvent.id.slice(0, 8).toUpperCase()}`
-                      : `Booking #${selectedEvent.id.slice(0, 8).toUpperCase()}`
-                    }
-                  </Text>
-                </View>
-
-                {/* Service Section */}
-                <View style={tw`mb-4`}>
-                  <Text style={[tw`text-sm font-semibold mb-2`, { color: theme.colors.foreground }]}>
-                    Service
-                  </Text>
-                  <Text style={[tw`text-base`, { color: theme.colors.foreground }]}>
-                    {selectedEvent.extendedProps.serviceName}
-                  </Text>
-                </View>
-
-                {/* Date & Time Section */}
-                <View style={tw`mb-4`}>
-                                      <View style={tw`flex-row items-center justify-between mb-2`}>
-                      <View style={tw`flex-row items-center`}>
-                        <Calendar size={16} color={theme.colors.mutedForeground} style={tw`mr-2`} />
-                        <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>Date</Text>
-                      </View>
-                    <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>
-                      {formatDate(new Date(selectedEvent.start))}
-                    </Text>
-                  </View>
-                  
-                                      <View style={tw`flex-row items-center justify-between`}>
-                      <View style={tw`flex-row items-center`}>
-                        <Clock size={16} color={theme.colors.mutedForeground} style={tw`mr-2`} />
-                        <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>Time</Text>
-                      </View>
-                    <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>
-                      {formatTime(new Date(selectedEvent.start))}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Status Section */}
-                <View style={tw`mb-4`}>
-                  <Text style={[tw`text-sm font-semibold mb-2`, { color: theme.colors.foreground }]}>
-                    Status
-                  </Text>
-                  <View style={[
-                    tw`self-end px-3 py-1 rounded-full`,
-                    selectedEvent.extendedProps.status === 'completed' 
-                      ? { backgroundColor: '#10b981', shadowColor: '#10b981', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
-                      : selectedEvent.extendedProps.status === 'cancelled'
-                      ? { backgroundColor: '#ef4444', shadowColor: '#ef4444', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
-                      : selectedEvent.extendedProps.status === 'missed'
-                      ? { backgroundColor: '#f59e0b', shadowColor: '#f59e0b', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
-                      : { backgroundColor: theme.colors.secondary, shadowColor: theme.colors.secondary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
-                  ]}>
-                    <Text style={[tw`text-xs font-semibold capitalize`, { color: 'white' }]}>
-                      {selectedEvent.extendedProps.status}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Pricing Section */}
-                {(() => {
-                  // Get pricing breakdown based on user role
-                  const breakdown = userRole === 'client' 
-                    ? {
-                        servicePrice: selectedEvent.extendedProps.basePrice,
-                        addons: selectedEvent.extendedProps.addonTotal,
-                        platformFee: selectedEvent.extendedProps.platformFee,
-                        total: selectedEvent.extendedProps.totalCharged,
-                      }
-                    : {
-                        servicePrice: selectedEvent.extendedProps.basePrice,
-                        addons: selectedEvent.extendedProps.addonTotal,
-                        platformFee: selectedEvent.extendedProps.platformFee,
-                        total: selectedEvent.extendedProps.totalCharged,
-                        barberPayout: selectedEvent.extendedProps.barberPayout,
-                      };
-
-                  // For barbers viewing "My Appointments" and clients, only show total (no breakdown)
-                  const isBarberAppointmentView = userRole === 'barber' && barberViewMode === 'appointments';
-                  const isClientView = userRole === 'client';
-                  const showBreakdown = !isBarberAppointmentView && !isClientView; // Only show for barbers viewing "My Bookings"
-                  
-                  return (
-                    <>
-                      {/* Total Section */}
-                      <View style={tw`mb-4`}>
-                        {/* Show "Total Charged" for clients OR barbers viewing "My Bookings" (when they're the client) */}
-                        {userRole === 'client' || (userRole === 'barber' && barberViewMode === 'bookings') ? (
-                          <>
-                            <View style={tw`flex-row items-center justify-between`}>
-                              <Text style={[tw`font-bold text-lg`, { color: theme.colors.foreground }]}>
-                                Total Charged
-                              </Text>
-                              <Text style={[tw`font-bold text-lg`, { color: theme.colors.secondary }]}>
-                                ${breakdown.total.toFixed(2)}
-                              </Text>
-                            </View>
-                            <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>
-                              Total amount charged to you
-                            </Text>
-                          </>
-                        ) : (
-                          /* Show "Your Payout" only for barbers viewing "My Appointments" (when they're providing service) */
-                          <>
-                            <View style={tw`flex-row items-center justify-between`}>
-                              <Text style={[tw`font-bold text-lg`, { color: theme.colors.foreground }]}>
-                                Your Payout
-                              </Text>
-                              <Text style={[tw`font-bold text-lg`, { color: theme.colors.secondary }]}>
-                                ${breakdown.barberPayout?.toFixed(2) || '0.00'}
-                              </Text>
-                            </View>
-                            <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>
-                              Amount you&apos;ll receive for this appointment
-                            </Text>
-                          </>
-                        )}
-                      </View>
-                    </>
-                  );
-                })()}
-
-                {/* Guest Information (if applicable) */}
-                {selectedEvent.extendedProps.isGuest && (
-                  <View style={tw`mb-4`}>
-                    <Text style={[tw`text-sm font-semibold mb-2`, { color: theme.colors.foreground }]}>
-                      Guest Information
-                    </Text>
-                    <View style={tw`space-y-1`}>
-                      <Text style={[tw`text-sm`, { color: theme.colors.foreground }]}>
-                        Email: {selectedEvent.extendedProps.guestEmail}
-                      </Text>
-                      <Text style={[tw`text-sm`, { color: theme.colors.foreground }]}>
-                        Phone: {selectedEvent.extendedProps.guestPhone}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Action Buttons */}
-                {selectedEvent.extendedProps.status === 'pending' && (
-                  <View style={tw`flex-row gap-3 mt-6`}>
-                    <TouchableOpacity
-                      onPress={handleMarkAsCompleted}
-                      disabled={isMarkingCompleted}
-                      style={[tw`flex-1 py-3 rounded-xl items-center`, { 
-                        backgroundColor: '#10b981',
-                        shadowColor: '#10b981',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                        elevation: 4
-                      }]}
-                    >
-                      {isMarkingCompleted ? (
-                        <ActivityIndicator color="white" size="small" />
-                      ) : (
-                        <Text style={tw`font-semibold text-white`}>Mark as Completed</Text>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={handleMarkAsMissed}
-                      disabled={isMarkingMissed}
-                      style={[tw`flex-1 py-3 rounded-xl items-center`, { 
-                        backgroundColor: theme.colors.secondary,
-                        shadowColor: theme.colors.secondary,
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                        elevation: 4
-                      }]}
-                    >
-                      {isMarkingMissed ? (
-                        <ActivityIndicator color="white" size="small" />
-                      ) : (
-                        <Text style={tw`font-semibold text-white`}>Mark as Missed</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* Cancel Button - for future appointments/bookings that aren't cancelled */}
-                {selectedEvent.extendedProps.status !== 'cancelled' && 
-                 selectedEvent.extendedProps.status !== 'completed' && 
-                 selectedEvent.extendedProps.status !== 'missed' && 
-                 new Date(selectedEvent.start) > new Date() && (
-                  <View style={tw`mt-6`}>
-                    <TouchableOpacity
-                      onPress={handleCancelBooking}
-                      style={[tw`py-3 rounded-xl items-center`, { 
-                        backgroundColor: '#ef4444',
-                        shadowColor: '#ef4444',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                        elevation: 4
-                      }]}
-                    >
-                      <Text style={tw`font-semibold text-white`}>
-                        {userRole === 'barber' && barberViewMode === 'appointments'
-                          ? 'Cancel Appointment'
-                          : 'Cancel Booking'
-                        }
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* Leave Review Button for Completed Bookings/Appointments */}
-                {selectedEvent.extendedProps.status === 'completed' && userRole === 'client' && (
-                  <View style={tw`mt-6`}>
-                    <TouchableOpacity
-                      onPress={handleLeaveReview}
-                      style={[tw`py-3 rounded-xl items-center`, { 
-                        backgroundColor: '#3b82f6',
-                        shadowColor: '#3b82f6',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                        elevation: 4
-                      }]}
-                    >
-                      <Text style={tw`font-semibold text-white`}>Leave Review</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
+        selectedEvent={selectedEvent}
+        userRole={userRole}
+        barberViewMode={barberViewMode}
+        onClose={() => setShowEventDialog(false)}
+        onMarkCompleted={handleMarkAsCompleted}
+        onMarkMissed={handleMarkAsMissed}
+        onCancelBooking={handleCancelBooking}
+        onLeaveReview={handleLeaveReview}
+        isMarkingCompleted={isMarkingCompleted}
+        isMarkingMissed={isMarkingMissed}
+        formatDate={formatDate}
+        formatTime={formatTime}
+      />
 
       {/* Manual Appointment Form Modal */}
       {/* TODO: Re-enable manual appointment feature later */}
@@ -1971,7 +1036,7 @@ export default function CalendarPage() {
             setReviewFormData(null);
             setShowReviewForm(false);
             // Refresh events if needed
-            fetchBookings();
+            loadBookings();
           }}
           isEditing={reviewFormData.isEditing}
           reviewId={reviewFormData.reviewId}

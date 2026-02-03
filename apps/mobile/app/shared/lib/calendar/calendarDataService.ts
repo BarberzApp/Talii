@@ -7,9 +7,10 @@
  * @module calendarDataService
  */
 
-import { supabase } from '../supabase';
-import { logger } from '../logger';
+import { Platform } from 'react-native';
 import { format } from 'date-fns';
+import { logger } from '../logger';
+import { supabase } from '../supabase';
 
 /**
  * Calendar event interface
@@ -31,6 +32,9 @@ export interface CalendarEvent {
     price: number;
     basePrice: number;
     addonTotal: number;
+    platformFee: number;
+    barberPayout: number;
+    totalCharged: number;
     addonNames: string[];
     isGuest: boolean;
     guestEmail: string;
@@ -155,7 +159,7 @@ export async function fetchBarberBookings(
         .from('bookings')
         .select('*')
         .eq('client_id', userId)
-        .in('payment_status', ['succeeded', 'paid']) // Show both succeeded and paid bookings
+        .eq('payment_status', 'succeeded') // Only show successful payments
         .order('date', { ascending: true });
 
       if (bookingsError) {
@@ -186,7 +190,7 @@ export async function fetchClientBookings(userId: string): Promise<any[]> {
       .from('bookings')
       .select('*')
       .eq('client_id', userId)
-      .in('payment_status', ['succeeded', 'paid']) // Show both succeeded and paid bookings
+      .eq('payment_status', 'succeeded') // Only show successful payments
       .order('date', { ascending: true });
 
     logger.log('📊 [CALENDAR] Client bookings query result:', { bookings, error });
@@ -455,38 +459,69 @@ export async function createManualAppointment(appointmentData: {
   date: Date;
   time: string;
   price: number;
-}): Promise<any | null> {
+}): Promise<{ booking: any | null; conflict: boolean }> {
   try {
-    const [hours, minutes] = appointmentData.time.split(':');
+    const [timeValue, period] = appointmentData.time.split(' ');
+    const [hours, minutes] = timeValue.split(':');
+    let hour = parseInt(hours);
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
     const appointmentDate = new Date(appointmentData.date);
-    appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    appointmentDate.setHours(hour, parseInt(minutes), 0, 0);
 
-    const { data: booking, error } = await supabase
+    const service = await fetchServiceById(appointmentData.serviceId);
+    const duration = service?.duration || 60;
+    const endTime = new Date(appointmentDate.getTime() + duration * 60000);
+
+    const { data: conflicts, error: conflictError } = await supabase
       .from('bookings')
-      .insert([
-        {
-          barber_id: appointmentData.barberId,
-          guest_name: appointmentData.clientName,
-          service_id: appointmentData.serviceId,
-          date: appointmentDate.toISOString(),
-          status: 'confirmed',
-          payment_status: 'manual',
-          price: appointmentData.price,
-          is_guest: true,
-        }
-      ])
-      .select()
-      .single();
+      .select('id')
+      .eq('barber_id', appointmentData.barberId)
+      .neq('status', 'cancelled')
+      .or(`and(date.lt.${endTime.toISOString()},end_time.gt.${appointmentDate.toISOString()})`);
 
-    if (error) {
-      logger.error('Error creating manual appointment:', error);
-      return null;
+    if (conflictError) {
+      logger.error('Error checking appointment conflicts:', conflictError);
+      return { booking: null, conflict: false };
     }
 
-    return booking;
+    if (conflicts && conflicts.length > 0) {
+      logger.warn('Manual appointment conflict detected');
+      return { booking: null, conflict: true };
+    }
+
+    const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL || 'https://www.bocmstyle.com';
+    const response = await fetch(`${apiBaseUrl}/api/bookings/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'expo-platform': Platform.OS,
+      },
+      body: JSON.stringify({
+        barber_id: appointmentData.barberId,
+        service_id: appointmentData.serviceId,
+        date: appointmentDate.toISOString(),
+        end_time: endTime.toISOString(),
+        status: 'confirmed',
+        payment_status: 'succeeded',
+        price: appointmentData.price,
+        guest_name: appointmentData.clientName,
+        guest_email: '',
+        guest_phone: '',
+        notes: 'Manual appointment created by barber',
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      logger.error('Error creating manual appointment:', data?.error || 'Unknown error');
+      return { booking: null, conflict: false };
+    }
+
+    return { booking: await response.json(), conflict: false };
   } catch (error) {
     logger.error('Error creating manual appointment:', error);
-    return null;
+    return { booking: null, conflict: false };
   }
 }
 

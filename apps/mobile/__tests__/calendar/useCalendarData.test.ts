@@ -286,8 +286,8 @@ describe('useCalendarData', () => {
   describe('createAppointment', () => {
     it('should create manual appointment successfully', async () => {
       mockCalendarDataService.createManualAppointment.mockResolvedValue({
-        id: 'booking-123',
-        status: 'confirmed',
+        booking: { id: 'booking-123', status: 'confirmed' },
+        conflict: false,
       });
       mockState.userRole = 'barber';
       mockCalendarDataService.fetchBarberId.mockResolvedValue('barber-123');
@@ -303,26 +303,29 @@ describe('useCalendarData', () => {
         price: 50,
       };
 
-      let success;
+      let resultValue;
       await act(async () => {
-        success = await result.current.createAppointment('barber-123', appointmentData);
+        resultValue = await result.current.createAppointment('barber-123', appointmentData);
       });
 
       expect(mockCalendarDataService.createManualAppointment).toHaveBeenCalledWith({
         barberId: 'barber-123',
         ...appointmentData,
       });
-      expect(success).toBe(true);
+      expect(resultValue).toEqual({ success: true, conflict: false });
     });
 
     it('should return false when appointment creation fails', async () => {
-      mockCalendarDataService.createManualAppointment.mockResolvedValue(null);
+      mockCalendarDataService.createManualAppointment.mockResolvedValue({
+        booking: null,
+        conflict: false,
+      });
 
       const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
 
-      let success;
+      let resultValue;
       await act(async () => {
-        success = await result.current.createAppointment('barber-123', {
+        resultValue = await result.current.createAppointment('barber-123', {
           clientName: 'John Doe',
           serviceId: 'service-1',
           date: new Date(),
@@ -331,7 +334,7 @@ describe('useCalendarData', () => {
         });
       });
 
-      expect(success).toBe(false);
+      expect(resultValue).toEqual({ success: false, conflict: false });
     });
   });
 

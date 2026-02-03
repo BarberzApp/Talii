@@ -123,7 +123,7 @@ describe('calendarDataService', () => {
       mockSupabase.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            in: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
               order: jest.fn().mockResolvedValue({ data: mockBookings, error: null })
             })
           })
@@ -159,7 +159,7 @@ describe('calendarDataService', () => {
       mockSupabase.from = jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            in: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
               order: jest.fn().mockResolvedValue({ data: mockBookings, error: null })
             })
           })
@@ -265,14 +265,31 @@ describe('calendarDataService', () => {
   describe('createManualAppointment', () => {
     it('should create appointment successfully', async () => {
       const mockBooking = { id: 'booking-123', status: 'confirmed' };
-      
-      mockSupabase.from = jest.fn().mockReturnValue({
-        insert: jest.fn().mockReturnValue({
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockBooking),
+      });
+
+      global.fetch = mockFetch as any;
+
+      mockSupabase.from = jest.fn()
+        .mockReturnValueOnce({
           select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: mockBooking, error: null })
+            eq: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: { name: 'Haircut', duration: 30, price: 50 },
+                error: null
+              })
+            })
           })
         })
-      });
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnThis(),
+            neq: jest.fn().mockReturnThis(),
+            or: jest.fn().mockResolvedValue({ data: [], error: null })
+          })
+        });
 
       const appointmentData = {
         barberId: 'barber-123',
@@ -285,17 +302,36 @@ describe('calendarDataService', () => {
 
       const result = await createManualAppointment(appointmentData);
       
-      expect(result).toEqual(mockBooking);
+      expect(result.booking).toEqual(mockBooking);
+      expect(result.conflict).toBe(false);
     });
 
     it('should return null on error', async () => {
-      mockSupabase.from = jest.fn().mockReturnValue({
-        insert: jest.fn().mockReturnValue({
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: false,
+        json: jest.fn().mockResolvedValue({ error: 'Error' }),
+      });
+
+      global.fetch = mockFetch as any;
+
+      mockSupabase.from = jest.fn()
+        .mockReturnValueOnce({
           select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({ data: null, error: { message: 'Error' } })
+            eq: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: { name: 'Haircut', duration: 30, price: 50 },
+                error: null
+              })
+            })
           })
         })
-      });
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnThis(),
+            neq: jest.fn().mockReturnThis(),
+            or: jest.fn().mockResolvedValue({ data: [], error: null })
+          })
+        });
 
       const appointmentData = {
         barberId: 'barber-123',
@@ -308,7 +344,8 @@ describe('calendarDataService', () => {
 
       const result = await createManualAppointment(appointmentData);
       
-      expect(result).toBeNull();
+      expect(result.booking).toBeNull();
+      expect(result.conflict).toBe(false);
     });
   });
 

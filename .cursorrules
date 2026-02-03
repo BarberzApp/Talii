@@ -1,0 +1,1 @@
+When running or adding tests, always validate them by executing the relevant test command(s) and report results (pass/fail). If tests cannot run, explain why and provide next steps.

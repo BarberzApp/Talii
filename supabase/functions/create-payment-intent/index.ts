@@ -8,7 +8,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req: Request) => {
+type EnvProvider = {
+  get: (key: string) => string | undefined
+}
+
+type HandlerDeps = {
+  env: EnvProvider
+  createSupabaseClient: (url: string, serviceKey: string) => ReturnType<typeof createClient>
+  createStripeClient: (secretKey: string) => Stripe
+}
+
+const createSupabaseClient = (url: string, serviceKey: string) => createClient(url, serviceKey)
+const createStripeClient = (secretKey: string) =>
+  new Stripe(secretKey, {
+    apiVersion: '2024-06-20' as any,
+  })
+
+export const handleCreatePaymentIntentRequest = async (
+  req: Request,
+  deps: HandlerDeps = {
+    env: Deno.env,
+    createSupabaseClient,
+    createStripeClient,
+  }
+) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -18,15 +41,13 @@ serve(async (req: Request) => {
     console.log('create-payment-intent function called')
     
     // Create Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabaseUrl = deps.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = deps.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = deps.createSupabaseClient(supabaseUrl, supabaseServiceKey)
 
     // Create Stripe client
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')!
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-06-20' as any,
-    })
+    const stripeSecretKey = deps.env.get('STRIPE_SECRET_KEY')!
+    const stripe = deps.createStripeClient(stripeSecretKey)
 
     // Parse request body
     const {
@@ -340,4 +361,6 @@ serve(async (req: Request) => {
       }
     )
   }
-})
+}
+
+serve((req: Request) => handleCreatePaymentIntentRequest(req))
