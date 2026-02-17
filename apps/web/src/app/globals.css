@@ -5,57 +5,162 @@
 
 @layer base {
   :root {
-    --background: #272a2f;
-    --foreground: #fff;
-    --card: #fff; /* fallback, not used directly */
-    --card-foreground: #272a2f;
-    --popover: #fff;
-    --popover-foreground: #272a2f;
-    --primary: #272a2f;
-    --primary-foreground: #fff;
-    --secondary: 35 55% 51%;
-    --secondary-foreground: #272a2f;
-    --muted: #f5f5f5;
-    --muted-foreground: #b0b0b0;
-    --accent: #8d7250;
-    --accent-foreground: #fff;
+    /* Talii light theme: white + orange for logo and brand */
+    --background: 0 0% 100%;
+    --foreground: 210 10% 17%;
+    --card: 40 20% 98%;
+    --card-foreground: 210 10% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 10% 17%;
+    
+    /* Primary brand color - Talii logo orange (#EE6D23) */
+    --primary: 22 86% 54%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary accent - Talii orange */
+    --secondary: 22 86% 54%;
+    --secondary-foreground: 0 0% 100%;
+    
+    /* Surface colors for cards and elevated elements */
+    --surface: 0 0% 96%;
+    --surface-foreground: 210 10% 17%;
+    
+    /* Muted colors for subtle backgrounds and text */
+    --muted: 0 0% 96%;
+    --muted-foreground: 240 4% 46%;
+    
+    /* Accent - Talii brand orange */
+    --accent: 22 86% 54%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Semantic colors */
     --destructive: #ff4d4f;
     --destructive-foreground: #fff;
-    --border: #e5e7eb;
+    --success: 142 71% 45%;
+    --success-foreground: #fff;
+    --warning: 38 92% 50%;
+    --warning-foreground: #272a2f;
+    --info: 199 89% 48%;
+    --info-foreground: #fff;
+    
+    /* UI element colors */
+    --border: #e4e4e7;
     --input: #e5e7eb;
-    --ring: #8d7250;
+    --ring: 22 86% 54%; /* Talii orange focus ring */
     --radius: 0.5rem;
-    --saffron: #c78e3f;
+    
+    /* Talii brand (replaces BOCM saffron) - same as primary #EE6D23 */
+    --saffron: #EE6D23;
+    /* RGB for rgba() usage (e.g. calendar) - Talii #EE6D23 = 238, 109, 35 */
+    --primary-rgb: 238, 109, 35;
+    --secondary-rgb: 238, 109, 35;
     --darkneutral: #2d2a26;
     --darkgreen: #FFFFFF;
+    
     /* Social Media Colors */
     --booking-highlight: #ff3b30;
     --social-instagram: #e1306c;
     --social-twitter: #1da1f2;
     --social-tiktok: #000000;
     --social-facebook: #1877f3;
-  }
-  
 
+    /* Landing spacing (BOCM React values) – single source of truth */
+    --landing-section-py: 4rem;      /* 64px – section vertical (py-16) */
+    --landing-section-py-sm: 5rem;  /* 80px – section vertical @ sm+ (py-20) */
+    --landing-hero-pt: 6rem;        /* 96px – hero top (pt-24) */
+    --landing-hero-pt-sm: 8rem;     /* 128px – hero top @ sm+ (pt-32) */
+    --landing-hero-pb: 4rem;        /* 64px – hero bottom (pb-16) */
+    --landing-hero-pb-sm: 6rem;     /* 96px – hero bottom @ sm+ (pb-24) */
+    --landing-hero-gap: 3rem;       /* 48px – hero content ↔ visual (gap-12) */
+    --landing-hero-gap-lg: 4rem;    /* 64px – hero gap @ lg+ (gap-16) */
+    --landing-block-mb: 3rem;       /* 48px – margin below section titles (mb-12) */
+    --landing-block-mb-sm: 4rem;    /* 64px – block margin @ sm+ (mb-16) */
+    --landing-block-mb-compact: 2rem;   /* 32px – calculator header (mb-8) */
+    --landing-block-mb-compact-sm: 3rem; /* 48px – calculator header @ sm+ (mb-12) */
+    --landing-grid-gap: 1.5rem;     /* 24px – feature/testimonial grid (gap-6) */
+    --landing-grid-gap-sm: 2rem;    /* 32px – grid gap @ sm+ (gap-8) */
+    --landing-cta-inner-py: 2rem;  /* 32px – CTA card inner vertical (p-8) */
+    --landing-cta-inner-py-sm: 3rem; /* 48px – CTA inner @ sm+ (p-12) */
+  }
+
+  .dark {
+    /* Talii dark theme: charcoal + orange for logo and brand */
+    --background: 220 15% 10%;
+    --foreground: 0 0% 98%;
+    --card: 220 15% 13%;
+    --card-foreground: 0 0% 98%;
+    --popover: 220 15% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 22 86% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 22 86% 54%;
+    --secondary-foreground: 0 0% 100%;
+    --surface: 220 15% 14%;
+    --surface-foreground: 0 0% 98%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 240 4% 65%;
+    --accent: 22 86% 54%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: #ff4d4f;
+    --destructive-foreground: #fff;
+    --success: 142 71% 45%;
+    --success-foreground: #fff;
+    --warning: 38 92% 50%;
+    --warning-foreground: #272a2f;
+    --info: 199 89% 48%;
+    --info-foreground: #fff;
+    --border: 220 15% 22%;
+    --input: 220 15% 20%;
+    --ring: 22 86% 54%;
+    --radius: 0.5rem;
+    --saffron: #EE6D23;
+    --primary-rgb: 238, 109, 35;
+    --secondary-rgb: 238, 109, 35;
+    --darkneutral: #2d2a26;
+    --darkgreen: #FFFFFF;
+    --booking-highlight: #ff3b30;
+    --social-instagram: #e1306c;
+    --social-twitter: #1da1f2;
+    --social-tiktok: #000000;
+    --social-facebook: #1877f3;
+    /* Landing spacing unchanged in dark */
+    --landing-section-py: 4rem;
+    --landing-section-py-sm: 5rem;
+    --landing-hero-pt: 6rem;
+    --landing-hero-pt-sm: 8rem;
+    --landing-hero-pb: 4rem;
+    --landing-hero-pb-sm: 6rem;
+    --landing-hero-gap: 3rem;
+    --landing-hero-gap-lg: 4rem;
+    --landing-block-mb: 3rem;
+    --landing-block-mb-sm: 4rem;
+    --landing-block-mb-compact: 2rem;
+    --landing-block-mb-compact-sm: 3rem;
+    --landing-grid-gap: 1.5rem;
+    --landing-grid-gap-sm: 2rem;
+    --landing-cta-inner-py: 2rem;
+    --landing-cta-inner-py-sm: 3rem;
+  }
 }
+
 
 @layer base {
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground antialiased;
-    background-color: var(--background) !important;
-    color: var(--foreground);
+    background-color: hsl(var(--background)) !important;
+    color: hsl(var(--foreground));
   }
-  ::selection {
-    @apply bg-primary/20 text-primary;
-  }
+  ::selection,
   textarea::selection,
-  input::selection,
-  ::selection {
-    background: #f8c662;
-    color: #262b2e;
+  input::selection {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
   }
   ::-webkit-scrollbar {
     @apply w-2;
@@ -273,6 +378,15 @@
   to {
     opacity: 1;
     filter: blur(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
   }
 }
 

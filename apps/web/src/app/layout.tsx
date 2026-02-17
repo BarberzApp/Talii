@@ -44,7 +44,7 @@ export default function RootLayout({
       <head />
       <body className={cn(inter.className, "bg-background min-h-screen")}> 
         <ErrorReportingProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <TooltipProvider>
             <EnhancedErrorBoundary>
               <LoadingProvider>

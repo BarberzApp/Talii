@@ -136,8 +136,8 @@ export default function BarberCalendar() {
               title: `${service?.name || 'Service'} - ${client?.name || booking.guest_name || 'Guest'}`,
               start: startDate.toISOString(),
               end: endDate.toISOString(),
-              backgroundColor: 'var(--secondary)',
-              borderColor: 'var(--secondary)',
+              backgroundColor: 'hsl(var(--secondary))',
+              borderColor: 'hsl(var(--secondary))',
               textColor: '#FFFFFF',
               extendedProps: {
                 status: booking.status,
@@ -216,8 +216,8 @@ export default function BarberCalendar() {
               title: `${booking.services?.name || 'Service'} with ${booking.barbers?.profiles?.name || 'Barber'}`,
               start: startDate.toISOString(),
               end: endDate.toISOString(),
-              backgroundColor: 'var(--secondary)',
-              borderColor: 'var(--secondary)',
+              backgroundColor: 'hsl(var(--secondary))',
+              borderColor: 'hsl(var(--secondary))',
               textColor: '#FFFFFF',
               extendedProps: {
                 status: booking.status,
@@ -299,9 +299,9 @@ export default function BarberCalendar() {
       font-weight: 600;
     }
     .barber-calendar .fc-button {
-      background: rgba(var(--secondary), 0.2) !important;
-      border: 1px solid rgba(var(--secondary), 0.3) !important;
-      color: var(--secondary) !important;
+      background: rgba(var(--secondary-rgb), 0.2) !important;
+      border: 1px solid rgba(var(--secondary-rgb), 0.3) !important;
+      color: hsl(var(--secondary)) !important;
       border-radius: 12px;
       padding: 0.75rem 1.5rem;
       font-weight: 600;
@@ -309,14 +309,14 @@ export default function BarberCalendar() {
       backdrop-filter: blur(10px);
     }
     .barber-calendar .fc-button:hover {
-      background: rgba(var(--secondary), 0.3) !important;
+      background: rgba(var(--secondary-rgb), 0.3) !important;
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(var(--secondary), 0.3);
+      box-shadow: 0 8px 25px rgba(var(--secondary-rgb), 0.3);
     }
     .barber-calendar .fc-button-active {
-      background: var(--secondary) !important;
+      background: hsl(var(--secondary)) !important;
       color: white !important;
-      box-shadow: 0 8px 25px rgba(var(--secondary), 0.4);
+      box-shadow: 0 8px 25px rgba(var(--secondary-rgb), 0.4);
     }
     .barber-calendar .fc-col-header {
       background: rgba(255, 255, 255, 0.1);
@@ -366,7 +366,7 @@ export default function BarberCalendar() {
       font-size: 1.2rem;
       font-weight: 700;
       text-transform: uppercase;
-      color: var(--secondary);
+      color: hsl(var(--secondary));
       display: block;
     }
     .barber-calendar .fc-timeGridWeek-view .fc-col-header-cell .fc-col-header-cell-cushion .day-number {
@@ -411,26 +411,26 @@ export default function BarberCalendar() {
       background: rgba(255, 255, 255, 0.05);
     }
     .barber-calendar .fc-day-today {
-      background: rgba(var(--secondary), 0.2) !important;
-      border: 2px solid rgba(var(--secondary), 0.5) !important;
+      background: rgba(var(--secondary-rgb), 0.2) !important;
+      border: 2px solid rgba(var(--secondary-rgb), 0.5) !important;
     }
     .barber-calendar .fc-timegrid-now-indicator-line {
-      border-color: var(--secondary) !important;
+      border-color: hsl(var(--secondary)) !important;
       border-width: 3px !important;
-      box-shadow: 0 0 10px rgba(var(--secondary), 0.5);
+      box-shadow: 0 0 10px rgba(var(--secondary-rgb), 0.5);
     }
     .barber-calendar .fc-timegrid-now-indicator-arrow {
-      border-color: var(--secondary) !important;
-      box-shadow: 0 0 10px rgba(var(--secondary), 0.5);
+      border-color: hsl(var(--secondary)) !important;
+      box-shadow: 0 0 10px rgba(var(--secondary-rgb), 0.5);
     }
     .barber-calendar .fc-event {
       border-radius: 12px !important;
-      border: 2px solid rgba(var(--secondary), 0.5) !important;
-      background: var(--secondary) !important;
+      border: 2px solid rgba(var(--secondary-rgb), 0.5) !important;
+      background: hsl(var(--secondary)) !important;
       color: white !important;
       font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(var(--secondary), 0.3);
+      box-shadow: 0 4px 15px rgba(var(--secondary-rgb), 0.3);
       transition: all 0.3s ease;
       backdrop-filter: blur(10px);
     }
@@ -440,9 +440,9 @@ export default function BarberCalendar() {
     }
     .barber-calendar .fc-event:hover {
       transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 12px 35px rgba(var(--secondary), 0.4);
-      border-color: rgba(var(--secondary), 0.8) !important;
-      background: var(--secondary) !important;
+      box-shadow: 0 12px 35px rgba(var(--secondary-rgb), 0.4);
+      border-color: rgba(var(--secondary-rgb), 0.8) !important;
+      background: hsl(var(--secondary)) !important;
     }
     .barber-calendar .fc-scrollgrid {
       border: 1px solid rgba(255, 255, 255, 0.2) !important;
@@ -463,7 +463,7 @@ export default function BarberCalendar() {
       font-weight: 600;
     }
     .barber-calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-      color: var(--secondary) !important;
+      color: hsl(var(--secondary)) !important;
       font-weight: bold;
     }
     .barber-calendar .fc-daygrid-day.fc-day-other .fc-daygrid-day-number {
@@ -471,12 +471,12 @@ export default function BarberCalendar() {
     }
     /* Enhanced more link */
     .barber-calendar .fc-more-link {
-      background: var(--secondary);
+      background: hsl(var(--secondary));
       color: white !important;
       font-weight: bold;
       border-radius: 9999px;
       padding: 0.25em 1em;
-      box-shadow: 0 2px 8px rgba(var(--secondary), 0.25);
+      box-shadow: 0 2px 8px rgba(var(--secondary-rgb), 0.25);
       border: none;
       font-size: 1.1em;
       letter-spacing: 0.5px;
@@ -495,15 +495,15 @@ export default function BarberCalendar() {
       display: none !important;
     }
     .barber-calendar .fc-more-link:hover {
-      background: var(--secondary);
-      box-shadow: 0 4px 16px rgba(var(--secondary), 0.35);
+      background: hsl(var(--secondary));
+      box-shadow: 0 4px 16px rgba(var(--secondary-rgb), 0.35);
       color: white !important;
       text-decoration: none;
       outline: none;
     }
     .barber-calendar .fc-popover, .barber-calendar .fc-more-popover {
       background: rgba(255,255,255,0.05) !important;
-      border: 1.5px solid var(--secondary) !important;
+      border: 1.5px solid hsl(var(--secondary)) !important;
       border-radius: 1rem !important;
       box-shadow: 0 8px 32px rgba(0,0,0,0.25) !important;
       backdrop-filter: blur(12px) !important;
@@ -512,14 +512,14 @@ export default function BarberCalendar() {
     }
     .barber-calendar .fc-popover .fc-popover-header, .barber-calendar .fc-more-popover .fc-popover-header {
       background: transparent !important;
-      border-bottom: 1px solid var(--secondary) !important;
-      color: var(--secondary) !important;
+      border-bottom: 1px solid hsl(var(--secondary)) !important;
+      color: hsl(var(--secondary)) !important;
       font-weight: 600;
       font-size: 1rem;
       border-radius: 1rem 1rem 0 0 !important;
     }
     .barber-calendar .fc-popover .fc-popover-close, .barber-calendar .fc-more-popover .fc-popover-close {
-      color: var(--secondary) !important;
+      color: hsl(var(--secondary)) !important;
       opacity: 0.8;
       font-size: 1.2rem;
       transition: opacity 0.2s;
@@ -528,7 +528,7 @@ export default function BarberCalendar() {
       opacity: 1;
     }
     .barber-calendar .fc-popover .fc-daygrid-event-harness .fc-event, .barber-calendar .fc-more-popover .fc-daygrid-event-harness .fc-event {
-      background: var(--secondary) !important;
+      background: hsl(var(--secondary)) !important;
       color: white !important;
       border-radius: 0.75rem !important;
       border: none !important;
@@ -539,31 +539,31 @@ export default function BarberCalendar() {
       transition: box-shadow 0.2s, background 0.2s;
     }
     .barber-calendar .fc-popover .fc-daygrid-event-harness .fc-event:hover, .barber-calendar .fc-more-popover .fc-daygrid-event-harness .fc-event:hover {
-      box-shadow: 0 4px 16px rgba(var(--secondary), 0.25);
-      background: var(--secondary) !important;
+      box-shadow: 0 4px 16px rgba(var(--secondary-rgb), 0.25);
+      background: hsl(var(--secondary)) !important;
     }
     .barber-calendar .fc-popover .fc-daygrid-event-harness .fc-event .text-secondary, .barber-calendar .fc-more-popover .fc-daygrid-event-harness .fc-event .text-secondary {
-      color: var(--secondary) !important;
+      color: hsl(var(--secondary)) !important;
     }
     /* Today button and view toggles */
     .barber-calendar .calendar-today-btn,
     .barber-calendar .calendar-view-toggle-active {
-      background: var(--secondary) !important;
+      background: hsl(var(--secondary)) !important;
       color: white !important;
       border: none !important;
       font-weight: bold;
-      box-shadow: 0 2px 8px rgba(var(--secondary), 0.25);
+      box-shadow: 0 2px 8px rgba(var(--secondary-rgb), 0.25);
     }
     .barber-calendar .calendar-today-btn:hover,
     .barber-calendar .calendar-view-toggle-active:hover {
-      background: var(--secondary) !important;
+      background: hsl(var(--secondary)) !important;
     }
     /* Icon backgrounds */
     .barber-calendar .calendar-header-icon {
-      background: var(--secondary) !important;
+      background: hsl(var(--secondary)) !important;
       color: white !important;
       border-radius: 1rem;
-      box-shadow: 0 2px 8px rgba(var(--secondary), 0.15);
+      box-shadow: 0 2px 8px rgba(var(--secondary-rgb), 0.15);
     }
   `;
 

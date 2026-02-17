@@ -2,32 +2,32 @@ import { ANIMATION_TIMING, SPRING_CONFIG } from '../constants/animations';
 
 export const theme = {
   colors: {
-    // Core colors - 4 Main Colors Theme
+    // Core colors - Talii brand
     background: '#272a2f', // Dark grey background
     foreground: '#fff', // White text
     card: '#fff',
     cardForeground: '#272a2f',
     popover: '#fff',
     popoverForeground: '#272a2f',
-    primary: '#272a2f', // Dark grey primary
+    primary: '#d2793e', // Talii brand orange (from logo)
     primaryForeground: '#fff',
-    secondary: '#c78e3f', // Saffron brown (vibrant) - for buttons
+    secondary: '#d2793e', // Talii orange - for buttons and accents
     secondaryForeground: '#fff',
     muted: '#f5f5f5', // Light grey muted
     mutedForeground: '#b0b0b0', // Medium grey text
-    accent: '#8d7250', // Coffee brown accent
+    accent: '#d2793e', // Talii orange accent
     accentForeground: '#fff',
     destructive: '#ff4d4f', // Red for errors
     destructiveForeground: '#fff',
     border: '#e5e7eb', // Light grey border
     input: '#e5e7eb',
-    ring: '#c78e3f', // Saffron brown ring
+    ring: '#d2793e', // Talii orange focus ring
     radius: '0.5rem', // 8px equivalent
     
-    // 4 Main Brand Colors
+    // Talii brand colors (replaces BOCM palette)
     grey: '#272a2f', // Dark grey
-    saffronBrown: '#c78e3f', // Vibrant saffron brown (for buttons)
-    coffeeBrown: '#8d7250', // Coffee brown
+    saffronBrown: '#d2793e', // Talii brand orange
+    coffeeBrown: '#b85c2a', // Darker Talii variant
     beige: '#f5f5f5', // Beige/light grey
     
     // Additional colors
@@ -49,15 +49,15 @@ export const theme = {
     glassBorder: 'rgba(255, 255, 255, 0.1)',
   },
   
-  // Enhanced gradient definitions
+  // Enhanced gradient definitions - Talii brand
   gradients: {
-    primary: ['#c78e3f', '#8d7250'],
+    primary: ['#d2793e', '#b85c2a'],
     background: ['#272a2f', '#2d2a26'],
     glass: ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)'],
-    logo: ['#c78e3f', '#8d7250'],
-    text: ['#c78e3f', '#8d7250'],
-    button: ['#c78e3f', '#8d7250'],
-    glow: ['rgba(199, 142, 63, 0.3)', 'rgba(199, 142, 63, 0.1)'],
+    logo: ['#d2793e', '#b85c2a'],
+    text: ['#d2793e', '#b85c2a'],
+    button: ['#d2793e', '#b85c2a'],
+    glow: ['rgba(210, 121, 62, 0.3)', 'rgba(210, 121, 62, 0.1)'],
   },
 
   // Animation configuration

@@ -1,75 +1,110 @@
-'use client';
-import Link from 'next/link';
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '@/shared/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/shared/components/ui/sheet';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { Badge } from '@/shared/components/ui/badge';
-import { 
-  Scissors, 
-  Calendar, 
-  DollarSign, 
-  Users, 
-  Star, 
-  TrendingUp, 
-  CheckCircle,
-  ArrowRight,
-  Play,
-  Quote,
-  Award,
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import {
+  HeroSection,
+  FeatureGrid,
+  TestimonialSection,
+  RevenueCalculator,
+  CTASection,
+  LandingNavbar,
+  type Feature,
+} from "@/shared/components/landing";
+import { EarningsDashboard } from "@/shared/components/payment/earnings-dashboard";
+import {
+  DollarSign,
+  Users,
+  Star,
   Zap,
-  Menu,
-  X,
-  Heart,
   MessageCircle,
-  Share2,
-  Eye,
-  MapPin,
-  Sparkles,
-  Video,
-  Instagram,
-  Clock,
-  User
-} from 'lucide-react';
+} from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/shared/components/ui/button";
 
 export default function LandingPage() {
-  const [averageMonthlyAmount, setAverageMonthlyAmount] = useState("5000");
-  const [cutCost, setCutCost] = useState("50");
-  const [numberOfCuts, setNumberOfCuts] = useState(100);
-  const [platformFeeBonus, setPlatformFeeBonus] = useState(120); // $1.20 per cut (40% of $3.00 after Stripe fee)
-  const [extraAnnual, setExtraAnnual] = useState(1620);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [headerState, setHeaderState] = useState<'default' | 'scrolled' | 'hidden'>('default');
-
-  const updateCalculator = () => {
-    const monthlyAmount = parseFloat(averageMonthlyAmount) || 5000;
-    const servicePrice = parseFloat(cutCost) || 50;
-    const cuts = Math.round(monthlyAmount / servicePrice);
-    // Barber gets $1.20 per booking (40% of $3.00 after Stripe fee)
-    const bonus = cuts * 1.20;
-    const annual = bonus * 12;
-    setNumberOfCuts(cuts);
-    setPlatformFeeBonus(bonus);
-    setExtraAnnual(annual);
-  };
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  // Avoid hydration mismatch: use "light" until mounted, then theme-based variant
+  const heroVariant = mounted && resolvedTheme === "dark" ? "default" : "light";
 
   useEffect(() => {
-    updateCalculator();
-  }, [averageMonthlyAmount, cutCost]);
+    setMounted(true);
+  }, []);
 
+  // Smooth scroll behavior for anchor links
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 200 ) {
-        setHeaderState('hidden');
-      } else if (window.scrollY > 0) {
-        setHeaderState('scrolled');
-      } else {
-        setHeaderState('default');
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a[href^="#"]');
+      
+      if (anchor) {
+        const href = anchor.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          e.preventDefault();
+          const targetId = href.slice(1);
+          const targetElement = document.getElementById(targetId);
+          
+          if (targetElement) {
+            const headerOffset = 80;
+            const elementPosition = targetElement.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }
       }
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    document.addEventListener('click', handleAnchorClick);
+    return () => document.removeEventListener('click', handleAnchorClick);
   }, []);
+  const navItems = [
+    { href: "#calculator", label: "Calculator" },
+    { href: "#features", label: "Features" },
+    { href: "#testimonials", label: "Success Stories" },
+    { href: "/browse", label: "Browse" },
+    { href: "/login", label: "Login" },
+  ];
+
+  const features: Feature[] = [
+    {
+      number: "01",
+      title: "Social Media Integration",
+      description:
+        "Connect your Instagram, Twitter, and Facebook to showcase your best work, share your portfolio, and attract new clients directly from your profile.",
+      icon: Star,
+      iconColor: "bg-secondary/20 text-secondary",
+    },
+    {
+      number: "02",
+      title: "Revenue Optimization",
+      description:
+        "Boost your earnings with smart pricing, service add-ons, and analytics that help you maximize every booking.",
+      icon: DollarSign,
+      iconColor: "bg-secondary/20 text-secondary",
+    },
+    {
+      number: "03",
+      title: "Reach System",
+      description:
+        "Get discovered by clients through our on-demand marketplace—customers browse, book, and you get paid for every service delivered.",
+      icon: Zap,
+      iconColor: "bg-secondary/20 text-secondary",
+      badge: "Alpha",
+    },
+    {
+      number: "04",
+      title: "Client Management",
+      description:
+        "Easily manage client profiles, preferences, and booking history to deliver a personalized experience every time.",
+      icon: Users,
+      iconColor: "bg-secondary/20 text-secondary",
+    },
+  ];
 
   const testimonials = [
     {
@@ -78,8 +113,10 @@ export default function LandingPage() {
       location: "Princeton, NJ",
       revenue: "$50K/year",
       image: "/api/placeholder/60/60",
-      quote: "BOCM made running my business so much easier. My clients love the booking experience, and I've seen my revenue grow every month.",
-      rating: 5
+      quote:
+        "Talii made running my business so much easier. My clients love the booking experience, and I've seen my revenue grow every month.",
+      rating: 5,
+      metric: "+300% Revenue Growth",
     },
     {
       name: "Caleb Bock",
@@ -87,465 +124,126 @@ export default function LandingPage() {
       location: "Blacksburg, VA",
       revenue: "$65K/year",
       image: "/api/placeholder/60/60",
-      quote: "Since switching to BOCM, I spend less time on admin and more time with my clients. The reminders and scheduling are a game changer!",
-      rating: 5
-    }
+      quote:
+        "Since switching to Talii, I spend less time on admin and more time with my clients. The reminders and scheduling are a game changer!",
+      rating: 5,
+      metric: "95% Booking Rate",
+    },
   ];
 
-  const features = [
-    {
-      number: "01",
-      title: "Social Media Integration",
-      description: "Connect your Instagram, Twitter, and Facebook to showcase your best cuts, share your portfolio, and attract new clients directly from your profile.",
-      icon: Star,
-      color: "bg-secondary/20 text-secondary"
-    },
-    {
-      number: "02", 
-      title: "Revenue Optimization",
-      description: "Boost your earnings with smart pricing, service add-ons, and analytics that help you maximize every booking.",
-      icon: DollarSign,
-      color: "bg-secondary/20 text-secondary"
-    },
-    {
-      number: "03",
-      title: "Reach System",
-      description: "Get discovered by clients through our on-demand marketplace—customers browse, book, and you get paid for every service delivered.",
-      icon: Zap,
-      color: "bg-secondary/20 text-secondary",
-      beta: true
-    },
-    {
-      number: "04",
-      title: "Client Management",
-      description: "Easily manage client profiles, preferences, and booking history to deliver a personalized experience every time.",
-      icon: Users,
-      color: "bg-secondary/20 text-secondary"
-    }
-  ];
-
-  const mobileNavItems = [
-    { href: "#calculator", label: "Calculator" },
-    { href: "#testimonials", label: "Success Stories" },
-    { href: "#features", label: "Features" },
-    { href: "/browse", label: "Browse" },
-    { href: "/login", label: "Login" },
-    { href: "/register", label: "Get Started" },
-  ];
-
-
-
+  // Hero visual - actual revenue dashboard UI with fake numbers (preview mode)
+  const heroVisual = (
+    <EarningsDashboard preview variant={heroVariant} />
+  );
 
   return (
-    <>
     <div className="landing-root min-h-screen bg-background">
-      {/* Background Elements */}
+      {/* Background: warm gradient in hero area + soft orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-secondary/5 rounded-full blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-transparent to-transparent h-[85vh]" />
+        <div className="absolute top-0 right-0 w-[28rem] h-[28rem] bg-primary/12 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       </div>
 
-      {/* Header with Mobile Menu */}
-      <header
-          className={`w-full py-3 sm:py-6 px-4 sm:px-6 bg-background backdrop-blur-xl transition-transform duration-300 ease-in-out z-50 fixed top-0
-          ${headerState === 'default' ? 'translate-y-0' : ''}
-          ${headerState === 'scrolled' ? 'translate-y-2 shadow-lg' : ''}
-          ${headerState === 'hidden' ? '-translate-y-full' : ''}
-        `}
-      >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center w-full md:w-auto justify-between md:justify-start">
-              <Link href="/" className="flex items-center gap-2 text-xl sm:text-2xl font-bebas font-bold text-secondary">
-              <img src="/BocmLogo.png" alt="BOCM Logo" className="h-8 w-8 sm:h-10 sm:w-10" />
-                <span className="font-bebas text-2xl font-bold text-secondary ml-2">BOCM</span>
-            </Link>
-            <div className="md:hidden flex items-center">
-              <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2 text-white hover:bg-white/10"
-                  >
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">Toggle Menu</span>
-                  </Button>
-                </SheetTrigger>
-                  <SheetContent side="right" className="w-[300px] bg-background backdrop-blur-xl border-white/10">
-                  <div className="flex flex-col h-full">
-                      <div className="flex items-center justify-center mb-8">
-                        <span className="flex items-center gap-2 text-2xl font-bebas font-bold text-secondary">
-                        <img src="/BocmLogo.png" alt="BOCM Logo" className="h-8 w-8 sm:h-10 sm:w-10" />
-                        BOCM
-                      </span>
-                    </div>
-                    <nav className="flex-1">
-                      <ul className="space-y-4">
-                        {mobileNavItems.map((item) => (
-                          <li key={item.href}>
-                            <Link
-                              href={item.href}
-                              onClick={() => setIsMenuOpen(false)}
-                                className="block py-3 px-4 text-white hover:text-secondary hover:bg-white/10 rounded-lg transition-colors text-lg font-bebas font-medium"
-                            >
-                              {item.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </nav>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-          </div>
-          
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-          <Link href="#calculator" className="text-white hover:text-secondary transition-colors font-medium">
-              Calculator
-            </Link>
-            <Link href="#features" className="text-white hover:text-secondary transition-colors font-medium">
-              Features
-            </Link>
-            <Link href="#testimonials" className="text-white hover:text-secondary transition-colors font-medium">
-              Success Stories
-            </Link>
-            <Link href="/browse" className="text-white hover:text-secondary transition-colors font-medium">
-              Browse
-            </Link>
-            <Link href="/login" className="text-white hover:text-secondary transition-colors font-medium">
-              Login
-            </Link>
-            <Link href="/register" className="bg-secondary text-black px-6 py-2 rounded-xl font-semibold hover:bg-secondary/90 transition-colors">
-              Get Started
-            </Link>
-          </nav>
-        </div>
-      </header>
+      {/* Navigation */}
+      <LandingNavbar
+        logo="/brand/talii-logo-zoomed.png"
+        logoDark="/brand/talii-logo-zoomed-dark.png"
+        logoText="Talii"
+        navItems={navItems}
+        ctaLabel="Get Started"
+        ctaHref="/register"
+      />
 
       {/* Hero Section */}
-        <section className="pt-24 sm:pt-32 pb-16 sm:pb-24 relative animate-fade-in">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Left Column - Content */}
-            <div className="space-y-8">
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <Badge className="bg-secondary/20 text-secondary border-secondary/30 px-3 py-1">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Social Booking Platform
-                  </Badge>
-                </div>
-                
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bebas font-bold text-white leading-tight">
-                  The Future of
-                    <span className="text-secondary block font-bebas">Cosmetology Booking</span>
-                </h1>
-                
-                <p className="text-lg sm:text-xl text-white/80 leading-relaxed max-w-2xl">
-                    <span className="font-pacifico">Connect, showcase, and grow.</span> BOCM is the first social booking platform that lets cosmetologists share their work, build their brand, and book clients seamlessly.
-                </p>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/register" className="bg-secondary text-black px-8 py-4 rounded-xl font-semibold text-lg hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-secondary/25">
-                  Start Your Journey
-                  <ArrowRight className="inline ml-2 h-5 w-5" />
-                </Link>
-                <Link href="/cuts" className="flex items-center justify-center px-8 py-4 border border-white/20 text-white rounded-xl font-semibold text-lg hover:bg-white/10 transition-all duration-300">
-                  <Play className="inline w-5 h-5 mr-2" />
-                  Watch Real Results
-                </Link>
-              </div>
-
-              {/* Why Choose BOCM */}
-              <div className="space-y-4 pt-6 sm:pt-8">
-                <h3 className="text-lg sm:text-xl font-bold text-white text-center mb-4">Why Choose BOCM?</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-3 sm:px-4 py-2 sm:py-3">
-                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-secondary mr-2 sm:mr-3 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm text-white/90 font-medium">Zero Setup Fees</span>
-                  </div>
-                  <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-3 sm:px-4 py-2 sm:py-3">
-                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-secondary mr-2 sm:mr-3 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm text-white/90 font-medium">Instant Payments</span>
-                </div>
-                  <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-3 sm:px-4 py-2 sm:py-3">
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-secondary mr-2 sm:mr-3 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm text-white/90 font-medium">Social Growth</span>
-                </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Dashboard Demo */}
-            <div className="relative mt-8 lg:mt-0">
-              <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl p-6 sm:p-8">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg sm:text-xl font-bold text-white">Revenue Dashboard</CardTitle>
-                    <div className="flex items-center text-secondary">
-                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                      <span className="text-sm font-medium">+40%</span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 sm:space-y-6">
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div className="bg-white/10 rounded-xl p-3 sm:p-4">
-                      <p className="text-white/60 text-xs sm:text-sm">Monthly Revenue</p>
-                      <p className="text-lg sm:text-2xl font-bold text-white">$12,450</p>
-                    </div>
-                    <div className="bg-white/10 rounded-xl p-3 sm:p-4">
-                      <p className="text-white/60 text-xs sm:text-sm">Bookings</p>
-                      <p className="text-lg sm:text-2xl font-bold text-white">127</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-secondary/20 rounded-xl p-3 sm:p-4">
-                    <p className="text-secondary text-xs sm:text-sm font-medium">This Month's Growth</p>
-                    <p className="text-lg sm:text-xl font-bold text-secondary">+$3,200</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <HeroSection
+        overline="FOR BEAUTY & GROOMING PROS"
+        headline={
+          <>
+            Built to Help You Earn More
+            <span className="text-secondary block font-bebas">
+              With Every Booking on{"\u00a0"}Talii
+            </span>
+          </>
+        }
+        subheadline="Connect, showcase, and grow. The first platform for modern cosmetology bookings made for individuals, so you can turn every client into extra income."
+        primaryCta={{
+          label: "Start Your Journey",
+          href: "/register",
+        }}
+        secondaryCta={{
+          label: "See Real Results",
+          href: "#testimonials",
+        }}
+        proof="Loved by independent stylists and barbers across the country"
+        visual={heroVisual}
+      />
 
       {/* Revenue Calculator Section */}
-        <section id="calculator" className="py-16 sm:py-20 bg-background backdrop-blur-sm animate-fade-in">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-8 sm:mb-12">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bebas font-bold text-white mb-4">
-              The "Holy Sh*t" Moment
-            </h2>
-            <p className="text-lg sm:text-xl text-white/80 max-w-2xl mx-auto">
-              See exactly how much more you could be earning with BOCM's revenue optimization tools.
-            </p>
-          </div>
-
-          <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl p-6 sm:p-8 lg:p-12">
-            <CardContent className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
-              {/* Calculator Input */}
-              <div className="space-y-4 sm:space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                  <div>
-                    <label className="block text-white font-semibold mb-2 text-sm sm:text-base">
-                      Average Monthly Amount
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-white/60">$</span>
-                      <input
-                        type="text"
-                        value={averageMonthlyAmount}
-                        onChange={(e) => setAverageMonthlyAmount(e.target.value.replace(/[^\d]/g, ''))}
-                        className="w-full pl-6 sm:pl-8 pr-3 sm:pr-4 py-3 sm:py-4 bg-white/10 border border-white/20 rounded-xl text-white text-lg sm:text-xl font-semibold placeholder-white/40 focus:outline-none focus:border-secondary"
-                        placeholder="5000"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-white font-semibold mb-2 text-sm sm:text-base">
-                      Cut Cost
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-white/60">$</span>
-                      <input
-                        type="text"
-                        value={cutCost}
-                        onChange={(e) => setCutCost(e.target.value.replace(/[^\d]/g, ''))}
-                        className="w-full pl-6 sm:pl-8 pr-3 sm:pr-4 py-3 sm:py-4 bg-white/10 border border-white/20 rounded-xl text-white text-lg sm:text-xl font-semibold placeholder-white/40 focus:outline-none focus:border-secondary"
-                        placeholder="50"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-6 sm:mt-8 text-center">
-                  <div className="text-base sm:text-lg text-white/80 mb-2">You do <span className="font-bold text-secondary">{numberOfCuts}</span> cuts per month</div>
-                  <div className="text-xl sm:text-2xl font-bold text-secondary mb-2">Platform Fee Bonus: ${platformFeeBonus.toLocaleString(undefined, {maximumFractionDigits: 0})}/month</div>
-                  <div className="text-base sm:text-lg text-white/80 mb-4">That's <span className="font-bold text-secondary">${extraAnnual.toLocaleString(undefined, {maximumFractionDigits: 0})}</span> per year in extra income!</div>
-                  <div className="bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-secondary/30 inline-block mt-4">
-                    <div className="text-white/80 text-xs sm:text-sm mb-1">Breakdown:</div>
-                    <div className="text-white text-sm sm:text-base font-semibold">{numberOfCuts} cuts × $1.20 = <span className="text-secondary">${platformFeeBonus.toLocaleString(undefined, {maximumFractionDigits: 0})}</span> per month</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Results */}
-              <div className="space-y-4 sm:space-y-6">
-                <div className="bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-secondary/30">
-                  <p className="text-secondary text-xs sm:text-sm font-medium mb-2">Total Monthly Revenue</p>
-                  <p className="text-3xl sm:text-4xl font-bold text-secondary">${platformFeeBonus.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                  <p className="text-secondary/80 text-xs sm:text-sm mt-1">Service + Platform Fees (40%)</p>
-                </div>
-                
-                <div className="bg-white/10 rounded-2xl p-4 sm:p-6">
-                  <p className="text-white/60 text-xs sm:text-sm mb-2">Extra Annual Income</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-white">${extraAnnual.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                  <p className="text-white/60 text-xs sm:text-sm mt-1">From platform fees alone</p>
-                </div>
-                
-                <div className="bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-secondary/30">
-                  <p className="text-secondary text-xs sm:text-sm font-medium mb-2">Monthly Breakdown</p>
-                  <div className="space-y-2 text-xs sm:text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Number of Cuts:</span>
-                      <span className="text-white">{numberOfCuts}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Platform Fee Bonus:</span>
-                      <span className="text-white">${platformFeeBonus.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <button className="w-full px-6 sm:px-8 py-3 sm:py-4 bg-secondary text-black rounded-xl font-semibold text-base sm:text-lg hover:bg-secondary/90 transition-colors">
-                  Start Earning More Today
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+      <RevenueCalculator
+        defaultMonthlyRevenue={5000}
+        defaultCutCost={50}
+        title='The "Holy Sh*t" Moment'
+        subtitle="See exactly how much more you could be earning with Talii's revenue optimization tools."
+        ctaLabel="Start Earning More Today"
+        ctaHref="/register"
+      />
 
       {/* Features Section */}
-        <section id="features" className="py-16 sm:py-20 animate-fade-in">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
-              Everything You Need to Scale
-            </h2>
-            <p className="text-lg sm:text-xl text-white/80 max-w-3xl mx-auto">
-              From booking automation to revenue optimization, BOCM gives you the tools to transform your cosmetology business.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {features.map((feature, index) => (
-              <Card 
-                key={index}
-                className="group bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl p-5 sm:p-6 hover:shadow-2xl hover:border-secondary/30 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden"
-              >
-                <CardContent className="p-0">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${feature.color}`}>
-                    <feature.icon className="w-5 h-5 sm:w-6 sm:h-6" />
-                  </div>
-                  <span className="text-3xl sm:text-4xl text-white/20 group-hover:text-white/30 transition-colors">
-                    {feature.number}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-0">{feature.title}</h3>
-                  {feature.beta && (
-                      <Badge className="bg-gradient-to-r from-secondary/80 to-secondary/80 text-white border-secondary/40 animate-pulse">
-                      Alpha
-                      </Badge>
-                  )}
-                </div>
-                <p className="text-white/70 leading-relaxed text-sm sm:text-base">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FeatureGrid
+        id="features"
+        features={features}
+        columns={4}
+        title="Everything You Need to Scale"
+        subtitle="From booking automation to revenue optimization, Talii gives you the tools to transform your cosmetology business."
+      />
 
       {/* Testimonials Section */}
-        <section id="testimonials" className="py-16 sm:py-20 bg-background backdrop-blur-sm animate-fade-in">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12 sm:mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
-              Success Stories
-            </h2>
-            <p className="text-lg sm:text-xl text-white/80 max-w-3xl mx-auto">
-              See how cosmetologists are transforming their businesses with BOCM.
-            </p>
-          </div>
+      <TestimonialSection
+        id="testimonials"
+        testimonials={testimonials}
+        title="Success Stories"
+        subtitle="See how cosmetologists are transforming their businesses with Talii."
+        columns={2}
+      />
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl p-6 sm:p-8">
-                <CardContent className="p-0">
-                  <div className="flex items-start gap-4 mb-6">
-                    <div className="h-12 w-12 bg-secondary/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User className="h-6 w-6 text-secondary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-white">{testimonial.name}</h3>
-                      <p className="text-white/70 text-sm">{testimonial.role} • {testimonial.location}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-secondary font-semibold">{testimonial.revenue}</span>
-                        <div className="flex items-center">
-                          {[...Array(testimonial.rating)].map((_, i) => (
-                            <Star key={i} className="h-4 w-4 text-secondary fill-current" />
-                          ))}
-                        </div>
-                      </div>
-                  </div>
-                  </div>
-                  <blockquote className="text-white/80 text-base leading-relaxed italic">
-                  "{testimonial.quote}"
-                </blockquote>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-        <section className="py-16 sm:py-20 animate-fade-in">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <Card className="bg-gradient-to-br from-secondary/20 via-secondary/10 to-transparent border border-secondary/30 shadow-2xl backdrop-blur-xl rounded-3xl p-8 sm:p-12">
-            <CardContent className="p-0">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
-                Ready to Transform Your Business?
-            </h2>
-              <p className="text-lg sm:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-                Join cosmetologists who are already growing their business with BOCM. Start your journey today.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/register" className="bg-secondary text-black px-8 py-4 rounded-xl font-semibold text-lg hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-secondary/25">
-                  Get Started Free
-                  <ArrowRight className="inline ml-2 h-5 w-5" />
-                </Link>
-                <Link href="/browse" className="flex items-center justify-center px-8 py-4 border border-white/20 text-white rounded-xl font-semibold text-lg hover:bg-white/10 transition-all duration-300">
-                  Browse Stylists
-              </Link>
-            </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+      {/* Final CTA Section */}
+      <CTASection
+        title="Ready to Transform Your Business?"
+        subtitle="Join cosmetologists who are already growing their business with Talii. Start your journey today."
+        primaryCta={{
+          label: "Get Started Free",
+          href: "/register",
+        }}
+        secondaryCta={{
+          label: "Browse Stylists",
+          href: "/browse",
+        }}
+        guarantee="30-day money-back guarantee • No setup fees • Cancel anytime"
+        variant="card"
+      />
 
       {/* Footer */}
-      <footer className="py-12 bg-white/5 backdrop-blur-sm border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <footer className="py-16 sm:py-20 bg-surface border-t border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-6">
             {/* Support Button */}
             <div className="flex justify-center">
               <Link href="/support">
-                <Button className="bg-white/10 border border-white/20 text-white hover:bg-white/20 hover:border-secondary/30 transition-all duration-300 rounded-xl px-6 py-3 font-semibold">
+                <Button className="bg-muted border border-border text-foreground hover:bg-muted/80 hover:border-primary/30 transition-all duration-300 rounded-xl px-6 py-3 font-semibold">
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Need Help? Contact Support
                 </Button>
               </Link>
             </div>
-            
-            <p className="text-white/60 text-sm">
-              © 2025 BOCM. All rights reserved. The future of booking.
+
+            <p className="text-muted-foreground text-sm">
+              © 2025 Talii. All rights reserved. The future of booking.
             </p>
           </div>
         </div>
       </footer>
-
     </div>
-    </>
   );
-} 
+}

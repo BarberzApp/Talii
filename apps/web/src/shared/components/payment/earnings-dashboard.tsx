@@ -1,15 +1,29 @@
 "use client"
 
+import type * as React from "react"
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card"
+import {
+  Card,
+  CardContent as CardContentBase,
+  CardDescription as CardDescriptionBase,
+  CardHeader as CardHeaderBase,
+  CardTitle as CardTitleBase,
+} from "@/shared/components/ui/card"
 import { useToast } from "@/shared/components/ui/use-toast"
 import { Loader2, DollarSign, TrendingUp, TrendingDown, CreditCard, Sparkles } from "lucide-react"
-import { Button } from "@/shared/components/ui/button"
+import { Button as ButtonBase } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
 import { LoadingSpinner } from "@/shared/components/ui/loading-spinner"
-import { GlassyCard } from "@/shared/components/ui/glassy-card"
+import { cn } from "@/shared/lib/utils"
 import { supabase } from "@/shared/lib/supabase"
 import { logger } from "@/shared/lib/logger"
+
+// React 19 JSX compatibility: cast to valid component types
+const CardHeader = CardHeaderBase as React.ComponentType<React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }>
+const CardTitle = CardTitleBase as React.ComponentType<React.HTMLAttributes<HTMLHeadingElement> & { children?: React.ReactNode }>
+const CardDescription = CardDescriptionBase as React.ComponentType<React.HTMLAttributes<HTMLParagraphElement> & { children?: React.ReactNode }>
+const CardContent = CardContentBase as React.ComponentType<React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }>
+const Button = ButtonBase as React.ComponentType<React.ButtonHTMLAttributes<HTMLButtonElement> & { children?: React.ReactNode; variant?: string; className?: string }>
 
 interface MonthlyEarnings {
   current: number
@@ -31,24 +45,44 @@ interface BarberProfile {
   }
 }
 
-interface EarningsDashboardProps {
-  barberId: string
+/** Fake data for landing page preview (amounts in cents) */
+const PREVIEW_EARNINGS: MonthlyEarnings = {
+  current: 1245000, // $12,450
+  previous: 925000,
+  trend: "up",
+  percentage: 40,
+  breakdown: {
+    serviceFees: 982000,
+    platformFees: 263000,
+    totalEarnings: 1245000,
+  },
 }
 
-export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
+interface EarningsDashboardProps {
+  barberId?: string
+  /** When true, show fake data and hide Stripe/API; barberId not required */
+  preview?: boolean
+  /** "light" for landing page (uses semantic tokens); "default" for app (dark glassy) */
+  variant?: "default" | "light"
+}
+
+export function EarningsDashboard({ barberId, preview = false, variant = "default" }: EarningsDashboardProps) {
   const { toast } = useToast()
-  const [earnings, setEarnings] = useState<MonthlyEarnings | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [earnings, setEarnings] = useState<MonthlyEarnings | null>(preview ? PREVIEW_EARNINGS : null)
+  const [isLoading, setIsLoading] = useState(!preview)
   const [isSettingUp, setIsSettingUp] = useState(false)
   const [hasStripeAccount, setHasStripeAccount] = useState(false)
 
   useEffect(() => {
+    if (preview) return
+    if (!barberId) return
     logger.debug('EarningsDashboard mounted', { barberId })
     loadEarnings()
     checkStripeAccount()
-  }, [barberId])
+  }, [barberId, preview])
 
   const checkStripeAccount = async () => {
+    if (preview) return
     logger.debug('Checking Stripe account for barber', { barberId })
     try {
       // First, try to refresh the account status from Stripe
@@ -93,6 +127,7 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
   }
 
   const loadEarnings = async () => {
+    if (preview || !barberId) return
     logger.debug('Loading earnings for barber', { barberId })
     setIsLoading(true)
     try {
@@ -273,50 +308,72 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
     }
   }
 
+  const isLight = variant === "light"
+
+  const cardCls = isLight
+    ? "bg-surface border border-border shadow-2xl rounded-2xl min-h-[400px]"
+    : "bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl min-h-[400px]"
+  const titleCls = isLight ? "text-2xl font-bebas text-foreground tracking-wide" : "text-2xl font-bebas text-white tracking-wide"
+  const descCls = isLight ? "text-muted-foreground" : "text-white/80"
+  const mainBoxCls = isLight
+    ? "relative bg-muted border border-border rounded-2xl p-8"
+    : "relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8"
+  const breakdownLabelCls = isLight ? "text-lg font-semibold text-foreground" : "text-lg font-semibold text-white"
+  const smallCardCls = isLight
+    ? "p-4 space-y-2 bg-muted border border-border rounded-xl"
+    : "p-4 space-y-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl"
+  const smallLabelCls = isLight ? "text-sm text-muted-foreground" : "text-sm text-white/60"
+  const smallValueCls = isLight ? "text-2xl font-bold text-foreground" : "text-2xl font-bold text-white"
+  const smallHintCls = isLight ? "text-xs text-muted-foreground/80" : "text-xs text-white/40"
+  const trendUpCls = isLight ? "h-5 w-5 text-green-600" : "h-5 w-5 text-green-400"
+  const trendDownCls = isLight ? "h-5 w-5 text-red-600" : "h-5 w-5 text-red-400"
+
   if (isLoading) {
     logger.debug('Loading state active')
     return (
-      <GlassyCard className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl">
+      <div className={cn("rounded-2xl min-h-[300px]", isLight ? "bg-surface border border-border" : "bg-white/5 border border-white/10")}>
         <CardContent className="pt-6 flex justify-center items-center min-h-[300px]">
           <LoadingSpinner size="md" text="Loading earnings..." />
         </CardContent>
-      </GlassyCard>
+      </div>
     )
   }
 
   logger.debug('Rendering dashboard with state', {
     hasStripeAccount,
     isSettingUp,
-    hasEarnings: !!earnings
+    hasEarnings: !!earnings,
+    preview,
   })
 
   return (
-    <GlassyCard className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl min-h-[400px]">
+    <div className={cn(cardCls)}>
       <CardHeader className="text-center">
         <div className="flex items-center justify-center gap-3 mb-2">
           <div className="p-2 bg-secondary/20 rounded-full">
             <DollarSign className="h-5 w-5 text-secondary" />
           </div>
-          <CardTitle className="text-2xl font-bebas text-white tracking-wide">Monthly Earnings</CardTitle>
+          <CardTitle className={titleCls}>Monthly Earnings</CardTitle>
         </div>
-        <CardDescription className="text-white/80">Your earnings breakdown for this month</CardDescription>
+        <CardDescription className={descCls}>Your earnings breakdown for this month</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col space-y-8">
           {/* Main Earnings Display */}
           <div className="text-center space-y-4">
             <div className="relative">
-              {/* Glowy background effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 via-secondary/10 to-transparent rounded-2xl blur-xl" />
-              <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8">
+              {!isLight && (
+                <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 via-secondary/10 to-transparent rounded-2xl blur-xl" />
+              )}
+              <div className={cn("relative rounded-2xl p-8", mainBoxCls)}>
                 <div className="text-5xl font-bebas font-bold text-secondary mb-2">
-                  ${earnings?.current ? (earnings.current / 100).toFixed(2) : "0.00"}
+                  ${earnings?.current ? (earnings.current / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                 </div>
                 <div className="flex items-center justify-center space-x-2">
                   {earnings?.trend === "up" ? (
-                    <TrendingUp className="h-5 w-5 text-green-400" />
+                    <TrendingUp className={trendUpCls} />
                   ) : (
-                    <TrendingDown className="h-5 w-5 text-red-400" />
+                    <TrendingDown className={trendDownCls} />
                   )}
                   <Badge variant="secondary" className="text-xs bg-secondary/20 text-secondary border-secondary/30">
                     {earnings?.trend === "up" ? "+" : "-"}{earnings?.percentage}% from last month
@@ -330,37 +387,37 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
           <div className="space-y-6">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-secondary" />
-              <h3 className="text-lg font-semibold text-white">Earnings Breakdown</h3>
+              <h3 className={breakdownLabelCls}>Earnings Breakdown</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <GlassyCard variant="hover" className="p-4 space-y-2">
-                <div className="text-sm text-white/60">Service Fees</div>
-                <div className="text-2xl font-bold text-white">
-                  ${earnings?.breakdown?.serviceFees ? (earnings.breakdown.serviceFees / 100).toFixed(2) : "0.00"}
+              <div className={smallCardCls}>
+                <div className={smallLabelCls}>Service Fees</div>
+                <div className={smallValueCls}>
+                  ${earnings?.breakdown?.serviceFees ? (earnings.breakdown.serviceFees / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                 </div>
-                <div className="text-xs text-white/40">From haircut services</div>
-              </GlassyCard>
-              <GlassyCard variant="hover" className="p-4 space-y-2">
-                <div className="text-sm text-white/60">Platform Fees</div>
-                <div className="text-2xl font-bold text-white">
-                  ${earnings?.breakdown?.platformFees ? (earnings.breakdown.platformFees / 100).toFixed(2) : "0.00"}
+                <div className={smallHintCls}>From haircut services</div>
+              </div>
+              <div className={smallCardCls}>
+                <div className={smallLabelCls}>Platform Fees</div>
+                <div className={smallValueCls}>
+                  ${earnings?.breakdown?.platformFees ? (earnings.breakdown.platformFees / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                 </div>
-                <div className="text-xs text-white/40">Processing fees</div>
-              </GlassyCard>
+                <div className={smallHintCls}>Processing fees</div>
+              </div>
             </div>
           </div>
 
-          {/* Payment Setup Section */}
-          {!hasStripeAccount && (
-            <div className="text-center space-y-4 border-t border-white/10 pt-8">
-              <GlassyCard className="p-6">
-                <p className="text-white/80 mb-4">
+          {/* Payment Setup Section - hidden in preview */}
+          {!preview && !hasStripeAccount && (
+            <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-white/10")}>
+              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-white/10 rounded-xl"}>
+                <p className={cn("mb-4", descCls)}>
                   Set up your payment account to start receiving payments
                 </p>
                 <Button
                   onClick={handleSetupPayments}
                   disabled={isSettingUp}
-                  className="bg-secondary hover:bg-secondary/90 text-primary font-semibold shadow-lg"
+                  className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-lg"
                 >
                   {isSettingUp ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -369,27 +426,27 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
                   )}
                   {isSettingUp ? "Setting up..." : "Set up payments"}
                 </Button>
-              </GlassyCard>
+              </div>
             </div>
           )}
 
-          {/* Stripe Dashboard Access */}
-          {hasStripeAccount && (
-            <div className="text-center space-y-4 border-t border-white/10 pt-8">
-              <GlassyCard className="p-6">
+          {/* Stripe Dashboard Access - hidden in preview */}
+          {!preview && hasStripeAccount && (
+            <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-white/10")}>
+              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-white/10 rounded-xl"}>
                 <Button
                   onClick={handleAccessDashboard}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10 font-semibold"
+                  className={isLight ? "border-border text-foreground hover:bg-muted" : "border-white/20 text-white hover:bg-white/10 font-semibold"}
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
                   Access Stripe Dashboard
                 </Button>
-              </GlassyCard>
+              </div>
             </div>
           )}
         </div>
       </CardContent>
-    </GlassyCard>
+    </div>
   )
 }

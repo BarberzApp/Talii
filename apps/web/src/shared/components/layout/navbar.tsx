@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar"
-// ModeToggle removed - dark mode disabled
+import { ModeToggle } from "@/shared/components/theme/mode-toggle"
 import { MobileNav } from "@/shared/components/layout/mobile-nav"
 import { useMobile } from "@/shared/hooks/use-mobile"
 import {
@@ -174,8 +174,9 @@ export function Navbar() {
               )}
             </Link>
             
-            {/* Notification Bell */}
+            {/* Theme toggle and Notification Bell */}
             <div className="flex items-center gap-2">
+              <ModeToggle />
               <NotificationBell />
               
               {/* User dropdown menu */}
@@ -229,7 +230,8 @@ export function Navbar() {
           </nav>
         ) : (
           // Unauthenticated user navigation
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-6">
+            <ModeToggle />
             <Link href="/browse" className="text-white/80 hover:text-saffron transition-all duration-300 font-medium px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-white/5">
               <Compass className="h-4 w-4" />
               Browse
