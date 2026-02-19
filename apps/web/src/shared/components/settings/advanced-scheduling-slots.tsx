@@ -246,7 +246,7 @@ export function AdvancedSchedulingSlots({ barberId, onUpdate }: AdvancedScheduli
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Day of Week</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value.toString()}>
+                          <Select onValueChange={(value: string) => field.onChange(parseInt(value))} value={field.value.toString()}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select day" />
@@ -277,7 +277,7 @@ export function AdvancedSchedulingSlots({ barberId, onUpdate }: AdvancedScheduli
                               min="15"
                               max="120"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 30)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -329,7 +329,7 @@ export function AdvancedSchedulingSlots({ barberId, onUpdate }: AdvancedScheduli
                               min="0"
                               max="60"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 0)}
                             />
                           </FormControl>
                           <FormDescription>
@@ -352,7 +352,7 @@ export function AdvancedSchedulingSlots({ barberId, onUpdate }: AdvancedScheduli
                               min="0"
                               max="60"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 0)}
                             />
                           </FormControl>
                           <FormDescription>
@@ -375,7 +375,7 @@ export function AdvancedSchedulingSlots({ barberId, onUpdate }: AdvancedScheduli
                               min="1"
                               max="10"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 1)}
                             />
                           </FormControl>
                           <FormMessage />

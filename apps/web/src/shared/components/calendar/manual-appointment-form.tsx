@@ -15,6 +15,7 @@ import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { Calendar, Clock, User, DollarSign, Loader2, Plus, X, Scissors, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+
 interface ManualAppointmentFormProps {
   isOpen: boolean
   onClose: () => void
@@ -340,7 +341,7 @@ export function ManualAppointmentForm({
                 <Input
                   id="clientName"
                   value={formData.clientName}
-                  onChange={(e) => handleInputChange('clientName', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('clientName', e.target.value)}
                   placeholder="Enter client name"
                   className={cn(
                     "bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron mt-1",
@@ -364,7 +365,7 @@ export function ManualAppointmentForm({
                     id="clientEmail"
                     type="email"
                     value={formData.clientEmail}
-                    onChange={(e) => handleInputChange('clientEmail', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('clientEmail', e.target.value)}
                     placeholder="client@email.com"
                     className={cn(
                       "bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron mt-1",
@@ -385,7 +386,7 @@ export function ManualAppointmentForm({
                   <Input
                     id="clientPhone"
                     value={formData.clientPhone}
-                    onChange={(e) => handleInputChange('clientPhone', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('clientPhone', e.target.value)}
                     placeholder="(555) 123-4567"
                     className={cn(
                       "bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron mt-1",
@@ -472,7 +473,7 @@ export function ManualAppointmentForm({
                     id="date"
                     type="date"
                     value={formData.date}
-                    onChange={(e) => handleInputChange('date', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('date', e.target.value)}
                     min={new Date().toISOString().split('T')[0]}
                     className={cn(
                       "bg-white/10 border-white/20 text-white focus:border-saffron mt-1",
@@ -494,7 +495,7 @@ export function ManualAppointmentForm({
                     id="time"
                     type="time"
                     value={formData.time}
-                    onChange={(e) => handleInputChange('time', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('time', e.target.value)}
                     className={cn(
                       "bg-white/10 border-white/20 text-white focus:border-saffron mt-1",
                       errors.time && "border-red-500 focus:border-red-500"
@@ -517,7 +518,7 @@ export function ManualAppointmentForm({
                   id="duration"
                   type="number"
                   value={formData.duration}
-                  onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 60)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement> ) => handleInputChange('duration', parseInt(e.target.value) || 60)}
                   className={cn(
                     "bg-white/10 border-white/20 text-white focus:border-saffron mt-1",
                     errors.duration && "border-red-500 focus:border-red-500"
@@ -670,7 +671,7 @@ export function ManualAppointmentForm({
               <Textarea
                 id="notes"
                 value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('notes', e.target.value)}
                 placeholder="Any additional notes about this appointment..."
                 className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron"
                 rows={3}

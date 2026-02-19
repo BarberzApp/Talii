@@ -45,7 +45,7 @@ export function TestimonialCard({
   return (
     <Card
       className={cn(
-        "bg-surface border border-border shadow-xl rounded-2xl p-6 sm:p-8 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300",
+        "bg-surface border border-border shadow-lg dark:shadow-xl rounded-2xl p-6 sm:p-8 hover:shadow-xl dark:hover:shadow-2xl hover:-translate-y-1 transition-all duration-300",
         className
       )}
     >
@@ -54,7 +54,7 @@ export function TestimonialCard({
           <div
             className={cn(
               "h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-semibold text-secondary",
-              "bg-secondary/20 border border-secondary/30"
+              "bg-secondary/15 border border-secondary/25 dark:bg-secondary/20 dark:border-secondary/30"
             )}
             aria-hidden
           >

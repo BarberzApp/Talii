@@ -57,7 +57,7 @@ export function HeroSection({
             <div className="space-y-6">
               {overline && (
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-secondary/15 text-secondary border border-secondary/25 px-3 py-1 text-xs font-medium tracking-wider">
+                  <Badge className="bg-secondary/10 text-secondary border border-secondary/20 dark:bg-secondary/15 dark:border-secondary/25 px-3 py-1 text-xs font-medium tracking-wider">
                     {overline}
                   </Badge>
                 </div>

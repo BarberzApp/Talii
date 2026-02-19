@@ -564,7 +564,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                       <Input
                         id="guestName"
                         value={formData.guestName}
-                        onChange={(e) => setFormData({ ...formData, guestName: e.target.value })}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, guestName: e.target.value })}
                         placeholder="Enter your full name"
                         className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
                       />
@@ -575,7 +575,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                         id="guestEmail"
                         type="email"
                         value={formData.guestEmail}
-                        onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, guestEmail: e.target.value })}
                         placeholder="Enter your email"
                         className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
                       />
@@ -585,7 +585,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                       <Input
                         id="guestPhone"
                         value={formData.guestPhone}
-                        onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, guestPhone: e.target.value })}
                         placeholder="Enter your phone number"
                         className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
                       />
@@ -616,7 +616,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                 <Textarea
                   id="notes"
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement> ) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="Any special requests or notes..."
                   className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl min-h-[100px]"
                 />

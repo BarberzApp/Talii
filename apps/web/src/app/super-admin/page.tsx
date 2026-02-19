@@ -573,7 +573,7 @@ export default function SuperAdminPage() {
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   placeholder="Enter super admin password"
                   className="bg-white/10 border-white/20 text-white"
                 />
@@ -824,7 +824,7 @@ export default function SuperAdminPage() {
                     type="text"
                     placeholder="Search users..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                     className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
                   />
                 </div>
@@ -947,7 +947,7 @@ export default function SuperAdminPage() {
                             <p className="text-sm font-semibold text-white mb-2">Role</p>
                             <Select
                               value={barber.profiles?.role || 'client'}
-                              onValueChange={(value) => updateUserRole(barber.user_id, value)}
+                              onValueChange={(value: string) => updateUserRole(barber.user_id, value)}
                               disabled={updatingBarber === barber.user_id}
                             >
                               <SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">

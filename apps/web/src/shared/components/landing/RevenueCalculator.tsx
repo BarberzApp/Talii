@@ -108,7 +108,7 @@ export function RevenueCalculator({
           </div>
         )}
 
-        <Card className="bg-surface border border-border shadow-2xl rounded-3xl p-6 sm:p-8 lg:p-12">
+        <Card className="bg-surface border border-border shadow-xl dark:shadow-2xl rounded-3xl p-6 sm:p-8 lg:p-12">
           <CardContent className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
             {/* Calculator Input */}
             <div className="space-y-4 sm:space-y-6">
@@ -185,7 +185,7 @@ export function RevenueCalculator({
                   </span>{" "}
                   per year in extra income!
                 </div>
-                <div className="bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-secondary/30 inline-block mt-4">
+                <div className="bg-secondary/10 dark:bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-secondary/20 dark:border-secondary/30 inline-block mt-4">
                   <div className="text-muted-foreground text-xs sm:text-sm mb-1">
                     Breakdown:
                   </div>
@@ -206,7 +206,7 @@ export function RevenueCalculator({
 
             {/* Results */}
             <div className="space-y-4 sm:space-y-6">
-              <div className="bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-secondary/30">
+              <div className="bg-secondary/10 dark:bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-secondary/20 dark:border-secondary/30">
                 <p className="text-secondary text-xs sm:text-sm font-medium mb-2">
                   Total Monthly Revenue
                 </p>
@@ -238,7 +238,7 @@ export function RevenueCalculator({
                 </p>
               </div>
 
-              <div className="bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-secondary/30">
+              <div className="bg-secondary/10 dark:bg-secondary/20 rounded-2xl p-4 sm:p-6 border border-secondary/20 dark:border-secondary/30">
                 <p className="text-secondary text-xs sm:text-sm font-medium mb-2">
                   Monthly Breakdown
                 </p>

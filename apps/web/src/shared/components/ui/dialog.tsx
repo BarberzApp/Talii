@@ -50,7 +50,7 @@ const DialogContent = React.forwardRef<
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
-))
+))as any
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({
@@ -64,7 +64,7 @@ const DialogHeader = ({
     )}
     {...props}
   />
-)
+)as any
 DialogHeader.displayName = "DialogHeader"
 
 const DialogFooter = ({
@@ -78,7 +78,7 @@ const DialogFooter = ({
     )}
     {...props}
   />
-)
+)as any
 DialogFooter.displayName = "DialogFooter"
 
 const DialogTitle = React.forwardRef<
@@ -93,7 +93,7 @@ const DialogTitle = React.forwardRef<
     )}
     {...props}
   />
-))
+))as any
 DialogTitle.displayName = DialogPrimitive.Title.displayName
 
 const DialogDescription = React.forwardRef<
@@ -105,7 +105,7 @@ const DialogDescription = React.forwardRef<
     className={cn("text-sm text-muted-foreground", className)}
     {...props}
   />
-))
+))as any
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
 export {

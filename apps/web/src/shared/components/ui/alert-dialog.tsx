@@ -6,7 +6,7 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 import { cn } from '@/shared/lib/utils'
 import { buttonVariants } from "@/shared/components/ui/button"
 
-const AlertDialog = AlertDialogPrimitive.Root
+const AlertDialog = AlertDialogPrimitive.Root as any
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger
 
@@ -24,7 +24,7 @@ const AlertDialogOverlay = React.forwardRef<
     {...props}
     ref={ref}
   />
-))
+)) as any
 AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 
 const AlertDialogContent = React.forwardRef<
@@ -42,7 +42,7 @@ const AlertDialogContent = React.forwardRef<
       {...props}
     />
   </AlertDialogPortal>
-))
+)) as any 
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
 
 const AlertDialogHeader = ({
@@ -56,7 +56,7 @@ const AlertDialogHeader = ({
     )}
     {...props}
   />
-)
+) as any
 AlertDialogHeader.displayName = "AlertDialogHeader"
 
 const AlertDialogFooter = ({
@@ -70,7 +70,7 @@ const AlertDialogFooter = ({
     )}
     {...props}
   />
-)
+) as any
 AlertDialogFooter.displayName = "AlertDialogFooter"
 
 const AlertDialogTitle = React.forwardRef<
@@ -82,7 +82,7 @@ const AlertDialogTitle = React.forwardRef<
     className={cn("text-lg font-semibold", className)}
     {...props}
   />
-))
+)) as any
 AlertDialogTitle.displayName = AlertDialogPrimitive.Title.displayName
 
 const AlertDialogDescription = React.forwardRef<
@@ -94,7 +94,7 @@ const AlertDialogDescription = React.forwardRef<
     className={cn("text-sm text-muted-foreground", className)}
     {...props}
   />
-))
+)) as any
 AlertDialogDescription.displayName =
   AlertDialogPrimitive.Description.displayName
 
@@ -107,7 +107,7 @@ const AlertDialogAction = React.forwardRef<
     className={cn(buttonVariants(), className)}
     {...props}
   />
-))
+)) as any
 AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
 
 const AlertDialogCancel = React.forwardRef<
@@ -123,7 +123,7 @@ const AlertDialogCancel = React.forwardRef<
     )}
     {...props}
   />
-))
+)) as any
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
 
 export {

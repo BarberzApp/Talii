@@ -206,7 +206,7 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
                       id={`start-${slot.day_of_week}`}
                       type="time"
                       value={slot.start_time}
-                      onChange={(e) => handleTimeChange(slot.day_of_week, 'start_time', e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, 'start_time', e.target.value)}
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary focus:ring-secondary rounded-lg h-10 text-base"
                     />
                   </div>
@@ -219,7 +219,7 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
                       id={`end-${slot.day_of_week}`}
                       type="time"
                       value={slot.end_time}
-                      onChange={(e) => handleTimeChange(slot.day_of_week, 'end_time', e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, 'end_time', e.target.value)}
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary focus:ring-secondary rounded-lg h-10 text-base"
                     />
                   </div>

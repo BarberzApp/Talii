@@ -151,7 +151,7 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
                 id="date"
                 type="date"
                 value={newHours.date}
-                onChange={(e) => setNewHours({ ...newHours, date: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, date: e.target.value })}
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
               />
             </div>
@@ -160,7 +160,7 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
               <Input
                 id="reason"
                 value={newHours.reason}
-                onChange={(e) => setNewHours({ ...newHours, reason: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, reason: e.target.value })}
                 placeholder="e.g. Holiday Hours, Special Event"
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
               />
@@ -170,7 +170,7 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
           <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-xl border border-white/10">
             <Switch
               checked={newHours.is_closed}
-              onCheckedChange={(checked) => setNewHours({ ...newHours, is_closed: checked })}
+              onCheckedChange={(checked: boolean) => setNewHours({ ...newHours, is_closed: checked as boolean })}
               className="data-[state=checked]:bg-saffron"
             />
             <Label className="text-white/80 font-medium">Closed on this date</Label>
@@ -184,7 +184,7 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
                   id="start_time"
                   type="time"
                   value={newHours.start_time}
-                  onChange={(e) => setNewHours({ ...newHours, start_time: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, start_time: e.target.value })}
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
                 />
               </div>
@@ -194,7 +194,7 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
                   id="end_time"
                   type="time"
                   value={newHours.end_time}
-                  onChange={(e) => setNewHours({ ...newHours, end_time: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, end_time: e.target.value })}
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
                 />
               </div>

@@ -138,18 +138,20 @@ export default function LandingPage() {
 
   return (
     <div className="landing-root min-h-screen bg-background">
-      {/* Background: warm gradient in hero area + soft orbs */}
+      {/* Background: subtle gradient per spec (§3.2) – very subtle between close neutrals or brand+neutral */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-transparent to-transparent h-[85vh]" />
-        <div className="absolute top-0 right-0 w-[28rem] h-[28rem] bg-primary/12 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        {/* Light: ultra-subtle top gradient with orange tint; Dark: slightly warmer primary tint */}
+        <div className="absolute inset-0 h-[85vh] bg-gradient-to-b from-primary/[0.12] via-primary/[0.05] to-transparent dark:from-primary/[0.08] dark:via-primary/[0.03] dark:to-transparent" />
+        {/* Light: orange-tinted orbs for visibility; Dark: primary-tinted orbs */}
+        <div className="absolute top-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl bg-primary/15 dark:bg-primary/12" />
+        <div className="absolute bottom-1/4 left-0 w-80 h-80 rounded-full blur-3xl bg-primary/12 dark:bg-primary/10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl bg-primary/8 dark:bg-primary/5" />
       </div>
 
       {/* Navigation */}
       <LandingNavbar
-        logo="/brand/talii-logo-zoomed.png"
-        logoDark="/brand/talii-logo-zoomed-dark.png"
+        logo="/brand/talii_logo_tp.png"
+        logoDark="/brand/talii_logo_tp.png"
         logoText="Talii"
         navItems={navItems}
         ctaLabel="Get Started"

@@ -176,7 +176,7 @@ export function BookingRestrictionsSettings({ barberId, onUpdate }: BookingRestr
                           min="0"
                           max="60"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormDescription>
@@ -216,7 +216,7 @@ export function BookingRestrictionsSettings({ barberId, onUpdate }: BookingRestr
                           min="1"
                           max="50"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 1)}
                         />
                       </FormControl>
                       <FormDescription>
@@ -249,7 +249,7 @@ export function BookingRestrictionsSettings({ barberId, onUpdate }: BookingRestr
                           min="0"
                           max="365"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormDescription>

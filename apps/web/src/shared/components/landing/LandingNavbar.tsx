@@ -88,7 +88,7 @@ export function LandingNavbar({
             aria-label={`${logoText} Home`}
           >
             {logoSrc ? (
-              <span className="inline-block h-12 w-[140px] sm:h-14 sm:w-[160px] flex items-center">
+              <span className="inline-block h-12 w-[140px] sm:h-14 sm:w-[160px] items-center">
                 <img
                   src={logoSrc}
                   alt={`${logoText} Logo`}

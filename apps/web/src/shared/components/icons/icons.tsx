@@ -1,10 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { LucideProps } from "lucide-react"
 
 export const Icons = {
-  logo: (props: LucideProps) => (
+  logo: (props: React.SVGProps<SVGSVGElement>) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"

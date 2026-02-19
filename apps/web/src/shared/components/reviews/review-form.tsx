@@ -106,7 +106,7 @@ export function ReviewForm({
           id="comment"
           placeholder="Share your experience with this barber..."
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setComment(e.target.value)}
           className="bg-white/10 border-white/20 text-white placeholder:text-white/40 min-h-[100px] resize-none"
           maxLength={500}
         />

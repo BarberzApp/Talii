@@ -509,19 +509,19 @@ export default function BrowsePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-primary">
+      <div className="min-h-screen bg-background">
         {/* Loading Content */}
         <div className="container mx-auto max-w-7xl px-4 py-12">
           <div className="space-y-8">
             {/* Header Skeleton */}
             <div className="text-center space-y-6">
-              <Skeleton className="h-12 w-64 mx-auto bg-white/10" />
-              <Skeleton className="h-6 w-96 mx-auto bg-white/10" />
+              <Skeleton className="h-12 w-64 mx-auto bg-muted" />
+              <Skeleton className="h-6 w-96 mx-auto bg-muted" />
             </div>
 
             {/* Search Bar Skeleton */}
             <div className="max-w-2xl mx-auto">
-                <Skeleton className="h-14 w-full rounded-2xl bg-white/10" />
+                <Skeleton className="h-14 w-full rounded-2xl bg-muted" />
             </div>
 
             {/* Search Results Skeleton */}
@@ -548,21 +548,21 @@ export default function BrowsePage() {
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-secondary/10 rounded-full blur-3xl -z-10" />
             <div className="flex flex-col items-center text-center gap-4 mb-6">
               <div>
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bebas font-bold text-white tracking-wide">
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bebas font-bold text-foreground tracking-wide">
                   Find Your Perfect Stylist
                 </h1>
-                <p className="text-white/80 mt-2 text-base sm:text-lg font-medium">
+                <p className="text-muted-foreground mt-2 text-base sm:text-lg font-medium">
                   Discover skilled cosmetologists and stylists in your area
                 </p>
               </div>
             </div>
-            <p className="text-white/60 text-lg sm:text-xl max-w-2xl mx-auto font-medium text-center">
+            <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto font-medium text-center">
               Connect with talented stylists and cosmetologists who match your style and preferences. Book appointments with confidence.
             </p>
             {/* Cuts Button */}
             <div className="flex justify-center pt-6">
               <Link href="/cuts">
-                <Button className="bg-secondary text-white font-bebas font-bold px-8 py-4 rounded-xl shadow-md shadow-secondary/15 hover:bg-secondary/90 transition-all text-lg flex items-center justify-center gap-2">
+                <Button className="bg-secondary text-primary-foreground font-bebas font-bold px-8 py-4 rounded-xl shadow-md shadow-secondary/15 hover:bg-secondary/90 transition-all text-lg flex items-center justify-center gap-2">
                   <Sparkles className="h-5 w-5" />
                   Watch Stylist Cuts
                 </Button>
@@ -575,7 +575,7 @@ export default function BrowsePage() {
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto">
               <div className="relative">
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 z-10">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10">
                   <Search className="h-5 w-5" />
                 </div>
                 <Input
@@ -583,14 +583,14 @@ export default function BrowsePage() {
                   value={searchQuery}
                   onChange={handleSearch}
                   onKeyDown={handleKeyDown}
-                  className="w-full pl-12 py-4 text-base bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron rounded-2xl backdrop-blur-xl"
+                  className="w-full pl-12 py-4 text-base bg-muted border-border text-foreground placeholder-muted-foreground focus:border-primary rounded-2xl backdrop-blur-xl"
                 />
                 {searchQuery && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={clearSearch}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0 text-white/60 hover:text-white hover:bg-white/10 rounded-full"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -601,11 +601,11 @@ export default function BrowsePage() {
             {/* Location Filter Indicator */}
             {(locationFilter.city || locationFilter.state || locationFilter.useCurrentLocation) && (
               <div className="max-w-2xl mx-auto">
-                <Card className="bg-saffron/20 border border-saffron/30 rounded-2xl">
+                <Card className="bg-primary/20 border border-primary/30 rounded-2xl">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-white">
-                        <MapIcon className="h-4 w-4 text-saffron" />
+                      <div className="flex items-center gap-2 text-foreground">
+                        <MapIcon className="h-4 w-4 text-primary" />
                         <span className="text-sm font-medium">
                           {locationFilter.useCurrentLocation 
                             ? `Within ${locationFilter.range} miles`
@@ -617,7 +617,7 @@ export default function BrowsePage() {
                         variant="ghost"
                         size="sm"
                         onClick={clearLocationFilter}
-                        className="text-white hover:bg-white/10 text-xs"
+                        className="text-foreground hover:bg-muted text-xs"
                       >
                         Clear
                       </Button>
@@ -628,30 +628,30 @@ export default function BrowsePage() {
             )}
 
             {/* Filters and Sort Controls */}
-            <Card className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl">
+            <Card className="bg-card border border-border shadow-xl backdrop-blur-xl rounded-2xl">
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                   <div className="flex items-center gap-3 w-full sm:w-auto">
                     <Sheet open={showFilters} onOpenChange={setShowFilters}>
                       <SheetTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl flex-1 sm:flex-none">
+                        <Button variant="outline" size="sm" className="flex items-center gap-2 bg-muted border-border text-foreground hover:bg-muted/80 rounded-xl flex-1 sm:flex-none">
                           <Filter className="h-4 w-4" />
                           Filters
                           {activeFiltersCount > 0 && (
-                            <Badge variant="secondary" className="ml-1 bg-saffron/20 text-saffron border-saffron/30">
+                            <Badge variant="secondary" className="ml-1 bg-primary/20 text-primary border-primary/30">
                               {activeFiltersCount}
                             </Badge>
                           )}
                         </Button>
                       </SheetTrigger>
-                      <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-black/95 border-r border-white/10">
-                        <SheetHeader className="border-b border-white/10 pb-4">
-                          <SheetTitle className="text-white text-xl font-bebas font-bold">Filters</SheetTitle>
+                      <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-background border-r border-border">
+                        <SheetHeader className="border-b border-border pb-4">
+                          <SheetTitle className="text-foreground text-xl font-bebas font-bold">Filters</SheetTitle>
                         </SheetHeader>
                         <div className="space-y-6 mt-6 overflow-y-auto max-h-[calc(100vh-200px)]">
                           {/* Specialties Filter */}
                           <div className="space-y-3">
-                            <Label className="text-sm font-medium text-white">Specialties</Label>
+                            <Label className="text-sm font-medium text-foreground">Specialties</Label>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
                               {allSpecialties.map((specialty) => (
                                 <div key={specialty} className="flex items-center space-x-2">
@@ -659,9 +659,9 @@ export default function BrowsePage() {
                                     id={specialty}
                                     checked={selectedSpecialties.includes(specialty)}
                                     onCheckedChange={() => toggleSpecialty(specialty)}
-                                    className="border-white/20 data-[state=checked]:bg-saffron data-[state=checked]:border-saffron"
+                                    className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                   />
-                                  <Label htmlFor={specialty} className="text-sm text-white/80">
+                                  <Label htmlFor={specialty} className="text-sm text-muted-foreground">
                                     {specialty}
                                   </Label>
                                 </div>
@@ -863,7 +863,7 @@ export default function BrowsePage() {
                     ref={cityInputRef}
                     placeholder="Enter city name"
                     value={locationFilter.city}
-                    onChange={(e) => {
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       setLocationFilter(prev => ({ ...prev, city: e.target.value }));
                       setShowLocationSuggestions(true);
                     }}
@@ -913,7 +913,7 @@ export default function BrowsePage() {
                   id="state"
                   placeholder="Enter state or province"
                   value={locationFilter.state}
-                  onChange={(e) => setLocationFilter(prev => ({ ...prev, state: e.target.value }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, state: e.target.value }))}
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl"
                 />
               </div>
@@ -924,7 +924,7 @@ export default function BrowsePage() {
                     type="checkbox"
                     id="useCurrentLocation"
                     checked={locationFilter.useCurrentLocation}
-                    onChange={(e) => setLocationFilter(prev => ({ ...prev, useCurrentLocation: e.target.checked }))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, useCurrentLocation: e.target.checked }))}
                     className="rounded border-white/20 bg-white/10 text-saffron focus:ring-saffron"
                   />
                   <Label htmlFor="useCurrentLocation" className="text-white font-medium text-base">
@@ -939,7 +939,7 @@ export default function BrowsePage() {
                     </Label>
                     <Select 
                       value={locationFilter.range.toString()} 
-                      onValueChange={(value) => setLocationFilter(prev => ({ ...prev, range: parseInt(value) }))}
+                      onValueChange={(value: string) => setLocationFilter(prev => ({ ...prev, range: parseInt(value) }))}
                     >
                       <SelectTrigger className="bg-white/10 border-white/20 text-white rounded-xl">
                         <SelectValue />

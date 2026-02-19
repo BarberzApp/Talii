@@ -16,7 +16,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       />
     )
   }
-)
+) as any
 Input.displayName = "Input"
 
 export { Input }

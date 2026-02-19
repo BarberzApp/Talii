@@ -1301,7 +1301,7 @@ const handleMuteToggle = useCallback((index: number, e: React.MouseEvent) => {
             <div key={cut.id} className="relative h-screen w-full snap-start overflow-hidden">
               <div className={cn("relative bg-black", getVideoSizing(cut.aspect_ratio).containerClass)}>
                 <video
-                  ref={(el) => (videoRefs.current[index] = el)}
+                  ref={(el: HTMLVideoElement | null) => (videoRefs.current[index] = el)}
                   src={cut.url}
                   className={cn("cursor-pointer", getVideoSizing(cut.aspect_ratio).videoClass)}
                   autoPlay={true}
@@ -1593,9 +1593,9 @@ const handleMuteToggle = useCallback((index: number, e: React.MouseEvent) => {
               <Input
                 placeholder="Add a comment..."
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewComment(e.target.value)}
                 className="flex-1 bg-white/10 border-white/20 text-white rounded-full"
-                onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === "Enter" && handleAddComment()}
               />
               <Button
                 size="sm"

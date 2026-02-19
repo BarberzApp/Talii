@@ -841,7 +841,7 @@ export default function ClientPortfolio() {
                             {editingReview === review.id ? (
                               <Textarea
                                 value={editReviewData.comment}
-                                onChange={(e) => setEditReviewData(prev => ({...prev, comment: e.target.value}))}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditReviewData(prev => ({...prev, comment: e.target.value}))}
                                 placeholder="Share your experience..."
                                 className="bg-white/5 border-white/10 text-white placeholder-white/40 text-sm mb-2 min-h-[60px]"
                               />

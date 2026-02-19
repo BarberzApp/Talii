@@ -54,7 +54,7 @@ export function FeatureGrid({
   };
 
   return (
-    <LandingSection id={id} className={cn("bg-surface/40", className)}>
+    <LandingSection id={id} className={className}>
       {(title || subtitle) && (
           <div className="text-center mb-[var(--landing-block-mb)] sm:mb-[var(--landing-block-mb-sm)]">
             {title && (
@@ -78,9 +78,9 @@ export function FeatureGrid({
           viewport={{ once: true, amount: 0.1 }}
         >
           {features.map((feature, index) => (
-            <motion.div key={index} variants={staggerItem}>
-              <Card className="group bg-surface border border-border shadow-xl rounded-2xl p-5 sm:p-6 hover:shadow-2xl hover:border-primary/30 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
-              <CardContent className="p-0">
+            <motion.div key={index} variants={staggerItem} className="h-full">
+              <Card className="group bg-surface border border-border shadow-lg dark:shadow-xl rounded-2xl p-5 sm:p-6 hover:shadow-xl dark:hover:shadow-2xl hover:border-primary/30 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden h-full flex flex-col">
+              <CardContent className="p-0 flex flex-col flex-1">
                 <div className="flex items-center justify-between mb-4">
                   <div
                     className={cn(
@@ -99,12 +99,12 @@ export function FeatureGrid({
                     {feature.title}
                   </h3>
                   {feature.badge && (
-                    <Badge className="bg-gradient-to-r from-secondary/80 to-secondary/80 text-primary-foreground border-secondary/40 animate-pulse">
+                    <Badge className="bg-secondary/90 text-primary-foreground border-secondary/50 dark:border-secondary/40 animate-pulse">
                       {feature.badge}
                     </Badge>
                   )}
                 </div>
-                <p className="text-muted-foreground leading-relaxed text-sm sm:text-base">
+                <p className="text-muted-foreground leading-relaxed text-sm sm:text-base flex-1">
                   {feature.description}
                 </p>
               </CardContent>

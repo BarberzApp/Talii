@@ -30,7 +30,7 @@ const GlassyCard = React.forwardRef<HTMLDivElement, GlassyCardProps>(
       </div>
     )
   }
-)
+) as any
 GlassyCard.displayName = "GlassyCard"
 
 export { GlassyCard } 

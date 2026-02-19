@@ -856,7 +856,7 @@ export default function BarberOnboardingPage() {
       const timer = setTimeout(() => {
         debouncedFetchSuggestions(locationInput);
       }, 300);
-      debounceTimerRef.current = timer;
+      debounceTimerRef.current = timer as unknown as NodeJS.Timeout;
     } else if (locationInput.length < 3) {
       setLocationSuggestions([]);
     }
@@ -1093,7 +1093,7 @@ export default function BarberOnboardingPage() {
                   <Input
                     id={`service-${index}-name`}
                     value={service.name}
-                    onChange={(e) => handleServiceChange(index, 'name', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleServiceChange(index, 'name', e.target.value)}
                     className={`h-11 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary ${validationErrors[`service-${index}-name`] ? 'border-red-500' : ''}`}
                     placeholder="e.g., Haircut"
                   />
@@ -1108,7 +1108,7 @@ export default function BarberOnboardingPage() {
                       id={`service-${index}-price`}
                       type="number"
                       value={service.price || ''}
-                      onChange={(e) => {
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const val = e.target.value;
                         const numVal = val === '' ? 0 : parseFloat(val);
                         handleServiceChange(index, 'price', numVal);
@@ -1128,7 +1128,7 @@ export default function BarberOnboardingPage() {
                       id={`service-${index}-duration`}
                       type="number"
                       value={service.duration || ''}
-                      onChange={(e) => {
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const val = e.target.value;
                         const numVal = val === '' ? 0 : parseInt(val);
                         handleServiceChange(index, 'duration', numVal);

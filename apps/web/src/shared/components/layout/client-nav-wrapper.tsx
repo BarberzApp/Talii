@@ -1,45 +1,11 @@
 "use client";
 import { Navbar } from "@/shared/components/layout/navbar";
 import { MobileNav } from "@/shared/components/layout/mobile-nav";
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { useCurrentPathname } from "@/shared/hooks/use-current-pathname";
 
 export default function ClientNavWrapper({ children }: { children: React.ReactNode }) {
-  const [pathname, setPathname] = useState<string>('');
-
-  // Update pathname when component mounts and when route changes
-  useEffect(() => {
-    // Set initial pathname
-    setPathname(window.location.pathname);
-
-    // Listen for route changes
-    const handleRouteChange = () => {
-      setPathname(window.location.pathname);
-    };
-
-    // Add event listener for popstate (back/forward navigation)
-    window.addEventListener('popstate', handleRouteChange);
-
-    // Listen for navigation events
-    const handleNavigation = () => {
-      // Small delay to ensure the route has changed
-      setTimeout(() => {
-        setPathname(window.location.pathname);
-      }, 0);
-    };
-
-    // Listen for clicks on navigation links
-    document.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'A' || target.closest('a')) {
-        handleNavigation();
-      }
-    });
-
-    return () => {
-      window.removeEventListener('popstate', handleRouteChange);
-      document.removeEventListener('click', handleNavigation);
-    };
-  }, []);
+  const pathname = useCurrentPathname();
 
   // Define pages where navigation should be hidden
   const hiddenPages = ["/", "/landing"];

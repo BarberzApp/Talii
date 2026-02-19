@@ -84,9 +84,9 @@ export function AddonSelector({
               <Checkbox
                 id={addon.id}
                 checked={selectedAddonIds.includes(addon.id)}
-                onCheckedChange={(checked) => handleAddonToggle(addon.id, checked as boolean)}
+                onCheckedChange={(checked: boolean) => handleAddonToggle(addon.id, checked as boolean)}
                 className="h-6 w-6 border-white/30 bg-white/10 rounded-lg focus:ring-secondary"
-                onClick={e => e.stopPropagation()}
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
               />
             </div>
             <div className="flex-1 min-w-0">

@@ -42,7 +42,7 @@ export function CTASection({
   if (variant === "band") {
     return (
       <section className={cn("py-[var(--landing-section-py)] sm:py-[var(--landing-section-py-sm)]", className)}>
-        <div className="w-full bg-gradient-to-br from-secondary/20 via-secondary/10 to-transparent border-y border-border">
+        <div className="w-full bg-gradient-to-br from-muted/70 via-muted/40 to-transparent dark:from-secondary/20 dark:via-secondary/10 dark:to-transparent border-y border-border">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-[var(--landing-cta-inner-py)] sm:py-[var(--landing-cta-inner-py-sm)] text-center">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
               {title}
@@ -81,7 +81,7 @@ export function CTASection({
 
   return (
     <LandingSection maxWidth="4xl" className={cn("text-center", className)}>
-        <Card className="bg-gradient-to-br from-secondary/20 via-secondary/10 to-transparent border border-border shadow-2xl rounded-3xl px-8 sm:px-12 py-[var(--landing-cta-inner-py)] sm:py-[var(--landing-cta-inner-py-sm)]">
+        <Card className="bg-gradient-to-br from-muted/60 via-muted/30 to-transparent dark:from-secondary/20 dark:via-secondary/10 dark:to-transparent border border-border shadow-xl dark:shadow-2xl rounded-3xl px-8 sm:px-12 py-[var(--landing-cta-inner-py)] sm:py-[var(--landing-cta-inner-py-sm)]">
           <CardContent className="p-0">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
               {title}

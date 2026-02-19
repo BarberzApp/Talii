@@ -21,9 +21,9 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'BOCM',
+  title: 'Talii',
   description: 'Book your next haircut with ease',
-  themeColor: '#000000',
+  themeColor: '#EE6D23',
   viewport: {
     width: 'device-width',
     initialScale: 1,

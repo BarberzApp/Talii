@@ -83,7 +83,7 @@ const FormItem = React.forwardRef<
       <div ref={ref} className={cn("space-y-2", className)} {...props} />
     </FormItemContext.Provider>
   )
-})
+}) as any
 FormItem.displayName = "FormItem"
 
 const FormLabel = React.forwardRef<
@@ -100,7 +100,7 @@ const FormLabel = React.forwardRef<
       {...props}
     />
   )
-})
+}) as any
 FormLabel.displayName = "FormLabel"
 
 const FormControl = React.forwardRef<
@@ -122,7 +122,7 @@ const FormControl = React.forwardRef<
       {...props}
     />
   )
-})
+}) as any
 FormControl.displayName = "FormControl"
 
 const FormDescription = React.forwardRef<
@@ -139,7 +139,7 @@ const FormDescription = React.forwardRef<
       {...props}
     />
   )
-})
+}) as any
 FormDescription.displayName = "FormDescription"
 
 const FormMessage = React.forwardRef<
@@ -163,7 +163,7 @@ const FormMessage = React.forwardRef<
       {body}
     </p>
   )
-})
+}) as any
 FormMessage.displayName = "FormMessage"
 
 export {

@@ -199,7 +199,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   <Input
                     type="time"
                     value={day?.start_time || '09:00'}
-                    onChange={(e) => handleTimeChange(index, 'start_time', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(index, 'start_time', e.target.value)}
                     disabled={!isAvailable}
                     className="w-full sm:w-32"
                   />
@@ -207,7 +207,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   <Input
                     type="time"
                     value={day?.end_time || '17:00'}
-                    onChange={(e) => handleTimeChange(index, 'end_time', e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(index, 'end_time', e.target.value)}
                     disabled={!isAvailable}
                     className="w-full sm:w-32"
                   />

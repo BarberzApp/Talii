@@ -88,7 +88,7 @@ export function CalendarView({ events = [] }: CalendarViewProps) {
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0"
-                      onClick={(e) => {
+                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation()
                         // Handle delete booking
                         logger.debug("Delete booking", { bookingId: event.bookingId })

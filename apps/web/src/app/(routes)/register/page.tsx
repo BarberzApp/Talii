@@ -7,12 +7,10 @@ import { useAuth } from "@/shared/hooks/use-auth-zustand"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Checkbox } from "@/shared/components/ui/checkbox"
-import { Scissors, User } from "lucide-react"
+import { Scissors } from "lucide-react"
 import { useToast } from "@/shared/components/ui/use-toast"
-import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group"
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import { supabase } from '@/shared/lib/supabase'
 import React from "react"
@@ -162,22 +160,20 @@ export default function RegisterPage() {
       </header>
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center">
-        <Card className="bg-white/5 border border-white/10 shadow-2xl rounded-3xl w-full max-w-md">
+        <Card className="bg-card border border-border shadow-xl rounded-3xl w-full max-w-md">
           <CardHeader className="text-center">
-            <Scissors className="mx-auto h-10 w-10 text-saffron mb-2" />
-            {/* Add User icon with saffron color if used visually */}
-            {/* <User className="mx-auto h-10 w-10 text-saffron mb-2" /> */}
-            <CardTitle className="text-3xl font-bebas text-white">Create Your Account</CardTitle>
-            <CardDescription className="text-white/80 font-pacifico">Join BarberHub and start your journey</CardDescription>
+            <Scissors className="mx-auto h-10 w-10 text-primary mb-2" />
+            <CardTitle className="text-3xl font-bebas text-foreground">Create Your Account</CardTitle>
+            <CardDescription className="text-muted-foreground">Join Talii and start your journey</CardDescription>
           </CardHeader>
           <CardContent>
             {/* Minimal role toggle, styled as pill buttons */}
-            <div className="flex w-full max-w-xs mx-auto mb-4 bg-white/10 border border-white/20 rounded-full p-1">
+            <div className="flex w-full max-w-xs mx-auto mb-4 bg-muted border border-border rounded-full p-1">
               <button
                 type="button"
                 onClick={() => setRole('client')}
                 className={`w-1/2 py-2 rounded-full text-base font-semibold transition-all duration-150
-                  ${role === 'client' ? 'bg-saffron text-primary shadow-md' : 'bg-transparent text-white hover:bg-white/5'}`}
+                  ${role === 'client' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-transparent text-foreground hover:bg-muted/80'}`}
                 aria-pressed={role === 'client'}
               >
                 Client
@@ -186,7 +182,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => setRole('barber')}
                 className={`w-1/2 py-2 rounded-full text-base font-semibold transition-all duration-150
-                  ${role === 'barber' ? 'bg-saffron text-primary shadow-md' : 'bg-transparent text-white hover:bg-white/5'}`}
+                  ${role === 'barber' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-transparent text-foreground hover:bg-muted/80'}`}
                 aria-pressed={role === 'barber'}
               >
                 Barber
@@ -194,7 +190,7 @@ export default function RegisterPage() {
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium text-white">Full Name</Label>
+                <Label htmlFor="name" className="text-sm font-medium text-foreground">Full Name</Label>
                 <Input
                   id="name"
                   name="name"
@@ -202,11 +198,11 @@ export default function RegisterPage() {
                   required
                   value={formData.name}
                   onChange={handleChange}
-                  className="h-11 bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron"
+                  className="h-11 bg-muted border-border text-foreground placeholder-muted-foreground focus:border-primary"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-white">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
                 <Input
                   id="email"
                   name="email"
@@ -215,11 +211,11 @@ export default function RegisterPage() {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="h-11 bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron"
+                  className="h-11 bg-muted border-border text-foreground placeholder-muted-foreground focus:border-primary"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-white">Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
                 <Input
                   id="password"
                   name="password"
@@ -227,11 +223,11 @@ export default function RegisterPage() {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="h-11 bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron"
+                  className="h-11 bg-muted border-border text-foreground placeholder-muted-foreground focus:border-primary"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-white">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -239,7 +235,7 @@ export default function RegisterPage() {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="h-11 bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron"
+                  className="h-11 bg-muted border-border text-foreground placeholder-muted-foreground focus:border-primary"
                 />
               </div>
               <div className="flex items-center space-x-2">
@@ -247,26 +243,26 @@ export default function RegisterPage() {
                   id="terms"
                   name="agreeTerms"
                   checked={formData.agreeTerms}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, agreeTerms: checked as boolean }))}
+                  onCheckedChange={(checked: boolean) => setFormData((prev) => ({ ...prev, agreeTerms: checked as boolean }))}
                   className="w-4 h-4"
                 />
                 <label
                   htmlFor="terms"
-                  className="text-sm font-medium text-white leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  className="text-sm font-medium text-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   I agree to the{' '}
-                  <Link href="/terms" className="text-saffron hover:underline font-pacifico" tabIndex={0}>
+                  <Link href="/terms" className="text-primary hover:underline" tabIndex={0}>
                     terms and conditions
                   </Link>{' '}
                   and{' '}
-                  <Link href="/privacy" className="text-saffron hover:underline font-pacifico" tabIndex={0}>
+                  <Link href="/privacy" className="text-primary hover:underline" tabIndex={0}>
                     privacy policy
                   </Link>
                 </label>
               </div>
               <Button 
                 type="submit" 
-                className="w-full bg-secondary text-black font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-secondary/90 transition-all text-lg font-bebas"
+                className="w-full bg-secondary text-primary-foreground font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-secondary/90 transition-all text-lg font-bebas"
                 disabled={loading}
               >
                 {loading ? (
@@ -281,31 +277,32 @@ export default function RegisterPage() {
             </form>
             {/* Divider */}
             <div className="flex items-center my-4">
-              <div className="flex-grow border-t border-white/20" />
-              <span className="mx-3 text-white/60 text-xs">or</span>
-              <div className="flex-grow border-t border-white/20" />
+              <div className="flex-grow border-t border-border" />
+              <span className="mx-3 text-muted-foreground text-xs">or</span>
+              <div className="flex-grow border-t border-border" />
             </div>
             {/* Google button with tooltip */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  variant="outline"
                   onClick={handleGoogleSignUp}
-                  className="flex items-center justify-center w-full h-11 rounded-full bg-white border border-gray-300 shadow hover:bg-gray-100 transition gap-2"
+                  className="flex items-center justify-center w-full h-11 rounded-full border border-border bg-background hover:bg-muted transition gap-2"
                   aria-label="Sign up with Google"
                   type="button"
                   disabled={!role}
                 >
                   <GoogleIcon />
-                  <span className="text-black font-medium">Sign up with Google</span>
+                  <span className="text-foreground font-medium">Sign up with Google</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Sign up with Google</TooltipContent>
             </Tooltip>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-center text-white/80">
+            <div className="text-sm text-center text-muted-foreground">
               Already have an account?{' '}
-              <Link href="/login" className="text-saffron hover:underline font-semibold">
+              <Link href="/login" className="text-primary hover:underline font-semibold">
                 Sign in
               </Link>
             </div>

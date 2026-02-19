@@ -36,7 +36,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
     {children}
     <ChevronRight className="ml-auto" />
   </DropdownMenuPrimitive.SubTrigger>
-))
+)) as any
 DropdownMenuSubTrigger.displayName =
   DropdownMenuPrimitive.SubTrigger.displayName
 
@@ -52,7 +52,7 @@ const DropdownMenuSubContent = React.forwardRef<
     )}
     {...props}
   />
-))
+)) as any
 DropdownMenuSubContent.displayName =
   DropdownMenuPrimitive.SubContent.displayName
 
@@ -71,7 +71,7 @@ const DropdownMenuContent = React.forwardRef<
       {...props}
     />
   </DropdownMenuPrimitive.Portal>
-))
+)) as any
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName
 
 const DropdownMenuItem = React.forwardRef<
@@ -89,7 +89,7 @@ const DropdownMenuItem = React.forwardRef<
     )}
     {...props}
   />
-))
+)) as any
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
 
 const DropdownMenuCheckboxItem = React.forwardRef<
@@ -112,7 +112,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
     </span>
     {children}
   </DropdownMenuPrimitive.CheckboxItem>
-))
+)) as any
 DropdownMenuCheckboxItem.displayName =
   DropdownMenuPrimitive.CheckboxItem.displayName
 
@@ -135,7 +135,7 @@ const DropdownMenuRadioItem = React.forwardRef<
     </span>
     {children}
   </DropdownMenuPrimitive.RadioItem>
-))
+)) as any
 DropdownMenuRadioItem.displayName = DropdownMenuPrimitive.RadioItem.displayName
 
 const DropdownMenuLabel = React.forwardRef<
@@ -153,7 +153,7 @@ const DropdownMenuLabel = React.forwardRef<
     )}
     {...props}
   />
-))
+)) as any
 DropdownMenuLabel.displayName = DropdownMenuPrimitive.Label.displayName
 
 const DropdownMenuSeparator = React.forwardRef<
@@ -165,7 +165,7 @@ const DropdownMenuSeparator = React.forwardRef<
     className={cn("-mx-1 my-1 h-px bg-muted", className)}
     {...props}
   />
-))
+))as any
 DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName
 
 const DropdownMenuShortcut = ({
@@ -177,7 +177,7 @@ const DropdownMenuShortcut = ({
       className={cn("ml-auto text-xs tracking-widest opacity-60", className)}
       {...props}
     />
-  )
+  )as any
 }
 DropdownMenuShortcut.displayName = "DropdownMenuShortcut"
 

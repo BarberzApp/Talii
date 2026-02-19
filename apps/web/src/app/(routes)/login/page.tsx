@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ChangeEvent } from 'react'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import Link from 'next/link'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
@@ -147,8 +147,8 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-saffron" />
-          <div className="text-white text-xl font-semibold mb-2">Redirecting...</div>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <div className="text-foreground text-xl font-semibold mb-2">Redirecting...</div>
           {error && (
             <div className="text-red-400 text-sm mt-2">
               {error}
@@ -169,11 +169,11 @@ export default function LoginPage() {
       </header>
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center">
-        <Card className="bg-white/5 border border-white/10 shadow-2xl rounded-3xl p-8 w-full max-w-md">
+        <Card className="bg-card border border-border shadow-xl rounded-3xl p-8 w-full max-w-md">
           <CardHeader className="text-center">
-            <Scissors className="mx-auto h-10 w-10 text-saffron mb-2" />
-            <CardTitle className="text-3xl sm:text-4xl font-bebas font-bold text-secondary mb-2">Welcome Back</CardTitle>
-            <CardDescription className="text-white/80 font-pacifico mb-6">Sign in to your account</CardDescription>
+            <Scissors className="mx-auto h-10 w-10 text-primary mb-2" />
+            <CardTitle className="text-3xl sm:text-4xl font-bebas font-bold text-foreground mb-2">Welcome Back</CardTitle>
+            <CardDescription className="text-muted-foreground mb-6">Sign in to your account</CardDescription>
           </CardHeader>
           <CardContent>
             {/* Error Display */}
@@ -186,23 +186,23 @@ export default function LoginPage() {
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-white">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="name@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                   required
-                  className="h-12 bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl px-4 py-3"
+                  className="h-12 bg-muted border border-border text-foreground placeholder-muted-foreground focus:border-primary rounded-xl px-4 py-3"
                 />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium text-white">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
                   <Link 
                     href="/forgot-password" 
-                    className="text-sm text-secondary hover:underline font-pacifico"
+                    className="text-sm text-primary hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -211,14 +211,14 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   required
-                  className="h-12 bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl px-4 py-3"
+                  className="h-12 bg-muted border border-border text-foreground placeholder-muted-foreground focus:border-primary rounded-xl px-4 py-3"
                 />
               </div>
               <Button 
                 type="submit" 
-                className="w-full bg-secondary text-black font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-secondary/90 transition-all text-lg font-bebas" 
+                className="w-full bg-secondary text-primary-foreground font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-secondary/90 transition-all text-lg font-bebas" 
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -233,30 +233,31 @@ export default function LoginPage() {
             </form>
             {/* Divider */}
             <div className="flex items-center my-4">
-              <div className="flex-grow border-t border-white/20" />
-              <span className="mx-3 text-white/60 text-xs">or</span>
-              <div className="flex-grow border-t border-white/20" />
+              <div className="flex-grow border-t border-border" />
+              <span className="mx-3 text-muted-foreground text-xs">or</span>
+              <div className="flex-grow border-t border-border" />
             </div>
             {/* Google button with tooltip */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   onClick={handleGoogleLogin}
-                  className="flex items-center justify-center w-full border border-white/20 text-white rounded-xl px-8 py-4 font-bold hover:bg-white/10 transition-all gap-2 mt-2"
+                  variant="outline"
+                  className="flex items-center justify-center w-full border border-border text-foreground rounded-xl px-8 py-4 font-bold hover:bg-muted transition-all gap-2 mt-2"
                   aria-label="Sign in with Google"
                   type="button"
                 >
                   <GoogleIcon />
-                  <span className="font-pacifico">Sign in with Google</span>
+                  <span>Sign in with Google</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Sign in with Google</TooltipContent>
             </Tooltip>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-center text-white/80">
-              Don't have an account?{' '}
-              <Link href="/register" className="text-secondary hover:underline font-pacifico">
+            <div className="text-sm text-center text-muted-foreground">
+              Don&apos;t have an account?{' '}
+              <Link href="/register" className="text-primary hover:underline">
                 Sign up
               </Link>
             </div>

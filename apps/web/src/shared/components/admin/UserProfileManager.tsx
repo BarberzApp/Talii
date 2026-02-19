@@ -265,8 +265,8 @@ export function UserProfileManager() {
                 type="text"
                 placeholder="Search by email or user ID..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && searchUser()}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && searchUser()}
                 className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/60"
               />
             </div>

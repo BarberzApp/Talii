@@ -134,7 +134,7 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
                 id="start_date"
                 type="date"
                 value={newTimeOff.start_date}
-                onChange={(e) => setNewTimeOff({ ...newTimeOff, start_date: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTimeOff({ ...newTimeOff, start_date: e.target.value })}
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
               />
             </div>
@@ -144,7 +144,7 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
                 id="end_date"
                 type="date"
                 value={newTimeOff.end_date}
-                onChange={(e) => setNewTimeOff({ ...newTimeOff, end_date: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTimeOff({ ...newTimeOff, end_date: e.target.value })}
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
               />
             </div>
@@ -155,7 +155,7 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
             <Input
               id="reason"
               value={newTimeOff.reason}
-              onChange={(e) => setNewTimeOff({ ...newTimeOff, reason: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTimeOff({ ...newTimeOff, reason: e.target.value })}
               placeholder="e.g. Vacation, Personal Day, Sick Leave"
               className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
             />

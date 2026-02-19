@@ -112,7 +112,7 @@ export default function RegisterPage() {
           <CardDescription>Join BarberHub today</CardDescription>
         </CardHeader>
 
-        <Tabs defaultValue="client" onValueChange={(value) => setRole(value as "client" | "barber")} className="w-full">
+        <Tabs defaultValue="client" onValueChange={(value: string) => setRole(value as "client" | "barber")} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="client" className="flex items-center gap-2">
               <User className="h-4 w-4" />
@@ -177,7 +177,7 @@ export default function RegisterPage() {
                     id="client-terms"
                     name="agreeTerms"
                     checked={formData.agreeTerms}
-                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, agreeTerms: checked as boolean }))}
+                    onCheckedChange={(checked: boolean) => setFormData((prev) => ({ ...prev, agreeTerms: checked as boolean }))}
                   />
                   <label
                     htmlFor="client-terms"
@@ -273,7 +273,7 @@ export default function RegisterPage() {
                     id="barber-terms"
                     name="agreeTerms"
                     checked={formData.agreeTerms}
-                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, agreeTerms: checked as boolean }))}
+                    onCheckedChange={(checked: boolean) => setFormData((prev) => ({ ...prev, agreeTerms: checked as boolean }))}
                   />
                   <label
                     htmlFor="barber-terms"

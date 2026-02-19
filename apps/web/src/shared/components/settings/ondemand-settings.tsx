@@ -224,7 +224,7 @@ export function OnDemandSettings({ barberId, onUpdate }: OnDemandSettingsProps) 
                               min="1"
                               max="50"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 1)}
                             />
                           </FormControl>
                           <FormDescription>
@@ -258,7 +258,7 @@ export function OnDemandSettings({ barberId, onUpdate }: OnDemandSettingsProps) 
                                 min="0"
                                 max="120"
                                 {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 0)}
                               />
                             </FormControl>
                             <FormDescription>
@@ -281,7 +281,7 @@ export function OnDemandSettings({ barberId, onUpdate }: OnDemandSettingsProps) 
                                 min="1"
                                 max="72"
                                 {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseInt(e.target.value) || 1)}
                               />
                             </FormControl>
                             <FormDescription>
@@ -338,7 +338,7 @@ export function OnDemandSettings({ barberId, onUpdate }: OnDemandSettingsProps) 
                                 max="3.0"
                                 step="0.1"
                                 {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 1.0)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(parseFloat(e.target.value) || 1.0)}
                               />
                             </FormControl>
                             <FormDescription>

@@ -19,7 +19,7 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
       <div className="relative min-h-screen bg-background flex flex-col">
         <Header />
         <main className="flex-1 container py-6">
-          {children}
+          {children as React.ReactNode}
         </main>
       </div>
     </ThemeProvider>
