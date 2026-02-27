@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
@@ -91,6 +91,7 @@ const TIME_OPTIONS = generateTimeOptions();
 
 export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerProps) {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [schedule, setSchedule] = useState<DaySchedule[]>(
     DAYS_OF_WEEK.map(day => ({
       day,
@@ -205,10 +206,10 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
 
   if (isLoading) {
     return (
-      <Card style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+      <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
         <CardContent style={tw`p-6 items-center`}>
-          <Loader2 size={32} color={theme.colors.secondary} style={tw`mb-3`} />
-          <Text style={[tw`text-base`, { color: theme.colors.mutedForeground }]}>
+          <Loader2 size={32} color={colors.primary} style={tw`mb-3`} />
+          <Text style={[tw`text-base`, { color: colors.mutedForeground }]}>
             Loading availability...
           </Text>
         </CardContent>
@@ -219,24 +220,24 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-24`}>
       {/* Header */}
-      <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+      <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
         <CardContent style={tw`p-4`}>
           <View style={tw`flex-row items-center justify-between`}>
             <View style={tw`flex-row items-center`}>
-              <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: theme.colors.secondary + '20' }]}>
-                <Calendar size={20} color={theme.colors.secondary} />
+              <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: colors.primarySubtle }]}>
+                <Calendar size={20} color={colors.primary} />
               </View>
               <View>
-                <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                   Weekly Schedule
                 </Text>
-                <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                   Set your working hours
                 </Text>
               </View>
             </View>
-            <View style={[tw`px-3 py-1 rounded-full`, { backgroundColor: theme.colors.secondary + '20' }]}>
-              <Text style={[tw`text-sm font-bold`, { color: theme.colors.secondary }]}>
+            <View style={[tw`px-3 py-1 rounded-full`, { backgroundColor: colors.primarySubtle }]}>
+              <Text style={[tw`text-sm font-bold`, { color: colors.primary }]}>
                 {getAvailableDaysCount()} days
               </Text>
             </View>
@@ -247,42 +248,42 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
       {/* Days Schedule */}
       <View style={tw`gap-3`}>
         {schedule.map((day, index) => (
-          <Card key={day.day} style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+          <Card key={day.day} style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <CardContent style={tw`p-4`}>
               <View style={tw`flex-row items-center justify-between mb-3`}>
-                <Text style={[tw`text-base font-semibold`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-base font-semibold`, { color: colors.foreground }]}>
                   {day.day}
                 </Text>
                 <Switch
                   value={day.enabled}
                   onValueChange={() => toggleDay(index)}
-                  trackColor={{ false: theme.colors.input, true: theme.colors.secondary }}
-                  thumbColor={theme.colors.foreground}
+                  trackColor={{ false: colors.input, true: colors.primary }}
+                  thumbColor={colors.foreground}
                 />
               </View>
 
               {day.enabled && (
                 <View style={tw`flex-row items-center gap-3`}>
                   <View style={tw`flex-1`}>
-                    <Text style={[tw`text-sm mb-2`, { color: theme.colors.mutedForeground }]}>
-                      Start Time
+<Text style={[tw`text-sm mb-2`, { color: colors.mutedForeground }]}>
+                    Start Time
                     </Text>
                     <View style={[
                       tw`rounded-xl overflow-hidden`,
-                      { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }
+                      { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }
                     ]}>
                       <Picker
                         selectedValue={day.slots[0].start}
                         onValueChange={(value) => updateTimeSlot(index, 'start', value)}
-                        style={{ color: theme.colors.foreground }}
-                        itemStyle={{ color: theme.colors.foreground }}
+                        style={{ color: colors.foreground }}
+                        itemStyle={{ color: colors.foreground }}
                       >
                         {TIME_OPTIONS.map((option) => (
                           <Picker.Item 
                             key={option.value} 
                             label={option.label} 
                             value={option.value} 
-                            color={theme.colors.foreground}
+                            color={colors.foreground}
                           />
                         ))}
                       </Picker>
@@ -290,25 +291,25 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   </View>
 
                   <View style={tw`flex-1`}>
-                    <Text style={[tw`text-sm mb-2`, { color: theme.colors.mutedForeground }]}>
-                      End Time
+<Text style={[tw`text-sm mb-2`, { color: colors.mutedForeground }]}>
+                    End Time
                     </Text>
                     <View style={[
                       tw`rounded-xl overflow-hidden`,
-                      { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }
+                      { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }
                     ]}>
                       <Picker
                         selectedValue={day.slots[0].end}
                         onValueChange={(value) => updateTimeSlot(index, 'end', value)}
-                        style={{ color: theme.colors.foreground }}
-                        itemStyle={{ color: theme.colors.foreground }}
+                        style={{ color: colors.foreground }}
+                        itemStyle={{ color: colors.foreground }}
                       >
                         {TIME_OPTIONS.map((option) => (
                           <Picker.Item 
                             key={option.value} 
                             label={option.label} 
                             value={option.value} 
-                            color={theme.colors.foreground}
+                            color={colors.foreground}
                           />
                         ))}
                       </Picker>
@@ -323,10 +324,10 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
 
       {/* Status Alert */}
       {getAvailableDaysCount() === 0 && (
-        <View style={[tw`mt-6 p-4 rounded-xl flex-row items-start`, { backgroundColor: theme.colors.accent + '10', borderWidth: 1, borderColor: theme.colors.accent + '20' }]}>
-          <AlertCircle size={16} color={theme.colors.accent} style={tw`mr-2 mt-0.5`} />
+        <View style={[tw`mt-6 p-4 rounded-xl flex-row items-start`, { backgroundColor: colors.primarySubtle, borderWidth: 1, borderColor: colors.primarySubtle }]}>
+          <AlertCircle size={16} color={colors.accent} style={tw`mr-2 mt-0.5`} />
           <View style={tw`flex-1`}>
-            <Text style={[tw`text-sm`, { color: theme.colors.accent }]}>
+            <Text style={[tw`text-sm`, { color: colors.accent }]}>
               You haven&apos;t set any available days. Clients won&apos;t be able to book appointments until you set your schedule.
             </Text>
           </View>
@@ -335,16 +336,16 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
 
       {/* Save Button */}
       <TouchableOpacity
-        style={[tw`mt-6 py-4 rounded-xl flex-row items-center justify-center`, { backgroundColor: theme.colors.secondary }]}
+        style={[tw`mt-6 py-4 rounded-xl flex-row items-center justify-center`, { backgroundColor: colors.primary }]}
         onPress={handleSave}
         disabled={isSaving}
       >
         {isSaving ? (
-          <LoadingSpinner color={theme.colors.primaryForeground} />
+          <LoadingSpinner color={colors.primaryForeground} />
         ) : (
           <>
-            <Save size={20} color={theme.colors.primaryForeground} style={tw`mr-2`} />
-            <Text style={[tw`font-semibold text-base`, { color: theme.colors.primaryForeground }]}>
+            <Save size={20} color={colors.primaryForeground} style={tw`mr-2`} />
+            <Text style={[tw`font-semibold text-base`, { color: colors.primaryForeground }]}>
               Save Schedule
             </Text>
           </>
@@ -352,12 +353,12 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
       </TouchableOpacity>
 
       {/* Tips */}
-      <Card style={[tw`mt-6`, { backgroundColor: theme.colors.secondary + '10', borderColor: theme.colors.secondary + '20' }]}>
+      <Card style={[tw`mt-6`, { backgroundColor: colors.primarySubtle, borderColor: colors.primarySubtle }]}>
         <CardContent style={tw`p-4`}>
           <View style={tw`flex-row items-start`}>
-            <CheckCircle size={16} color={theme.colors.secondary} style={tw`mr-2 mt-0.5`} />
+            <CheckCircle size={16} color={colors.primary} style={tw`mr-2 mt-0.5`} />
             <View style={tw`flex-1`}>
-              <Text style={[tw`text-sm font-semibold mb-2`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-sm font-semibold mb-2`, { color: colors.foreground }]}>
                 Quick Tips
               </Text>
               <View style={tw`gap-1`}>
@@ -368,8 +369,8 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   'Disable days when you\'re not available'
                 ].map((tip, index) => (
                   <View key={index} style={tw`flex-row items-start`}>
-                    <Text style={[tw`text-xs mr-1`, { color: theme.colors.secondary }]}>•</Text>
-                    <Text style={[tw`text-xs flex-1`, { color: theme.colors.foreground, opacity: 0.8 }]}>
+                    <Text style={[tw`text-xs mr-1`, { color: colors.primary }]}>•</Text>
+                    <Text style={[tw`text-xs flex-1`, { color: colors.foreground, opacity: 0.8 }]}>
                       {tip}
                     </Text>
                   </View>

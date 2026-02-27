@@ -6,6 +6,7 @@ import type { FeedItem, VideoState } from '../types/feed.types';
 import { useNavigation } from '@react-navigation/native';
 import { logger } from '../shared/lib/logger';
 import { ReportContentModal } from '../shared/components/ReportContentModal';
+import { useTheme } from '../shared/components/theme';
 
 const { height, width } = Dimensions.get('window');
 
@@ -19,6 +20,7 @@ type Props = {
 };
 
 function OptimizedVideoCardImpl({ item, isActive, navBottomInset, onVideoStateChange, onHoldToPause }: Props) {
+  const { colors } = useTheme();
   const navigation = useNavigation();
   const videoRef = useRef<Video>(null);
   const [muted, setMuted] = useState(true);
@@ -237,18 +239,11 @@ function OptimizedVideoCardImpl({ item, isActive, navBottomInset, onVideoStateCh
             </View>
           </View>
           
-          {item.caption ? (
-            <Text style={styles.caption} numberOfLines={3}>
-              {item.caption}
-            </Text>
-          ) : null}
-          
-
         </View>
         
         {/* Right side - Action buttons */}
         <View style={styles.actions}>
-          <TouchableOpacity onPress={handleBookAppointment} style={styles.bookActionButton}>
+          <TouchableOpacity onPress={handleBookAppointment} style={[styles.bookActionButton, { backgroundColor: colors.primary }]}>
             <Calendar size={28} color="white" />
             <Text style={styles.bookActionText}>Book Now</Text>
           </TouchableOpacity>
@@ -405,14 +400,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 2,
   },
-  caption: { 
-    color: 'white', 
-    fontSize: 14, 
-    fontWeight: 'bold',
-    opacity: 0.9,
-    marginBottom: 8,
-  },
-
   actions: { 
     width: 64, 
     alignItems: 'center', 
@@ -433,7 +420,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
     marginTop: 8,
-    backgroundColor: 'rgba(180, 138, 60, 0.9)',
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 20,

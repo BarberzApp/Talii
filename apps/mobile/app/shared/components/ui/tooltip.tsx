@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, Dimensions } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface TooltipProps {
   children: React.ReactNode;
@@ -18,6 +18,7 @@ export function Tooltip({
   className,
   style 
 }: TooltipProps) {
+  const { colors } = useTheme();
   const [visible, setVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
@@ -32,12 +33,12 @@ export function Tooltip({
   const getTooltipStyle = () => {
     const baseStyle = {
       position: 'absolute' as const,
-      backgroundColor: theme.colors.popover,
+      backgroundColor: colors.popover,
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 6,
       borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderColor: colors.border,
       zIndex: 1000,
     };
 
@@ -97,7 +98,7 @@ export function Tooltip({
           <View style={getTooltipStyle()}>
             <Text style={[
               tw`text-sm`,
-              { color: theme.colors.popoverForeground }
+              { color: colors.popoverForeground }
             ]}>
               {content}
             </Text>

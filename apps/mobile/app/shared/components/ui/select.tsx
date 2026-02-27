@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Modal, FlatList, StyleSheet } from 'react-native';
 import { ChevronDown, Check } from 'lucide-react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface SelectOption {
   value: string;
@@ -23,8 +23,75 @@ const Select: React.FC<SelectProps> = ({
   placeholder = 'Select an option',
   disabled = false,
 }) => {
+  const { colors } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find(option => option.value === value);
+
+  const styles = useMemo(() => StyleSheet.create({
+    trigger: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 6,
+      backgroundColor: colors.background,
+    },
+    triggerText: {
+      fontSize: 16,
+      color: colors.foreground,
+    },
+    placeholder: {
+      color: colors.mutedForeground,
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    content: {
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      margin: 20,
+      maxHeight: 400,
+      minWidth: 300,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.foreground,
+    },
+    closeButton: {
+      fontSize: 24,
+      color: colors.foreground,
+    },
+    option: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    optionText: {
+      fontSize: 16,
+      color: colors.foreground,
+    },
+  }), [colors]);
 
   return (
     <View>
@@ -36,7 +103,7 @@ const Select: React.FC<SelectProps> = ({
         <Text style={[styles.triggerText, !selectedOption && styles.placeholder]}>
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
-        <ChevronDown size={20} stroke={theme.colors.mutedForeground} />
+        <ChevronDown size={20} stroke={colors.mutedForeground} />
       </TouchableOpacity>
 
       <Modal
@@ -66,7 +133,7 @@ const Select: React.FC<SelectProps> = ({
                 >
                   <Text style={styles.optionText}>{item.label}</Text>
                   {item.value === value && (
-                    <Check size={20} stroke={theme.colors.primary} />
+                    <Check size={20} stroke={colors.primary} />
                   )}
                 </TouchableOpacity>
               )}
@@ -77,71 +144,5 @@ const Select: React.FC<SelectProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  trigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 6,
-    backgroundColor: theme.colors.background,
-  },
-  triggerText: {
-    fontSize: 16,
-    color: theme.colors.foreground,
-  },
-  placeholder: {
-    color: theme.colors.mutedForeground,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 12,
-    margin: 20,
-    maxHeight: 400,
-    minWidth: 300,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.foreground,
-  },
-  closeButton: {
-    fontSize: 24,
-    color: theme.colors.foreground,
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  optionText: {
-    fontSize: 16,
-    color: theme.colors.foreground,
-  },
-});
 
 export default Select; 

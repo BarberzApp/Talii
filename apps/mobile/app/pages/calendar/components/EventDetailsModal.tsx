@@ -2,7 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Modal, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar, Clock, X } from 'lucide-react-native';
 import tw from 'twrnc';
-import { theme } from '../../../shared/lib/theme';
+import { useTheme } from '../../../shared/components/theme';
 import type { CalendarEvent } from '../../../shared/lib/calendar';
 
 type Props = {
@@ -36,6 +36,7 @@ export default function EventDetailsModal({
   formatDate,
   formatTime,
 }: Props) {
+  const { colors } = useTheme();
   return (
     <Modal
       visible={visible}
@@ -45,19 +46,19 @@ export default function EventDetailsModal({
     >
       <View style={tw`flex-1 bg-black/50 justify-end`}>
         <View style={[tw`rounded-t-3xl p-6`, {
-          backgroundColor: theme.colors.background,
+          backgroundColor: colors.background,
           borderTopWidth: 1,
-          borderColor: 'rgba(255,255,255,0.1)'
+          borderColor: colors.border
         }]}>
           <View style={tw`flex-row items-center justify-between mb-6`}>
-            <Text style={[tw`text-xl font-bold`, { color: theme.colors.foreground }]}>
+            <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>
               {userRole === 'barber' && barberViewMode === 'appointments'
                 ? 'Appointment Details'
                 : 'Booking Details'
               }
             </Text>
             <TouchableOpacity onPress={onClose}>
-              <X size={24} color={theme.colors.mutedForeground} />
+              <X size={24} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
@@ -65,13 +66,13 @@ export default function EventDetailsModal({
             <View style={tw`space-y-4`}>
               {/* Header Section */}
               <View style={tw`items-center mb-4`}>
-                <Text style={[tw`text-xl font-bold mb-1`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-xl font-bold mb-1`, { color: colors.foreground }]}>
                   {userRole === 'barber' && barberViewMode === 'appointments'
                     ? 'Appointment Details'
                     : 'Booking Details'
                   }
                 </Text>
-                <Text style={[tw`text-lg font-semibold mb-1`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-lg font-semibold mb-1`, { color: colors.foreground }]}>
                   {userRole === 'client'
                     ? selectedEvent.extendedProps.barberName
                     : userRole === 'barber' && barberViewMode === 'appointments'
@@ -79,7 +80,7 @@ export default function EventDetailsModal({
                     : selectedEvent.extendedProps.barberName
                   }
                 </Text>
-                <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                   {userRole === 'barber' && barberViewMode === 'appointments'
                     ? `Appointment #${selectedEvent.id.slice(0, 8).toUpperCase()}`
                     : `Booking #${selectedEvent.id.slice(0, 8).toUpperCase()}`
@@ -89,10 +90,10 @@ export default function EventDetailsModal({
 
               {/* Service Section */}
               <View style={tw`mb-4`}>
-                <Text style={[tw`text-sm font-semibold mb-2`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-sm font-semibold mb-2`, { color: colors.foreground }]}>
                   Service
                 </Text>
-                <Text style={[tw`text-base`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-base`, { color: colors.foreground }]}>
                   {selectedEvent.extendedProps.serviceName}
                 </Text>
               </View>
@@ -101,20 +102,20 @@ export default function EventDetailsModal({
               <View style={tw`mb-4`}>
                 <View style={tw`flex-row items-center justify-between mb-2`}>
                   <View style={tw`flex-row items-center`}>
-                    <Calendar size={16} color={theme.colors.mutedForeground} style={tw`mr-2`} />
-                    <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>Date</Text>
+                    <Calendar size={16} color={colors.mutedForeground} style={tw`mr-2`} />
+                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>Date</Text>
                   </View>
-                  <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
                     {formatDate(new Date(selectedEvent.start))}
                   </Text>
                 </View>
 
                 <View style={tw`flex-row items-center justify-between`}>
                   <View style={tw`flex-row items-center`}>
-                    <Clock size={16} color={theme.colors.mutedForeground} style={tw`mr-2`} />
-                    <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>Time</Text>
+                    <Clock size={16} color={colors.mutedForeground} style={tw`mr-2`} />
+                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>Time</Text>
                   </View>
-                  <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
                     {formatTime(new Date(selectedEvent.start))}
                   </Text>
                 </View>
@@ -122,7 +123,7 @@ export default function EventDetailsModal({
 
               {/* Status Section */}
               <View style={tw`mb-4`}>
-                <Text style={[tw`text-sm font-semibold mb-2`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-sm font-semibold mb-2`, { color: colors.foreground }]}>
                   Status
                 </Text>
                 <View style={[
@@ -133,7 +134,7 @@ export default function EventDetailsModal({
                     ? { backgroundColor: '#ef4444', shadowColor: '#ef4444', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
                     : selectedEvent.extendedProps.status === 'missed'
                     ? { backgroundColor: '#f59e0b', shadowColor: '#f59e0b', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
-                    : { backgroundColor: theme.colors.secondary, shadowColor: theme.colors.secondary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
+                    : { backgroundColor: colors.primary, shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
                 ]}>
                   <Text style={[tw`text-xs font-semibold capitalize`, { color: 'white' }]}>
                     {selectedEvent.extendedProps.status}
@@ -165,28 +166,28 @@ export default function EventDetailsModal({
                       {userRole === 'client' || (userRole === 'barber' && barberViewMode === 'bookings') ? (
                         <>
                           <View style={tw`flex-row items-center justify-between`}>
-                            <Text style={[tw`font-bold text-lg`, { color: theme.colors.foreground }]}>
+                            <Text style={[tw`font-bold text-lg`, { color: colors.foreground }]}>
                               Total Charged
                             </Text>
-                            <Text style={[tw`font-bold text-lg`, { color: theme.colors.secondary }]}>
+                            <Text style={[tw`font-bold text-lg`, { color: colors.primary }]}>
                               ${breakdown.total.toFixed(2)}
                             </Text>
                           </View>
-                          <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>
+                          <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
                             Total amount charged to you
                           </Text>
                         </>
                       ) : (
                         <>
                           <View style={tw`flex-row items-center justify-between`}>
-                            <Text style={[tw`font-bold text-lg`, { color: theme.colors.foreground }]}>
+                            <Text style={[tw`font-bold text-lg`, { color: colors.foreground }]}>
                               Your Payout
                             </Text>
-                            <Text style={[tw`font-bold text-lg`, { color: theme.colors.secondary }]}>
+                            <Text style={[tw`font-bold text-lg`, { color: colors.primary }]}>
                               ${breakdown.barberPayout?.toFixed(2) || '0.00'}
                             </Text>
                           </View>
-                          <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>
+                          <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
                             Amount you&apos;ll receive for this appointment
                           </Text>
                         </>
@@ -199,14 +200,14 @@ export default function EventDetailsModal({
               {/* Guest Information (if applicable) */}
               {selectedEvent.extendedProps.isGuest && (
                 <View style={tw`mb-4`}>
-                  <Text style={[tw`text-sm font-semibold mb-2`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-sm font-semibold mb-2`, { color: colors.foreground }]}>
                     Guest Information
                   </Text>
                   <View style={tw`space-y-1`}>
-                    <Text style={[tw`text-sm`, { color: theme.colors.foreground }]}>
+                    <Text style={[tw`text-sm`, { color: colors.foreground }]}>
                       Email: {selectedEvent.extendedProps.guestEmail}
                     </Text>
-                    <Text style={[tw`text-sm`, { color: theme.colors.foreground }]}>
+                    <Text style={[tw`text-sm`, { color: colors.foreground }]}>
                       Phone: {selectedEvent.extendedProps.guestPhone}
                     </Text>
                   </View>
@@ -238,8 +239,8 @@ export default function EventDetailsModal({
                     onPress={onMarkMissed}
                     disabled={isMarkingMissed}
                     style={[tw`flex-1 py-3 rounded-xl items-center`, {
-                      backgroundColor: theme.colors.secondary,
-                      shadowColor: theme.colors.secondary,
+                      backgroundColor: colors.primary,
+                      shadowColor: colors.primary,
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.3,
                       shadowRadius: 4,

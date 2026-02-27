@@ -50,8 +50,8 @@ export function getStatusColors(status: string): {
       };
     default:
       return {
-        backgroundColor: theme.colors.secondary || '#f59e0b',
-        borderColor: theme.colors.secondary || '#f59e0b',
+        backgroundColor: theme.colors.primary || '#f59e0b',
+        borderColor: theme.colors.primary || '#f59e0b',
         textColor: '#FFFFFF'
       };
   }
@@ -130,8 +130,8 @@ export function transformBookingToEvent(
     title,
     start: startDate.toISOString(),
     end: endDate.toISOString(),
-    backgroundColor: theme.colors.secondary,
-    borderColor: theme.colors.secondary,
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
     textColor: '#FFFFFF',
     extendedProps: {
       status: booking.status,

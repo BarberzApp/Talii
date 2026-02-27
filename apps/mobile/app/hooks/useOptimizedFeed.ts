@@ -58,9 +58,6 @@ export function useOptimizedFeed(opts: FeedOptions = {}) {
           created_at,
           duration,
           views,
-          likes,
-          shares,
-          comments_count,
           barber_id,
           barbers!inner(
             id,
@@ -128,11 +125,7 @@ export function useOptimizedFeed(opts: FeedOptions = {}) {
           aspect_ratio: 9/16, // Default to 9:16 aspect ratio
           duration: cut.duration,
           view_count: cut.views || 0,
-          reach_count: cut.views || 0, // Use views as reach count for now
-          likes: cut.likes || 0,
-          comments: cut.comments_count || 0,
-          shares: cut.shares || 0,
-          music: 'Original Sound', // TODO: Add music field to cuts table
+          reach_count: cut.views || 0,
           distance: distance,
           barber_location: barber?.city || barber?.state || 'Unknown location',
         };

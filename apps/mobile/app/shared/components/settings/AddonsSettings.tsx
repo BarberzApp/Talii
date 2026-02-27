@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Switch,
   Alert,
@@ -11,11 +10,12 @@ import {
   Platform,
 } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
 import { Button, Card, CardContent, LoadingSpinner } from '../ui';
+import Input from '../ui/Input';
 import { 
   Plus, 
   Edit, 
@@ -33,6 +33,7 @@ interface AddonsSettingsProps {
 }
 
 export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [addons, setAddons] = useState<ServiceAddon[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -211,17 +212,17 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-24`}>
         {/* Header */}
-        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
           <CardContent style={tw`p-4`}>
             <View style={tw`flex-row items-center mb-4`}>
-              <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: theme.colors.secondary + '20' }]}>
-                <Package size={20} color={theme.colors.secondary} />
+              <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: colors.primarySubtle }]}>
+                <Package size={20} color={colors.primary} />
               </View>
               <View>
-                <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                   Service Add-ons
                 </Text>
-                <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                   Manage additional services and items
                 </Text>
               </View>
@@ -230,108 +231,61 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
         </Card>
 
         {/* Add/Edit Form */}
-        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
           <CardContent style={tw`p-4`}>
-            <Text style={[tw`text-base font-semibold mb-4`, { color: theme.colors.foreground }]}>
+            <Text style={[tw`text-base font-semibold mb-4`, { color: colors.foreground }]}>
               {editingAddon ? 'Edit Add-on' : 'Add New Add-on'}
             </Text>
 
-            <View style={tw`mb-4`}>
-              <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
-                Add-on Name *
-              </Text>
-              <TextInput
-                value={formData.name}
-                onChangeText={(text) => setFormData({ ...formData, name: text })}
-                placeholder="e.g., Fresh Towel, Premium Shampoo"
-                placeholderTextColor={theme.colors.mutedForeground}
-                style={[
-                  tw`px-4 py-3 rounded-xl text-base`,
-                  { 
-                    backgroundColor: 'rgba(255,255,255,0.05)', 
-                    color: theme.colors.foreground,
-                    borderWidth: 1,
-                    borderColor: validationErrors.name ? theme.colors.destructive : 'rgba(255,255,255,0.1)'
-                  }
-                ]}
-              />
-              {validationErrors.name && (
-                <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>{validationErrors.name}</Text>
-              )}
-            </View>
+            <Input
+              label="Add-on Name *"
+              value={formData.name}
+              onChangeText={(text) => setFormData({ ...formData, name: text })}
+              placeholder="e.g., Fresh Towel, Premium Shampoo"
+              error={validationErrors.name}
+            />
 
-            <View style={tw`mb-4`}>
-              <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
-                Price ($) *
-              </Text>
-              <TextInput
-                value={formData.price.toString()}
-                onChangeText={(text) => setFormData({ ...formData, price: parseFloat(text) || 0 })}
-                placeholder="5.00"
-                placeholderTextColor={theme.colors.mutedForeground}
-                keyboardType="numeric"
-                style={[
-                  tw`px-4 py-3 rounded-xl text-base`,
-                  { 
-                    backgroundColor: 'rgba(255,255,255,0.05)', 
-                    color: theme.colors.foreground,
-                    borderWidth: 1,
-                    borderColor: validationErrors.price ? theme.colors.destructive : 'rgba(255,255,255,0.1)'
-                  }
-                ]}
-              />
-              {validationErrors.price && (
-                <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>{validationErrors.price}</Text>
-              )}
-            </View>
+            <Input
+              label="Price ($) *"
+              value={formData.price.toString()}
+              onChangeText={(text) => setFormData({ ...formData, price: parseFloat(text) || 0 })}
+              placeholder="5.00"
+              keyboardType="numeric"
+              error={validationErrors.price}
+            />
 
-            <View style={tw`mb-4`}>
-              <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
-                Description (Optional)
-              </Text>
-              <TextInput
-                value={formData.description}
-                onChangeText={(text) => setFormData({ ...formData, description: text })}
-                placeholder="Brief description of what this add-on includes..."
-                placeholderTextColor={theme.colors.mutedForeground}
-                multiline
-                numberOfLines={3}
-                style={[
-                  tw`px-4 py-3 rounded-xl text-base`,
-                  { 
-                    backgroundColor: 'rgba(255,255,255,0.05)', 
-                    color: theme.colors.foreground,
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    minHeight: 80,
-                    textAlignVertical: 'top'
-                  }
-                ]}
-              />
-            </View>
+            <Input
+              label="Description (Optional)"
+              value={formData.description}
+              onChangeText={(text) => setFormData({ ...formData, description: text })}
+              placeholder="Brief description of what this add-on includes..."
+              multiline
+              numberOfLines={3}
+              inputStyle={{ minHeight: 80, textAlignVertical: 'top' }}
+            />
 
             <View style={tw`flex-row items-center justify-between mb-4`}>
-              <Text style={[tw`font-medium`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`font-medium`, { color: colors.foreground }]}>
                 Active (available for booking)
               </Text>
               <Switch
                 value={formData.is_active}
                 onValueChange={(value) => setFormData({ ...formData, is_active: value })}
-                trackColor={{ false: theme.colors.input, true: theme.colors.secondary }}
-                thumbColor={theme.colors.foreground}
+                trackColor={{ false: colors.input, true: colors.primary }}
+                thumbColor={colors.foreground}
               />
             </View>
 
             <View style={tw`flex-row gap-3`}>
               <TouchableOpacity
-                style={[tw`flex-1 py-3 rounded-xl flex-row items-center justify-center`, { backgroundColor: theme.colors.secondary }]}
+                style={[tw`flex-1 py-3 rounded-xl flex-row items-center justify-center`, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <LoadingSpinner color={theme.colors.primaryForeground} />
+                  <LoadingSpinner color={colors.primaryForeground} />
                 ) : (
-                  <Text style={[tw`font-semibold`, { color: theme.colors.primaryForeground }]}>
+                  <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>
                     {editingAddon ? 'Update Add-on' : 'Add Add-on'}
                   </Text>
                 )}
@@ -339,10 +293,10 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
 
               {editingAddon && (
                 <TouchableOpacity
-                  style={[tw`px-4 py-3 rounded-xl`, { borderWidth: 1, borderColor: theme.colors.mutedForeground }]}
+                  style={[tw`px-4 py-3 rounded-xl`, { borderWidth: 1, borderColor: colors.mutedForeground }]}
                   onPress={resetForm}
                 >
-                  <Text style={{ color: theme.colors.foreground }}>Cancel</Text>
+                  <Text style={{ color: colors.foreground }}>Cancel</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -352,17 +306,17 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
         {/* Add-ons List */}
         <View>
           <View style={tw`flex-row items-center mb-4`}>
-            <Package size={18} color={theme.colors.secondary} style={tw`mr-2`} />
-            <Text style={[tw`text-base font-semibold`, { color: theme.colors.foreground }]}>
+            <Package size={18} color={colors.primary} style={tw`mr-2`} />
+            <Text style={[tw`text-base font-semibold`, { color: colors.foreground }]}>
               Your Add-ons ({addons.length})
             </Text>
           </View>
 
           {addons.length === 0 ? (
-            <Card style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+            <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
               <CardContent style={tw`p-6 items-center`}>
-                <Package size={32} color={theme.colors.mutedForeground} style={tw`mb-3`} />
-                <Text style={[tw`text-center`, { color: theme.colors.mutedForeground }]}>
+                <Package size={32} color={colors.mutedForeground} style={tw`mb-3`} />
+                <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
                   No add-ons created yet. Add your first add-on above to get started.
                 </Text>
               </CardContent>
@@ -370,34 +324,34 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
           ) : (
             <View style={tw`gap-3`}>
               {addons.map((addon) => (
-                <Card key={addon.id} style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+                <Card key={addon.id} style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                   <CardContent style={tw`p-4`}>
                     <View style={tw`flex-row justify-between items-start`}>
                       <View style={tw`flex-1 pr-2`}>
                         <View style={tw`flex-row items-center flex-wrap mb-1`}>
-                          <Text style={[tw`font-semibold text-base mr-2`, { color: theme.colors.foreground }]} numberOfLines={1}>
+                          <Text style={[tw`font-semibold text-base mr-2`, { color: colors.foreground }]} numberOfLines={1}>
                             {addon.name}
                           </Text>
                           <View style={[
                             tw`px-2 py-0.5 rounded-full`,
-                            { backgroundColor: addon.is_active ? theme.colors.secondary + '20' : theme.colors.mutedForeground + '20' }
+                            { backgroundColor: colors.primarySubtle }
                           ]}>
                             <Text style={[
                               tw`text-xs`,
-                              { color: addon.is_active ? theme.colors.secondary : theme.colors.mutedForeground }
+                              { color: addon.is_active ? colors.primary : colors.mutedForeground }
                             ]}>
                               {addon.is_active ? 'Active' : 'Inactive'}
                             </Text>
                           </View>
                         </View>
                         {addon.description && (
-                          <Text style={[tw`text-sm mb-2`, { color: theme.colors.mutedForeground }]} numberOfLines={2}>
+                          <Text style={[tw`text-sm mb-2`, { color: colors.mutedForeground }]} numberOfLines={2}>
                             {addon.description}
                           </Text>
                         )}
                         <View style={tw`flex-row items-center`}>
-                          <DollarSign size={16} color={theme.colors.secondary} />
-                          <Text style={[tw`font-semibold`, { color: theme.colors.secondary }]}>
+                          <DollarSign size={16} color={colors.primary} />
+                          <Text style={[tw`font-semibold`, { color: colors.primary }]}>
                             {addon.price.toFixed(2)}
                           </Text>
                         </View>
@@ -406,15 +360,15 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                       <View style={tw`flex-row gap-2`}>
                         <TouchableOpacity
                           onPress={() => handleEdit(addon)}
-                          style={[tw`p-2 rounded-xl`, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+                          style={[tw`p-2 rounded-xl`, { backgroundColor: colors.glassBorder }]}
                         >
-                          <Edit size={18} color={theme.colors.foreground} />
+                          <Edit size={18} color={colors.foreground} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => handleDelete(addon.id!)}
-                          style={[tw`p-2 rounded-xl`, { backgroundColor: theme.colors.destructive + '10' }]}
+                          style={[tw`p-2 rounded-xl`, { backgroundColor: colors.primarySubtle }]}
                         >
-                          <Trash2 size={18} color={theme.colors.destructive} />
+                          <Trash2 size={18} color={colors.destructive} />
                         </TouchableOpacity>
                       </View>
                     </View>

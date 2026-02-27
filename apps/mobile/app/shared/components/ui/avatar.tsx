@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import { User } from 'lucide-react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import tw from 'twrnc';
 import { logger } from '../../lib/logger';
 
@@ -24,6 +24,7 @@ const Avatar: React.FC<AvatarProps> = ({
   className = '',
   style,
 }) => {
+  const { colors } = useTheme();
   const getSizeStyles = () => {
     switch (size) {
       case 'sm':
@@ -76,7 +77,7 @@ const Avatar: React.FC<AvatarProps> = ({
       style={[
         tw`rounded-full overflow-hidden items-center justify-center`,
         getSizeStyles(),
-        { backgroundColor: theme.colors.muted },
+        { backgroundColor: colors.muted },
         style,
       ]}
       onPress={onPress}
@@ -95,7 +96,7 @@ const Avatar: React.FC<AvatarProps> = ({
           style={[
             tw`font-medium`,
             getFallbackTextSize(),
-            { color: theme.colors.mutedForeground },
+            { color: colors.mutedForeground },
           ]}
         >
           {fallback.charAt(0).toUpperCase()}
@@ -103,7 +104,7 @@ const Avatar: React.FC<AvatarProps> = ({
       ) : (
         <User
           size={getFallbackSize()}
-          color={theme.colors.mutedForeground}
+          color={colors.mutedForeground}
         />
       )}
     </Container>

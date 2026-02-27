@@ -28,7 +28,8 @@ import tw from 'twrnc';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { supabase } from '../shared/lib/supabase';
 import { useAuth } from '../shared/hooks/useAuth';
-import { theme } from '../shared/lib/theme';
+import { useTheme } from '../shared/components/theme';
+import Input from '../shared/components/ui/Input';
 import { logger } from '../shared/lib/logger';
 import { ReviewForm } from '../shared/components/ReviewForm';
 import { useCalendarData } from '../shared/hooks/useCalendarData';
@@ -42,6 +43,7 @@ import EventDetailsModal from './calendar/components/EventDetailsModal';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function CalendarPage() {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const calendarState = useCalendarState();
   const calendarData = useCalendarData(calendarState, user?.id);
@@ -532,10 +534,10 @@ export default function CalendarPage() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
         <View style={tw`flex-1 items-center justify-center`}>
-          <ActivityIndicator size="large" color={theme.colors.secondary} />
-          <Text style={[tw`mt-4 text-lg`, { color: theme.colors.foreground }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[tw`mt-4 text-lg`, { color: colors.foreground }]}>
             Loading Calendar...
           </Text>
         </View>
@@ -544,7 +546,7 @@ export default function CalendarPage() {
   }
 
   return (
-    <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
       <Animated.View 
         style={[
           tw`flex-1`,
@@ -560,24 +562,24 @@ export default function CalendarPage() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={theme.colors.secondary}
-              colors={[theme.colors.secondary]}
-              progressBackgroundColor="rgba(0, 0, 0, 0.3)"
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+              progressBackgroundColor={colors.backdrop}
             />
           }
         >
         {/* Title */}
         <View style={tw`px-4 pt-4 pb-2`}>
-          <Text style={[tw`text-2xl font-bold mb-4`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-2xl font-bold mb-4`, { color: colors.foreground }]}>
             Calendar
           </Text>
           
           {/* Barber View Toggle */}
           {userRole === 'barber' && (
             <View style={[tw`flex-row mb-4 p-1 rounded-xl`, { 
-              backgroundColor: 'rgba(255,255,255,0.05)',
+              backgroundColor: colors.glass,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)'
+              borderColor: colors.glassBorder
             }]}>
               <TouchableOpacity
                 onPress={() => handleBarberViewToggle('appointments')}
@@ -585,8 +587,8 @@ export default function CalendarPage() {
                   tw`flex-1 py-3 px-4 rounded-lg items-center`,
                   barberViewMode === 'appointments' 
                     ? { 
-                        backgroundColor: theme.colors.secondary,
-                        shadowColor: theme.colors.secondary,
+                        backgroundColor: colors.primary,
+                        shadowColor: colors.primary,
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.3,
                         shadowRadius: 4,
@@ -598,16 +600,16 @@ export default function CalendarPage() {
                 <Text style={[
                   tw`font-semibold text-sm`,
                   barberViewMode === 'appointments' 
-                    ? { color: 'white' }
-                    : { color: theme.colors.mutedForeground }
+                    ? { color: colors.primaryForeground }
+                    : { color: colors.mutedForeground }
                 ]}>
                   My Appointments
                 </Text>
                 <Text style={[
                   tw`text-xs mt-1`,
                   barberViewMode === 'appointments' 
-                    ? { color: 'rgba(255,255,255,0.8)' }
-                    : { color: theme.colors.mutedForeground }
+                    ? { color: colors.primaryForeground }
+                    : { color: colors.mutedForeground }
                 ]}>
                   Clients Coming In
                 </Text>
@@ -619,8 +621,8 @@ export default function CalendarPage() {
                   tw`flex-1 py-3 px-4 rounded-lg items-center`,
                   barberViewMode === 'bookings' 
                     ? { 
-                        backgroundColor: theme.colors.secondary,
-                        shadowColor: theme.colors.secondary,
+                        backgroundColor: colors.primary,
+                        shadowColor: colors.primary,
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.3,
                         shadowRadius: 4,
@@ -632,16 +634,16 @@ export default function CalendarPage() {
                 <Text style={[
                   tw`font-semibold text-sm`,
                   barberViewMode === 'bookings' 
-                    ? { color: 'white' }
-                    : { color: theme.colors.mutedForeground }
+                    ? { color: colors.primaryForeground }
+                    : { color: colors.mutedForeground }
                 ]}>
                   My Bookings
                 </Text>
                 <Text style={[
                   tw`text-xs mt-1`,
                   barberViewMode === 'bookings' 
-                    ? { color: 'rgba(255,255,255,0.8)' }
-                    : { color: theme.colors.mutedForeground }
+                    ? { color: colors.primaryForeground }
+                    : { color: colors.mutedForeground }
                 ]}>
                   Going Somewhere
                 </Text>
@@ -655,10 +657,10 @@ export default function CalendarPage() {
             style={[
               tw`mx-5 mb-6 p-6 rounded-3xl`,
               { 
-                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                backgroundColor: colors.glass,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                              shadowColor: theme.colors.secondary,
+                borderColor: colors.glassBorder,
+                              shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 15 },
               shadowOpacity: 0.2,
               shadowRadius: 30,
@@ -686,31 +688,31 @@ export default function CalendarPage() {
             {/* TODO: Re-enable manual appointment feature later */}
             {/* {userRole === 'barber' && barberViewMode === 'appointments' && (
               <View style={[tw`mt-4 p-4 rounded-2xl`, {
-                backgroundColor: `${theme.colors.secondary}10`,
+                backgroundColor: `${colors.primary}10`,
                 borderWidth: 1,
-                borderColor: `${theme.colors.secondary}20`
+                borderColor: `${colors.primary}20`
               }]}>
                 <View style={tw`items-center mb-3`}>
-                  <Text style={[tw`font-semibold text-sm mb-1`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`font-semibold text-sm mb-1`, { color: colors.foreground }]}>
                     Quick Add Appointment
                   </Text>
-                  <Text style={[tw`text-xs`, { color: 'rgba(255,255,255,0.6)' }]}>
+                  <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                     For walk-ins, phone bookings, or admin purposes
                   </Text>
         </View>
                 <TouchableOpacity
                   onPress={() => setShowManualAppointmentForm(true)}
                   style={[tw`py-3 rounded-xl items-center flex-row justify-center`, {
-                    backgroundColor: theme.colors.secondary,
-                    shadowColor: theme.colors.secondary,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.25,
                     shadowRadius: 8,
                     elevation: 4
                   }]}
                 >
-                  <Plus size={16} color={theme.colors.primaryForeground} style={tw`mr-2`} />
-                  <Text style={[tw`font-semibold`, { color: theme.colors.primaryForeground }]}>
+                  <Plus size={16} color={colors.primaryForeground} style={tw`mr-2`} />
+                  <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>
                     Add Manual Appointment
                   </Text>
                 </TouchableOpacity>
@@ -755,20 +757,20 @@ export default function CalendarPage() {
         transparent
         onRequestClose={() => setShowManualAppointmentForm(false)}
       >
-        <View style={tw`flex-1 bg-black/50 justify-end`}>
+        <View style={[tw`flex-1 justify-end`, { backgroundColor: colors.backdrop }]}>
           <View style={[tw`rounded-t-3xl`, { 
-            backgroundColor: theme.colors.background,
+            backgroundColor: colors.background,
             borderTopWidth: 1,
-            borderColor: 'rgba(255,255,255,0.1)',
+            borderColor: colors.glassBorder,
             maxHeight: screenHeight * 0.9, // Limit modal height to 90% of screen
           }]}>
             {/* Fixed Header */}
-            <View style={tw`flex-row items-center justify-between p-6 pb-4 border-b border-white/10`}>
-              <Text style={[tw`text-xl font-bold`, { color: theme.colors.foreground }]}>
+            <View style={[tw`flex-row items-center justify-between p-6 pb-4 border-b`, { borderColor: colors.glassBorder }]}>
+              <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>
                 Add Manual Appointment
               </Text>
               <TouchableOpacity onPress={() => setShowManualAppointmentForm(false)}>
-                <X size={24} color={theme.colors.mutedForeground} />
+                <X size={24} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
 
@@ -781,25 +783,15 @@ export default function CalendarPage() {
               keyboardShouldPersistTaps="handled"
             >
               <View style={tw`space-y-4`}>
-              <View>
-                <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
-                  Client Name *
-            </Text>
-                <TextInput
-                  style={[tw`p-3 rounded-xl border`, {
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    color: theme.colors.foreground
-                  }]}
-                  placeholder="Enter client name"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                  value={manualFormData.clientName}
-                  onChangeText={(text) => setManualFormData(prev => ({ ...prev, clientName: text }))}
-                />
-              </View>
+              <Input
+                label="Client Name *"
+                placeholder="Enter client name"
+                value={manualFormData.clientName}
+                onChangeText={(text) => setManualFormData(prev => ({ ...prev, clientName: text }))}
+              />
 
               <View>
-                <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
                   Service *
                 </Text>
                 {services.length > 0 ? (
@@ -812,13 +804,13 @@ export default function CalendarPage() {
                           tw`p-3 rounded-xl border mb-2`,
                           {
                             backgroundColor: manualFormData.serviceId === service.id 
-                              ? `${theme.colors.secondary}15` 
-                              : 'rgba(255,255,255,0.05)',
+                              ? `${colors.primary}15` 
+                              : colors.glass,
                             borderColor: manualFormData.serviceId === service.id 
-                              ? theme.colors.secondary 
-                              : 'rgba(255,255,255,0.1)',
+                              ? colors.primary 
+                              : colors.glassBorder,
                             borderWidth: manualFormData.serviceId === service.id ? 2 : 1,
-                            shadowColor: manualFormData.serviceId === service.id ? theme.colors.secondary : 'transparent',
+                            shadowColor: manualFormData.serviceId === service.id ? colors.primary : 'transparent',
                             shadowOffset: { width: 0, height: 2 },
                             shadowOpacity: manualFormData.serviceId === service.id ? 0.2 : 0,
                             shadowRadius: 4,
@@ -827,14 +819,14 @@ export default function CalendarPage() {
                         ]}
                       >
                         <View style={tw`flex-row justify-between items-center`}>
-                          <Text style={[tw`font-medium`, { color: theme.colors.foreground }]}>
+                          <Text style={[tw`font-medium`, { color: colors.foreground }]}>
                             {service.name}
                           </Text>
-                          <Text style={[tw`font-semibold`, { color: theme.colors.secondary }]}>
+                          <Text style={[tw`font-semibold`, { color: colors.primary }]}>
                             ${service.price}
                           </Text>
                         </View>
-                        <Text style={[tw`text-xs`, { color: 'rgba(255,255,255,0.6)' }]}>
+                        <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                           {service.duration} minutes
                         </Text>
                       </TouchableOpacity>
@@ -842,35 +834,25 @@ export default function CalendarPage() {
                   </ScrollView>
                 ) : (
                   <View style={[tw`p-4 rounded-xl border items-center`, {
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    borderColor: 'rgba(255,255,255,0.1)',
+                    backgroundColor: colors.glass,
+                    borderColor: colors.glassBorder,
                   }]}>
-                    <Text style={[tw`text-center`, { color: 'rgba(255,255,255,0.6)' }]}>
+                    <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
                       No services available. Please add services in your profile settings.
                     </Text>
                   </View>
                 )}
               </View>
 
-              <View>
-                <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
-                  Price
-                </Text>
-                <TextInput
-                  style={[tw`p-3 rounded-xl border`, {
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    color: theme.colors.foreground
-                  }]}
-                  placeholder="Auto-filled from service"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                  value={manualFormData.price}
-                  editable={false}
-                />
-              </View>
+              <Input
+                label="Price"
+                placeholder="Auto-filled from service"
+                value={manualFormData.price}
+                editable={false}
+              />
 
               <View>
-                <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
                   Date *
                 </Text>
                 <TouchableOpacity
@@ -910,33 +892,33 @@ export default function CalendarPage() {
                     );
                   }}
                   style={[tw`p-3 rounded-xl border`, {
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    borderColor: 'rgba(255,255,255,0.1)',
+                    backgroundColor: colors.glass,
+                    borderColor: colors.glassBorder,
                   }]}
                 >
-                  <Text style={[tw`text-center`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-center`, { color: colors.foreground }]}>
                     {manualFormData.date ? format(manualFormData.date, 'MMM dd, yyyy') : 'Select Date'}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               <View>
-                <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
                   Time *
                 </Text>
                 {manualFormData.date && (
                   <View>
                     {loadingTimeSlots ? (
                       <View style={tw`items-center py-8`}>
-                        <ActivityIndicator size="small" color={theme.colors.secondary} />
-                        <Text style={[tw`mt-2`, { color: theme.colors.mutedForeground }]}>Loading times...</Text>
+                        <ActivityIndicator size="small" color={colors.primary} />
+                        <Text style={[tw`mt-2`, { color: colors.mutedForeground }]}>Loading times...</Text>
                       </View>
                     ) : timeSlots.filter(slot => slot.available).length === 0 ? (
                       <View style={[tw`p-4 rounded-xl border items-center`, {
-                        backgroundColor: 'rgba(255,255,255,0.05)',
-                        borderColor: 'rgba(255,255,255,0.1)',
+                        backgroundColor: colors.glass,
+                        borderColor: colors.glassBorder,
                       }]}>
-                        <Text style={[tw`text-center`, { color: 'rgba(255,255,255,0.6)' }]}>
+                        <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
                           No available time slots for this date
                         </Text>
                       </View>
@@ -954,14 +936,14 @@ export default function CalendarPage() {
                               <View style={[
                                 tw`rounded-lg py-3 items-center`,
                                 manualFormData.time === slot.time
-                                  ? { backgroundColor: theme.colors.secondary }
-                                  : { backgroundColor: 'rgba(255,255,255,0.05)' }
+                                  ? { backgroundColor: colors.primary }
+                                  : { backgroundColor: colors.glass }
                               ]}>
                                 <Text style={[
                                   tw`text-sm font-medium`,
                                   manualFormData.time === slot.time
-                                    ? { color: theme.colors.background }
-                                    : { color: theme.colors.foreground }
+                                    ? { color: colors.background }
+                                    : { color: colors.foreground }
                                 ]}>
                                   {formatTimeSlot(slot.time)}
                                 </Text>
@@ -977,18 +959,19 @@ export default function CalendarPage() {
             </ScrollView>
 
             {/* Fixed Footer with Buttons */}
-            <View style={[tw`flex-row gap-3 p-6 pt-4 border-t border-white/10`, {
-              backgroundColor: theme.colors.background,
+            <View style={[tw`flex-row gap-3 p-6 pt-4 border-t`, {
+              backgroundColor: colors.background,
+              borderColor: colors.glassBorder,
             }]}>
             <TouchableOpacity
               onPress={() => setShowManualAppointmentForm(false)}
                 style={[tw`flex-1 py-3 rounded-xl items-center`, {
-                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  backgroundColor: colors.glass,
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.2)'
+                  borderColor: colors.glassBorder
                 }]}
               >
-                <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
                   Cancel
                 </Text>
               </TouchableOpacity>
@@ -998,8 +981,8 @@ export default function CalendarPage() {
                 style={[
                   tw`flex-1 py-3 rounded-xl items-center`, 
                   { 
-                    backgroundColor: isSubmitting ? 'rgba(255,255,255,0.3)' : theme.colors.secondary,
-                    shadowColor: theme.colors.secondary,
+                    backgroundColor: isSubmitting ? colors.glassBorder : colors.primary,
+                    shadowColor: colors.primary,
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.3,
                     shadowRadius: 4,
@@ -1008,9 +991,9 @@ export default function CalendarPage() {
                 ]}
             >
                 {isSubmitting ? (
-                  <ActivityIndicator color={theme.colors.primaryForeground} size="small" />
+                  <ActivityIndicator color={colors.primaryForeground} size="small" />
                 ) : (
-              <Text style={[tw`font-semibold`, { color: theme.colors.primaryForeground }]}>
+              <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>
                     Add Appointment
               </Text>
                 )}

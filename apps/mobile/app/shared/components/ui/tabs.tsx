@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface TabsProps {
   children: React.ReactNode;
@@ -79,11 +79,12 @@ const TabsList: React.FC<TabsListProps & { activeTab?: string; onValueChange?: (
   activeTab,
   onValueChange
 }) => {
+  const { colors } = useTheme();
   return (
     <View 
       style={[
         tw`inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground`,
-        { backgroundColor: theme.colors.muted },
+        { backgroundColor: colors.muted },
         style
       ]}
     >
@@ -109,6 +110,7 @@ const TabsTrigger: React.FC<TabsTriggerProps & { activeTab?: string; onValueChan
   activeTab,
   onValueChange
 }) => {
+  const { colors } = useTheme();
   const isActive = activeTab === value;
 
   return (
@@ -116,11 +118,9 @@ const TabsTrigger: React.FC<TabsTriggerProps & { activeTab?: string; onValueChan
       style={[
         tw`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50`,
         isActive ? {
-          backgroundColor: theme.colors.background,
-          color: theme.colors.foreground,
+          backgroundColor: colors.primary,
         } : {
           backgroundColor: 'transparent',
-          color: theme.colors.mutedForeground,
         },
         disabled && { opacity: 0.5 },
         style
@@ -133,7 +133,7 @@ const TabsTrigger: React.FC<TabsTriggerProps & { activeTab?: string; onValueChan
         style={[
           tw`text-sm font-medium`,
           { 
-            color: isActive ? theme.colors.foreground : theme.colors.mutedForeground 
+            color: isActive ? colors.primaryForeground : colors.mutedForeground 
           }
         ]}
       >

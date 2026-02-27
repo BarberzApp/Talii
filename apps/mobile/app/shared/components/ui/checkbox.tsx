@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { Check } from 'lucide-react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface CheckboxProps {
   checked: boolean;
@@ -16,6 +16,38 @@ const Checkbox: React.FC<CheckboxProps> = ({
   label, 
   disabled = false 
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    label: {
+      fontSize: 16,
+      color: colors.foreground,
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    disabledText: {
+      color: colors.mutedForeground,
+    },
+  }), [colors]);
+
   return (
     <TouchableOpacity
       style={[styles.container, disabled && styles.disabled]}
@@ -24,7 +56,7 @@ const Checkbox: React.FC<CheckboxProps> = ({
     >
       <View style={[styles.checkbox, checked && styles.checked]}>
         {checked && (
-          <Check size={16} stroke={theme.colors.primaryForeground} />
+          <Check size={16} stroke={colors.primaryForeground} />
         )}
       </View>
       {label && (
@@ -35,36 +67,5 @@ const Checkbox: React.FC<CheckboxProps> = ({
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checked: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  label: {
-    fontSize: 16,
-    color: theme.colors.foreground,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  disabledText: {
-    color: theme.colors.mutedForeground,
-  },
-});
 
 export default Checkbox; 

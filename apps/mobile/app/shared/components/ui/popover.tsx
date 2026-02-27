@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, ViewStyle, Pressable } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface PopoverProps {
   children: React.ReactNode;
@@ -85,6 +85,7 @@ const PopoverContent: React.FC<PopoverContentProps & { isOpen?: boolean; onOpenC
   isOpen = false,
   onOpenChange
 }) => {
+  const { colors } = useTheme();
   return (
     <Modal
       visible={isOpen}
@@ -101,8 +102,8 @@ const PopoverContent: React.FC<PopoverContentProps & { isOpen?: boolean; onOpenC
             style={[
               tw`rounded-md border bg-popover p-4 text-popover-foreground shadow-md`,
               { 
-                backgroundColor: theme.colors.popover,
-                borderColor: theme.colors.border,
+                backgroundColor: colors.popover,
+                borderColor: colors.border,
               },
               style
             ]}

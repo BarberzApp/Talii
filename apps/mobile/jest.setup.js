@@ -81,6 +81,32 @@ jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),
 }))
 
+// Mock theme for tests - provide light theme colors
+jest.mock('./app/shared/components/theme/ThemeProvider', () => {
+  const React = require('react')
+  const { theme, getResolvedColors } = require('./app/shared/lib/theme')
+  const ThemeContext = React.createContext(null)
+  const resolvedColors = getResolvedColors('light')
+  return {
+    ThemeProvider: ({ children }) => React.createElement(ThemeContext.Provider, {
+      value: {
+        theme,
+        colors: resolvedColors,
+        colorScheme: 'light',
+        themePreference: 'system',
+        setColorScheme: jest.fn(),
+      },
+    }, children),
+    useTheme: () => {
+      const context = React.useContext(ThemeContext)
+      if (!context) {
+        return { theme, colors: resolvedColors, colorScheme: 'light', themePreference: 'system', setColorScheme: jest.fn() }
+      }
+      return context
+    },
+  }
+})
+
 // Mock Supabase
 jest.mock('./app/shared/lib/supabase', () => ({
   supabase: {

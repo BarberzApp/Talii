@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { Circle } from 'lucide-react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import tw from 'twrnc';
 
 interface RadioGroupOption {
@@ -25,6 +25,7 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
   disabled = false,
   className = '',
 }) => {
+  const { colors } = useTheme();
   return (
     <View style={tw`w-full`}>
       {options.map((option) => (
@@ -46,20 +47,20 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
               <View
                 style={[
                   tw`w-4 h-4 rounded-full items-center justify-center`,
-                  { backgroundColor: theme.colors.primary },
+                  { backgroundColor: colors.primary },
                 ]}
               >
                 <Circle
                   size={8}
-                  color={theme.colors.primaryForeground}
-                  fill={theme.colors.primaryForeground}
+                  color={colors.primaryForeground}
+                  fill={colors.primaryForeground}
                 />
               </View>
             ) : (
               <View
                 style={[
                   tw`w-4 h-4 rounded-full border-2`,
-                  { borderColor: theme.colors.border },
+                  { borderColor: colors.border },
                 ]}
               />
             )}
@@ -67,7 +68,7 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
           <Text
             style={[
               tw`text-base`,
-              { color: theme.colors.foreground },
+              { color: colors.foreground },
             ]}
           >
             {option.label}

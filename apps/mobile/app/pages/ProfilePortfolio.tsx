@@ -11,10 +11,9 @@ import {
   Dimensions,
   SafeAreaView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../shared/hooks/useAuth';
-import { theme } from '../shared/lib/theme';
+import { useTheme } from '../shared/components/theme';
 import tw from 'twrnc';
 import {
   Button,
@@ -44,7 +43,6 @@ import { ImageUpload } from '../shared/components/ui/ImageUpload';
 import { VideoUpload } from '../shared/components/ui/VideoUpload';
 import {
   getAvatarFallbackProps,
-  getCoverFallbackProps,
 } from '../shared/helpers/fallbackImageHelper';
 
 const { width, height } = Dimensions.get('window');
@@ -123,6 +121,7 @@ interface Booking {
 }
 
 export default function ProfilePortfolio() {
+  const { colors } = useTheme();
   const navigation = useNavigation();
   const { user, userProfile, logout } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -369,9 +368,9 @@ export default function ProfilePortfolio() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[tw`flex-1 justify-center items-center`, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.secondary} />
-        <Text style={[tw`mt-4 text-lg`, { color: theme.colors.foreground }]}>
+      <SafeAreaView style={[tw`flex-1 justify-center items-center`, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[tw`mt-4 text-lg`, { color: colors.foreground }]}>
           Loading your profile...
         </Text>
       </SafeAreaView>
@@ -380,8 +379,8 @@ export default function ProfilePortfolio() {
 
   if (!user || !profile) {
     return (
-      <SafeAreaView style={[tw`flex-1 justify-center items-center`, { backgroundColor: theme.colors.background }]}>
-        <Text style={[tw`text-lg`, { color: theme.colors.foreground }]}>
+      <SafeAreaView style={[tw`flex-1 justify-center items-center`, { backgroundColor: colors.background }]}>
+        <Text style={[tw`text-lg`, { color: colors.foreground }]}>
           Profile not found
         </Text>
         <Button onPress={() => navigation.goBack()} style={tw`mt-4`}>
@@ -470,7 +469,7 @@ export default function ProfilePortfolio() {
             ) : (
               // Client Portfolio - Empty state (portfolio tab hidden for clients)
                   <View style={tw`flex-1 justify-center items-center py-8`}>
-                    <Text style={[tw`text-sm text-center`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
                   Portfolio view not available for clients
                     </Text>
               </View>
@@ -534,15 +533,15 @@ export default function ProfilePortfolio() {
                 {/* Cuts List */}
                 {cuts.length > 0 && (
                   <View style={tw`space-y-3`}>
-                    <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                    <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                       My Cuts ({cuts.length})
                     </Text>
                     <View style={tw`space-y-3`}>
                       {cuts.map((cut) => (
-                        <Card key={cut.id} style={[tw`bg-white/5 border`, { borderColor: 'rgba(255,255,255,0.1)' }]}>
+                        <Card key={cut.id} style={[tw`border`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                           <CardContent style={tw`p-4`}>
                             <View style={tw`flex-row items-center gap-3`}>
-                              <View style={tw`w-16 h-16 rounded-lg overflow-hidden bg-white/10`}>
+                              <View style={[tw`w-16 h-16 rounded-lg overflow-hidden`, { backgroundColor: colors.glass }]}>
                                 {cut.thumbnail ? (
                                   <Image
                                     source={{ uri: cut.thumbnail }}
@@ -551,27 +550,27 @@ export default function ProfilePortfolio() {
                                   />
                                 ) : (
                                   <View style={tw`w-full h-full items-center justify-center`}>
-                                    <Play size={24} color={theme.colors.mutedForeground} />
+                                    <Play size={24} color={colors.mutedForeground} />
                                   </View>
                                 )}
                               </View>
                               <View style={tw`flex-1`}>
-                                <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>
+                                <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
                                   {cut.title}
                                 </Text>
-                                <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                                <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                                   {cut.description || 'No description'}
                                 </Text>
                                 <View style={tw`flex-row items-center gap-4 mt-1`}>
                                   <View style={tw`flex-row items-center gap-1`}>
-                                    <Eye size={12} color={theme.colors.mutedForeground} />
-                                    <Text style={[tw`text-xs`, { color: theme.colors.mutedForeground }]}>
+                                    <Eye size={12} color={colors.mutedForeground} />
+                                    <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                                       {cut.views} views
                                     </Text>
                                   </View>
                                   <View style={tw`flex-row items-center gap-1`}>
-                                    <Heart size={12} color={theme.colors.mutedForeground} />
-                                    <Text style={[tw`text-xs`, { color: theme.colors.mutedForeground }]}>
+                                    <Heart size={12} color={colors.mutedForeground} />
+                                    <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                                       {cut.likes} likes
                                     </Text>
                                   </View>
@@ -587,11 +586,11 @@ export default function ProfilePortfolio() {
               </View>
             ) : (
               <View style={tw`flex-1 justify-center items-center py-8`}>
-                <Users size={48} style={[tw`mb-4`, { color: theme.colors.mutedForeground }]} />
-                <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: theme.colors.foreground }]}>
+                <Users size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
+                <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: colors.foreground }]}>
                   No past stylists
                 </Text>
-                <Text style={[tw`text-sm text-center`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
                   Book appointments to see your stylists here
                 </Text>
               </View>
@@ -607,19 +606,19 @@ export default function ProfilePortfolio() {
                 {/* Services Overview Header */}
                 <View style={[
                   tw`flex-row items-center justify-center p-6 rounded-2xl`,
-                  { backgroundColor: 'rgba(255,255,255,0.05)' }
+                  { backgroundColor: colors.glass }
                 ]}>
                   <View style={tw`items-center`}>
                     <View style={[
                       tw`w-12 h-12 rounded-full items-center justify-center mb-3`,
-                      { backgroundColor: 'rgba(255,255,255,0.1)' }
+                      { backgroundColor: colors.glass }
                     ]}>
-                      <History size={24} color={theme.colors.secondary} />
+                      <History size={24} color={colors.primary} />
                     </View>
-                    <Text style={[tw`font-semibold text-base`, { color: theme.colors.foreground }]}>
+                    <Text style={[tw`font-semibold text-base`, { color: colors.foreground }]}>
                       My Services
                     </Text>
-                    <Text style={[tw`text-sm mt-1`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-sm mt-1`, { color: colors.mutedForeground }]}>
                       View your current offerings
                     </Text>
                   </View>
@@ -627,7 +626,7 @@ export default function ProfilePortfolio() {
 
                 {/* Services Overview */}
                 <View style={tw`space-y-3`}>
-                  <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                     My Services
                   </Text>
                   
@@ -636,31 +635,31 @@ export default function ProfilePortfolio() {
                       {barberProfile.services.map((service) => (
                         <View key={service.id} style={[
                           tw`p-4 rounded-xl`,
-                          { backgroundColor: 'rgba(255,255,255,0.05)' }
+                          { backgroundColor: colors.glass }
                         ]}>
                           <View style={tw`flex-row items-center justify-between`}>
                             <View style={tw`flex-1`}>
-                              <Text style={[tw`font-semibold text-base`, { color: theme.colors.foreground }]}>
+                              <Text style={[tw`font-semibold text-base`, { color: colors.foreground }]}>
                                 {service.name}
                               </Text>
                               {service.description && (
-                                <Text style={[tw`text-sm mt-1`, { color: theme.colors.mutedForeground }]}>
+                                <Text style={[tw`text-sm mt-1`, { color: colors.mutedForeground }]}>
                                   {service.description}
                                 </Text>
                               )}
                               <View style={tw`flex-row items-center mt-2`}>
                                 <View style={[
                                   tw`px-2 py-1 rounded-full`,
-                                  { backgroundColor: 'rgba(255,255,255,0.1)' }
+                                  { backgroundColor: colors.glass }
                                 ]}>
-                                  <Text style={[tw`text-xs font-medium`, { color: theme.colors.secondary }]}>
+                                  <Text style={[tw`text-xs font-medium`, { color: colors.primary }]}>
                                     {service.duration} min
                                   </Text>
                                 </View>
                               </View>
                             </View>
                             <View style={tw`items-end`}>
-                              <Text style={[tw`font-bold text-xl`, { color: theme.colors.secondary }]}>
+                              <Text style={[tw`font-bold text-xl`, { color: colors.primary }]}>
                                 ${service.price}
                               </Text>
                             </View>
@@ -670,11 +669,11 @@ export default function ProfilePortfolio() {
                     </View>
                   ) : (
                     <View style={tw`flex-1 justify-center items-center py-8`}>
-                      <History size={48} style={[tw`mb-4`, { color: 'rgba(255,255,255,0.4)' }]} />
-                      <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: theme.colors.foreground }]}>
+                      <History size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
+                      <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: colors.foreground }]}>
                         No services set up yet
                       </Text>
-                      <Text style={[tw`text-sm text-center`, { color: theme.colors.mutedForeground }]}>
+                      <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
                         Set up your services and pricing to start accepting bookings
                       </Text>
                     </View>
@@ -685,37 +684,37 @@ export default function ProfilePortfolio() {
               <View style={tw`space-y-4`}>
                 {bookings.length === 0 ? (
                   <View style={tw`flex-1 justify-center items-center py-8`}>
-                    <Calendar size={48} style={[tw`mb-4`, { color: 'rgba(255,255,255,0.4)' }]} />
-                    <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: theme.colors.foreground }]}>
+                    <Calendar size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
+                    <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: colors.foreground }]}>
                       No bookings yet
                     </Text>
-                    <Text style={[tw`text-sm text-center`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
                       Start booking appointments with stylists
                     </Text>
                   </View>
                 ) : (
                   bookings.map((booking) => (
-                    <Card key={booking.id} style={[tw`bg-white/5 border`, { borderColor: 'rgba(255,255,255,0.1)' }]}>
+                    <Card key={booking.id} style={[tw`border`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                       <CardContent style={tw`p-4`}>
                         <View style={tw`flex-row items-center gap-3`}>
                           <Avatar size="md" src={booking.barber.image} fallback={booking.barber.name?.charAt(0)} />
                           <View style={tw`flex-1`}>
-                            <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>
+                            <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
                               {booking.barber.name}
                             </Text>
-                            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                               {booking.service}
                             </Text>
                             <View style={tw`flex-row items-center gap-4 mt-1`}>
                               <View style={tw`flex-row items-center gap-1`}>
-                                <Calendar size={12} color={theme.colors.mutedForeground} />
-                                <Text style={[tw`text-xs`, { color: theme.colors.mutedForeground }]}>
+                                <Calendar size={12} color={colors.mutedForeground} />
+                                <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                                   {formatDate(booking.date)}
                                 </Text>
                               </View>
                               <View style={tw`flex-row items-center gap-1`}>
-                                <Clock size={12} color={theme.colors.mutedForeground} />
-                                <Text style={[tw`text-xs`, { color: theme.colors.mutedForeground }]}>
+                                <Clock size={12} color={colors.mutedForeground} />
+                                <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                                   {formatTime(booking.time)}
                                 </Text>
                               </View>
@@ -724,14 +723,14 @@ export default function ProfilePortfolio() {
                           <Badge 
                             style={[
                               booking.status === 'completed' 
-                                ? { backgroundColor: 'rgba(34, 197, 94, 0.2)', borderColor: 'rgba(34, 197, 94, 0.3)' }
-                                : { backgroundColor: 'rgba(180, 138, 60, 0.2)', borderColor: 'rgba(180, 138, 60, 0.3)' }
+                                ? { backgroundColor: colors.successSubtle, borderColor: colors.success }
+                                : { backgroundColor: colors.muted, borderColor: colors.border }
                             ]}
                           >
                             <Text style={[
                               booking.status === 'completed' 
-                                ? { color: '#22c55e' }
-                                : { color: theme.colors.secondary }
+                                ? { color: colors.success }
+                                : { color: colors.mutedForeground }
                             ]}>
                               {booking.status}
                             </Text>
@@ -752,11 +751,11 @@ export default function ProfilePortfolio() {
   };
 
   return (
-    <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
       {/* Header Section */}
       <View style={tw`relative w-full overflow-hidden`}>
         {/* Cover Photo */}
-        <View style={[tw`h-32 w-full flex items-center justify-center relative`, { backgroundColor: theme.colors.muted }]}>
+        <View style={[tw`h-40 w-full relative`, { backgroundColor: colors.primarySubtle }]}>
           {profile.coverphoto && !coverError ? (
             <Image
               source={{ uri: profile.coverphoto }}
@@ -767,33 +766,30 @@ export default function ProfilePortfolio() {
               }}
             />
           ) : (
-            <LinearGradient
-              colors={getCoverFallbackProps(profile.name || profile.username).gradientColors as [string, string]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={tw`absolute inset-0 w-full h-full`}
-            />
+            <View style={[tw`absolute inset-0 w-full h-full`, { backgroundColor: colors.primarySubtle }]}>
+              <View style={[tw`absolute top-4 left-4 w-20 h-20 border rounded-full`, { borderColor: colors.primaryTint, opacity: 0.4 }]} />
+              <View style={[tw`absolute bottom-4 right-4 w-16 h-16 border rounded-full`, { borderColor: colors.primaryTint, opacity: 0.3 }]} />
+              <View style={[tw`absolute`, { top: '40%', left: '45%', width: 80, height: 80, borderRadius: 40, borderWidth: 1, borderColor: colors.primaryTint, opacity: 0.25 }]} />
+            </View>
           )}
           {/* Camera button for cover photo */}
           <TouchableOpacity
-            style={tw`absolute top-3 right-3 z-20 h-8 w-8 rounded-full bg-black/40 items-center justify-center`}
+            style={[tw`absolute top-3 right-3 z-20 h-9 w-9 rounded-full items-center justify-center`, { backgroundColor: 'rgba(0,0,0,0.3)' }]}
             onPress={() => setShowCoverUpload(true)}
           >
-            <Camera size={16} color="white" />
+            <Camera size={16} color="#FFFFFF" />
           </TouchableOpacity>
-          {/* Glass overlay */}
-          <View style={tw`absolute inset-0 bg-black/30 z-10`} />
         </View>
 
         {/* Avatar - Positioned exactly where cover photo ends */}
         <View style={[
-          tw`absolute top-20 z-20`,
+          tw`absolute top-28 z-20`,
           { 
             left: width / 2,
             transform: [{ translateX: -48 }] // w-24 = 96px, so half is 48px
           }
         ]}>
-          <View style={[tw`w-24 h-24 rounded-full overflow-hidden border-2`, { borderColor: theme.colors.secondary }]}>
+          <View style={[tw`w-24 h-24 rounded-full overflow-hidden border-4`, { borderColor: colors.surfaceElevated, shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6 }]}>
             {profile.avatar_url && !avatarError ? (
               <Image
                 source={{ uri: profile.avatar_url }}
@@ -804,66 +800,53 @@ export default function ProfilePortfolio() {
                 }}
               />
             ) : (
-              <LinearGradient
-                colors={[
-                  getAvatarFallbackProps(profile.name || profile.username).backgroundColor,
-                  getCoverFallbackProps(profile.name || profile.username).gradientColors[1] || getAvatarFallbackProps(profile.name || profile.username).backgroundColor,
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={tw`w-full h-full items-center justify-center`}
-              >
-                <Text
-                  style={[
-                    tw`text-3xl font-bold`,
-                    { color: getAvatarFallbackProps(profile.name || profile.username).textColor },
-                  ]}
-                >
+              <View style={[tw`w-full h-full items-center justify-center`, { backgroundColor: colors.primarySubtle }]}>
+                <Text style={[tw`text-3xl font-bold`, { color: colors.primary }]}>
                   {getAvatarFallbackProps(profile.name || profile.username).initials}
                 </Text>
-              </LinearGradient>
+              </View>
             )}
           </View>
           <TouchableOpacity
-            style={[tw`absolute bottom-0 right-0 h-8 w-8 rounded-full items-center justify-center`, { backgroundColor: theme.colors.secondary }]}
+            style={[tw`absolute bottom-0 right-0 h-8 w-8 rounded-full items-center justify-center`, { backgroundColor: colors.primary }]}
             onPress={() => setShowAvatarUpload(true)}
           >
-            <Camera size={14} color={theme.colors.primary} />
+            <Camera size={14} color={colors.primaryForeground} />
           </TouchableOpacity>
         </View>
         
         {/* Profile Info */}
         <View style={tw`px-4 pt-16 pb-4 items-center`}>
-          <Text style={[tw`text-xl font-bold mb-1 text-center`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-xl font-bold mb-1 text-center`, { color: colors.foreground }]}>
             {isBarber && barberProfile?.business_name ? barberProfile.business_name : profile.name}
           </Text>
           {profile.username && (
-            <Text style={[tw`text-sm mb-1 text-center`, { color: theme.colors.secondary }]}>
+            <Text style={[tw`text-sm mb-1 text-center`, { color: colors.primary }]}>
               @{profile.username}
             </Text>
           )}
           {isBarber && barberProfile?.bio && (
-            <Text style={[tw`text-sm mb-2 text-center`, { color: theme.colors.mutedForeground }]}>
+            <Text style={[tw`text-sm mb-2 text-center`, { color: colors.mutedForeground }]}>
               {barberProfile.bio}
             </Text>
           )}
           {profile.location && (
-            <Text style={[tw`text-sm text-center`, { color: theme.colors.foreground }]}>
+            <Text style={[tw`text-sm text-center`, { color: colors.foreground }]}>
               {profile.location}
             </Text>
           )}
           {isBarber && barberProfile?.specialties && barberProfile.specialties.length > 0 && (
             <View style={tw`flex-row flex-wrap justify-center mt-2 gap-1`}>
               {barberProfile.specialties.slice(0, 3).map((specialty, index) => (
-                <Badge key={index} style={tw`bg-white/10 border-white/20`}>
-                  <Text style={[tw`text-xs`, { color: theme.colors.foreground }]}>
+                <Badge key={index} style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+                  <Text style={[tw`text-xs`, { color: colors.foreground }]}>
                     {specialty}
                   </Text>
                 </Badge>
               ))}
               {barberProfile.specialties.length > 3 && (
-                <Badge style={tw`bg-white/10 border-white/20`}>
-                  <Text style={[tw`text-xs`, { color: theme.colors.foreground }]}>
+                <Badge style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+                  <Text style={[tw`text-xs`, { color: colors.foreground }]}>
                     +{barberProfile.specialties.length - 3} more
                   </Text>
                 </Badge>
@@ -873,7 +856,7 @@ export default function ProfilePortfolio() {
         </View>
 
         {/* Tabs Under Avatar */}
-        <View style={[tw`flex-row border-b`, { borderColor: 'rgba(255,255,255,0.1)', backgroundColor: theme.colors.background }]}>
+        <View style={[tw`flex-row border-b`, { borderColor: colors.glassBorder, backgroundColor: colors.background }]}>
           {isBarber && (
           <TouchableOpacity
             style={tw`flex-1 py-3 items-center`}
@@ -881,11 +864,11 @@ export default function ProfilePortfolio() {
           >
             <Heart 
               size={20} 
-              color={activeTab === 'portfolio' ? theme.colors.secondary : theme.colors.mutedForeground} 
+              color={activeTab === 'portfolio' ? colors.primary : colors.mutedForeground} 
             />
             <Text style={[
               tw`text-xs mt-1`, 
-              { color: activeTab === 'portfolio' ? theme.colors.secondary : theme.colors.mutedForeground }
+              { color: activeTab === 'portfolio' ? colors.primary : colors.mutedForeground }
             ]}>
                 Portfolio
             </Text>
@@ -898,11 +881,11 @@ export default function ProfilePortfolio() {
           >
             <Users 
               size={20} 
-              color={activeTab === 'cuts' ? theme.colors.secondary : theme.colors.mutedForeground} 
+              color={activeTab === 'cuts' ? colors.primary : colors.mutedForeground} 
             />
             <Text style={[
               tw`text-xs mt-1`, 
-              { color: activeTab === 'cuts' ? theme.colors.secondary : theme.colors.mutedForeground }
+              { color: activeTab === 'cuts' ? colors.primary : colors.mutedForeground }
             ]}>
               {isBarber ? 'My Cuts' : 'Stylists'}
             </Text>
@@ -914,11 +897,11 @@ export default function ProfilePortfolio() {
           >
             <History 
               size={20} 
-              color={activeTab === 'services' ? theme.colors.secondary : theme.colors.mutedForeground} 
+              color={activeTab === 'services' ? colors.primary : colors.mutedForeground} 
             />
             <Text style={[
               tw`text-xs mt-1`, 
-              { color: activeTab === 'services' ? theme.colors.secondary : theme.colors.mutedForeground }
+              { color: activeTab === 'services' ? colors.primary : colors.mutedForeground }
             ]}>
               {isBarber ? 'Services' : 'Bookings'}
             </Text>
@@ -952,30 +935,30 @@ export default function ProfilePortfolio() {
                 <View style={tw`flex-row items-center gap-3 mb-3`}>
                   <Avatar size="md" src={selectedVideo.barber.image} fallback={selectedVideo.barber.name?.charAt(0)} />
                   <View style={tw`flex-1`}>
-                    <Text style={[tw`font-bold text-lg`, { color: theme.colors.foreground }]}>
+                    <Text style={[tw`font-bold text-lg`, { color: colors.foreground }]}>
                       {selectedVideo.title}
                     </Text>
-                    <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                       {selectedVideo.barber.name}
                     </Text>
                   </View>
                 </View>
                 <View style={tw`flex-row items-center justify-around`}>
                   <View style={tw`flex-row items-center gap-1`}>
-                    <Eye size={16} color={theme.colors.mutedForeground} />
-                    <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                    <Eye size={16} color={colors.mutedForeground} />
+                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                       {selectedVideo.views} views
                     </Text>
                   </View>
                   <View style={tw`flex-row items-center gap-1`}>
-                    <Heart size={16} color={theme.colors.mutedForeground} />
-                    <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                    <Heart size={16} color={colors.mutedForeground} />
+                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                       {selectedVideo.likes} likes
                     </Text>
                   </View>
                   <View style={tw`flex-row items-center gap-1`}>
-                    <Share2 size={16} color={theme.colors.mutedForeground} />
-                    <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                    <Share2 size={16} color={colors.mutedForeground} />
+                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                       {selectedVideo.shares} shares
                     </Text>
                   </View>
@@ -1005,7 +988,7 @@ export default function ProfilePortfolio() {
       {/* Avatar Upload Modal */}
       <Dialog visible={showAvatarUpload} onClose={() => setShowAvatarUpload(false)}>
         <View style={tw`p-4`}>
-          <Text style={[tw`text-lg font-semibold mb-4`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-lg font-semibold mb-4`, { color: colors.foreground }]}>
             Update Profile Picture
           </Text>
           <ImageUpload
@@ -1047,7 +1030,7 @@ export default function ProfilePortfolio() {
       {/* Cover Photo Upload Modal */}
       <Dialog visible={showCoverUpload} onClose={() => setShowCoverUpload(false)}>
         <View style={tw`p-4`}>
-          <Text style={[tw`text-lg font-semibold mb-4`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-lg font-semibold mb-4`, { color: colors.foreground }]}>
             Update Cover Photo
           </Text>
           <ImageUpload

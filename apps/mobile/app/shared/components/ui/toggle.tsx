@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, ViewStyle } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface ToggleProps {
   children: React.ReactNode;
@@ -24,6 +24,7 @@ const Toggle: React.FC<ToggleProps> = ({
   style,
   className 
 }) => {
+  const { colors } = useTheme();
   const sizeStyles: Record<string, any> = {
     sm: { height: 36, paddingHorizontal: 10 },
     default: { height: 40, paddingHorizontal: 12 },
@@ -32,12 +33,12 @@ const Toggle: React.FC<ToggleProps> = ({
 
   const variantStyles = {
     default: {
-      backgroundColor: pressed ? theme.colors.accent : 'transparent',
+      backgroundColor: pressed ? colors.accent : 'transparent',
       borderColor: 'transparent',
     },
     outline: {
       backgroundColor: 'transparent',
-      borderColor: theme.colors.border,
+      borderColor: colors.border,
       borderWidth: 1,
     }
   };
@@ -48,7 +49,7 @@ const Toggle: React.FC<ToggleProps> = ({
         tw`inline-flex items-center justify-center rounded-md text-sm font-medium`,
         sizeStyles[size],
         variantStyles[variant],
-        pressed && { backgroundColor: theme.colors.accent },
+        pressed && { backgroundColor: colors.accent },
         disabled && { opacity: 0.5 },
         style
       ]}

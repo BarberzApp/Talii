@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
@@ -40,6 +40,7 @@ interface ProfileData {
 }
 
 export function ShareSettings({ barberId }: ShareSettingsProps) {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -145,11 +146,11 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
 
   if (isLoading) {
     return (
-      <Card style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+      <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
         <CardContent style={tw`p-6`}>
           <View style={tw`items-center`}>
-            <Share2 size={24} color={theme.colors.secondary} style={tw`mb-2`} />
-            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+            <Share2 size={24} color={colors.primary} style={tw`mb-2`} />
+            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
               Loading booking link...
             </Text>
           </View>
@@ -159,17 +160,17 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
   }
 
   return (
-    <Card style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+    <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
       <CardContent style={tw`p-4`}>
         <View style={tw`flex-row items-center mb-4`}>
-          <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: theme.colors.secondary + '20' }]}>
-            <Share2 size={20} color={theme.colors.secondary} />
+          <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: colors.primarySubtle }]}>
+            <Share2 size={20} color={colors.primary} />
           </View>
           <View style={tw`flex-1`}>
-            <Text style={[tw`text-base font-semibold`, { color: theme.colors.foreground }]}>
+            <Text style={[tw`text-base font-semibold`, { color: colors.foreground }]}>
               Share Your Booking Link
             </Text>
-            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
               Share with clients to receive bookings
             </Text>
           </View>
@@ -177,10 +178,10 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
 
         {/* Profile Status Alert */}
         {!profileData.is_public && (
-          <View style={[tw`mb-4 p-3 rounded-xl flex-row items-start`, { backgroundColor: theme.colors.saffronBrown + '10', borderWidth: 1, borderColor: theme.colors.saffronBrown + '20' }]}>
-            <AlertCircle size={16} color={theme.colors.saffronBrown} style={tw`mr-2 mt-0.5`} />
+          <View style={[tw`mb-4 p-3 rounded-xl flex-row items-start`, { backgroundColor: colors.primarySubtle, borderWidth: 1, borderColor: colors.primaryTint }]}>
+            <AlertCircle size={16} color={colors.primary} style={tw`mr-2 mt-0.5`} />
             <View style={tw`flex-1`}>
-              <Text style={[tw`text-sm`, { color: theme.colors.saffronBrown }]}>
+              <Text style={[tw`text-sm`, { color: colors.primary }]}>
                 Your profile is currently private. Make it public to allow clients to book appointments.
               </Text>
             </View>
@@ -189,12 +190,12 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
 
         {/* Booking Link Display */}
         <View style={tw`mb-4`}>
-          <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
             Your Booking Link
           </Text>
-          <View style={[tw`p-3 rounded-xl flex-row items-center`, { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }]}>
-            <Link size={16} color={theme.colors.secondary} style={tw`mr-2`} />
-            <Text style={[tw`flex-1 text-sm`, { color: theme.colors.secondary }]} numberOfLines={1}>
+          <View style={[tw`p-3 rounded-xl flex-row items-center`, { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }]}>
+            <Link size={16} color={colors.primary} style={tw`mr-2`} />
+            <Text style={[tw`flex-1 text-sm`, { color: colors.primary }]} numberOfLines={1}>
               {bookingLink}
             </Text>
           </View>
@@ -205,10 +206,10 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
           <TouchableOpacity
             onPress={shareLink}
             disabled={!isLinkValid}
-            style={[tw`flex-1 py-3 rounded-xl flex-row items-center justify-center`, { backgroundColor: theme.colors.secondary }]}
+            style={[tw`flex-1 py-3 rounded-xl flex-row items-center justify-center`, { backgroundColor: colors.primary }]}
           >
-            <Share2 size={18} color={theme.colors.primaryForeground} style={tw`mr-2`} />
-            <Text style={[tw`font-semibold`, { color: theme.colors.primaryForeground }]}>
+            <Share2 size={18} color={colors.primaryForeground} style={tw`mr-2`} />
+            <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>
               Share Link
             </Text>
           </TouchableOpacity>
@@ -216,12 +217,12 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
           <TouchableOpacity
             onPress={copyToClipboard}
             disabled={!isLinkValid}
-            style={[tw`px-4 py-3 rounded-xl`, { borderWidth: 1, borderColor: theme.colors.secondary + '30' }]}
+            style={[tw`px-4 py-3 rounded-xl`, { borderWidth: 1, borderColor: colors.border }]}
           >
             {copied ? (
-              <CheckCircle size={20} color={theme.colors.secondary} />
+              <CheckCircle size={20} color={colors.primary} />
             ) : (
-              <Copy size={20} color={theme.colors.secondary} />
+              <Copy size={20} color={colors.primary} />
             )}
           </TouchableOpacity>
         </View>
@@ -230,34 +231,34 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
         <TouchableOpacity
           onPress={() => setShowQR(!showQR)}
           disabled={!isLinkValid}
-          style={[tw`py-3 rounded-xl flex-row items-center justify-center mb-4`, { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }]}
+          style={[tw`py-3 rounded-xl flex-row items-center justify-center mb-4`, { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }]}
         >
-          <QrCode size={18} color={theme.colors.foreground} style={tw`mr-2`} />
-          <Text style={[tw`font-medium`, { color: theme.colors.foreground }]}>
+          <QrCode size={18} color={colors.foreground} style={tw`mr-2`} />
+          <Text style={[tw`font-medium`, { color: colors.foreground }]}>
             {showQR ? 'Hide' : 'Show'} QR Code
           </Text>
         </TouchableOpacity>
 
         {/* QR Code Display */}
         {showQR && isLinkValid && (
-          <View style={[tw`p-4 rounded-xl mb-4`, { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }]}>
+          <View style={[tw`p-4 rounded-xl mb-4`, { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }]}>
             <View style={tw`items-center`}>
-              <Text style={[tw`text-sm mb-3`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-sm mb-3`, { color: colors.foreground }]}>
                 Clients can scan this QR code to book appointments
               </Text>
-              <View style={[tw`p-4 rounded-xl`, { backgroundColor: theme.colors.foreground }]}>
+              <View style={[tw`p-4 rounded-xl`, { backgroundColor: colors.foreground }]}>
                 <QRCode
                   value={bookingLink}
                   size={200}
-                  color={theme.colors.primary}
-                  backgroundColor={theme.colors.foreground}
+                  color={colors.primary}
+                  backgroundColor={colors.foreground}
                 />
               </View>
               <View style={tw`mt-3 items-center`}>
-                <Text style={[tw`text-xs text-center mb-1`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-xs text-center mb-1`, { color: colors.mutedForeground }]}>
                   Scan this QR code to access the booking page
                 </Text>
-                <Text style={[tw`text-xs text-center`, { color: theme.colors.secondary }]}>
+                <Text style={[tw`text-xs text-center`, { color: colors.primary }]}>
                   {profileData.business_name || profileData.name || 'Your'} Booking Link
                 </Text>
               </View>
@@ -266,11 +267,11 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
         )}
 
         {/* Tips Section */}
-        <View style={[tw`p-4 rounded-xl`, { backgroundColor: theme.colors.secondary + '10' }]}>
+        <View style={[tw`p-4 rounded-xl`, { backgroundColor: colors.primarySubtle }]}>
           <View style={tw`flex-row items-start`}>
-            <Sparkles size={16} color={theme.colors.secondary} style={tw`mr-2 mt-0.5`} />
+            <Sparkles size={16} color={colors.primary} style={tw`mr-2 mt-0.5`} />
             <View style={tw`flex-1`}>
-              <Text style={[tw`text-sm font-semibold mb-2`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-sm font-semibold mb-2`, { color: colors.foreground }]}>
                 Pro Tips
               </Text>
               <View style={tw`gap-1`}>
@@ -281,8 +282,8 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
                   'Use the QR code for in-person sharing'
                 ].map((tip, index) => (
                   <View key={index} style={tw`flex-row items-start`}>
-                    <Text style={[tw`text-xs mr-1`, { color: theme.colors.secondary }]}>•</Text>
-                    <Text style={[tw`text-xs flex-1`, { color: theme.colors.foreground, opacity: 0.8 }]}>
+                    <Text style={[tw`text-xs mr-1`, { color: colors.primary }]}>•</Text>
+                    <Text style={[tw`text-xs flex-1`, { color: colors.foreground, opacity: 0.8 }]}>
                       {tip}
                     </Text>
                   </View>

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Animated } from 'react-native';
 import { theme } from '../lib/theme';
+import { useTheme } from './theme/ThemeProvider';
+import type { ResolvedColors } from '../lib/theme';
 
 interface AnimatedTextProps {
   text: string;
@@ -9,39 +11,43 @@ interface AnimatedTextProps {
   style?: any;
 }
 
-const getTypeStyles = (type: string) => {
+const getTypeStyles = (type: string, colors: ResolvedColors) => {
   switch (type) {
     case 'title':
       return {
-        fontSize: 72,
+        fontSize: 36,
         fontFamily: theme.typography.fontFamily.bebas[0],
-        letterSpacing: -1.44,
-        lineHeight: 79.2,
+        letterSpacing: -0.5,
+        lineHeight: 40,
         textAlign: 'center' as const,
-        color: theme.colors.secondary, // Use saffron color for title
+        color: colors.primary,
+        fontWeight: '600' as const,
       };
     case 'welcome':
       return {
-        fontSize: 28,
+        fontSize: 16,
         fontWeight: '500' as const,
-        color: 'rgba(255, 255, 255, 0.6)',
-        letterSpacing: 0.28,
+        color: colors.mutedForeground,
+        letterSpacing: 0.1,
         textAlign: 'center' as const,
+        lineHeight: 22,
       };
     case 'tagline':
       return {
-        fontSize: 22,
+        fontSize: 16,
         fontWeight: '500' as const,
-        color: 'rgba(255, 255, 255, 0.8)',
-        letterSpacing: 0.11,
+        color: colors.foreground,
+        letterSpacing: 0.1,
         textAlign: 'center' as const,
+        lineHeight: 24,
       };
     default:
       return {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '400' as const,
-        color: theme.colors.mutedForeground,
+        color: colors.foreground,
         textAlign: 'center' as const,
+        lineHeight: 24,
       };
   }
 };
@@ -52,6 +58,7 @@ export const AnimatedText: React.FC<AnimatedTextProps> = ({
   delay = 0,
   style = {}
 }) => {
+  const { colors } = useTheme();
   const [isVisible, setIsVisible] = useState(false);
   const animatedValues = useRef(text.split('').map(() => new Animated.Value(0))).current;
 
@@ -75,7 +82,7 @@ export const AnimatedText: React.FC<AnimatedTextProps> = ({
     }
   }, [isVisible]);
 
-  const typeStyles = getTypeStyles(type);
+  const typeStyles = getTypeStyles(type, colors);
 
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import tw from 'twrnc';
 
 interface FormProps {
@@ -37,18 +37,19 @@ const FormField: React.FC<FormFieldProps> = ({
   required = false,
   className = '',
 }) => {
+  const { colors } = useTheme();
   return (
     <View style={tw`w-full space-y-2`}>
       {label && (
         <Text
           style={[
             tw`text-sm font-medium`,
-            { color: theme.colors.foreground },
+            { color: colors.foreground },
           ]}
         >
           {label}
           {required && (
-            <Text style={{ color: theme.colors.destructive }}> *</Text>
+            <Text style={{ color: colors.destructive }}> *</Text>
           )}
         </Text>
       )}
@@ -57,7 +58,7 @@ const FormField: React.FC<FormFieldProps> = ({
         <Text
           style={[
             tw`text-sm`,
-            { color: theme.colors.destructive },
+            { color: colors.destructive },
           ]}
         >
           {error}
@@ -72,12 +73,13 @@ const FormMessage: React.FC<FormMessageProps> = ({
   variant = 'default',
   className = '',
 }) => {
+  const { colors } = useTheme();
   const getMessageColor = () => {
     switch (variant) {
       case 'destructive':
-        return theme.colors.destructive;
+        return colors.destructive;
       default:
-        return theme.colors.mutedForeground;
+        return colors.mutedForeground;
     }
   };
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Switch as RNSwitch, View } from 'react-native';
-import { theme } from '../../lib/theme';
 import tw from 'twrnc';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface SwitchProps {
   checked?: boolean;
@@ -16,6 +16,7 @@ const Switch: React.FC<SwitchProps> = ({
   disabled = false,
   className = '',
 }) => {
+  const { colors } = useTheme();
   return (
     <View style={tw`w-full`}>
       <RNSwitch
@@ -23,13 +24,13 @@ const Switch: React.FC<SwitchProps> = ({
         onValueChange={onCheckedChange}
         disabled={disabled}
         trackColor={{
-          false: theme.colors.muted,
-          true: theme.colors.primary,
+          false: colors.muted,
+          true: colors.primary,
         }}
         thumbColor={
-          checked ? theme.colors.primaryForeground : theme.colors.foreground
+          checked ? colors.primaryForeground : colors.foreground
         }
-        ios_backgroundColor={theme.colors.muted}
+        ios_backgroundColor={colors.muted}
         style={tw`w-12 h-6`}
       />
     </View>

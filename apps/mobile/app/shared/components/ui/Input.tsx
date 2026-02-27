@@ -1,6 +1,7 @@
 import React from 'react';
 import { TextInput, TextInputProps, View, Text, ViewStyle, TextStyle } from 'react-native';
 import tw from 'twrnc';
+import { useTheme } from '../theme/ThemeProvider';
 import { theme } from '../../lib/theme';
 
 interface InputProps extends TextInputProps {
@@ -11,6 +12,7 @@ interface InputProps extends TextInputProps {
   focusBorderColor?: string;
   className?: string;
   icon?: any;
+  rightIcon?: React.ReactNode;
   description?: string;
 }
 
@@ -23,59 +25,72 @@ const Input: React.FC<InputProps> = ({
   focusBorderColor,
   className,
   icon: Icon,
+  rightIcon,
   description,
   ...props
 }) => {
+  const { colors } = useTheme();
   const [isFocused, setIsFocused] = React.useState(false);
 
   return (
     <View style={[tw`w-full mb-4`, containerStyle]}>
       {(label || Icon) && (
         <View style={tw`flex-row items-center mb-2`}>
-          {Icon && <Icon size={16} color={theme.colors.secondary} style={tw`mr-2`} />}
+          {Icon && <Icon size={16} color={colors.primary} style={tw`mr-2`} />}
           {label && (
-            <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
+            <Text style={[{ fontSize: 14, fontWeight: '600' }, { color: colors.foreground }]}>
               {label}
             </Text>
           )}
         </View>
       )}
-      <TextInput
+      <View
         style={[
-          tw`flex w-full rounded-xl border px-4 py-3 text-base`,
           {
-            backgroundColor: 'rgba(255,255,255,0.05)',
-            borderColor: error ? theme.colors.destructive : 'rgba(255,255,255,0.1)',
-            color: theme.colors.foreground,
+            height: 56,
+            borderRadius: theme.borderRadius['2xl'],
             borderWidth: 1,
-            includeFontPadding: false,
-            textAlignVertical: 'center',
+            borderColor: error ? colors.destructive : isFocused ? colors.primary : colors.border,
+            backgroundColor: colors.input,
+            paddingHorizontal: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
           },
-          isFocused && {
-            borderColor: theme.colors.secondary,
-            borderWidth: 1,
-          },
-          inputStyle
         ]}
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.mutedForeground}
-        onFocus={(e) => {
-          setIsFocused(true);
-          props.onFocus && props.onFocus(e);
-        }}
-        onBlur={(e) => {
-          setIsFocused(false);
-          props.onBlur && props.onBlur(e);
-        }}
-        {...props}
-      />
+      >
+        <TextInput
+          style={[
+            {
+              flex: 1,
+              color: colors.foreground,
+              fontSize: 16,
+              includeFontPadding: false,
+              textAlignVertical: 'center',
+              paddingVertical: 0,
+            },
+            inputStyle
+          ]}
+          placeholder={placeholder}
+          placeholderTextColor={colors.mutedForeground}
+          onFocus={(e) => {
+            setIsFocused(true);
+            props.onFocus && props.onFocus(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            props.onBlur && props.onBlur(e);
+          }}
+          {...props}
+        />
+        {rightIcon}
+      </View>
       {description && !error && (
-        <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>
+        <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
           {description}
         </Text>
       )}
       {error && (
-        <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>
+        <Text style={[{ fontSize: 12, marginTop: 4 }, { color: colors.destructive }]}>
           {error}
         </Text>
       )}

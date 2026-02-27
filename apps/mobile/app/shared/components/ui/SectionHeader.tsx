@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ViewStyle } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { LucideIcon } from 'lucide-react-native';
 
 interface SectionHeaderProps {
@@ -17,16 +17,17 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   description,
   style,
 }) => {
+  const { colors } = useTheme();
   return (
     <View style={[tw`mb-4`, style]}>
       <View style={tw`flex-row items-center mb-2`}>
-        {Icon && <Icon size={20} color={theme.colors.secondary} style={tw`mr-2`} />}
-        <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+        {Icon && <Icon size={20} color={colors.primary} style={tw`mr-2`} />}
+        <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
           {title}
         </Text>
       </View>
       {description && (
-        <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+        <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
           {description}
         </Text>
       )}

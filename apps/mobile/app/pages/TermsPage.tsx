@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, FileText } from 'lucide-react-native';
+import { useTheme } from '../shared/components/theme';
 import { theme } from '../shared/lib/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 import { RootStackParamList } from '../shared/types';
@@ -155,6 +155,7 @@ For questions or concerns regarding these Terms, contact primbocm@gmail.com.`;
 type TermsNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function TermsPage() {
+  const { theme, colors, colorScheme } = useTheme();
   const navigation = useNavigation<TermsNavigationProp>();
 
   const handleBack = () => {
@@ -163,8 +164,11 @@ export default function TermsPage() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       
       {/* Animated Background */}
       <AnimatedBackground />
@@ -179,14 +183,15 @@ export default function TermsPage() {
           zIndex: 10,
           width: 44,
           height: 44,
-          borderRadius: 22,
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: theme.borderRadius.full,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
           justifyContent: 'center',
           alignItems: 'center',
-          backdropFilter: 'blur(10px)',
         }}
       >
-        <ArrowLeft size={24} color={theme.colors.foreground} />
+        <ArrowLeft size={24} color={colors.foreground} />
       </TouchableOpacity>
 
       <ScrollView
@@ -199,28 +204,28 @@ export default function TermsPage() {
           <View style={{
             width: 80,
             height: 80,
-            borderRadius: 40,
-            backgroundColor: 'rgba(199, 142, 63, 0.2)',
+            borderRadius: theme.borderRadius.full,
+            backgroundColor: colors.muted,
             justifyContent: 'center',
             alignItems: 'center',
             marginBottom: 24,
           }}>
-            <FileText size={40} color={theme.colors.secondary} />
+            <FileText size={40} color={colors.primary} />
           </View>
           
           <Text style={{
             fontSize: 32,
             fontFamily: theme.typography.fontFamily.bebas[0],
-            color: theme.colors.secondary,
+            color: colors.primary,
             textAlign: 'center',
             marginBottom: 12,
           }}>
-            TERMS & CONDITIONS
+            Terms & Conditions
           </Text>
           
           <Text style={{
             fontSize: 16,
-            color: 'rgba(255, 255, 255, 0.8)',
+            color: colors.mutedForeground,
             textAlign: 'center',
           }}>
             Please read these terms carefully
@@ -229,16 +234,15 @@ export default function TermsPage() {
 
         {/* Terms Content */}
         <View style={{
-          borderRadius: 24,
+          borderRadius: theme.borderRadius['3xl'],
           overflow: 'hidden',
         }}>
-          <BlurView
-            intensity={20}
+          <View
             style={{
               padding: 32,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
             }}
           >
             <ScrollView
@@ -248,20 +252,20 @@ export default function TermsPage() {
               <Text style={{
                 fontSize: 14,
                 lineHeight: 22,
-                color: 'rgba(255, 255, 255, 0.9)',
+                color: colors.foreground,
                 textAlign: 'left',
               }}>
                 {terms}
               </Text>
             </ScrollView>
-          </BlurView>
+          </View>
         </View>
 
         {/* Footer */}
         <View style={{ alignItems: 'center', marginTop: 32 }}>
           <Text style={{
             fontSize: 12,
-            color: 'rgba(255, 255, 255, 0.6)',
+            color: colors.mutedForeground,
             textAlign: 'center',
             marginBottom: 16,
           }}>
@@ -275,7 +279,7 @@ export default function TermsPage() {
           >
             <Text style={{
               fontSize: 14,
-              color: theme.colors.secondary,
+              color: colors.primary,
               textDecorationLine: 'underline',
               fontWeight: '600',
             }}>

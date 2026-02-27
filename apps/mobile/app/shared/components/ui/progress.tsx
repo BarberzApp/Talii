@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { theme } from '../../lib/theme';
 import tw from 'twrnc';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface ProgressProps {
   value?: number;
@@ -14,20 +14,21 @@ const Progress: React.FC<ProgressProps> = ({
   max = 100,
   className = '',
 }) => {
+  const { colors } = useTheme();
   const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
 
   return (
     <View
       style={[
         tw`w-full h-2 rounded-full overflow-hidden`,
-        { backgroundColor: theme.colors.muted },
+        { backgroundColor: colors.muted },
       ]}
     >
       <View
         style={[
           tw`h-full rounded-full`,
           { 
-            backgroundColor: theme.colors.primary,
+            backgroundColor: colors.primary,
             width: `${percentage}%`,
           },
         ]}
@@ -36,4 +37,4 @@ const Progress: React.FC<ProgressProps> = ({
   );
 };
 
-export default Progress; 
+export default Progress;

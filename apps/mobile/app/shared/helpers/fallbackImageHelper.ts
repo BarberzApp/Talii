@@ -26,7 +26,7 @@ export function getInitials(name?: string | null): string {
  */
 export function getColorFromString(str?: string | null): string {
   if (!str || str.length === 0) {
-    return theme.colors.secondary; // Default saffron brown
+    return theme.colors.primary; // Default saffron brown
   }
 
   // Generate a hash from the string
@@ -37,7 +37,7 @@ export function getColorFromString(str?: string | null): string {
 
   // Use theme colors as base palette
   const colors = [
-    theme.colors.secondary, // Saffron brown
+    theme.colors.primary, // Saffron brown
     theme.colors.accent, // Coffee brown
     '#8B4513', // Saddle brown
     '#A0522D', // Sienna
@@ -61,7 +61,7 @@ export function getCoverGradientColors(name?: string | null): [string, string] {
   // Create a darker and lighter variant for gradient
   // Simple approach: use theme gradients or create variations
   const gradients: [string, string][] = [
-    [theme.colors.secondary, theme.colors.accent],
+    [theme.colors.primary, theme.colors.accent],
     ['#272a2f', '#2d2a26'],
     ['#c78e3f', '#8d7250'],
     ['#8d7250', '#c78e3f'],

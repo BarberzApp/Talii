@@ -1,14 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Animated, Image } from 'react-native';
 import { theme } from '../lib/theme';
+import { useTheme } from './theme/ThemeProvider';
+
+const logoLight = require('../../../assets/brand/talii-logo.png');
+const logoDark = require('../../../assets/brand/talii-logo-dark.png');
 
 interface SparkleProps {
   delay: number;
   top: number;
   left: number;
+  primaryColor: string;
 }
 
-const Sparkle: React.FC<SparkleProps> = ({ delay, top, left }) => {
+const Sparkle: React.FC<SparkleProps> = ({ delay, top, left, primaryColor }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -55,7 +60,7 @@ const Sparkle: React.FC<SparkleProps> = ({ delay, top, left }) => {
         width: 4,
         height: 4,
         borderRadius: 2,
-        backgroundColor: theme.colors.secondary,
+        backgroundColor: primaryColor,
         top: `${top}%`,
         left: `${left}%`,
         transform: [{ translateY }, { scale }],
@@ -66,6 +71,7 @@ const Sparkle: React.FC<SparkleProps> = ({ delay, top, left }) => {
 };
 
 export const AnimatedLogo: React.FC = () => {
+  const { colors, colorScheme } = useTheme();
   const [isVisible, setIsVisible] = useState(false);
   const scaleValue = useRef(new Animated.Value(0)).current;
   const opacityValue = useRef(new Animated.Value(0)).current;
@@ -134,19 +140,19 @@ export const AnimatedLogo: React.FC = () => {
           }}
         >
           <Image
-            source={require('../../../assets/images/BocmLogoTrans.png')}
+            source={colorScheme === 'dark' ? logoDark : logoLight}
             style={{
-              width: 80,
-              height: 80,
+              width: 96, // 72-96px per spec §2.3
+              height: 96,
               resizeMode: 'contain',
             }}
           />
         </View>
 
         {/* Floating sparkles */}
-        <Sparkle delay={0} top={20} left={15} />
-        <Sparkle delay={500} top={45} left={40} />
-        <Sparkle delay={1000} top={70} left={65} />
+        <Sparkle delay={0} top={20} left={15} primaryColor={colors.primary} />
+        <Sparkle delay={500} top={45} left={40} primaryColor={colors.primary} />
+        <Sparkle delay={1000} top={70} left={65} primaryColor={colors.primary} />
       </View>
     </Animated.View>
   );

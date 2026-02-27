@@ -19,7 +19,7 @@ import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
-import { theme } from '../shared/lib/theme';
+import { useTheme } from '../shared/components/theme';
 import { supabase } from '../shared/lib/supabase';
 import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
@@ -114,6 +114,7 @@ type SortOrder = 'asc' | 'desc';
 
 // Star Rating Component
 function BarberRating({ barberId }: { barberId: string }) {
+  const { colors } = useTheme();
   const { stats, loading } = useReviews(barberId);
   const [likesCount, setLikesCount] = useState(0);
   const [likesLoading, setLikesLoading] = useState(true);
@@ -149,7 +150,7 @@ function BarberRating({ barberId }: { barberId: string }) {
   if (loading || likesLoading) {
     return (
       <View style={tw`flex-row items-center`}>
-        <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>Loading...</Text>
+        <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>Loading...</Text>
       </View>
     );
   }
@@ -157,11 +158,11 @@ function BarberRating({ barberId }: { barberId: string }) {
   if (!stats || stats.total_reviews === 0) {
     return (
       <View style={tw`flex-row items-center justify-between`}>
-        <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>No reviews yet</Text>
+        <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>No reviews yet</Text>
         {likesCount > 0 && (
           <View style={tw`flex-row items-center`}>
-            <Heart size={12} color={theme.colors.mutedForeground} style={tw`mr-1`} />
-            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+            <Heart size={12} color={colors.mutedForeground} style={tw`mr-1`} />
+            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
               {likesCount}
             </Text>
           </View>
@@ -177,19 +178,19 @@ function BarberRating({ barberId }: { barberId: string }) {
           <Star
             key={index}
             size={12}
-            fill={index < Math.round(stats.average_rating) ? '#FFD700' : 'transparent'}
-            color={index < Math.round(stats.average_rating) ? '#FFD700' : '#6B7280'}
+            fill={index < Math.round(stats.average_rating) ? colors.premium : 'transparent'}
+            color={index < Math.round(stats.average_rating) ? colors.premium : colors.mutedForeground}
             style={tw`mr-0.5`}
           />
         ))}
-        <Text style={[tw`text-sm ml-1`, { color: theme.colors.mutedForeground }]}>
+        <Text style={[tw`text-sm ml-1`, { color: colors.mutedForeground }]}>
           {stats.average_rating.toFixed(1)} ({stats.total_reviews})
         </Text>
       </View>
       {likesCount > 0 && (
         <View style={tw`flex-row items-center`}>
-          <Heart size={12} color={theme.colors.mutedForeground} style={tw`mr-1`} />
-          <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+          <Heart size={12} color={colors.mutedForeground} style={tw`mr-1`} />
+          <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
             {likesCount}
           </Text>
         </View>
@@ -206,6 +207,7 @@ function ReviewsList({
   barberId: string;
   onAddReview: () => void;
 }) {
+  const { colors } = useTheme();
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -272,9 +274,9 @@ function ReviewsList({
 
   if (loading) {
     return (
-      <View style={tw`flex-1 justify-center items-center`}>
-        <ActivityIndicator size="large" color={theme.colors.secondary} />
-        <Text style={[tw`mt-4 text-lg`, { color: theme.colors.foreground }]}>
+      <View style={tw`flex-1 justify-center items-center py-12`}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[tw`mt-4 text-base`, { color: colors.mutedForeground }]}>
           Loading reviews...
         </Text>
       </View>
@@ -283,19 +285,32 @@ function ReviewsList({
 
   if (reviews.length === 0) {
     return (
-      <View style={tw`flex-1 justify-center items-center py-8`}>
-        <Text style={[tw`text-lg font-bold text-center mb-2`, { color: theme.colors.foreground }]}>
+      <View style={tw`flex-1 justify-center items-center py-12 px-6`}>
+        <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: colors.primarySubtle }]}>
+          <Star size={28} color={colors.primary} />
+        </View>
+        <Text style={[tw`text-lg font-bold text-center mb-2`, { color: colors.foreground }]}>
           No reviews yet
         </Text>
-        <Text style={[tw`text-sm text-center mb-4`, { color: theme.colors.mutedForeground }]}>
+        <Text style={[tw`text-sm text-center mb-6`, { color: colors.mutedForeground }]}>
           Be the first to review this stylist!
         </Text>
         <TouchableOpacity
-          style={[tw`px-6 py-3 rounded-xl`, { backgroundColor: theme.colors.secondary }]}
+          style={[
+            tw`px-8 py-3 rounded-xl`,
+            {
+              backgroundColor: colors.primary,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 8,
+              elevation: 4,
+            }
+          ]}
           onPress={onAddReview}
         >
-          <Text style={[tw`font-semibold`, { color: theme.colors.primaryForeground }]}>
-            Add Review
+          <Text style={[tw`font-bold`, { color: colors.primaryForeground }]}>
+            Write a Review
           </Text>
         </TouchableOpacity>
       </View>
@@ -305,19 +320,30 @@ function ReviewsList({
   return (
     <View style={tw`flex-1`}>
       {/* Add Review Button */}
-      <View style={tw`px-4 py-3 border-b border-white/10`}>
+      <View style={[tw`px-4 py-3`, { borderBottomWidth: 1, borderColor: colors.border }]}>
         <TouchableOpacity
-          style={[tw`py-3 rounded-xl items-center`, { backgroundColor: theme.colors.secondary }]}
+          style={[
+            tw`py-3 rounded-xl items-center flex-row justify-center`,
+            {
+              backgroundColor: colors.primary,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 6,
+              elevation: 3,
+            }
+          ]}
           onPress={onAddReview}
         >
-          <Text style={[tw`font-semibold`, { color: theme.colors.primaryForeground }]}>
-            Add Review
+          <Star size={16} color={colors.primaryForeground} style={tw`mr-2`} />
+          <Text style={[tw`font-bold`, { color: colors.primaryForeground }]}>
+            Write a Review
           </Text>
         </TouchableOpacity>
       </View>
       
       {/* Reviews List */}
-      <ScrollView style={tw`flex-1`}>
+      <ScrollView style={tw`flex-1 px-4 pt-3`}>
         {reviews.map((review) => (
           <ReviewCard
             key={review.id}
@@ -331,6 +357,7 @@ function ReviewsList({
 }
 
 export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
+  const { colors } = useTheme();
   const navigation = useNavigation<BrowseNavigationProp>();
   const { user } = useAuth();
   const guestMode = Boolean(isGuest || !user);
@@ -488,6 +515,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
       fetchBarbers(0, false, false); // Use nearby fetch when turning on
     }
   };
+
 
   const fetchBarbers = async (page = 0, append = false, skipNearbyFetch = false) => {
     try {
@@ -901,11 +929,9 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
           type: 'video' as const,
           url: cut.url,
           thumbnail: cut.thumbnail,
-          title: cut.title,
           barberName: profile?.name || 'Unknown',
           barberAvatar: processAvatarUrl(profile?.avatar_url),
-          barberId: barber?.user_id, // Add barber ID for navigation
-          likes: cut.likes || 0,
+          barberId: barber?.user_id,
           views: cut.views || 0,
           duration: cut.duration,
           aspectRatio: 9 / 16, // Default video aspect ratio
@@ -1077,8 +1103,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
       <Star
         key={index}
         size={size}
-        fill={index < rating ? '#FFD700' : 'transparent'}
-        color={index < rating ? '#FFD700' : '#6B7280'}
+        fill={index < rating ? colors.premium : 'transparent'}
+        color={index < rating ? colors.premium : colors.mutedForeground}
         style={tw`mr-0.5`}
       />
     ));
@@ -1108,7 +1134,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   
 
   return (
-    <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={tw`px-4 pt-4 pb-2`}>
         <View style={tw`flex-row items-center justify-between mb-4`}>
@@ -1117,30 +1143,30 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
               <TouchableOpacity
                 onPress={() => navigation.navigate('Home')}
                 style={[tw`flex-row items-center mr-3 rounded-full px-3 py-1`, {
-                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  backgroundColor: colors.glass,
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.15)',
+                  borderColor: colors.glassBorder,
                 }]}
               >
-                <ChevronLeft size={16} color={theme.colors.foreground} />
-                <Text style={[tw`ml-1 text-sm font-medium`, { color: theme.colors.foreground }]}>
+                <ChevronLeft size={16} color={colors.foreground} />
+                <Text style={[tw`ml-1 text-sm font-medium`, { color: colors.foreground }]}>
                   Home
                 </Text>
               </TouchableOpacity>
             )}
-            <Text style={[tw`text-2xl font-bold`, { color: theme.colors.foreground }]}>
+            <Text style={[tw`text-2xl font-bold`, { color: colors.foreground }]}>
               Browse
             </Text>
           </View>
 
           {/* View Toggle Buttons - Explore tab hidden but code preserved */}
-          <View style={tw`flex-row bg-white/10 rounded-lg p-1`}>
+          <View style={[tw`flex-row rounded-lg p-1`, { backgroundColor: colors.muted }]}>
             {/* Explore tab - hidden but code preserved for future use */}
             {/* <TouchableOpacity
               style={[
                 tw`px-4 py-2 rounded-md`,
                 viewMode === 'explore' 
-                  ? { backgroundColor: theme.colors.background }
+                  ? { backgroundColor: colors.background }
                   : { backgroundColor: 'transparent' }
               ]}
               onPress={() => setViewMode('explore')}
@@ -1148,8 +1174,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
               <Text style={[
                 tw`font-medium text-sm`,
                 viewMode === 'explore'
-                  ? { color: theme.colors.foreground }
-                  : { color: theme.colors.mutedForeground }
+                  ? { color: colors.foreground }
+                  : { color: colors.mutedForeground }
               ]}>
                 Explore
               </Text>
@@ -1159,7 +1185,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
               style={[
                 tw`px-4 py-2 rounded-md`,
                 viewMode === 'cosmetologists' 
-                  ? { backgroundColor: theme.colors.background }
+                  ? { backgroundColor: colors.background }
                   : { backgroundColor: 'transparent' }
               ]}
               onPress={() => setViewMode('cosmetologists')}
@@ -1167,8 +1193,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
               <Text style={[
                 tw`font-medium text-sm`,
                 viewMode === 'cosmetologists'
-                  ? { color: theme.colors.foreground }
-                  : { color: theme.colors.mutedForeground }
+                  ? { color: colors.foreground }
+                  : { color: colors.mutedForeground }
               ]}>
                 Cosmetologists
               </Text>
@@ -1178,18 +1204,18 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
         
         {/* Search Bar */}
         <View style={tw`flex-row items-center mb-4`}>
-          <View style={[tw`flex-1 flex-row items-center rounded-xl px-3 py-2`, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-            <Search size={20} color={theme.colors.mutedForeground} style={tw`mr-2`} />
+          <View style={[tw`flex-1 flex-row items-center rounded-xl px-3 py-2`, { backgroundColor: colors.glass }]}>
+            <Search size={20} color={colors.mutedForeground} style={tw`mr-2`} />
             <TextInput
-              style={[tw`flex-1 text-base`, { color: theme.colors.foreground }]}
+              style={[tw`flex-1 text-base`, { color: colors.foreground }]}
               placeholder={viewMode === 'explore' ? "Search styles..." : "Search stylists..."}
-              placeholderTextColor={theme.colors.mutedForeground}
+              placeholderTextColor={colors.mutedForeground}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <X size={20} color={theme.colors.mutedForeground} />
+                <X size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
           </View>
@@ -1200,25 +1226,25 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
               tw`ml-2 p-3 rounded-xl flex-row items-center`,
               { 
                 backgroundColor: useLocation 
-                  ? 'rgba(59,130,246,0.3)' 
-                  : 'rgba(255,255,255,0.1)',
+                  ? colors.infoSubtle 
+                  : colors.glass,
                 borderWidth: useLocation ? 1 : 0,
-                borderColor: useLocation ? 'rgba(59,130,246,0.5)' : 'transparent'
+                borderColor: useLocation ? colors.infoBorder : 'transparent'
               }
             ]}
             onPress={toggleLocation}
             disabled={locationLoading}
           >
             {locationLoading ? (
-              <ActivityIndicator size={16} color={theme.colors.secondary} />
+              <ActivityIndicator size={16} color={colors.primary} />
             ) : (
               <MapPin 
                 size={16} 
-                color={useLocation ? theme.colors.secondary : theme.colors.foreground} 
+                color={useLocation ? colors.primary : colors.foreground} 
               />
             )}
             {useLocation && !locationLoading && (
-              <Text style={[tw`ml-1 text-xs font-medium`, { color: theme.colors.secondary }]}>
+              <Text style={[tw`ml-1 text-xs font-medium`, { color: colors.primary }]}>
                 ON
               </Text>
             )}
@@ -1226,10 +1252,10 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
           
           <TouchableOpacity
             testID="filter-button"
-            style={[tw`ml-2 p-2 rounded-xl`, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+            style={[tw`ml-2 p-2 rounded-xl`, { backgroundColor: colors.glass }]}
             onPress={() => setShowFilters(!showFilters)}
           >
-            <Filter size={20} color={theme.colors.foreground} />
+            <Filter size={20} color={colors.foreground} />
           </TouchableOpacity>
         </View>
 
@@ -1237,31 +1263,31 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
         {isLocationAvailable && (
           <View style={[
             tw`mb-3 p-3 rounded-xl flex-row items-center justify-center`,
-            { backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)' }
+            { backgroundColor: colors.primarySubtle, borderWidth: 1, borderColor: colors.primaryTint }
           ]}>
-            <MapPin size={16} color={theme.colors.secondary} />
+            <MapPin size={16} color={colors.primary} />
             <View style={tw`flex-1 ml-2`}>
-              <Text style={[tw`text-sm font-medium text-center`, { color: theme.colors.secondary }]}>
+              <Text style={[tw`text-sm font-medium text-center`, { color: colors.foreground }]}>
                 Showing barbers sorted by distance from your location
               </Text>
-              <Text style={[tw`text-xs text-center mt-1`, { color: 'rgba(255,255,255,0.6)' }]}>
+              <Text style={[tw`text-xs text-center mt-1`, { color: colors.mutedForeground }]}>
                 Location accuracy: {locationAccuracy ? (
                   <Text style={[
                     tw`font-semibold`,
-                    locationAccuracy === 'high' ? { color: '#22c55e' } :
-                    locationAccuracy === 'medium' ? { color: '#f59e0b' } :
-                    locationAccuracy === 'low' ? { color: '#ef4444' } :
-                    { color: '#ef4444' }
+                    locationAccuracy === 'high' ? { color: colors.success } :
+                    locationAccuracy === 'medium' ? { color: colors.warning } :
+                    locationAccuracy === 'low' ? { color: colors.destructive } :
+                    { color: colors.destructive }
                   ]}>
                     {locationAccuracy}
                   </Text>
                 ) : (
-                  <Text style={[tw`font-semibold`, { color: 'rgba(255,255,255,0.5)' }]}>
+                  <Text style={[tw`font-semibold`, { color: colors.mutedForeground }]}>
                     checking...
                   </Text>
                 )}
                 {' • '}
-                <Text style={[tw`italic`, { color: 'rgba(255,255,255,0.5)' }]}>
+                <Text style={[tw`italic`, { color: colors.mutedForeground }]}>
                   Location optimization is currently being tested
                 </Text>
               </Text>
@@ -1271,10 +1297,10 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
         {/* Filters */}
         {showFilters && (
-          <View style={[tw`mb-4 p-4 rounded-xl`, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+          <View style={[tw`mb-4 p-4 rounded-xl`, { backgroundColor: colors.glass }]}>
             {/* Specialty Filter */}
             <View style={tw`mb-4`}>
-              <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
                 Specialties
               </Text>
               <View style={tw`flex-row flex-wrap gap-2`}>
@@ -1284,16 +1310,16 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                     style={[
                       tw`px-3 py-1 rounded-full`,
                       selectedSpecialties.includes(specialty)
-                        ? { backgroundColor: theme.colors.secondary }
-                        : { backgroundColor: 'rgba(255,255,255,0.1)' }
+                        ? { backgroundColor: colors.primary }
+                        : { backgroundColor: colors.glass }
                     ]}
                     onPress={() => toggleSpecialty(specialty)}
                   >
                     <Text style={[
                       tw`text-xs`,
                       selectedSpecialties.includes(specialty)
-                        ? { color: theme.colors.primary }
-                        : { color: theme.colors.foreground }
+                        ? { color: colors.primaryForeground }
+                        : { color: colors.foreground }
                     ]}>
                       {specialty}
                     </Text>
@@ -1306,10 +1332,10 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
             {/* Clear Filters */}
             <TouchableOpacity
-              style={[tw`mt-2 p-2 rounded-lg items-center`, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+              style={[tw`mt-2 p-2 rounded-lg items-center`, { backgroundColor: colors.glass }]}
               onPress={clearFilters}
             >
-              <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>
                 Clear All Filters
               </Text>
             </TouchableOpacity>
@@ -1325,18 +1351,18 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
           <>
             {postsLoading ? (
               <View style={tw`flex-1 justify-center items-center`}>
-                <ActivityIndicator size="large" color={theme.colors.secondary} />
-                <Text style={[tw`mt-4 text-lg`, { color: theme.colors.foreground }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[tw`mt-4 text-lg`, { color: colors.foreground }]}>
                   Loading posts...
                 </Text>
               </View>
             ) : filteredPosts.length === 0 ? (
               <View style={tw`flex-1 justify-center items-center py-8`}>
-                <Grid3X3 size={48} style={[tw`mb-4`, { color: theme.colors.mutedForeground }]} />
-                <Text style={[tw`text-lg font-bold text-center mb-2`, { color: theme.colors.foreground }]}>
+                <Grid3X3 size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
+                <Text style={[tw`text-lg font-bold text-center mb-2`, { color: colors.foreground }]}>
                   No posts found
                 </Text>
-                <Text style={[tw`text-sm text-center`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
                   {posts.length === 0 ? 'Check back later for new content' : 'Try adjusting your filters'}
                 </Text>
               </View>
@@ -1354,17 +1380,17 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
           <>
             {barbersLoading ? (
               <View style={tw`flex-1 justify-center items-center`}>
-                <ActivityIndicator size="large" color={theme.colors.secondary} />
-                <Text style={[tw`mt-4 text-lg`, { color: theme.colors.foreground }]}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[tw`mt-4 text-lg`, { color: colors.foreground }]}>
                   Loading stylists...
                 </Text>
               </View>
             ) : filteredBarbers.length === 0 ? (
               <View style={tw`flex-1 justify-center items-center py-8`}>
-                <Text style={[tw`text-lg font-bold text-center mb-2`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-lg font-bold text-center mb-2`, { color: colors.foreground }]}>
                   No stylists found
                 </Text>
-                <Text style={[tw`text-sm text-center`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
                   Try adjusting your search or filters
                 </Text>
               </View>
@@ -1375,8 +1401,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                   <RefreshControl
                     refreshing={barbersLoading}
                     onRefresh={() => fetchBarbers(0)}
-                    tintColor={theme.colors.secondary}
-                    colors={[theme.colors.secondary]}
+                    tintColor={colors.primary}
+                    colors={[colors.primary]}
                   />
                 }
               >
@@ -1384,18 +1410,19 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                   <View key={barber.id} style={tw`mb-6 mx-4`}>
                     {/* Barber Card - Web App Style */}
                     <View style={[
-                      tw`bg-black border border-white/10 rounded-xl overflow-hidden shadow-2xl`,
+                      tw`border rounded-xl overflow-hidden shadow-2xl`,
                       { 
-                        backgroundColor: 'rgba(0,0,0,0.9)',
-                        shadowColor: theme.colors.secondary,
-                        shadowOffset: { width: 0, height: 8 },
-                        shadowOpacity: 0.3,
+                        backgroundColor: colors.surfaceElevated,
+                        borderColor: colors.border,
+                        shadowColor: colors.primary,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.12,
                         shadowRadius: 16,
-                        elevation: 8
+                        elevation: 6
                       }
                     ]}>
-                      {/* Cover Photo Section with Gradient */}
-                      <View style={tw`relative h-48`}>
+                      {/* Cover Photo Section */}
+                      <View style={tw`relative h-56`}>
                         {barber.coverPhotoUrl ? (
                           <Image
                             source={{ uri: barber.coverPhotoUrl }}
@@ -1405,15 +1432,11 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                         ) : (
                           <View style={[
                             tw`w-full h-full`,
-                            { 
-                              backgroundColor: 'rgba(255,255,255,0.05)',
-                              backgroundImage: 'linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(147,51,234,0.2) 50%, rgba(59,130,246,0.2) 100%)'
-                            }
+                            { backgroundColor: colors.primarySubtle }
                           ]}>
-                            {/* Decorative Pattern */}
-                            <View style={tw`absolute top-4 left-4 w-20 h-20 border border-white/20 rounded-full opacity-10`} />
-                            <View style={tw`absolute bottom-4 right-4 w-16 h-16 border border-white/20 rounded-full opacity-10`} />
-                            <View style={tw`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-white/20 rounded-full opacity-10`} />
+                            <View style={[tw`absolute top-4 left-4 w-20 h-20 border rounded-full`, { borderColor: colors.primaryTint, opacity: 0.4 }]} />
+                            <View style={[tw`absolute bottom-4 right-4 w-16 h-16 border rounded-full`, { borderColor: colors.primaryTint, opacity: 0.3 }]} />
+                            <View style={[tw`absolute top-1/2 left-1/2`, { width: 128, height: 128, borderRadius: 64, marginLeft: -64, marginTop: -64, borderWidth: 1, borderColor: colors.primaryTint, opacity: 0.25 }]} />
                           </View>
                         )}
                       </View>
@@ -1424,12 +1447,12 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                           <View style={[
                             tw`h-32 w-32 rounded-full border-4 shadow-xl overflow-hidden`,
                             { 
-                              borderColor: 'rgba(0,0,0,0.8)',
-                              shadowColor: theme.colors.secondary,
+                              borderColor: colors.surfaceElevated,
+                              shadowColor: colors.primary,
                               shadowOffset: { width: 0, height: 4 },
-                              shadowOpacity: 0.3,
-                              shadowRadius: 8,
-                              elevation: 4
+                              shadowOpacity: 0.2,
+                              shadowRadius: 12,
+                              elevation: 6
                             }
                           ]}>
                             {barber.avatarUrl ? (
@@ -1442,8 +1465,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                                 }}
                               />
                             ) : (
-                              <View style={tw`w-full h-full bg-gray-600 items-center justify-center`}>
-                                <Text style={[tw`text-3xl font-bold`, { color: 'white' }]}>
+                              <View style={[tw`w-full h-full items-center justify-center`, { backgroundColor: colors.primarySubtle }]}>
+                                <Text style={[tw`text-3xl font-bold`, { color: colors.primary }]}>
                                   {barber.name?.charAt(0)?.toUpperCase() || 'U'}
                                 </Text>
                               </View>
@@ -1456,15 +1479,15 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                       <View style={tw`px-6 pb-6`}>
                         {/* Header - Centered */}
                         <View style={tw`items-center mb-4`}>
-                          <Text style={[tw`text-2xl font-bold text-center`, { color: theme.colors.foreground }]}>
+                          <Text style={[tw`text-2xl font-bold text-center`, { color: colors.foreground }]}>
                             {barber.name}
                           </Text>
                           {barber.businessName && (
-                            <Text style={[tw`text-base font-medium text-center mb-1`, { color: 'rgba(255,255,255,0.6)' }]}>
+                            <Text style={[tw`text-base font-medium text-center mb-1`, { color: colors.mutedForeground }]}>
                               {barber.businessName}
                             </Text>
                           )}
-                          <Text style={[tw`text-lg font-semibold`, { color: theme.colors.secondary }]}>
+                          <Text style={[tw`text-lg font-semibold`, { color: colors.primary }]}>
                             @{barber.username}
                           </Text>
                         </View>
@@ -1472,11 +1495,11 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                         {/* Location - Centered */}
                         {barber.location && (
                           <View style={tw`flex-row items-center justify-center mb-3`}>
-                            <MapPin size={16} color={theme.colors.secondary} />
-                            <Text style={[tw`text-sm ml-2`, { color: 'rgba(255,255,255,0.7)' }]}>
+                            <MapPin size={16} color={colors.primary} />
+                            <Text style={[tw`text-sm ml-2`, { color: colors.mutedForeground }]}>
                               {barber.location}
                               {useLocation && barber.distance !== undefined && (
-                                <Text style={[tw`ml-2 font-semibold`, { color: theme.colors.secondary }]}>
+                                <Text style={[tw`ml-2 font-semibold`, { color: colors.primary }]}>
                                   • {formatDistance(barber.distance)}
                                 </Text>
                               )}
@@ -1495,11 +1518,11 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                             <View style={[
                               tw`px-3 py-1 rounded-full border`,
                               { 
-                                backgroundColor: 'rgba(59,130,246,0.2)',
-                                borderColor: 'rgba(59,130,246,0.3)'
+                                backgroundColor: colors.primarySubtle,
+                                borderColor: colors.primaryTint
                               }
                             ]}>
-                              <Text style={[tw`text-xs font-medium`, { color: theme.colors.secondary }]}>
+                              <Text style={[tw`text-xs font-medium`, { color: colors.primary }]}>
                                 {barber.priceRange} Pricing
                               </Text>
                             </View>
@@ -1508,7 +1531,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
                         {/* Bio */}
                         {barber.bio && (
-                          <Text style={[tw`text-sm text-center mb-4 leading-relaxed`, { color: 'rgba(255,255,255,0.7)' }]}>
+                          <Text style={[tw`text-sm text-center mb-4 leading-relaxed`, { color: colors.mutedForeground }]}>
                             {barber.bio}
                           </Text>
                         )}
@@ -1517,8 +1540,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                         {barber.specialties && barber.specialties.length > 0 && (
                           <View style={tw`mb-4`}>
                             <View style={tw`flex-row items-center justify-center mb-2`}>
-                              <Scissors size={16} color={theme.colors.secondary} />
-                              <Text style={[tw`text-xs font-semibold ml-2 uppercase tracking-wide`, { color: 'rgba(255,255,255,0.8)' }]}>
+                              <Scissors size={16} color={colors.primary} />
+                              <Text style={[tw`text-xs font-semibold ml-2 uppercase tracking-wide`, { color: colors.mutedForeground }]}>
                                 Specialties
                               </Text>
                             </View>
@@ -1529,12 +1552,12 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                                   style={[
                                     tw`px-2 py-1 rounded-full mx-1 mb-1 border`,
                                     { 
-                                      backgroundColor: 'rgba(255,255,255,0.1)',
-                                      borderColor: 'rgba(255,255,255,0.2)'
+                                      backgroundColor: colors.glass,
+                                      borderColor: colors.glassBorder
                                     }
                                   ]}
                                 >
-                                  <Text style={[tw`text-xs`, { color: 'rgba(255,255,255,0.8)' }]}>
+                                  <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                                     {specialty}
                                   </Text>
                                 </View>
@@ -1544,10 +1567,10 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                                   tw`px-2 py-1 rounded-full mx-1 mb-1 border`,
                                   { 
                                     backgroundColor: 'transparent',
-                                    borderColor: 'rgba(255,255,255,0.2)'
+                                    borderColor: colors.glassBorder
                                   }
                                 ]}>
-                                  <Text style={[tw`text-xs`, { color: 'rgba(255,255,255,0.6)' }]}>
+                                  <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                                     +{barber.specialties.length - 3} more
                                   </Text>
                                 </View>
@@ -1560,19 +1583,18 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                         <View style={tw`flex-row gap-3`}>
                           <TouchableOpacity
                             style={[
-                              tw`flex-1 py-3 rounded-xl items-center border`,
+                              tw`flex-1 py-3 rounded-xl items-center border-2`,
                               { 
-                                backgroundColor: 'rgba(59,130,246,0.2)',
-                                borderColor: 'rgba(59,130,246,0.3)'
+                                backgroundColor: 'transparent',
+                                borderColor: colors.primary
                               }
                             ]}
                             onPress={() => {
-                              // Reviews button clicked - removed debug logging
                               setSelectedBarberForReviews(barber.id);
                               setShowReviews(true);
                             }}
                           >
-                            <Text style={[tw`font-semibold text-sm`, { color: theme.colors.secondary }]}>
+                            <Text style={[tw`font-semibold text-sm`, { color: colors.primary }]}>
                               Reviews
                             </Text>
                           </TouchableOpacity>
@@ -1580,20 +1602,25 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                           <TouchableOpacity
                             style={[
                               tw`flex-1 py-3 rounded-xl items-center`,
-                              { backgroundColor: theme.colors.secondary }
+                              { 
+                                backgroundColor: colors.primary,
+                                shadowColor: colors.primary,
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: 0.25,
+                                shadowRadius: 8,
+                                elevation: 4
+                              }
                             ]}
                             onPress={() => {
-                              // Always allow opening the profile. ProfilePreview will block booking for guests.
                               setSelectedBarber({
                                 barberId: barber.id,
                                 barberName: barber.name,
                                 name: barber.name
                               });
                               navigation.navigate('ProfilePreview', { barberId: barber.id});
-                              // setShowBookingForm(true);
                             }}
                           >
-                            <Text style={[tw`font-semibold text-sm`, { color: theme.colors.primary }]}>
+                            <Text style={[tw`font-semibold text-sm`, { color: colors.primaryForeground }]}>
                               Book Now
                             </Text>
                           </TouchableOpacity>
@@ -1610,8 +1637,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                       style={[
                         tw`py-4 px-6 rounded-xl items-center border-2 border-dashed`,
                         { 
-                          borderColor: 'rgba(255,255,255,0.2)',
-                          backgroundColor: 'rgba(255,255,255,0.05)'
+                          borderColor: colors.glassBorder,
+                          backgroundColor: colors.glass
                         }
                       ]}
                       onPress={loadMoreBarbers}
@@ -1619,17 +1646,17 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                     >
                       {barbersLoadingMore ? (
                         <View style={tw`flex-row items-center`}>
-                          <ActivityIndicator size="small" color={theme.colors.secondary} />
-                          <Text style={[tw`ml-2 font-medium`, { color: theme.colors.secondary }]}>
+                          <ActivityIndicator size="small" color={colors.primary} />
+                          <Text style={[tw`ml-2 font-medium`, { color: colors.primary }]}>
                             Loading more barbers...
                           </Text>
                         </View>
                       ) : (
                         <View style={tw`items-center`}>
-                          <Text style={[tw`text-lg font-semibold mb-1`, { color: theme.colors.foreground }]}>
+                          <Text style={[tw`text-lg font-semibold mb-1`, { color: colors.foreground }]}>
                             Load More Barbers
                           </Text>
-                          <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                          <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                             Tap to load the next 10 barbers
                           </Text>
                         </View>
@@ -1641,7 +1668,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                 {/* End of barbers message */}
                 {!hasMoreBarbers && barbers.length > 0 && (
                   <View style={tw`py-6 px-4 items-center`}>
-                    <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                       You&apos;ve seen all available barbers!
                     </Text>
                   </View>
@@ -1656,10 +1683,10 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
       {/* Reviews Modal */}
       {selectedBarberForReviews && showReviews && (
-        <View style={tw`absolute inset-0 bg-black/90`}>
+        <View style={[tw`absolute inset-0`, { backgroundColor: colors.backdrop }]}>
           <View style={tw`flex-1 pt-12`}>
             <View style={tw`flex-row items-center justify-between px-4 mb-4`}>
-              <Text style={[tw`text-xl font-bold`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>
                 Reviews
               </Text>
               <TouchableOpacity
@@ -1669,7 +1696,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                 }}
                 style={tw`p-2`}
               >
-                <X size={24} color={theme.colors.foreground} />
+                <X size={24} color={colors.foreground} />
               </TouchableOpacity>
             </View>
             
@@ -1695,19 +1722,20 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
       {/* Review Form Modal */}
       {reviewFormData && (
-        <ReviewForm
-          barberId={reviewFormData.barberId}
-          bookingId={reviewFormData.bookingId}
-          onClose={() => setReviewFormData(null)}
-          onSuccess={() => {
-            setReviewFormData(null);
-            // Refresh reviews if needed
-          }}
-          isEditing={reviewFormData.isEditing}
-          reviewId={reviewFormData.reviewId}
-          initialRating={reviewFormData.initialRating}
-          initialComment={reviewFormData.initialComment}
-        />
+        <View style={tw`absolute inset-0`}>
+          <ReviewForm
+            barberId={reviewFormData.barberId}
+            bookingId={reviewFormData.bookingId}
+            onClose={() => setReviewFormData(null)}
+            onSuccess={() => {
+              setReviewFormData(null);
+            }}
+            isEditing={reviewFormData.isEditing}
+            reviewId={reviewFormData.reviewId}
+            initialRating={reviewFormData.initialRating}
+            initialComment={reviewFormData.initialComment}
+          />
+        </View>
       )}
 
       {/* Booking Form Modal */}

@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { Button, Card, CardContent, LoadingSpinner, LocationInput, Input, Textarea } from '../ui';
@@ -47,6 +47,7 @@ interface ProfileSettingsProps {
 }
 
 export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isBarber, setIsBarber] = useState(false);
@@ -322,11 +323,11 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-24`}>
         {/* Basic Information */}
-        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
           <CardContent style={tw`p-4`}>
             <View style={tw`flex-row items-center mb-4`}>
-              <User size={20} color={theme.colors.secondary} style={tw`mr-2`} />
-              <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+              <User size={20} color={colors.primary} style={tw`mr-2`} />
+              <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                 Basic Information
               </Text>
             </View>
@@ -383,8 +384,8 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
 
             <View style={tw`mb-4`}>
               <View style={tw`flex-row items-center mb-2`}>
-                <MapPin size={16} color={theme.colors.secondary} style={tw`mr-2`} />
-                <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
+                <MapPin size={16} color={colors.primary} style={tw`mr-2`} />
+                <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>
                   Location
                 </Text>
               </View>
@@ -409,17 +410,17 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
 
         {/* Professional Information (Barbers only) */}
         {isBarber && (
-          <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+          <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <CardContent style={tw`p-4`}>
               <View style={tw`flex-row items-center mb-4`}>
-                <Sparkles size={20} color={theme.colors.secondary} style={tw`mr-2`} />
-                <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                <Sparkles size={20} color={colors.primary} style={tw`mr-2`} />
+                <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                   Professional Information
                 </Text>
               </View>
 
               <View style={tw`mb-4`}>
-                <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
                   Specialties *
                 </Text>
                 <View style={tw`flex-row flex-wrap`}>
@@ -430,13 +431,13 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                       style={[
                         tw`mr-2 mb-2 px-3 py-1.5 rounded-full`,
                         formData.specialties.includes(specialty)
-                          ? { backgroundColor: theme.colors.secondary }
-                          : { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }
+                          ? { backgroundColor: colors.primary }
+                          : { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }
                       ]}
                     >
                       <Text style={[
                         tw`text-sm`,
-                        { color: formData.specialties.includes(specialty) ? theme.colors.primaryForeground : theme.colors.foreground }
+                        { color: formData.specialties.includes(specialty) ? colors.primaryForeground : colors.foreground }
                       ]}>
                         {specialty}
                       </Text>
@@ -444,7 +445,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                   ))}
                 </View>
                 {validationErrors.specialties && (
-                  <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>{validationErrors.specialties}</Text>
+                  <Text style={[tw`text-xs mt-1`, { color: colors.destructive }]}>{validationErrors.specialties}</Text>
                 )}
               </View>
             </CardContent>
@@ -453,11 +454,11 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
 
         {/* Social Media */}
         {isBarber && (
-          <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+          <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <CardContent style={tw`p-4`}>
               <View style={tw`flex-row items-center mb-4`}>
-                <Sparkles size={20} color={theme.colors.secondary} style={tw`mr-2`} />
-                <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                <Sparkles size={20} color={colors.primary} style={tw`mr-2`} />
+                <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                   Social Media
                 </Text>
               </View>
@@ -510,11 +511,11 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
         )}
 
         {/* Notifications */}
-        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
           <CardContent style={tw`p-4`}>
             <View style={tw`flex-row items-center mb-4`}>
-              <AlertCircle size={20} color={theme.colors.secondary} style={tw`mr-2`} />
-              <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+              <AlertCircle size={20} color={colors.primary} style={tw`mr-2`} />
+              <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                 Push Notifications
               </Text>
             </View>
@@ -523,48 +524,48 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               onPress={handlePushNotificationToggle}
               style={[
                 tw`px-4 py-2 rounded-xl flex-row items-center justify-center`,
-                { backgroundColor: formData.sms_notifications ? theme.colors.secondary : theme.colors.input }
+                { backgroundColor: formData.sms_notifications ? colors.primary : colors.input }
               ]}
             >
               {formData.sms_notifications ? (
                 <>
-                  <Check size={16} color={theme.colors.primaryForeground} style={tw`mr-2`} />
-                  <Text style={[tw`font-medium`, { color: theme.colors.primaryForeground }]}>Push Notifications Enabled</Text>
+                  <Check size={16} color={colors.primaryForeground} style={tw`mr-2`} />
+                  <Text style={[tw`font-medium`, { color: colors.primaryForeground }]}>Push Notifications Enabled</Text>
                 </>
               ) : (
-                <Text style={[tw`font-medium`, { color: theme.colors.foreground }]}>Enable Push Notifications</Text>
+                <Text style={[tw`font-medium`, { color: colors.foreground }]}>Enable Push Notifications</Text>
               )}
             </TouchableOpacity>
           </CardContent>
         </Card>
 
         {/* Visibility Settings */}
-        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
           <CardContent style={tw`p-4`}>
             <View style={tw`flex-row items-center justify-between`}>
               <View style={tw`flex-1 mr-4`}>
-                <Text style={[tw`font-medium mb-1`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`font-medium mb-1`, { color: colors.foreground }]}>
                   Public Profile
                 </Text>
-                <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                   When enabled, your profile appears in search results
                 </Text>
               </View>
               <Switch
                 value={formData.isPublic}
                 onValueChange={(value) => setFormData({ ...formData, isPublic: value })}
-                trackColor={{ false: theme.colors.input, true: theme.colors.secondary }}
-                thumbColor={theme.colors.foreground}
+                trackColor={{ false: colors.input, true: colors.primary }}
+                thumbColor={colors.foreground}
               />
             </View>
           </CardContent>
         </Card>
 
         {!formData.isPublic && (
-          <View style={[tw`mb-6 p-4 rounded-xl flex-row items-start`, { backgroundColor: theme.colors.destructive + '10', borderWidth: 1, borderColor: theme.colors.destructive + '20' }]}>
-            <AlertCircle size={16} color={theme.colors.destructive} style={tw`mr-2 mt-0.5`} />
+          <View style={[tw`mb-6 p-4 rounded-xl flex-row items-start`, { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }]}>
+            <AlertCircle size={16} color={colors.destructive} style={tw`mr-2 mt-0.5`} />
             <View style={tw`flex-1`}>
-              <Text style={[tw`text-sm`, { color: theme.colors.destructive }]}>
+              <Text style={[tw`text-sm`, { color: colors.destructive }]}>
                 Your profile is currently private and won&apos;t appear in search results. Enable public profile to start receiving bookings from new clients.
               </Text>
             </View>
@@ -573,16 +574,16 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
 
         {/* Save Button */}
         <TouchableOpacity
-          style={[tw`py-4 rounded-xl flex-row items-center justify-center`, { backgroundColor: theme.colors.secondary }]}
+          style={[tw`py-4 rounded-xl flex-row items-center justify-center`, { backgroundColor: colors.primary }]}
           onPress={handleSave}
           disabled={isLoading}
         >
           {isLoading ? (
-            <LoadingSpinner color={theme.colors.primaryForeground} />
+            <LoadingSpinner color={colors.primaryForeground} />
           ) : (
             <>
-              <Save size={20} color={theme.colors.primaryForeground} style={tw`mr-2`} />
-              <Text style={[tw`font-semibold text-base`, { color: theme.colors.primaryForeground }]}>
+              <Save size={20} color={colors.primaryForeground} style={tw`mr-2`} />
+              <Text style={[tw`font-semibold text-base`, { color: colors.primaryForeground }]}>
                 Save Changes
               </Text>
             </>

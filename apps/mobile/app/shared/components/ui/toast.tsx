@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Check, X, AlertCircle, Info } from 'lucide-react-native';
-import { theme } from '../../lib/theme';
 import tw from 'twrnc';
+import { useTheme } from '../theme/ThemeProvider';
 
 export interface ToastProps {
   id: string;
@@ -24,27 +24,28 @@ const Toast: React.FC<ToastProps> = ({
   variant = 'default',
   onClose,
 }) => {
+  const { colors } = useTheme();
   const getVariantStyles = () => {
     switch (variant) {
       case 'destructive':
         return {
-          container: { backgroundColor: theme.colors.destructive },
-          text: { color: theme.colors.destructiveForeground },
+          container: { backgroundColor: colors.destructive },
+          text: { color: colors.destructiveForeground },
         };
       case 'success':
         return {
-          container: { backgroundColor: '#10b981' },
-          text: { color: '#ffffff' },
+          container: { backgroundColor: colors.success },
+          text: { color: colors.primaryForeground },
         };
       case 'warning':
         return {
-          container: { backgroundColor: '#f59e0b' },
-          text: { color: '#ffffff' },
+          container: { backgroundColor: colors.warning },
+          text: { color: colors.primaryForeground },
         };
       default:
         return {
-          container: { backgroundColor: theme.colors.background },
-          text: { color: theme.colors.foreground },
+          container: { backgroundColor: colors.background },
+          text: { color: colors.foreground },
         };
     }
   };
@@ -52,13 +53,13 @@ const Toast: React.FC<ToastProps> = ({
   const getIcon = () => {
     switch (variant) {
       case 'destructive':
-        return <X size={16} color={theme.colors.destructiveForeground} />;
+        return <X size={16} color={colors.destructiveForeground} />;
       case 'success':
-        return <Check size={16} color="#ffffff" />;
+        return <Check size={16} color={colors.primaryForeground} />;
       case 'warning':
-        return <AlertCircle size={16} color="#ffffff" />;
+        return <AlertCircle size={16} color={colors.primaryForeground} />;
       default:
-        return <Info size={16} color={theme.colors.foreground} />;
+        return <Info size={16} color={colors.foreground} />;
     }
   };
 
@@ -69,7 +70,7 @@ const Toast: React.FC<ToastProps> = ({
       style={[
         tw`flex-row items-center p-4 rounded-lg shadow-lg border`,
         variantStyles.container,
-        { borderColor: theme.colors.border },
+        { borderColor: colors.border },
       ]}
     >
       <View style={tw`mr-3`}>

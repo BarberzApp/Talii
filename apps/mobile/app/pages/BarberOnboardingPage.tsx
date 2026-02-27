@@ -20,7 +20,7 @@ import tw from 'twrnc';
 import { RootStackParamList } from '../shared/types';
 import { supabase } from '../shared/lib/supabase';
 import { useAuth } from '../shared/hooks/useAuth';
-import { theme } from '../shared/lib/theme';
+import { useTheme } from '../shared/components/theme';
 import { logger } from '../shared/lib/logger';
 import { 
     Card, 
@@ -105,6 +105,7 @@ interface ValidationErrors {
 }
 
 export default function BarberOnboardingPage() {
+    const { theme, colors } = useTheme();
     const navigation = useNavigation<BarberOnboardingNavigationProp>();
     const { user, userProfile } = useAuth();
     const [currentStep, setCurrentStep] = useState(0);
@@ -685,7 +686,7 @@ export default function BarberOnboardingPage() {
                 return (
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-32`}>
                         {/* Business Information */}
-                        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+                        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                             <CardContent style={tw`p-4`}>
                                 <SectionHeader
                                     title="Business Information"
@@ -720,8 +721,8 @@ export default function BarberOnboardingPage() {
 
                                 <View style={tw`mb-4`}>
                                     <View style={tw`flex-row items-center mb-2`}>
-                                        <MapPin size={16} color={theme.colors.secondary} style={tw`mr-2`} />
-                                        <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
+                                        <MapPin size={16} color={colors.primary} style={tw`mr-2`} />
+                                        <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>
                                             Location *
                                         </Text>
                                     </View>
@@ -746,7 +747,7 @@ export default function BarberOnboardingPage() {
                         </Card>
 
                         {/* Specialties */}
-                        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+                        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                             <CardContent style={tw`p-4`}>
                                 <SectionHeader
                                     title="Specialties"
@@ -754,7 +755,7 @@ export default function BarberOnboardingPage() {
                                 />
 
                                 <View style={tw`mb-4`}>
-                                    <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
+                                    <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
                                         Select your specialties *
                                     </Text>
                                     <SpecialtyAutocomplete
@@ -763,11 +764,11 @@ export default function BarberOnboardingPage() {
                                         placeholder="Select your specialties..."
                                         maxSelections={15}
                                     />
-                                    <Text style={[tw`text-xs mt-2`, { color: theme.colors.mutedForeground }]}>
+                                    <Text style={[tw`text-xs mt-2`, { color: colors.mutedForeground }]}>
                                         List your specialties to help clients find you
                                     </Text>
                                     {validationErrors.specialties && (
-                                        <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>
+                                        <Text style={[tw`text-xs mt-1`, { color: colors.destructive }]}>
                                             {validationErrors.specialties}
                                         </Text>
                                     )}
@@ -776,7 +777,7 @@ export default function BarberOnboardingPage() {
                         </Card>
 
                         {/* Social Media */}
-                        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+                        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                             <CardContent style={tw`p-4`}>
                                 <SectionHeader
                                     title="Social Media (Optional)"
@@ -837,7 +838,7 @@ export default function BarberOnboardingPage() {
             case 'services':
                 return (
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-32`}>
-                        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+                        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                             <CardContent style={tw`p-4`}>
                                 <SectionHeader
                                     title="Services & Pricing"
@@ -849,19 +850,19 @@ export default function BarberOnboardingPage() {
                                     {formData.services.map((service, index) => (
                                         <View key={index} style={[
                                             tw`p-4 rounded-xl`,
-                                            { backgroundColor: 'rgba(255,255,255,0.03)' }
+                                            { backgroundColor: colors.glass }
                                         ]}>
                                             <View style={tw`flex-row items-center justify-between mb-4`}>
                                                 <View style={tw`flex-row items-center`}>
                                                     <View style={[
                                                         tw`w-8 h-8 rounded-lg items-center justify-center mr-3`,
-                                                        { backgroundColor: 'rgba(255,255,255,0.1)' }
+                                                        { backgroundColor: colors.glass }
                                                     ]}>
-                                                        <Text style={[tw`text-sm font-bold`, { color: theme.colors.secondary }]}>
+                                                        <Text style={[tw`text-sm font-bold`, { color: colors.primary }]}>
                                                             {index + 1}
                                                         </Text>
                                                     </View>
-                                                    <Text style={[tw`text-base font-semibold`, { color: theme.colors.foreground }]}>
+                                                    <Text style={[tw`text-base font-semibold`, { color: colors.foreground }]}>
                                                         Service {index + 1}
                                                     </Text>
                                                 </View>
@@ -870,10 +871,10 @@ export default function BarberOnboardingPage() {
                                                         onPress={() => removeService(index)}
                                                         style={[
                                                             tw`p-2 rounded-lg`,
-                                                            { backgroundColor: 'rgba(239, 68, 68, 0.2)' }
+                                                            { backgroundColor: colors.destructiveSubtle }
                                                         ]}
                                                     >
-                                                        <Trash2 size={16} color={theme.colors.destructive} />
+                                                        <Trash2 size={16} color={colors.destructive} />
                                                     </TouchableOpacity>
                                                 )}
                                             </View>
@@ -911,16 +912,16 @@ export default function BarberOnboardingPage() {
                                         onPress={addService}
                                         style={[
                                             tw`flex-row items-center justify-center p-4 rounded-xl border-2 border-dashed`,
-                                            { borderColor: 'rgba(255,255,255,0.3)', backgroundColor: 'transparent' }
+                                            { borderColor: colors.glassBorder, backgroundColor: 'transparent' }
                                         ]}
                                     >
                                         <View style={[
                                             tw`w-8 h-8 rounded-lg items-center justify-center mr-3`,
-                                            { backgroundColor: 'rgba(255,255,255,0.1)' }
+                                            { backgroundColor: colors.glass }
                                         ]}>
-                                            <Plus size={16} color={theme.colors.secondary} />
+                                            <Plus size={16} color={colors.primary} />
                                         </View>
-                                        <Text style={[tw`font-semibold text-base`, { color: theme.colors.secondary }]}>
+                                        <Text style={[tw`font-semibold text-base`, { color: colors.primary }]}>
                                             Add Another Service
                                         </Text>
                                     </TouchableOpacity>
@@ -933,7 +934,7 @@ export default function BarberOnboardingPage() {
             case 'stripe':
                 return (
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-32`}>
-                        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+                        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                             <CardContent style={tw`p-4`}>
                                 <SectionHeader
                                     title="Payment Setup"
@@ -943,20 +944,20 @@ export default function BarberOnboardingPage() {
 
                                 <View style={[
                                     tw`p-4 rounded-xl`,
-                                    { backgroundColor: 'rgba(255,255,255,0.03)' }
+                                    { backgroundColor: colors.glass }
                                 ]}>
                                     <View style={tw`flex-row items-center mb-4`}>
                                         <View style={[
                                             tw`w-12 h-12 rounded-xl items-center justify-center mr-4`,
-                                            { backgroundColor: 'rgba(255,255,255,0.1)' }
+                                            { backgroundColor: colors.glass }
                                         ]}>
-                                            <CreditCard size={24} color={theme.colors.secondary} />
+                                            <CreditCard size={24} color={colors.primary} />
                                         </View>
                                         <View style={tw`flex-1`}>
-                                            <Text style={[tw`text-lg font-bold`, { color: theme.colors.foreground }]}>
+                                            <Text style={[tw`text-lg font-bold`, { color: colors.foreground }]}>
                                                 Stripe Connect
                                             </Text>
-                                            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                                            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                                                 Secure payment processing
                                             </Text>
                                         </View>
@@ -966,11 +967,11 @@ export default function BarberOnboardingPage() {
                                         <View style={tw`flex-row items-start`}>
                                             <View style={[
                                                 tw`w-6 h-6 rounded-full items-center justify-center mr-3 mt-0.5`,
-                                                { backgroundColor: 'rgba(34, 197, 94, 0.2)' }
+                                                { backgroundColor: colors.successSubtle }
                                             ]}>
-                                                <Text style={[tw`text-xs font-bold`, { color: '#22c55e' }]}>✓</Text>
+                                                <Text style={[tw`text-xs font-bold`, { color: colors.success }]}>✓</Text>
                                             </View>
-                                            <Text style={[tw`text-sm flex-1`, { color: theme.colors.foreground }]}>
+                                            <Text style={[tw`text-sm flex-1`, { color: colors.foreground }]}>
                                                 Accept credit card and digital wallet payments
                                             </Text>
                                         </View>
@@ -978,11 +979,11 @@ export default function BarberOnboardingPage() {
                                         <View style={tw`flex-row items-start`}>
                                             <View style={[
                                                 tw`w-6 h-6 rounded-full items-center justify-center mr-3 mt-0.5`,
-                                                { backgroundColor: 'rgba(34, 197, 94, 0.2)' }
+                                                { backgroundColor: colors.successSubtle }
                                             ]}>
-                                                <Text style={[tw`text-xs font-bold`, { color: '#22c55e' }]}>✓</Text>
+                                                <Text style={[tw`text-xs font-bold`, { color: colors.success }]}>✓</Text>
                                             </View>
-                                            <Text style={[tw`text-sm flex-1`, { color: theme.colors.foreground }]}>
+                                            <Text style={[tw`text-sm flex-1`, { color: colors.foreground }]}>
                                                 Automatic payouts to your bank account
                                             </Text>
                                         </View>
@@ -990,11 +991,11 @@ export default function BarberOnboardingPage() {
                                         <View style={tw`flex-row items-start`}>
                                             <View style={[
                                                 tw`w-6 h-6 rounded-full items-center justify-center mr-3 mt-0.5`,
-                                                { backgroundColor: 'rgba(34, 197, 94, 0.2)' }
+                                                { backgroundColor: colors.successSubtle }
                                             ]}>
-                                                <Text style={[tw`text-xs font-bold`, { color: '#22c55e' }]}>✓</Text>
+                                                <Text style={[tw`text-xs font-bold`, { color: colors.success }]}>✓</Text>
                                             </View>
-                                            <Text style={[tw`text-sm flex-1`, { color: theme.colors.foreground }]}>
+                                            <Text style={[tw`text-sm flex-1`, { color: colors.foreground }]}>
                                                 Industry-leading security and fraud protection
                                             </Text>
                                         </View>
@@ -1005,16 +1006,16 @@ export default function BarberOnboardingPage() {
                                         disabled={stripeLoading}
                                         style={[
                                             tw`flex-row items-center justify-center py-3 px-6 rounded-xl`,
-                                            { backgroundColor: theme.colors.secondary },
+                                            { backgroundColor: colors.primary },
                                             stripeLoading && { opacity: 0.6 }
                                         ]}
                                     >
                                         {stripeLoading ? (
-                                            <ActivityIndicator color={theme.colors.secondaryForeground} />
+                                            <ActivityIndicator color={colors.primaryForeground} />
                                         ) : (
                                             <>
-                                                <CreditCard size={20} color={theme.colors.secondaryForeground} style={tw`mr-3`} />
-                                                <Text style={[tw`font-semibold text-base`, { color: theme.colors.secondaryForeground }]}>
+                                                <CreditCard size={20} color={colors.primaryForeground} style={tw`mr-3`} />
+                                                <Text style={[tw`font-semibold text-base`, { color: colors.primaryForeground }]}>
                                                     Connect Stripe Account
                                                 </Text>
                                             </>
@@ -1025,9 +1026,9 @@ export default function BarberOnboardingPage() {
                                 {/* Skip Option */}
                                 <View style={[
                                     tw`p-4 rounded-xl mt-4`,
-                                    { backgroundColor: 'rgba(255,255,255,0.03)' }
+                                    { backgroundColor: colors.glass }
                                 ]}>
-                                    <Text style={[tw`text-sm text-center`, { color: theme.colors.mutedForeground }]}>
+                                    <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
                                         You can always set up payments later in your settings
                                     </Text>
                                 </View>
@@ -1042,22 +1043,22 @@ export default function BarberOnboardingPage() {
     };
 
     return (
-        <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+        <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
             <StatusBar barStyle="light-content" />
             
             {/* Header */}
             <View style={tw`px-6 pt-6 pb-4`}>
                 <View style={tw`items-center mb-6`}>
-                    <View style={[tw`p-4 rounded-full mb-3`, { backgroundColor: theme.colors.secondary + '20' }]}>
+                    <View style={[tw`p-4 rounded-full mb-3`, { backgroundColor: colors.primary + '20' }]}>
                         {React.createElement(steps[currentStep].icon, { 
                             size: 32, 
-                            color: theme.colors.secondary 
+                            color: colors.primary 
                         })}
                     </View>
-                    <Text style={[tw`text-2xl font-bold`, { color: theme.colors.foreground }]}>
+                    <Text style={[tw`text-2xl font-bold`, { color: colors.foreground }]}>
                         {steps[currentStep].title}
                     </Text>
-                    <Text style={[tw`text-sm mt-1`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-sm mt-1`, { color: colors.mutedForeground }]}>
                         {steps[currentStep].description}
                     </Text>
                 </View>
@@ -1075,22 +1076,22 @@ export default function BarberOnboardingPage() {
             {/* Onboarding Complete Banner */}
             {onboardingComplete && showCompleteBanner && (
                 <View style={tw`px-6 mb-6`}>
-                    <Card style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+                    <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                         <CardContent style={tw`p-4`}>
                             <View style={tw`flex-row items-center justify-between mb-2`}>
                                 <View style={tw`flex-row items-center`}>
-                                    <CheckCircle size={16} color={theme.colors.secondary} style={tw`mr-2`} />
-                                    <Text style={[tw`text-sm font-semibold`, { color: theme.colors.foreground }]}>
+                                    <CheckCircle size={16} color={colors.primary} style={tw`mr-2`} />
+                                    <Text style={[tw`text-sm font-semibold`, { color: colors.foreground }]}>
                                         Onboarding Complete!
                                     </Text>
                                 </View>
                                 <TouchableOpacity
                                     onPress={() => setShowCompleteBanner(false)}
                                 >
-                                    <X size={16} color={theme.colors.mutedForeground} />
+                                    <X size={16} color={colors.mutedForeground} />
                                 </TouchableOpacity>
                             </View>
-                            <Text style={[tw`text-xs`, { color: theme.colors.mutedForeground }]}>
+                            <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                                 Your profile is ready. You can now receive bookings and payments. Welcome to the platform!
                             </Text>
                             <Button
@@ -1117,7 +1118,7 @@ export default function BarberOnboardingPage() {
             </KeyboardAvoidingView>
 
             {/* Navigation Buttons */}
-            <View style={tw`px-6 py-3 border-t border-white/10`}>
+            <View style={[tw`px-6 py-3 border-t`, { borderColor: colors.glassBorder }]}>
                 <View style={tw`flex-row justify-between items-center gap-3`}>
                     <Button
                         variant="outline"
@@ -1125,17 +1126,17 @@ export default function BarberOnboardingPage() {
                         disabled={currentStep === 0}
                         style={[
                             tw`flex-1 rounded-xl`,
-                            { borderColor: theme.colors.secondary, opacity: currentStep === 0 ? 0.5 : 1 }
+                            { borderColor: colors.primary, opacity: currentStep === 0 ? 0.5 : 1 }
                         ]}
-                        textStyle={{ color: theme.colors.secondary }}
+                        textStyle={{ color: colors.primary }}
                     >
                         Back
                     </Button>
                     
                     <TouchableOpacity
                         style={[
-                            tw`bg-secondary rounded-xl px-6 py-2.5 flex-1 flex-row items-center justify-center`,
-                            { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+                            tw`rounded-xl px-6 py-2.5 flex-1 flex-row items-center justify-center`,
+                            { backgroundColor: colors.primary, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
                             loading && { opacity: 0.6 }
                         ]}
                         onPress={async () => {
@@ -1152,9 +1153,9 @@ export default function BarberOnboardingPage() {
                         disabled={loading}
                     >
                         {loading ? (
-                            <ActivityIndicator color={theme.colors.secondaryForeground} />
+                            <ActivityIndicator color={colors.primaryForeground} />
                         ) : (
-                            <Text style={[tw`text-base font-bold text-center`, { color: theme.colors.secondaryForeground }]}>
+                            <Text style={[tw`text-base font-bold text-center`, { color: colors.primaryForeground }]}>
                                 {currentStep < steps.length - 1 ? 'Next' : 'Finish'}
                             </Text>
                         )}

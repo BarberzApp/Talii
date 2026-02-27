@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, ViewStyle } from 'react-native';
-import { ActivityIndicator } from 'react-native';
+import { View, ViewStyle, ActivityIndicator } from 'react-native';
 import tw from 'twrnc';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'default' | 'lg';
@@ -11,9 +11,11 @@ interface LoadingSpinnerProps {
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
   size = 'default', 
-  color = '#262b2e',
+  color,
   style 
 }) => {
+  const { colors } = useTheme();
+
   const sizeMap = {
     sm: 'small',
     default: 'small',
@@ -24,10 +26,10 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     <View style={[tw`flex items-center justify-center`, style]}>
       <ActivityIndicator 
         size={sizeMap[size]} 
-        color={color}
+        color={color ?? colors.primary}
       />
     </View>
   );
 };
 
-export default LoadingSpinner; 
+export default LoadingSpinner;

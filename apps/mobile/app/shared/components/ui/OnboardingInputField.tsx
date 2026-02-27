@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, KeyboardTypeOptions } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface OnboardingInputFieldProps {
   label: string;
@@ -26,36 +26,37 @@ export const OnboardingInputField: React.FC<OnboardingInputFieldProps> = ({
   multiline = false,
   description,
 }) => {
+  const { colors } = useTheme();
   return (
     <View style={tw`mb-4`}>
       <View style={tw`flex-row items-center mb-2`}>
-        {Icon && <Icon size={16} color={theme.colors.secondary} style={tw`mr-2`} />}
-        <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>{label}</Text>
+        {Icon && <Icon size={16} color={colors.primary} style={tw`mr-2`} />}
+        <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>{label}</Text>
       </View>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.mutedForeground}
+        placeholderTextColor={colors.mutedForeground}
         keyboardType={keyboardType}
         multiline={multiline}
         style={[
           tw`px-4 py-3 rounded-xl text-base`,
           multiline && tw`h-24`,
           {
-            backgroundColor: 'rgba(255,255,255,0.06)',
-            color: theme.colors.foreground,
+            backgroundColor: colors.glass,
+            color: colors.foreground,
             borderWidth: 1,
-            borderColor: error ? theme.colors.destructive : 'rgba(255,255,255,0.12)',
+            borderColor: error ? colors.destructive : colors.glassBorder,
             textAlignVertical: multiline ? 'top' : 'center',
           },
         ]}
       />
       {description && (
-        <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>{description}</Text>
+        <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>{description}</Text>
       )}
       {error && (
-        <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>{error}</Text>
+        <Text style={[tw`text-xs mt-1`, { color: colors.destructive }]}>{error}</Text>
       )}
     </View>
   );

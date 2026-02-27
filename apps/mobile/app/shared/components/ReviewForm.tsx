@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,20 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import { Star, Send, X } from 'lucide-react-native';
 import tw from 'twrnc';
 import { useReviews } from '../hooks/useReviews';
 import { logger } from '../lib/logger';
 import { validateReviewContent, sanitizeText } from '../lib/contentModeration';
+import { useTheme } from './theme';
 
 interface ReviewFormProps {
   barberId: string;
-  bookingId: string | null; // Can be null for reviews not tied to a booking
+  bookingId: string | null;
   onClose: () => void;
   onSuccess?: () => void;
   initialRating?: number;
@@ -24,6 +28,8 @@ interface ReviewFormProps {
   isEditing?: boolean;
   reviewId?: string;
 }
+
+const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'] as const;
 
 export function ReviewForm({
   barberId,
@@ -35,9 +41,42 @@ export function ReviewForm({
   isEditing = false,
   reviewId,
 }: ReviewFormProps) {
+  const { colors } = useTheme();
   const [rating, setRating] = useState(initialRating);
   const [comment, setComment] = useState(initialComment);
   const { submitReview, updateReview, submitting } = useReviews(barberId);
+
+  const translateY = useRef(new Animated.Value(0)).current;
+  const screenHeight = Dimensions.get('window').height;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        gestureState.dy > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 100 || gestureState.vy > 0.5) {
+          Animated.timing(translateY, {
+            toValue: screenHeight,
+            duration: 250,
+            useNativeDriver: true,
+          }).start(() => onClose());
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 80,
+            friction: 12,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -45,7 +84,6 @@ export function ReviewForm({
       return;
     }
 
-    // Validate and sanitize comment content
     const trimmedComment = comment.trim();
     if (trimmedComment) {
       const validation = validateReviewContent(trimmedComment);
@@ -58,7 +96,6 @@ export function ReviewForm({
         return;
       }
       
-      // Sanitize the comment
       const sanitizedComment = sanitizeText(trimmedComment);
       
       try {
@@ -79,7 +116,6 @@ export function ReviewForm({
         logger.error('Error submitting review:', error);
       }
     } else {
-      // No comment, just submit rating
       try {
         if (isEditing && reviewId) {
           await updateReview(reviewId, { rating, comment: '' });
@@ -100,97 +136,155 @@ export function ReviewForm({
     }
   };
 
-  const renderStars = () => {
-    return Array.from({ length: 5 }, (_, index) => (
-      <TouchableOpacity
-        key={index}
-        onPress={() => setRating(index + 1)}
-        style={tw`p-2`}
-      >
-        <Star
-          size={32}
-          fill={index < rating ? '#FFD700' : 'transparent'}
-          color={index < rating ? '#FFD700' : '#6B7280'}
-        />
-      </TouchableOpacity>
-    ));
-  };
-
   return (
-    <View style={tw`flex-1 bg-black/90 justify-end`}>
-      <View style={tw`bg-white/10 border border-white/20 rounded-t-3xl p-15 max-h-[100%]`}>
+    <View style={[tw`flex-1`, { backgroundColor: colors.backdrop }]}>
+      <Animated.View
+        style={[
+          tw`flex-1 mt-12 rounded-t-3xl px-6 pt-6 pb-8`,
+          {
+            backgroundColor: colors.surfaceElevated,
+            borderWidth: 1,
+            borderColor: colors.border,
+            transform: [{ translateY }],
+          },
+        ]}
+      >
+        {/* Swipe handle */}
+        <View {...panResponder.panHandlers} style={tw`items-center pb-4`}>
+          <View style={[tw`w-10 h-1 rounded-full`, { backgroundColor: colors.border }]} />
+        </View>
+
+        {/* Header */}
         <View style={tw`flex-row items-center justify-between mb-6`}>
-          <Text style={tw`text-white text-xl font-bold`}>
-            {isEditing ? 'Edit Review' : 'Write a Review'}
+          <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>
+            {isEditing ? 'Edit Your Review' : 'Write a Review'}
           </Text>
           <TouchableOpacity
             onPress={onClose}
-            style={tw`p-2`}
+            style={[tw`p-2 rounded-full`, { backgroundColor: colors.muted }]}
           >
-            <X size={24} color="#6B7280" />
+            <X size={20} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Rating Section */}
-          <View style={tw`mb-6`}>
-            <Text style={tw`text-white/80 text-base font-medium mb-3`}>
-              Rate your experience
+          <View style={[
+            tw`p-5 rounded-2xl mb-6`,
+            { backgroundColor: colors.primarySubtle }
+          ]}>
+            <Text style={[tw`text-base font-semibold text-center mb-4`, { color: colors.foreground }]}>
+              How was your experience?
             </Text>
             <View style={tw`flex-row justify-center`}>
-              {renderStars()}
+              {Array.from({ length: 5 }, (_, index) => {
+                const isActive = index < rating;
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => setRating(index + 1)}
+                    style={[
+                      tw`mx-1.5 p-2 rounded-xl`,
+                      isActive && { backgroundColor: 'rgba(245, 158, 11, 0.15)' }
+                    ]}
+                  >
+                    <Star
+                      size={36}
+                      fill={isActive ? colors.premium : 'transparent'}
+                      color={isActive ? colors.premium : colors.border}
+                      strokeWidth={isActive ? 2 : 1.5}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <Text style={tw`text-white/60 text-sm text-center mt-2`}>
-              {rating === 0 && 'Tap to rate'}
-              {rating === 1 && 'Poor'}
-              {rating === 2 && 'Fair'}
-              {rating === 3 && 'Good'}
-              {rating === 4 && 'Very Good'}
-              {rating === 5 && 'Excellent'}
-            </Text>
+            {rating > 0 && (
+              <View style={tw`items-center mt-3`}>
+                <View style={[tw`px-4 py-1.5 rounded-full`, { backgroundColor: colors.surfaceElevated }]}>
+                  <Text style={[tw`text-sm font-bold`, { color: colors.primary }]}>
+                    {ratingLabels[rating]}
+                  </Text>
+                </View>
+              </View>
+            )}
+            {rating === 0 && (
+              <Text style={[tw`text-sm text-center mt-3`, { color: colors.mutedForeground }]}>
+                Tap a star to rate
+              </Text>
+            )}
           </View>
 
           {/* Comment Section */}
           <View style={tw`mb-6`}>
-            <Text style={tw`text-white/80 text-base font-medium mb-3`}>
-              Share your experience (optional)
+            <Text style={[tw`text-base font-semibold mb-3`, { color: colors.foreground }]}>
+              Share your experience
             </Text>
-            <TextInput
-              style={tw`bg-white/5 border border-white/20 rounded-lg p-4 text-white text-base min-h-24`}
-              placeholder="Tell us about your experience..."
-              placeholderTextColor="#6B7280"
-              value={comment}
-              onChangeText={setComment}
-              multiline
-              textAlignVertical="top"
-              maxLength={500}
-            />
-            <Text style={tw`text-white/40 text-xs text-right mt-2`}>
-              {comment.length}/500
-            </Text>
+            <View style={[
+              tw`rounded-2xl overflow-hidden`,
+              {
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+              }
+            ]}>
+              <TextInput
+                style={[
+                  tw`p-4 text-base`,
+                  {
+                    color: colors.foreground,
+                    minHeight: 120,
+                    textAlignVertical: 'top',
+                  },
+                ]}
+                placeholder="What made this visit great? Any highlights?"
+                placeholderTextColor={colors.mutedForeground}
+                value={comment}
+                onChangeText={setComment}
+                multiline
+                maxLength={500}
+              />
+              <View style={[tw`px-4 py-2 flex-row justify-between items-center`, { borderTopWidth: 1, borderColor: colors.border }]}>
+                <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
+                  Optional
+                </Text>
+                <Text style={[tw`text-xs font-medium`, { color: comment.length > 400 ? colors.warning : colors.mutedForeground }]}>
+                  {comment.length}/500
+                </Text>
+              </View>
+            </View>
           </View>
 
           {/* Submit Button */}
           <TouchableOpacity
-            style={tw`secondary rounded-lg p-4 flex-row items-center justify-center ${
-              rating === 0 ? 'opacity-50' : ''
-            }`}
+            style={[
+              tw`rounded-2xl p-4 flex-row items-center justify-center`,
+              {
+                backgroundColor: rating === 0 ? colors.muted : colors.primary,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: rating === 0 ? 0 : 0.25,
+                shadowRadius: 8,
+                elevation: rating === 0 ? 0 : 4,
+              }
+            ]}
             onPress={handleSubmit}
             disabled={rating === 0 || submitting}
           >
             {submitting ? (
-              <ActivityIndicator color="white" size="small" />
+              <ActivityIndicator color={colors.primaryForeground} size="small" />
             ) : (
               <>
-                <Send size={20} color="white" style={tw`mr-2`} />
-                <Text style={tw`text-white font-semibold text-base`}>
+                <Send size={18} color={rating === 0 ? colors.mutedForeground : colors.primaryForeground} style={tw`mr-2`} />
+                <Text style={[tw`font-bold text-base`, { color: rating === 0 ? colors.mutedForeground : colors.primaryForeground }]}>
                   {isEditing ? 'Update Review' : 'Submit Review'}
                 </Text>
               </>
             )}
           </TouchableOpacity>
+
+          <View style={tw`h-4`} />
         </ScrollView>
-      </View>
+      </Animated.View>
     </View>
   );
 }

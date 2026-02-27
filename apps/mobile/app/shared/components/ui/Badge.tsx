@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, ViewStyle } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
-type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'soft' | 'info';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -13,30 +13,42 @@ interface BadgeProps {
 }
 
 const Badge: React.FC<BadgeProps> = ({ children, variant = 'default', style, className }) => {
+  const { colors } = useTheme();
+
   const variantStyles: Record<BadgeVariant, any> = {
     default: {
-      backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
     secondary: {
-      backgroundColor: theme.colors.secondary,
-      borderColor: theme.colors.secondary,
+      backgroundColor: colors.primarySubtle,
+      borderColor: colors.primary,
     },
     destructive: {
-      backgroundColor: theme.colors.destructive,
-      borderColor: theme.colors.destructive,
+      backgroundColor: colors.destructive,
+      borderColor: colors.destructive,
     },
     outline: {
       backgroundColor: 'transparent',
-      borderColor: theme.colors.border,
-    }
+      borderColor: colors.border,
+    },
+    soft: {
+      backgroundColor: colors.primarySubtle,
+      borderColor: colors.primarySubtle,
+    },
+    info: {
+      backgroundColor: colors.info,
+      borderColor: colors.info,
+    },
   };
 
   const textStyles: Record<BadgeVariant, any> = {
-    default: { color: theme.colors.primaryForeground },
-    secondary: { color: theme.colors.secondaryForeground },
-    destructive: { color: theme.colors.destructiveForeground },
-    outline: { color: theme.colors.foreground }
+    default: { color: colors.primaryForeground },
+    secondary: { color: colors.primary },
+    destructive: { color: colors.destructiveForeground },
+    outline: { color: colors.foreground },
+    soft: { color: colors.primary },
+    info: { color: colors.infoForeground },
   };
 
   return (
@@ -59,4 +71,4 @@ const Badge: React.FC<BadgeProps> = ({ children, variant = 'default', style, cla
   );
 };
 
-export default Badge; 
+export default Badge;

@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Text,
   StatusBar,
-  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,7 +16,9 @@ import { RootStackParamList } from '../shared/types';
 import { supabase } from '../shared/lib/supabase';
 import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
-import { theme } from '../shared/lib/theme';
+import { useTheme } from '../shared/components/theme';
+import Input from '../shared/components/ui/Input';
+import { ThemeToggle } from '../shared/components/theme';
 import { ProfileSettings } from '../shared/components/settings/ProfileSettings';
 import { ServicesSettings } from '../shared/components/settings/ServicesSettings';
 import { AddonsSettings } from '../shared/components/settings/AddonsSettings';
@@ -46,6 +47,7 @@ import { useAccountDeletionHelper } from '../shared/helpers/accountDeletionHelpe
 type SettingsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 
 export default function SettingsPage() {
+  const { colors, colorScheme } = useTheme();
   const navigation = useNavigation<SettingsNavigationProp>();
   const { user, userProfile, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
@@ -194,30 +196,38 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[tw`flex-1 justify-center items-center`, { backgroundColor: theme.colors.background }]}>
-        <SettingsIcon size={40} color={theme.colors.secondary} style={tw`mb-4`} />
-        <ActivityIndicator size="large" color={theme.colors.secondary} />
-        <Text style={[tw`mt-4 text-base`, { color: theme.colors.mutedForeground }]}>Loading your settings...</Text>
+      <SafeAreaView style={[tw`flex-1 justify-center items-center`, { backgroundColor: colors.background }]}>
+        <SettingsIcon size={40} color={colors.primary} style={tw`mb-4`} />
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[tw`mt-4 text-base`, { color: colors.mutedForeground }]}>Loading your settings...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
+      <StatusBar
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-32`}>
         {/* Header */}
         <View style={tw`px-6 pt-6 pb-4`}>
           <View style={tw`items-center mb-6`}>
-            <View style={[tw`p-4 rounded-full mb-3`, { backgroundColor: theme.colors.secondary + '20' }]}>
-              <SettingsIcon size={32} color={theme.colors.secondary} />
+            <View style={[tw`p-4 rounded-full mb-3`, { backgroundColor: colors.muted }]}>
+              <SettingsIcon size={32} color={colors.primary} />
             </View>
-            <Text style={[tw`text-2xl font-bold`, { color: theme.colors.foreground }]}>Settings</Text>
-            <Text style={[tw`text-sm mt-1`, { color: theme.colors.mutedForeground }]}>
+            <Text style={[tw`text-2xl font-bold`, { color: colors.foreground }]}>Settings</Text>
+            <Text style={[tw`text-sm mt-1`, { color: colors.mutedForeground }]}>
               Manage your profile, services, and preferences
             </Text>
           </View>
+        </View>
+
+        {/* Theme Toggle */}
+        <View style={tw`px-6 mb-6`}>
+          <ThemeToggle />
         </View>
 
         {/* Share Settings Banner for Barbers */}
@@ -231,7 +241,7 @@ export default function SettingsPage() {
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
-          style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)' }]}
+          style={[tw`mb-6`, { backgroundColor: colors.surface }]}
           contentContainerStyle={tw`px-6`}
         >
           {visibleTabs.map((tab) => {
@@ -244,23 +254,23 @@ export default function SettingsPage() {
                 key={tab.id}
                 style={[
                   tw`py-4 px-4 mr-3`,
-                  isActive && { borderBottomWidth: 2, borderBottomColor: theme.colors.secondary }
+                  isActive && { borderBottomWidth: 2, borderBottomColor: colors.primary }
                 ]}
                 onPress={() => setActiveTab(tab.id)}
               >
                 <View style={tw`flex-row items-center`}>
                   <Icon 
                     size={18} 
-                    color={isActive ? theme.colors.secondary : theme.colors.mutedForeground}
+                    color={isActive ? colors.primary : colors.mutedForeground}
                   />
                   <Text style={[
                     tw`ml-2 text-sm font-medium`,
-                    { color: isActive ? theme.colors.secondary : theme.colors.mutedForeground }
+                    { color: isActive ? colors.primary : colors.mutedForeground }
                   ]}>
                     {tab.label}
                   </Text>
                   {status === 'complete' && (
-                    <CheckCircle size={14} color={theme.colors.secondary} style={tw`ml-2`} />
+                    <CheckCircle size={14} color={colors.primary} style={tw`ml-2`} />
                   )}
                 </View>
               </TouchableOpacity>
@@ -293,17 +303,17 @@ export default function SettingsPage() {
 
         {/* Legal Information */}
         <View style={tw`px-6 mt-8`}>
-          <Card style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+          <Card style={{ backgroundColor: colors.surface }}>
             <CardContent style={tw`p-4`}>
-              <Text style={[tw`text-base font-semibold mb-4`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-base font-semibold mb-4`, { color: colors.foreground }]}>
                 Legal Information
               </Text>
               <TouchableOpacity
-                style={tw`flex-row items-center py-3 border-b border-white/10`}
+                style={[tw`flex-row items-center py-3 border-b`, { borderColor: colors.border }]}
                 onPress={() => navigation.navigate('Terms' as any)}
               >
-                <FileText size={18} color={theme.colors.secondary} style={tw`mr-3`} />
-                <Text style={[tw`flex-1 text-base`, { color: theme.colors.foreground }]}>
+                <FileText size={18} color={colors.primary} style={tw`mr-3`} />
+                <Text style={[tw`flex-1 text-base`, { color: colors.foreground }]}>
                   Terms & Conditions
                 </Text>
               </TouchableOpacity>
@@ -311,8 +321,8 @@ export default function SettingsPage() {
                 style={tw`flex-row items-center py-3`}
                 onPress={() => navigation.navigate('PrivacyPolicy' as any)}
               >
-                <Shield size={18} color={theme.colors.secondary} style={tw`mr-3`} />
-                <Text style={[tw`flex-1 text-base`, { color: theme.colors.foreground }]}>
+                <Shield size={18} color={colors.primary} style={tw`mr-3`} />
+                <Text style={[tw`flex-1 text-base`, { color: colors.foreground }]}>
                   Privacy Policy
                 </Text>
               </TouchableOpacity>
@@ -323,48 +333,36 @@ export default function SettingsPage() {
         {/* Logout Button */}
         <View style={tw`px-6 mt-6`}>
           <TouchableOpacity
-            style={[tw`py-3 rounded-xl`, { backgroundColor: theme.colors.destructive }]}
+            style={[tw`py-3 rounded-xl`, { backgroundColor: colors.destructive }]}
             onPress={handleLogout}
           >
             <View style={tw`flex-row items-center justify-center`}>
-              <LogOut size={20} color={theme.colors.destructiveForeground} style={tw`mr-2`} />
-              <Text style={[tw`font-semibold`, { color: theme.colors.destructiveForeground }]}>Log Out</Text>
+              <LogOut size={20} color={colors.destructiveForeground} style={tw`mr-2`} />
+              <Text style={[tw`font-semibold`, { color: colors.destructiveForeground }]}>Log Out</Text>
             </View>
           </TouchableOpacity>
         </View>
-        {/* Development-only onboarding button - hidden in production */}
-        {__DEV__ && (
-          <View style={tw`px-6 mt-6 mb-10`}>
-            <Button onPress={() => navigation.navigate('BarberOnboarding')}>
-              <View style={tw`flex-row items-center justify-center`}>
-                <Text style={[tw`font-semibold`, { color: theme.colors.secondary }]}>Onboarding (Dev Only)</Text>
-              </View>
-            </Button>
-          </View>
-        )}
+      
+       
         {/* Account Deletion */}
         <View style={tw`px-6 mt-6 mb-10`}>
-          <Card style={[{ backgroundColor: 'rgba(255,0,0,0.05)', borderColor: theme.colors.destructive + '40' }]}>
+          <Card style={[{ backgroundColor: colors.muted, borderColor: colors.border }]}>
             <CardContent style={tw`p-4`}>
               <View style={tw`flex-row items-center mb-3`}>
-                <AlertCircle size={18} color={theme.colors.destructive} style={tw`mr-2`} />
-                <Text style={[tw`text-base font-semibold`, { color: theme.colors.destructive }]}>
+                <AlertCircle size={18} color={colors.destructive} style={tw`mr-2`} />
+                <Text style={[tw`text-base font-semibold`, { color: colors.destructive }]}>
                   Delete Account
                 </Text>
               </View>
-              <Text style={[tw`text-sm mb-4`, { color: theme.colors.mutedForeground }]}>
+              <Text style={[tw`text-sm mb-4`, { color: colors.mutedForeground }]}>
                 This will permanently remove your account and data. Type YES in all caps to confirm.
               </Text>
 
               {isConfirming && (
                 <View style={tw`mb-3`}>
-                  <TextInput
-                    style={[
-                      tw`w-full px-4 py-3 rounded-xl text-base`,
-                      { backgroundColor: 'rgba(255,255,255,0.05)', color: theme.colors.foreground },
-                    ]}
+                  <Input
+                    containerStyle={tw`mb-0`}
                     placeholder="Type YES to confirm"
-                    placeholderTextColor={theme.colors.mutedForeground}
                     autoCapitalize="characters"
                     value={confirmText}
                     onChangeText={(text) => setConfirmText(text.toUpperCase())}
@@ -373,7 +371,7 @@ export default function SettingsPage() {
                     style={[
                       tw`mt-3 py-3 rounded-xl`,
                       {
-                        backgroundColor: isConfirmed ? theme.colors.destructive : 'rgba(255,255,255,0.1)',
+                        backgroundColor: isConfirmed ? colors.destructive : colors.muted,
                         opacity: isDeleting ? 0.7 : 1,
                       },
                     ]}
@@ -383,7 +381,7 @@ export default function SettingsPage() {
                     <Text
                       style={[
                         tw`text-center font-semibold`,
-                        { color: isConfirmed ? theme.colors.destructiveForeground : theme.colors.mutedForeground },
+                        { color: isConfirmed ? colors.destructiveForeground : colors.mutedForeground },
                       ]}
                     >
                       {isDeleting ? 'Deleting...' : 'Confirm Delete'}
@@ -395,12 +393,12 @@ export default function SettingsPage() {
               <TouchableOpacity
                 style={[
                   tw`py-3 rounded-xl`,
-                  { backgroundColor: theme.colors.destructive },
+                  { backgroundColor: colors.destructive },
                 ]}
                 onPress={requestDelete}
                 disabled={isDeleting}
               >
-                <Text style={[tw`text-center font-semibold`, { color: theme.colors.destructiveForeground }]}>
+                <Text style={[tw`text-center font-semibold`, { color: colors.destructiveForeground }]}>
                   Delete My Account
                 </Text>
               </TouchableOpacity>

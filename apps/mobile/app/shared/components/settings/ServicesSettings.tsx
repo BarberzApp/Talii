@@ -3,18 +3,18 @@ import {
   View,
   Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
 import { Button, Card, CardContent, LoadingSpinner } from '../ui';
+import Input from '../ui/Input';
 import { 
   Plus, 
   Edit, 
@@ -34,6 +34,7 @@ interface ServicesSettingsProps {
 }
 
 export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -227,142 +228,74 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-24`}>
         {/* Add/Edit Service Form */}
-        <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
           <CardContent style={tw`p-4`}>
             <View style={tw`flex-row items-center mb-4`}>
-              <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: theme.colors.secondary + '20' }]}>
-                {editingService ? <Edit size={20} color={theme.colors.secondary} /> : <Plus size={20} color={theme.colors.secondary} />}
+              <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: colors.primarySubtle }]}>
+                {editingService ? <Edit size={20} color={colors.primary} /> : <Plus size={20} color={colors.primary} />}
               </View>
-              <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                 {editingService ? 'Edit Service' : 'Add New Service'}
               </Text>
             </View>
 
-            <View style={tw`mb-4`}>
-              <View style={tw`flex-row items-center mb-2`}>
-                <Scissors size={14} color={theme.colors.secondary} style={tw`mr-2`} />
-                <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
-                  Service Name *
-                </Text>
-              </View>
-              <TextInput
-                value={formData.name}
-                onChangeText={(text) => setFormData({ ...formData, name: text })}
-                placeholder="e.g., Haircut, Beard Trim"
-                placeholderTextColor={theme.colors.mutedForeground}
-                style={[
-                  tw`px-4 py-3 rounded-xl text-base`,
-                  { 
-                    backgroundColor: 'rgba(255,255,255,0.05)', 
-                    color: theme.colors.foreground,
-                    borderWidth: 1,
-                    borderColor: validationErrors.name ? theme.colors.destructive : 'rgba(255,255,255,0.1)'
-                  }
-                ]}
-              />
-              {validationErrors.name && (
-                <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>{validationErrors.name}</Text>
-              )}
-            </View>
+            <Input
+              icon={Scissors}
+              label="Service Name *"
+              value={formData.name}
+              onChangeText={(text) => setFormData({ ...formData, name: text })}
+              placeholder="e.g., Haircut, Beard Trim"
+              error={validationErrors.name}
+            />
 
-            <View style={tw`flex-row gap-3 mb-4`}>
+            <View style={tw`flex-row gap-3`}>
               <View style={tw`flex-1`}>
-                <View style={tw`flex-row items-center mb-2`}>
-                  <DollarSign size={14} color={theme.colors.secondary} style={tw`mr-2`} />
-                  <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
-                    Price ($) *
-                  </Text>
-                </View>
-                <TextInput
+                <Input
+                  icon={DollarSign}
+                  label="Price ($) *"
                   value={formData.price.toString()}
                   onChangeText={(text) => setFormData({ ...formData, price: parseFloat(text) || 0 })}
                   placeholder="25.00"
-                  placeholderTextColor={theme.colors.mutedForeground}
                   keyboardType="numeric"
-                  style={[
-                    tw`px-4 py-3 rounded-xl text-base`,
-                    { 
-                      backgroundColor: 'rgba(255,255,255,0.05)', 
-                      color: theme.colors.foreground,
-                      borderWidth: 1,
-                      borderColor: validationErrors.price ? theme.colors.destructive : 'rgba(255,255,255,0.1)'
-                    }
-                  ]}
+                  error={validationErrors.price}
                 />
-                {validationErrors.price && (
-                  <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>{validationErrors.price}</Text>
-                )}
               </View>
-
               <View style={tw`flex-1`}>
-                <View style={tw`flex-row items-center mb-2`}>
-                  <Clock size={14} color={theme.colors.secondary} style={tw`mr-2`} />
-                  <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
-                    Duration (min) *
-                  </Text>
-                </View>
-                <TextInput
+                <Input
+                  icon={Clock}
+                  label="Duration (min) *"
                   value={formData.duration.toString()}
                   onChangeText={(text) => setFormData({ ...formData, duration: parseInt(text) || 30 })}
                   placeholder="30"
-                  placeholderTextColor={theme.colors.mutedForeground}
                   keyboardType="numeric"
-                  style={[
-                    tw`px-4 py-3 rounded-xl text-base`,
-                    { 
-                      backgroundColor: 'rgba(255,255,255,0.05)', 
-                      color: theme.colors.foreground,
-                      borderWidth: 1,
-                      borderColor: validationErrors.duration ? theme.colors.destructive : 'rgba(255,255,255,0.1)'
-                    }
-                  ]}
+                  error={validationErrors.duration}
                 />
-                {validationErrors.duration && (
-                  <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>{validationErrors.duration}</Text>
-                )}
               </View>
             </View>
 
-            <View style={tw`mb-4`}>
-              <View style={tw`flex-row items-center mb-2`}>
-                <Package size={14} color={theme.colors.secondary} style={tw`mr-2`} />
-                <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
-                  Description
-                </Text>
-              </View>
-              <TextInput
-                value={formData.description}
-                onChangeText={(text) => setFormData({ ...formData, description: text })}
-                placeholder="Brief description of the service"
-                placeholderTextColor={theme.colors.mutedForeground}
-                multiline
-                numberOfLines={3}
-                style={[
-                  tw`px-4 py-3 rounded-xl text-base`,
-                  { 
-                    backgroundColor: 'rgba(255,255,255,0.05)', 
-                    color: theme.colors.foreground,
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    minHeight: 80,
-                    textAlignVertical: 'top'
-                  }
-                ]}
-              />
-            </View>
+            <Input
+              icon={Package}
+              label="Description"
+              value={formData.description}
+              onChangeText={(text) => setFormData({ ...formData, description: text })}
+              placeholder="Brief description of the service"
+              multiline
+              numberOfLines={3}
+              inputStyle={{ minHeight: 80, textAlignVertical: 'top' }}
+            />
 
             <View style={tw`flex-row gap-3`}>
               <TouchableOpacity
-                style={[tw`flex-1 py-3 rounded-xl flex-row items-center justify-center`, { backgroundColor: theme.colors.secondary }]}
+                style={[tw`flex-1 py-3 rounded-xl flex-row items-center justify-center`, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <LoadingSpinner color={theme.colors.primaryForeground} />
+                  <LoadingSpinner color={colors.primaryForeground} />
                 ) : (
                   <>
-                    <CheckCircle size={18} color={theme.colors.primaryForeground} style={tw`mr-2`} />
-                    <Text style={[tw`font-semibold`, { color: theme.colors.primaryForeground }]}>
+                    <CheckCircle size={18} color={colors.primaryForeground} style={tw`mr-2`} />
+                    <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>
                       {editingService ? 'Update Service' : 'Add Service'}
                     </Text>
                   </>
@@ -371,10 +304,10 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
 
               {editingService && (
                 <TouchableOpacity
-                  style={[tw`px-4 py-3 rounded-xl`, { borderWidth: 1, borderColor: theme.colors.mutedForeground }]}
+                  style={[tw`px-4 py-3 rounded-xl`, { borderWidth: 1, borderColor: colors.mutedForeground }]}
                   onPress={resetForm}
                 >
-                  <Text style={{ color: theme.colors.foreground }}>Cancel</Text>
+                  <Text style={{ color: colors.foreground }}>Cancel</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -385,36 +318,36 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
         <View>
           <View style={tw`flex-row items-center justify-between mb-4`}>
             <View style={tw`flex-row items-center`}>
-              <Scissors size={18} color={theme.colors.secondary} style={tw`mr-2`} />
-              <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+              <Scissors size={18} color={colors.primary} style={tw`mr-2`} />
+              <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                 Your Services
               </Text>
             </View>
-            <View style={[tw`px-3 py-1 rounded-full`, { backgroundColor: theme.colors.secondary + '20' }]}>
-              <Text style={[tw`text-sm font-bold`, { color: theme.colors.secondary }]}>
+            <View style={[tw`px-3 py-1 rounded-full`, { backgroundColor: colors.primarySubtle }]}>
+              <Text style={[tw`text-sm font-bold`, { color: colors.primary }]}>
                 {services.length} {services.length === 1 ? 'Service' : 'Services'}
               </Text>
             </View>
           </View>
 
           {services.length === 0 ? (
-            <Card style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+            <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
               <CardContent style={tw`p-8 items-center`}>
-                <View style={[tw`p-4 rounded-3xl mb-4`, { backgroundColor: theme.colors.secondary + '20' }]}>
-                  <Sparkles size={32} color={theme.colors.secondary} />
+                <View style={[tw`p-4 rounded-3xl mb-4`, { backgroundColor: colors.primarySubtle }]}>
+                  <Sparkles size={32} color={colors.primary} />
                 </View>
-                <Text style={[tw`text-xl font-bold mb-2`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-xl font-bold mb-2`, { color: colors.foreground }]}>
                   No Services Yet
                 </Text>
-                <Text style={[tw`text-center mb-6`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-center mb-6`, { color: colors.mutedForeground }]}>
                   Add your first service to start accepting bookings
                 </Text>
                 <TouchableOpacity
-                  style={[tw`px-6 py-3 rounded-xl flex-row items-center`, { backgroundColor: theme.colors.secondary }]}
+                  style={[tw`px-6 py-3 rounded-xl flex-row items-center`, { backgroundColor: colors.primary }]}
                   onPress={() => setFormData({ name: '', price: 0, duration: 30, description: '' })}
                 >
-                  <Plus size={18} color={theme.colors.primaryForeground} style={tw`mr-2`} />
-                  <Text style={[tw`font-semibold`, { color: theme.colors.primaryForeground }]}>
+                  <Plus size={18} color={colors.primaryForeground} style={tw`mr-2`} />
+                  <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>
                     Add Your First Service
                   </Text>
                 </TouchableOpacity>
@@ -423,29 +356,29 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
           ) : (
             <View style={tw`gap-3`}>
               {services.map((service) => (
-                <Card key={service.id} style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+                <Card key={service.id} style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                   <CardContent style={tw`p-4`}>
                     <View style={tw`flex-row justify-between items-start`}>
                       <View style={tw`flex-1`}>
-                        <Text style={[tw`text-lg font-semibold mb-1`, { color: theme.colors.foreground }]}>
+                        <Text style={[tw`text-lg font-semibold mb-1`, { color: colors.foreground }]}>
                           {service.name}
                         </Text>
                         <View style={tw`flex-row items-center gap-4 mb-2`}>
-                          <View style={[tw`px-3 py-1 rounded-full flex-row items-center`, { backgroundColor: theme.colors.secondary + '20' }]}>
-                            <DollarSign size={14} color={theme.colors.secondary} />
-                            <Text style={[tw`ml-1 font-bold`, { color: theme.colors.secondary }]}>
+                          <View style={[tw`px-3 py-1 rounded-full flex-row items-center`, { backgroundColor: colors.primarySubtle }]}>
+                            <DollarSign size={14} color={colors.primary} />
+                            <Text style={[tw`ml-1 font-bold`, { color: colors.primary }]}>
                               {service.price}
                             </Text>
                           </View>
                           <View style={tw`flex-row items-center`}>
-                            <Clock size={14} color={theme.colors.mutedForeground} style={tw`mr-1`} />
-                            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                            <Clock size={14} color={colors.mutedForeground} style={tw`mr-1`} />
+                            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                               {formatDuration(service.duration)}
                             </Text>
                           </View>
                         </View>
                         {service.description && (
-                          <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                          <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                             {service.description}
                           </Text>
                         )}
@@ -454,15 +387,15 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                       <View style={tw`flex-row gap-2 ml-4`}>
                         <TouchableOpacity
                           onPress={() => handleEdit(service)}
-                          style={[tw`p-2 rounded-xl`, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+                          style={[tw`p-2 rounded-xl`, { backgroundColor: colors.glassBorder }]}
                         >
-                          <Edit size={18} color={theme.colors.foreground} />
+                          <Edit size={18} color={colors.foreground} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => handleDelete(service.id!)}
-                          style={[tw`p-2 rounded-xl`, { backgroundColor: theme.colors.destructive + '10' }]}
+                          style={[tw`p-2 rounded-xl`, { backgroundColor: colors.primarySubtle }]}
                         >
-                          <Trash2 size={18} color={theme.colors.destructive} />
+                          <Trash2 size={18} color={colors.destructive} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -474,14 +407,14 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
         </View>
 
         {/* Tips Section */}
-        <Card style={[tw`mt-8`, { backgroundColor: theme.colors.secondary + '10', borderColor: theme.colors.secondary + '20' }]}>
+        <Card style={[tw`mt-8`, { backgroundColor: colors.primarySubtle, borderColor: colors.primarySubtle }]}>
           <CardContent style={tw`p-4`}>
             <View style={tw`flex-row items-start`}>
-              <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: theme.colors.secondary + '20' }]}>
-                <Sparkles size={20} color={theme.colors.secondary} />
+              <View style={[tw`p-2 rounded-xl mr-3`, { backgroundColor: colors.primarySubtle }]}>
+                <Sparkles size={20} color={colors.primary} />
               </View>
               <View style={tw`flex-1`}>
-                <Text style={[tw`text-base font-semibold mb-3`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-base font-semibold mb-3`, { color: colors.foreground }]}>
                   Pro Tips for Success
                 </Text>
                 <View style={tw`gap-2`}>
@@ -492,8 +425,8 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                     'Consider offering package deals for multiple services'
                   ].map((tip, index) => (
                     <View key={index} style={tw`flex-row items-start`}>
-                      <View style={[tw`w-1.5 h-1.5 rounded-full mt-1.5 mr-2`, { backgroundColor: theme.colors.secondary }]} />
-                      <Text style={[tw`flex-1 text-sm`, { color: theme.colors.foreground }]}>
+                      <View style={[tw`w-1.5 h-1.5 rounded-full mt-1.5 mr-2`, { backgroundColor: colors.primary }]} />
+                      <Text style={[tw`flex-1 text-sm`, { color: colors.foreground }]}>
                         {tip}
                       </Text>
                     </View>

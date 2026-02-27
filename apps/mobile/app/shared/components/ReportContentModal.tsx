@@ -17,7 +17,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { X, AlertCircle, Shield } from 'lucide-react-native';
 import tw from 'twrnc';
-import { theme } from '../lib/theme';
+import { useTheme } from './theme/ThemeProvider';
 import { reportingService } from '../services/reportingService';
 import { logger } from '../lib/logger';
 import type { ReportType, ReportReason } from '../types/reporting.types';
@@ -87,6 +87,7 @@ export function ReportContentModal({
   reportedUserId,
   contentDescription,
 }: ReportContentModalProps) {
+  const { colors } = useTheme();
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -176,7 +177,7 @@ export function ReportContentModal({
             {
               backgroundColor: 'rgba(0, 0, 0, 0.85)',
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderColor: colors.glassBorder,
             },
           ]}
         >
@@ -187,16 +188,16 @@ export function ReportContentModal({
                 <View
                   style={[
                     tw`w-12 h-12 rounded-full items-center justify-center mr-3`,
-                    { backgroundColor: theme.colors.destructive + '20' },
+                    { backgroundColor: colors.primarySubtle },
                   ]}
                 >
-                  <Shield size={24} color={theme.colors.destructive} />
+                  <Shield size={24} color={colors.destructive} />
                 </View>
                 <View>
-                  <Text style={[tw`text-xl font-bold`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>
                     Report Content
                   </Text>
-                  <Text style={[tw`text-sm mt-1`, { color: theme.colors.mutedForeground }]}>
+                  <Text style={[tw`text-sm mt-1`, { color: colors.mutedForeground }]}>
                     Why are you reporting {getContentTypeLabel(contentType)}?
                   </Text>
                 </View>
@@ -206,7 +207,7 @@ export function ReportContentModal({
                 disabled={isSubmitting}
                 style={tw`p-2`}
               >
-                <X size={24} color={theme.colors.mutedForeground} />
+                <X size={24} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
 
@@ -214,10 +215,10 @@ export function ReportContentModal({
               <View
                 style={[
                   tw`p-3 rounded-xl mt-2`,
-                  { backgroundColor: 'rgba(255, 255, 255, 0.05)' },
+                  { backgroundColor: colors.glass },
                 ]}
               >
-                <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                   {contentDescription}
                 </Text>
               </View>
@@ -241,12 +242,12 @@ export function ReportContentModal({
                     tw`p-4 rounded-xl mb-3 border`,
                     selectedReason === reason.value
                       ? {
-                          backgroundColor: theme.colors.destructive + '20',
-                          borderColor: theme.colors.destructive,
+                          backgroundColor: colors.primarySubtle,
+                          borderColor: colors.destructive,
                         }
                       : {
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                          borderColor: 'rgba(255, 255, 255, 0.1)',
+                          backgroundColor: colors.glass,
+                          borderColor: colors.glassBorder,
                         },
                   ]}
                 >
@@ -256,17 +257,17 @@ export function ReportContentModal({
                         tw`w-5 h-5 rounded-full border-2 items-center justify-center mr-3 mt-0.5`,
                         selectedReason === reason.value
                           ? {
-                              borderColor: theme.colors.destructive,
-                              backgroundColor: theme.colors.destructive,
+                              borderColor: colors.destructive,
+                              backgroundColor: colors.destructive,
                             }
-                          : { borderColor: theme.colors.mutedForeground },
+                          : { borderColor: colors.mutedForeground },
                       ]}
                     >
                       {selectedReason === reason.value && (
                         <View
                           style={[
                             tw`w-2.5 h-2.5 rounded-full`,
-                            { backgroundColor: theme.colors.background },
+                            { backgroundColor: colors.background },
                           ]}
                         />
                       )}
@@ -278,15 +279,15 @@ export function ReportContentModal({
                           {
                             color:
                               selectedReason === reason.value
-                                ? theme.colors.destructive
-                                : theme.colors.foreground,
+                                ? colors.destructive
+                                : colors.foreground,
                           },
                         ]}
                       >
                         {reason.label}
                       </Text>
                       <Text
-                        style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}
+                        style={[tw`text-sm`, { color: colors.mutedForeground }]}
                       >
                         {reason.description}
                       </Text>
@@ -298,22 +299,22 @@ export function ReportContentModal({
 
             {/* Additional Details */}
             <View style={tw`mb-6`}>
-              <Text style={[tw`font-semibold mb-2`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`font-semibold mb-2`, { color: colors.foreground }]}>
                 Additional Details (Optional)
               </Text>
               <TextInput
                 style={[
                   tw`p-4 rounded-xl text-base min-h-[100px]`,
                   {
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    backgroundColor: colors.glass,
                     borderWidth: 1,
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    color: theme.colors.foreground,
+                    borderColor: colors.glassBorder,
+                    color: colors.foreground,
                     textAlignVertical: 'top',
                   },
                 ]}
                 placeholder="Provide any additional information that might help us review this report..."
-                placeholderTextColor={theme.colors.mutedForeground}
+                placeholderTextColor={colors.mutedForeground}
                 value={description}
                 onChangeText={setDescription}
                 multiline
@@ -321,7 +322,7 @@ export function ReportContentModal({
                 editable={!isSubmitting}
                 maxLength={500}
               />
-              <Text style={[tw`text-xs mt-1 text-right`, { color: theme.colors.mutedForeground }]}>
+              <Text style={[tw`text-xs mt-1 text-right`, { color: colors.mutedForeground }]}>
                 {description.length}/500
               </Text>
             </View>
@@ -354,12 +355,12 @@ export function ReportContentModal({
               style={[
                 tw`flex-1 py-4 rounded-xl items-center`,
                 {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  backgroundColor: colors.glassBorder,
                   opacity: isSubmitting ? 0.5 : 1,
                 },
               ]}
             >
-              <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -371,14 +372,14 @@ export function ReportContentModal({
                 {
                   backgroundColor:
                     selectedReason && !isSubmitting
-                      ? theme.colors.destructive
-                      : 'rgba(255, 255, 255, 0.1)',
+                      ? colors.destructive
+                      : colors.glassBorder,
                   opacity: !selectedReason || isSubmitting ? 0.5 : 1,
                 },
               ]}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color={theme.colors.foreground} />
+                <ActivityIndicator size="small" color={colors.foreground} />
               ) : (
                 <Text
                   style={[
@@ -386,8 +387,8 @@ export function ReportContentModal({
                     {
                       color:
                         selectedReason && !isSubmitting
-                          ? theme.colors.destructiveForeground
-                          : theme.colors.mutedForeground,
+                          ? colors.destructiveForeground
+                          : colors.mutedForeground,
                     },
                   ]}
                 >

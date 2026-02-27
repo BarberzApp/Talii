@@ -10,6 +10,8 @@ import type { FeedItem, VideoState } from '../types/feed.types';
 import { logger } from '../shared/lib/logger';
 import { supabase } from '../shared/lib/supabase';
 import { ArrowLeft } from 'lucide-react-native';
+import { useTheme } from '../shared/components/theme';
+import { theme } from '../shared/lib/theme';
 
 const { height, width } = Dimensions.get('window');
 const PAGE_HEIGHT = height;
@@ -19,6 +21,7 @@ type CutsPageRouteProp = RouteProp<RootStackParamList, 'Cuts'>;
 type CutsPageNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Cuts'>;
 
 export default function CutsPage() {
+  const { colors } = useTheme();
   const route = useRoute<CutsPageRouteProp>();
   const navigation = useNavigation<CutsPageNavigationProp>();
   const { cutId, barberId } = route.params || {};
@@ -91,9 +94,6 @@ export default function CutsPage() {
           created_at,
           duration,
           views,
-          likes,
-          shares,
-          comments_count,
           barber_id,
           barbers!inner(
             id,
@@ -113,7 +113,6 @@ export default function CutsPage() {
         .eq('id', cutId)
         .eq('is_public', true);
       
-      // If barberId filter is provided, also fetch other cuts from same barber
       if (filterBarberId) {
         query = query.eq('barber_id', filterBarberId);
       }
@@ -139,10 +138,6 @@ export default function CutsPage() {
           duration: data.duration,
           view_count: data.views || 0,
           reach_count: data.views || 0,
-          likes: data.likes || 0,
-          comments: data.comments_count || 0,
-          shares: data.shares || 0,
-          music: 'Original Sound',
           barber_location: barber?.city || barber?.state || 'Unknown location',
         };
         
@@ -158,9 +153,6 @@ export default function CutsPage() {
               created_at,
               duration,
               views,
-              likes,
-              shares,
-              comments_count,
               barber_id,
               barbers!inner(
                 id,
@@ -199,10 +191,6 @@ export default function CutsPage() {
                 duration: cut.duration,
                 view_count: cut.views || 0,
                 reach_count: cut.views || 0,
-                likes: cut.likes || 0,
-                comments: cut.comments_count || 0,
-                shares: cut.shares || 0,
-                music: 'Original Sound',
                 barber_location: barber?.city || barber?.state || 'Unknown location',
               };
             });
@@ -322,31 +310,24 @@ export default function CutsPage() {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.errorContainer}>
+      <SafeAreaView style={[styles.errorContainer, { backgroundColor: colors.background }]}>
         <View style={styles.errorContent}>
-          <Text style={styles.errorText}>Failed to load videos</Text>
-          <Text style={styles.errorSubtext}>{error}</Text>
+          <Text style={[styles.errorText, { color: colors.foreground }]}>Failed to load videos</Text>
+          <Text style={[styles.errorSubtext, { color: colors.mutedForeground }]}>{error}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Back Button */}
       <SafeAreaView style={styles.backButtonContainer} edges={['top']}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => {
-            if (barberId) {
-              // Navigate back to profile
-              navigation.navigate('ProfilePreview', { barberId });
-            } else {
-              navigation.goBack();
-            }
-          }}
+          onPress={() => navigation.goBack()}
         >
-          <ArrowLeft size={24} color="white" />
+          <ArrowLeft size={22} color="#FFFFFF" />
         </TouchableOpacity>
       </SafeAreaView>
       
@@ -360,8 +341,8 @@ export default function CutsPage() {
           <RefreshControl
             refreshing={loading && filteredItems.length === 0}
             onRefresh={onRefresh}
-            tintColor="white"
-            colors={['white']}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         contentContainerStyle={styles.contentContainer}
@@ -372,7 +353,7 @@ export default function CutsPage() {
       {/* Loading indicator for pagination */}
       {loading && filteredItems.length > 0 && (
         <View style={styles.loadingIndicator}>
-          <Text style={styles.loadingText}>Loading more...</Text>
+          <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>Loading more...</Text>
         </View>
       )}
     </View>
@@ -382,26 +363,22 @@ export default function CutsPage() {
 const styles = StyleSheet.create({
   root: { 
     flex: 1, 
-    backgroundColor: 'black' 
   },
   backButtonContainer: {
     position: 'absolute',
-    top: 15,
+    top: 0,
     left: 0,
-    right: 0,
     zIndex: 1000,
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingLeft: 16,
+    paddingTop: 12,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   contentContainer: {
     minHeight: height,
@@ -409,7 +386,6 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: 'black',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -418,13 +394,11 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   errorSubtext: {
-    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     textAlign: 'center',
   },
@@ -436,7 +410,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
   },
 });

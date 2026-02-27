@@ -7,9 +7,10 @@ import {
   ViewStyle
 } from 'react-native';
 import tw from 'twrnc';
+import { useTheme } from '../theme/ThemeProvider';
 import { theme } from '../../lib/theme';
 
-type ButtonSize = 'sm' | 'default' | 'lg' | 'icon';
+type ButtonSize = 'sm' | 'default' | 'lg' | 'hero' | 'icon';
 type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 
 interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
@@ -34,46 +35,62 @@ const Button: React.FC<ButtonProps> = ({
   className,
   ...props
 }) => {
-  const sizeStyles: Record<ButtonSize, string> = {
-    sm: 'h-9 px-3',
-    default: 'h-10 px-4',
-    lg: 'h-11 px-8',
-    icon: 'h-10 w-10'
+  const { colors } = useTheme();
+
+  const sizeContainerStyles: Record<ButtonSize, ViewStyle> = {
+    sm: { height: 36, paddingHorizontal: 12, borderRadius: theme.borderRadius.xl },
+    default: { height: 40, paddingHorizontal: 16, borderRadius: theme.borderRadius.xl },
+    lg: { height: 44, paddingHorizontal: 32, borderRadius: theme.borderRadius['2xl'] },
+    hero: { height: 56, paddingHorizontal: 24, borderRadius: theme.borderRadius['3xl'], width: '100%' as any },
+    icon: { height: 40, width: 40, borderRadius: theme.borderRadius.xl },
   };
 
-  const variantStyles: Record<ButtonVariant, any> = {
-    default: { backgroundColor: theme.colors.primary },
-    destructive: { backgroundColor: theme.colors.destructive },
+  const variantStyles: Record<ButtonVariant, ViewStyle> = {
+    default: {
+      backgroundColor: colors.primary,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 6,
+    },
+    destructive: { backgroundColor: colors.destructive },
     outline: { 
       borderWidth: 1, 
-      borderColor: theme.colors.input, 
-      backgroundColor: theme.colors.background 
+      borderColor: colors.border, 
+      backgroundColor: colors.background 
     },
-    secondary: { backgroundColor: theme.colors.secondary },
+    secondary: {
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
     ghost: { backgroundColor: 'transparent' },
-    link: { backgroundColor: 'transparent' }
+    link: { backgroundColor: 'transparent' },
   };
 
   const textSizeStyles: Record<ButtonSize, number> = {
     sm: 14,
     default: 16,
     lg: 18,
+    hero: 20,
     icon: 14
   };
 
-  const textVariantStyles: Record<ButtonVariant, any> = {
-    default: { color: theme.colors.primaryForeground },
-    destructive: { color: theme.colors.destructiveForeground },
-    outline: { color: theme.colors.foreground },
-    secondary: { color: theme.colors.secondaryForeground },
-    ghost: { color: theme.colors.foreground },
-    link: { color: theme.colors.primary, textDecorationLine: 'underline' }
+  const textVariantStyles: Record<ButtonVariant, TextStyle> = {
+    default: { color: colors.primaryForeground },
+    destructive: { color: colors.destructiveForeground },
+    outline: { color: colors.foreground },
+    secondary: { color: colors.primary },
+    ghost: { color: colors.foreground },
+    link: { color: colors.primary, textDecorationLine: 'underline' }
   };
 
   return (
     <TouchableOpacity
       style={[
-        tw`${sizeStyles[size]} rounded-md flex-row items-center justify-center`,
+        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+        sizeContainerStyles[size],
         variantStyles[variant],
         disabled && { opacity: 0.5 },
         style

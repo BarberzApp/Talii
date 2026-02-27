@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface DialogProps {
   visible: boolean;
@@ -33,6 +33,7 @@ const Dialog: React.FC<DialogProps> = ({
   children, 
   showCloseButton = true 
 }) => {
+  const { colors } = useTheme();
   return (
     <Modal
       visible={visible}
@@ -41,20 +42,26 @@ const Dialog: React.FC<DialogProps> = ({
       onRequestClose={onClose}
     >
       <TouchableOpacity 
-        style={styles.overlay}
+        style={[styles.overlay, { backgroundColor: colors.backdrop }]}
         activeOpacity={1}
         onPress={onClose}
       >
         <View 
-          style={styles.dialog}
+          style={[
+            styles.dialog,
+            {
+              backgroundColor: colors.background,
+              borderColor: colors.glassBorder,
+            },
+          ]}
           onStartShouldSetResponder={() => true}
         >
           {title && (
             <View style={styles.header}>
-              <Text style={styles.title}>{title}</Text>
+              <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
               {showCloseButton && (
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Text style={styles.closeButtonText}>×</Text>
+                <TouchableOpacity onPress={onClose} style={[styles.closeButton, { backgroundColor: colors.glass }]}>
+                  <Text style={[styles.closeButtonText, { color: colors.foreground }]}>×</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -79,18 +86,18 @@ const DialogFooter: React.FC<DialogFooterProps> = ({ children }) => {
 };
 
 const DialogTitle: React.FC<DialogTitleProps> = ({ children }) => {
-  return <Text style={styles.title}>{children}</Text>;
+  const { colors } = useTheme();
+  return <Text style={[styles.title, { color: colors.foreground }]}>{children}</Text>;
 };
 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   dialog: {
-    backgroundColor: theme.colors.background,
+    borderWidth: 1,
     borderRadius: 12,
     padding: 20,
     margin: 20,
@@ -106,19 +113,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: theme.colors.foreground,
   },
   closeButton: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButtonText: {
     fontSize: 18,
-    color: theme.colors.foreground,
     lineHeight: 20,
   },
   content: {

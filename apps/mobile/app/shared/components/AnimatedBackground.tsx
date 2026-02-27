@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Animated, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { theme } from '../lib/theme';
+import { useTheme } from './theme/ThemeProvider';
 
 const { width, height } = Dimensions.get('window');
 
@@ -11,9 +12,10 @@ interface ParticleProps {
   startX: number;
   startY: number;
   size: number;
+  primaryColor: string;
 }
 
-const Particle: React.FC<ParticleProps> = ({ delay, duration, startX, startY, size }) => {
+const Particle: React.FC<ParticleProps> = ({ delay, duration, startX, startY, size, primaryColor }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -67,7 +69,7 @@ const Particle: React.FC<ParticleProps> = ({ delay, duration, startX, startY, si
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: theme.colors.secondary,
+        backgroundColor: primaryColor,
         left: startX,
         top: startY,
         transform: [{ translateY }, { translateX }, { scale }],
@@ -77,7 +79,7 @@ const Particle: React.FC<ParticleProps> = ({ delay, duration, startX, startY, si
   );
 };
 
-const LargeFloatingElement: React.FC<{ delay: number; index: number }> = ({ delay, index }) => {
+const LargeFloatingElement: React.FC<{ delay: number; index: number; primarySoftColor: string }> = ({ delay, index, primarySoftColor }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -130,7 +132,7 @@ const LargeFloatingElement: React.FC<{ delay: number; index: number }> = ({ dela
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: 'rgba(199, 142, 63, 0.1)',
+        backgroundColor: primarySoftColor,
         left: `${left}%`,
         top: `${top}%`,
         transform: [{ translateY }, { scale }],
@@ -141,7 +143,11 @@ const LargeFloatingElement: React.FC<{ delay: number; index: number }> = ({ dela
 };
 
 export const AnimatedBackground: React.FC = () => {
+  const { colors, colorScheme } = useTheme();
   const backgroundOpacity = useRef(new Animated.Value(0)).current;
+
+  const gradientColors = colorScheme === 'dark' ? theme.gradients.backgroundDark : theme.gradients.background;
+  const overlayColors: [string, string] = ['transparent', colors.glass];
 
   useEffect(() => {
     Animated.timing(backgroundOpacity, {
@@ -162,36 +168,36 @@ export const AnimatedBackground: React.FC = () => {
 
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-      {/* Base gradient background */}
+      {/* Base gradient background - theme-aware */}
       <Animated.View style={{ flex: 1, opacity: backgroundOpacity }}>
         <LinearGradient
-          colors={theme.gradients.background}
+          colors={gradientColors}
           style={{ flex: 1 }}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
         />
       </Animated.View>
 
-      {/* Radial gradient overlays */}
+      {/* Radial gradient overlays - Talii orange tints matching web */}
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
         <LinearGradient
-          colors={['rgba(199, 142, 63, 0.15)', 'transparent']}
+          colors={['rgba(238, 109, 35, 0.12)', 'transparent']} // Talii orange #EE6D23 with opacity
           style={{
             position: 'absolute',
             width: 200,
             height: 200,
-            borderRadius: 100,
+            borderRadius: theme.borderRadius.full,
             top: '80%',
             left: '20%',
           }}
         />
         <LinearGradient
-          colors={['rgba(141, 114, 80, 0.1)', 'transparent']}
+          colors={['rgba(238, 109, 35, 0.08)', 'transparent']} // Talii orange #EE6D23 with opacity
           style={{
             position: 'absolute',
             width: 200,
             height: 200,
-            borderRadius: 100,
+            borderRadius: theme.borderRadius.full,
             top: '20%',
             left: '80%',
           }}
@@ -200,17 +206,22 @@ export const AnimatedBackground: React.FC = () => {
 
       {/* Floating particles */}
       {particles.map((particle, index) => (
-        <Particle key={index} {...particle} />
+        <Particle key={index} {...particle} primaryColor={colors.primary} />
       ))}
 
       {/* Larger floating elements */}
       {Array.from({ length: 3 }, (_, index) => (
-        <LargeFloatingElement key={`large-${index}`} delay={index * 2000} index={index} />
+        <LargeFloatingElement
+          key={`large-${index}`}
+          delay={index * 2000}
+          index={index}
+          primarySoftColor={theme.gradients.glow[1]}
+        />
       ))}
 
-      {/* Subtle overlay for depth */}
+      {/* Subtle overlay for depth - theme-aware */}
       <LinearGradient
-        colors={['transparent', 'rgba(39, 42, 47, 0.3)']}
+        colors={overlayColors}
         style={{
           position: 'absolute',
           top: 0,

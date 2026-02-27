@@ -15,7 +15,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
 import { RootStackParamList } from '../shared/types';
-import { supabase, theme } from '../shared/lib';
+import { supabase } from '../shared/lib';
+import { useTheme } from '../shared/components/theme';
 import { useAuth } from '../shared/hooks';
 import { logger } from '../shared/lib/logger';
 const Icon = require('react-native-vector-icons/Feather').default;
@@ -57,6 +58,7 @@ type Barber = {
 }
 
 export default function FindBarberPage() {
+    const { colors } = useTheme();
     const navigation = useNavigation<FindBarberNavigationProp>();
     const { user } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
@@ -179,36 +181,36 @@ export default function FindBarberPage() {
 
     if (loading) {
         return (
-            <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+            <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
                 <View style={tw`flex-1 items-center justify-center`}>
-                    <ActivityIndicator size="large" color={theme.colors.secondary} />
-                    <Text style={[tw`mt-4`, { color: theme.colors.mutedForeground }]}>Loading barbers...</Text>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[tw`mt-4`, { color: colors.mutedForeground }]}>Loading barbers...</Text>
                 </View>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+        <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
             <View style={tw`flex-1`}>
                 {/* Header */}
                 <View style={tw`px-5 pt-4 pb-3`}>
-                    <Text style={[tw`text-2xl font-bold`, { color: theme.colors.foreground }]}>
+                    <Text style={[tw`text-2xl font-bold`, { color: colors.foreground }]}>
                         Find a Barber
                     </Text>
-                    <Text style={[tw`text-sm mt-1`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-sm mt-1`, { color: colors.mutedForeground }]}>
                         Discover skilled barbers in your area
                     </Text>
                 </View>
 
                 {/* Search Bar */}
                 <View style={tw`px-5 pb-3`}>
-                    <View style={[tw`rounded-full flex-row items-center px-4 py-3`, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-                        <Icon name="search" size={18} color={theme.colors.mutedForeground} />
+                    <View style={[tw`rounded-full flex-row items-center px-4 py-3`, { backgroundColor: colors.input }]}>
+                        <Icon name="search" size={18} color={colors.mutedForeground} />
                         <TextInput
-                            style={[tw`flex-1 text-base ml-3`, { color: theme.colors.foreground }]}
+                            style={[tw`flex-1 text-base ml-3`, { color: colors.foreground }]}
                             placeholder="Search by name, location, or specialty..."
-                            placeholderTextColor={theme.colors.mutedForeground}
+                            placeholderTextColor={colors.mutedForeground}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                             autoCapitalize="none"
@@ -216,7 +218,7 @@ export default function FindBarberPage() {
                         />
                         {searchQuery.length > 0 && (
                             <TouchableOpacity onPress={clearSearch}>
-                                <Icon name="x" size={20} color={theme.colors.mutedForeground} />
+                                <Icon name="x" size={20} color={colors.mutedForeground} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -224,7 +226,7 @@ export default function FindBarberPage() {
 
                 {/* Results Summary */}
                 <View style={tw`px-5 pb-3`}>
-                    <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                         {filteredBarbers.length} barber{filteredBarbers.length !== 1 ? 's' : ''} found
                     </Text>
                 </View>
@@ -232,8 +234,8 @@ export default function FindBarberPage() {
                 {/* Error Message */}
                 {error && (
                     <View style={tw`px-5 mb-3`}>
-                        <View style={[tw`border rounded-lg p-3`, { backgroundColor: theme.colors.destructive + '20', borderColor: theme.colors.destructive + '50' }]}>
-                            <Text style={[tw`text-sm`, { color: theme.colors.destructive }]}>{error}</Text>
+                        <View style={[tw`border rounded-lg p-3`, { backgroundColor: colors.primarySubtle, borderColor: colors.destructive }]}>
+                            <Text style={[tw`text-sm`, { color: colors.destructive }]}>{error}</Text>
                         </View>
                     </View>
                 )}
@@ -247,13 +249,13 @@ export default function FindBarberPage() {
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={handleRefresh}
-                            tintColor={theme.colors.secondary}
+                            tintColor={colors.primary}
                         />
                     }
                 >
                     {filteredBarbers.length === 0 ? (
                         <View style={tw`items-center justify-center py-20`}>
-                            <Text style={[tw`text-base text-center`, { color: theme.colors.mutedForeground }]}>
+                            <Text style={[tw`text-base text-center`, { color: colors.mutedForeground }]}>
                                 {searchQuery 
                                     ? "No barbers found matching your search.\nTry adjusting your search terms."
                                     : "No barbers are currently available.\nPlease check back later."
@@ -261,10 +263,10 @@ export default function FindBarberPage() {
                             </Text>
                             {searchQuery && (
                                 <TouchableOpacity
-                                    style={[tw`mt-4 px-4 py-2 rounded-lg`, { backgroundColor: 'rgba(255,255,255,0.05)' }]}
+                                    style={[tw`mt-4 px-4 py-2 rounded-lg`, { backgroundColor: colors.input }]}
                                     onPress={clearSearch}
                                 >
-                                    <Text style={{ color: theme.colors.foreground }}>Clear search</Text>
+                                    <Text style={{ color: colors.foreground }}>Clear search</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -274,7 +276,7 @@ export default function FindBarberPage() {
                                 key={barber.id}
                                 style={[
                                     tw`rounded-2xl p-4 mb-3`,
-                                    { backgroundColor: 'rgba(255,255,255,0.05)' },
+                                    { backgroundColor: colors.input },
                                     !barber.isStripeReady && tw`opacity-60`
                                 ]}
                             >
@@ -283,14 +285,14 @@ export default function FindBarberPage() {
                                     {/* Avatar */}
                                     <View style={tw`mr-3`}>
                                         <View style={tw`relative`}>
-                                            <View style={[tw`w-14 h-14 rounded-full items-center justify-center`, { backgroundColor: theme.colors.secondary }]}>
-                                                <Text style={[tw`text-lg font-semibold`, { color: theme.colors.primaryForeground }]}>
+                                            <View style={[tw`w-14 h-14 rounded-full items-center justify-center`, { backgroundColor: colors.primary }]}>
+                                                <Text style={[tw`text-lg font-semibold`, { color: colors.primaryForeground }]}>
                                                     {getInitials(barber.name)}
                                                 </Text>
                                             </View>
                                             {barber.isStripeReady && (
                                                 <View style={tw`absolute -bottom-1 -right-1 bg-green-500 rounded-full w-5 h-5 items-center justify-center`}>
-                                                    <Icon name="check" size={12} color="white" />
+                                                    <Icon name="check" size={12} color={colors.primaryForeground} />
                                                 </View>
                                             )}
                                         </View>
@@ -298,11 +300,11 @@ export default function FindBarberPage() {
                                     
                                     {/* Name and business name */}
                                     <View style={tw`flex-1`}>
-                                        <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                                        <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                                             {barber.businessName || barber.name}
                                         </Text>
                                         {barber.businessName && barber.name !== barber.businessName && (
-                                            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                                            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                                                 {barber.name}
                                             </Text>
                                         )}
@@ -311,7 +313,7 @@ export default function FindBarberPage() {
                                 
                                 {/* Bio */}
                                 {barber.bio && (
-                                    <Text style={[tw`text-sm mt-3 mb-2`, { color: theme.colors.mutedForeground }]} numberOfLines={2}>
+                                    <Text style={[tw`text-sm mt-3 mb-2`, { color: colors.mutedForeground }]} numberOfLines={2}>
                                         {barber.bio}
                                     </Text>
                                 )}
@@ -319,8 +321,8 @@ export default function FindBarberPage() {
                                 {/* Location */}
                                 {barber.location && (
                                     <View style={tw`flex-row items-center mt-2`}>
-                                        <Icon name="map-pin" size={14} color={theme.colors.mutedForeground} />
-                                        <Text style={[tw`text-sm ml-1`, { color: theme.colors.mutedForeground }]}>
+                                        <Icon name="map-pin" size={14} color={colors.mutedForeground} />
+                                        <Text style={[tw`text-sm ml-1`, { color: colors.mutedForeground }]}>
                                             {barber.location}
                                         </Text>
                                     </View>
@@ -332,15 +334,15 @@ export default function FindBarberPage() {
                                         {barber.specialties.slice(0, 3).map((specialty, index) => (
                                             <View
                                                 key={index}
-                                                style={[tw`px-2 py-1 rounded-full mr-2 mb-2`, { backgroundColor: theme.colors.secondary + '20' }]}
+                                                style={[tw`px-2 py-1 rounded-full mr-2 mb-2`, { backgroundColor: colors.primarySubtle }]}
                                             >
-                                                <Text style={[tw`text-xs`, { color: theme.colors.secondary }]}>
+                                                <Text style={[tw`text-xs`, { color: colors.primary }]}>
                                                     {specialty}
                                                 </Text>
                                             </View>
                                         ))}
                                         {barber.specialties.length > 3 && (
-                                            <Text style={[tw`text-xs self-center mb-2`, { color: theme.colors.mutedForeground }]}>
+                                            <Text style={[tw`text-xs self-center mb-2`, { color: colors.mutedForeground }]}>
                                                 +{barber.specialties.length - 3} more
                                             </Text>
                                         )}
@@ -352,17 +354,17 @@ export default function FindBarberPage() {
                                     <View style={tw`flex-row items-center`}>
                                         {/* Price */}
                                         {barber.priceRange && (
-                                            <Text style={[tw`font-medium text-sm mr-3`, { color: theme.colors.secondary }]}>
+                                            <Text style={[tw`font-medium text-sm mr-3`, { color: colors.primary }]}>
                                                 {barber.priceRange}
                                             </Text>
                                         )}
                                         {/* Status */}
                                         {barber.isStripeReady ? (
-                                            <Text style={tw`text-green-400 text-sm font-medium`}>
+                                            <Text style={[tw`text-sm font-medium`, { color: colors.success }]}>
                                                 Available for booking
                                             </Text>
                                         ) : (
-                                            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                                            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                                                 Not available for booking
                                             </Text>
                                         )}
@@ -372,11 +374,11 @@ export default function FindBarberPage() {
                                     {barber.isStripeReady && (
                                         <TouchableOpacity
                                             onPress={() => handleBookAppointment(barber.id, barber.name)}
-                                            style={[tw`rounded-full flex-row items-center px-4 py-2`, { backgroundColor: theme.colors.secondary }]}
+                                            style={[tw`rounded-full flex-row items-center px-4 py-2`, { backgroundColor: colors.primary }]}
                                             activeOpacity={0.8}
                                         >
-                                            <Icon name="calendar" size={16} color={theme.colors.primaryForeground} style={tw`mr-1`} />
-                                            <Text style={[tw`text-sm font-semibold`, { color: theme.colors.primaryForeground }]}>Book</Text>
+                                            <Icon name="calendar" size={16} color={colors.primaryForeground} style={tw`mr-1`} />
+                                            <Text style={[tw`text-sm font-semibold`, { color: colors.primaryForeground }]}>Book</Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>

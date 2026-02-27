@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
@@ -48,6 +48,7 @@ interface EarningsDashboardProps {
 
 export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [earnings, setEarnings] = useState<EarningsData>({
     totalEarnings: 0,
     monthlyEarnings: 0,
@@ -237,8 +238,8 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
                 try {
                   const result = await WebBrowser.openBrowserAsync(data.url, {
                     presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-                    controlsColor: theme.colors.primary,
-                    toolbarColor: theme.colors.background,
+                    controlsColor: colors.primary,
+                    toolbarColor: colors.background,
                   });
                   
                   logger.log('WebBrowser result:', result);
@@ -256,8 +257,8 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
         // Open Stripe dashboard in browser
         const result = await WebBrowser.openBrowserAsync(data.url, {
           presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-          controlsColor: theme.colors.primary,
-          toolbarColor: theme.colors.background,
+          controlsColor: colors.primary,
+          toolbarColor: colors.background,
         });
         
         logger.log('WebBrowser result:', result);
@@ -454,10 +455,10 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
 
   if (isLoading) {
     return (
-      <Card style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+      <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
         <CardContent style={tw`p-6 items-center`}>
-          <Loader2 size={32} color={theme.colors.secondary} style={tw`mb-3`} />
-          <Text style={[tw`text-base`, { color: theme.colors.mutedForeground }]}>
+          <Loader2 size={32} color={colors.primary} style={tw`mb-3`} />
+          <Text style={[tw`text-base`, { color: colors.mutedForeground }]}>
             Loading earnings data...
           </Text>
         </CardContent>
@@ -469,40 +470,40 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-24`}>
       {/* Stripe Connect Status */}
       {!earnings.stripeConnected && (
-        <Card style={[tw`mb-6`, { backgroundColor: theme.colors.warning + '10', borderColor: theme.colors.warning + '20' }]}>
+        <Card style={[tw`mb-6`, { backgroundColor: colors.primarySubtle, borderColor: colors.primarySubtle }]}>
           <CardContent style={tw`p-4`}>
             <View style={tw`flex-row items-start`}>
-              <AlertCircle size={20} color={theme.colors.warning} style={tw`mr-3 mt-0.5`} />
+              <AlertCircle size={20} color={colors.warning} style={tw`mr-3 mt-0.5`} />
               <View style={tw`flex-1`}>
-                <Text style={[tw`font-semibold mb-1`, { color: theme.colors.warning }]}>
+                <Text style={[tw`font-semibold mb-1`, { color: colors.warning }]}>
                   Connect Stripe to receive payments
                 </Text>
-                <Text style={[tw`text-sm mb-3`, { color: theme.colors.warning }]}>
+                <Text style={[tw`text-sm mb-3`, { color: colors.warning }]}>
                   You need to connect your Stripe account to receive payouts from bookings.
                 </Text>
                 <TouchableOpacity
                   onPress={handleStripeConnect}
-                  style={[tw`py-2 px-4 rounded-xl flex-row items-center self-start`, { backgroundColor: theme.colors.warning }]}
+                  style={[tw`py-2 px-4 rounded-xl flex-row items-center self-start`, { backgroundColor: colors.warning }]}
                 >
-                  <CreditCard size={16} color={theme.colors.primary} style={tw`mr-2`} />
-                  <Text style={[tw`font-semibold`, { color: theme.colors.primary }]}>Connect Stripe</Text>
-                  <ExternalLink size={14} color={theme.colors.primary} style={tw`ml-2`} />
+                  <CreditCard size={16} color={colors.primary} style={tw`mr-2`} />
+                  <Text style={[tw`font-semibold`, { color: colors.primary }]}>Connect Stripe</Text>
+                  <ExternalLink size={14} color={colors.primary} style={tw`ml-2`} />
                 </TouchableOpacity>
                 
                 <TouchableOpacity
                   onPress={checkStripeStatus}
-                  style={[tw`py-2 px-4 rounded-xl flex-row items-center self-start mt-2`, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+                  style={[tw`py-2 px-4 rounded-xl flex-row items-center self-start mt-2`, { backgroundColor: colors.glassBorder }]}
                 >
-                  <RefreshCw size={16} color={theme.colors.foreground} style={tw`mr-2`} />
+                  <RefreshCw size={16} color={colors.foreground} style={tw`mr-2`} />
                   <Text>Check Status</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
                   onPress={debugStripeAccount}
-                  style={[tw`py-2 px-4 rounded-xl flex-row items-center self-start mt-2`, { backgroundColor: 'rgba(255,0,0,0.1)' }]}
+                  style={[tw`py-2 px-4 rounded-xl flex-row items-center self-start mt-2`, { backgroundColor: colors.destructiveSubtle }]}
                 >
-                  <RefreshCw size={16} color="red" style={tw`mr-2`} />
-                  <Text style={{ color: 'red' }}>Debug Stripe</Text>
+                  <RefreshCw size={16} color={colors.destructive} style={tw`mr-2`} />
+                  <Text style={{ color: colors.destructive }}>Debug Stripe</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -519,13 +520,13 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
             style={[
               tw`flex-1 py-2 rounded-xl`,
               period === p
-                ? { backgroundColor: theme.colors.secondary }
-                : { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }
+                ? { backgroundColor: colors.primary }
+                : { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }
             ]}
           >
             <Text style={[
               tw`text-center font-medium capitalize`,
-              { color: period === p ? theme.colors.primaryForeground : theme.colors.foreground }
+              { color: period === p ? colors.primaryForeground : colors.foreground }
             ]}>
               {p}
             </Text>
@@ -534,51 +535,51 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
       </View>
 
       {/* Main Earnings Card */}
-      <Card style={[tw`mb-6`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+      <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
         <CardContent style={tw`p-6`}>
           <View style={tw`flex-row items-center justify-between mb-2`}>
-            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
               {period === 'week' ? 'Weekly' : period === 'month' ? 'Monthly' : 'Yearly'} Earnings
             </Text>
             <View style={[
               tw`flex-row items-center px-2 py-1 rounded-full`,
-              { backgroundColor: getPercentageChange() >= 0 ? theme.colors.secondary + '20' : theme.colors.destructive + '20' }
+              { backgroundColor: colors.primarySubtle }
             ]}>
               {getPercentageChange() >= 0 ? (
-                <ArrowUpRight size={14} color={theme.colors.secondary} />
+                <ArrowUpRight size={14} color={colors.primary} />
               ) : (
-                <ArrowDownRight size={14} color={theme.colors.destructive} />
+                <ArrowDownRight size={14} color={colors.destructive} />
               )}
               <Text style={[
                 tw`text-xs font-bold ml-1`,
-                { color: getPercentageChange() >= 0 ? theme.colors.secondary : theme.colors.destructive }
+                { color: getPercentageChange() >= 0 ? colors.primary : colors.destructive }
               ]}>
                 {Math.abs(getPercentageChange())}%
               </Text>
             </View>
           </View>
           
-          <Text style={[tw`text-3xl font-bold mb-4`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-3xl font-bold mb-4`, { color: colors.foreground }]}>
             ${earnings.monthlyEarnings.toFixed(2)}
           </Text>
-          <Text style={[tw`text-xs mb-2`, { color: theme.colors.mutedForeground }]}>
+          <Text style={[tw`text-xs mb-2`, { color: colors.mutedForeground }]}>
             Includes: Service price + Add-ons (at appointment) + Platform fee share (via Stripe)
           </Text>
 
           <View style={tw`flex-row justify-between`}>
             <View>
-              <Text style={[tw`text-xs`, { color: theme.colors.mutedForeground }]}>
+              <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                 Completed Bookings
               </Text>
-              <Text style={[tw`text-base font-semibold`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-base font-semibold`, { color: colors.foreground }]}>
                 {earnings.completedBookings}
               </Text>
             </View>
             <View>
-              <Text style={[tw`text-xs`, { color: theme.colors.mutedForeground }]}>
+              <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                 Avg. Service Price
               </Text>
-              <Text style={[tw`text-base font-semibold`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-base font-semibold`, { color: colors.foreground }]}>
                 ${earnings.averageServicePrice.toFixed(2)}
               </Text>
             </View>
@@ -589,34 +590,34 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
       {/* Stats Grid */}
       <View style={tw`gap-3`}>
         <View style={tw`flex-row gap-3`}>
-          <Card style={[tw`flex-1`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+          <Card style={[tw`flex-1`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <CardContent style={tw`p-4`}>
               <View style={tw`flex-row items-center justify-between mb-2`}>
-                <View style={[tw`p-2 rounded-xl`, { backgroundColor: theme.colors.secondary + '20' }]}>
-                  <DollarSign size={20} color={theme.colors.secondary} />
+                <View style={[tw`p-2 rounded-xl`, { backgroundColor: colors.primarySubtle }]}>
+                  <DollarSign size={20} color={colors.primary} />
                 </View>
-                <TrendingUp size={16} color={theme.colors.secondary} />
+                <TrendingUp size={16} color={colors.primary} />
               </View>
-              <Text style={[tw`text-xs`, { color: theme.colors.mutedForeground }]}>
+              <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                 Total Earnings
               </Text>
-              <Text style={[tw`text-xl font-bold`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>
                 ${earnings.totalEarnings.toFixed(2)}
               </Text>
             </CardContent>
           </Card>
 
-          <Card style={[tw`flex-1`, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+          <Card style={[tw`flex-1`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <CardContent style={tw`p-4`}>
               <View style={tw`flex-row items-center justify-between mb-2`}>
-                <View style={[tw`p-2 rounded-xl`, { backgroundColor: theme.colors.warning + '20' }]}>
-                  <Calendar size={20} color={theme.colors.warning} />
+                <View style={[tw`p-2 rounded-xl`, { backgroundColor: colors.primarySubtle }]}>
+                  <Calendar size={20} color={colors.warning} />
                 </View>
               </View>
-              <Text style={[tw`text-xs`, { color: theme.colors.mutedForeground }]}>
+              <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
                 This Week
               </Text>
-              <Text style={[tw`text-xl font-bold`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>
                 ${earnings.weeklyEarnings.toFixed(2)}
               </Text>
             </CardContent>
@@ -625,25 +626,25 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
 
         {/* Pending Payouts */}
         {earnings.stripeConnected && (
-          <Card style={[{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+          <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <CardContent style={tw`p-4`}>
               <View style={tw`flex-row items-center justify-between`}>
                 <View>
                   <View style={tw`flex-row items-center mb-1`}>
-                    <CreditCard size={16} color={theme.colors.secondary} style={tw`mr-2`} />
-                    <Text style={[tw`font-medium`, { color: theme.colors.foreground }]}>
+                    <CreditCard size={16} color={colors.primary} style={tw`mr-2`} />
+                    <Text style={[tw`font-medium`, { color: colors.foreground }]}>
                       Pending Payouts
                     </Text>
                   </View>
-                  <Text style={[tw`text-2xl font-bold`, { color: theme.colors.secondary }]}>
+                  <Text style={[tw`text-2xl font-bold`, { color: colors.primary }]}>
                     ${earnings.pendingPayouts.toFixed(2)}
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={[tw`px-4 py-2 rounded-xl`, { backgroundColor: theme.colors.secondary + '20' }]}
+                  style={[tw`px-4 py-2 rounded-xl`, { backgroundColor: colors.primarySubtle }]}
                   onPress={handleViewStripeDetails}
                 >
-                  <Text style={[tw`text-sm font-medium`, { color: theme.colors.secondary }]}>
+                  <Text style={[tw`text-sm font-medium`, { color: colors.primary }]}>
                     View Details
                   </Text>
                 </TouchableOpacity>
@@ -655,13 +656,13 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
 
       {/* Success Message */}
       {earnings.stripeConnected && (
-        <View style={[tw`mt-6 p-4 rounded-xl flex-row items-start`, { backgroundColor: theme.colors.secondary + '10', borderWidth: 1, borderColor: theme.colors.secondary + '20' }]}>
-          <CheckCircle size={16} color={theme.colors.secondary} style={tw`mr-2 mt-0.5`} />
+        <View style={[tw`mt-6 p-4 rounded-xl flex-row items-start`, { backgroundColor: colors.primarySubtle, borderWidth: 1, borderColor: colors.primarySubtle }]}>
+          <CheckCircle size={16} color={colors.primary} style={tw`mr-2 mt-0.5`} />
           <View style={tw`flex-1`}>
-            <Text style={[tw`font-semibold mb-1`, { color: theme.colors.secondary }]}>
+            <Text style={[tw`font-semibold mb-1`, { color: colors.primary }]}>
               Stripe Connected
             </Text>
-            <Text style={[tw`text-sm`, { color: theme.colors.secondary }]}>
+            <Text style={[tw`text-sm`, { color: colors.primary }]}>
               Your payments are being processed automatically. Payouts occur daily.
             </Text>
           </View>

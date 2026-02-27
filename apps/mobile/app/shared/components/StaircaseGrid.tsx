@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import tw from 'twrnc';
-import { theme } from '../lib/theme';
+import { useTheme } from './theme/ThemeProvider';
 import { Calendar } from 'lucide-react-native';
 
 
@@ -23,11 +23,9 @@ interface Post {
   type: 'video' | 'image';
   url: string;
   thumbnail?: string;
-  title?: string;
   barberName: string;
   barberAvatar?: string;
-  barberId?: string; // Add barber ID for navigation
-  likes: number;
+  barberId?: string;
   views?: number;
   duration?: number;
   aspectRatio?: number;
@@ -56,6 +54,7 @@ export default function StaircaseGrid({
   onImagePress,
   onBookPress,
 }: StaircaseGridProps) {
+  const { colors } = useTheme();
   const [gridItems, setGridItems] = useState<GridItem[]>([]);
   const [playingVideos, setPlayingVideos] = useState<Set<string>>(new Set());
   const flatListRef = useRef<FlatList>(null);
@@ -141,7 +140,7 @@ export default function StaircaseGrid({
           {
             width,
             height,
-            backgroundColor: theme.colors.muted,
+            backgroundColor: colors.muted,
           },
         ]}
         onPress={() => handlePostPress(item)}

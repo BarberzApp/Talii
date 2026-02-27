@@ -3,9 +3,9 @@ import { ScrollView, View, Text, TouchableOpacity, StatusBar } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Shield } from 'lucide-react-native';
+import { useTheme } from '../shared/components/theme';
 import { theme } from '../shared/lib/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 
@@ -293,6 +293,7 @@ We will respond to your inquiries within a reasonable timeframe.
 By using our Services, you consent to the collection and use of your information as described in this Privacy Policy. If you do not agree with any part of this Privacy Policy, please do not use our Services.`;
 
 export default function PrivacyPolicyPage() {
+  const { theme, colors, colorScheme } = useTheme();
   const navigation = useNavigation();
 
   const handleBack = () => {
@@ -301,8 +302,11 @@ export default function PrivacyPolicyPage() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       
       {/* Animated Background */}
       <AnimatedBackground />
@@ -317,14 +321,15 @@ export default function PrivacyPolicyPage() {
           zIndex: 10,
           width: 44,
           height: 44,
-          borderRadius: 22,
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: theme.borderRadius.full,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
           justifyContent: 'center',
           alignItems: 'center',
-          backdropFilter: 'blur(10px)',
         }}
       >
-        <ArrowLeft size={24} color={theme.colors.foreground} />
+        <ArrowLeft size={24} color={colors.foreground} />
       </TouchableOpacity>
 
       <ScrollView
@@ -337,28 +342,28 @@ export default function PrivacyPolicyPage() {
           <View style={{
             width: 80,
             height: 80,
-            borderRadius: 40,
-            backgroundColor: 'rgba(199, 142, 63, 0.2)',
+            borderRadius: theme.borderRadius.full,
+            backgroundColor: colors.muted,
             justifyContent: 'center',
             alignItems: 'center',
             marginBottom: 24,
           }}>
-            <Shield size={40} color={theme.colors.secondary} />
+            <Shield size={40} color={colors.primary} />
           </View>
           
           <Text style={{
             fontSize: 32,
             fontFamily: theme.typography.fontFamily.bebas[0],
-            color: theme.colors.secondary,
+            color: colors.primary,
             textAlign: 'center',
             marginBottom: 12,
           }}>
-            PRIVACY POLICY
+            Privacy Policy
           </Text>
           
           <Text style={{
             fontSize: 16,
-            color: 'rgba(255, 255, 255, 0.8)',
+            color: colors.mutedForeground,
             textAlign: 'center',
           }}>
             How we collect, use, and protect your data
@@ -367,16 +372,15 @@ export default function PrivacyPolicyPage() {
 
         {/* Privacy Policy Content */}
         <View style={{
-          borderRadius: 24,
+          borderRadius: theme.borderRadius['3xl'],
           overflow: 'hidden',
         }}>
-          <BlurView
-            intensity={20}
+          <View
             style={{
               padding: 32,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
             }}
           >
             <ScrollView
@@ -386,20 +390,20 @@ export default function PrivacyPolicyPage() {
               <Text style={{
                 fontSize: 14,
                 lineHeight: 22,
-                color: 'rgba(255, 255, 255, 0.9)',
+                color: colors.foreground,
                 textAlign: 'left',
               }}>
                 {privacyPolicy}
               </Text>
             </ScrollView>
-          </BlurView>
+          </View>
         </View>
 
         {/* Footer */}
         <View style={{ alignItems: 'center', marginTop: 32 }}>
           <Text style={{
             fontSize: 12,
-            color: 'rgba(255, 255, 255, 0.6)',
+            color: colors.mutedForeground,
             textAlign: 'center',
           }}>
             Your privacy is important to us

@@ -6,11 +6,11 @@ import { notificationService } from './app/shared/lib/notifications';
 import { initSentry } from './app/shared/lib/sentry';
 import { logger } from './app/shared/lib/logger';
 import tw from 'twrnc';
-import { theme } from './app/shared/lib/theme';
 import { AppNavigator } from './app/navigation/AppNavigator';
 import { AuthProvider } from './app/shared/hooks/useAuth';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { Toaster, useToast } from './app/shared/components/ui';
+import { ThemeProvider, useTheme } from './app/shared/components/theme';
 // Initialize Sentry as early as possible (using secure configuration from sentry.ts)
 // The initSentry() function handles proper configuration with data privacy protections
 initSentry();
@@ -161,37 +161,49 @@ const App = () => {
 
   const { toasts, dismiss } = useToast();
 
-  if (!fontsLoaded || isLoading) {
-    return (
-      <View style={[tw`flex-1 justify-center items-center`, { backgroundColor: theme.colors.background }]}>
-        <Text style={[tw`text-xl font-bold`, { color: theme.colors.foreground }]}>BOCM</Text>
-        <Text style={[tw`text-sm mt-2`, { color: theme.colors.mutedForeground }]}>Loading...</Text>
-      </View>
-    );
-  }
-
-  // Validate Stripe publishable key
   const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-  if (!stripePublishableKey) {
+  if (stripePublishableKey === undefined || stripePublishableKey === '') {
     logger.error('Stripe publishable key is missing');
-    return (
-      <View style={[tw`flex-1 justify-center items-center`, { backgroundColor: theme.colors.background }]}>
-        <Text style={[tw`text-xl font-bold`, { color: theme.colors.foreground }]}>Configuration Error</Text>
-        <Text style={[tw`text-sm mt-2 text-center px-4`, { color: theme.colors.mutedForeground }]}>
-          The app is not properly configured. Please contact support.
-        </Text>
-      </View>
-    );
   }
 
   return (
-    <StripeProvider publishableKey={stripePublishableKey}>
-      <AuthProvider>
-        <AppNavigator />
-        <Toaster toasts={toasts} onDismiss={dismiss} />
-      </AuthProvider>
-    </StripeProvider>
+    <ThemeProvider>
+      {!fontsLoaded || isLoading ? (
+        <AppLoadingScreen />
+      ) : !stripePublishableKey ? (
+        <AppConfigErrorScreen />
+      ) : (
+        <StripeProvider publishableKey={stripePublishableKey}>
+          <AuthProvider>
+            <AppNavigator />
+            <Toaster toasts={toasts} onDismiss={dismiss} />
+          </AuthProvider>
+        </StripeProvider>
+      )}
+    </ThemeProvider>
   );
 };
+
+function AppLoadingScreen() {
+  const { colors } = useTheme();
+  return (
+    <View style={[tw`flex-1 justify-center items-center`, { backgroundColor: colors.background }]}>
+      <Text style={[tw`text-xl font-bold`, { color: colors.primary }]}>Talii</Text>
+      <Text style={[tw`text-sm mt-2`, { color: colors.mutedForeground }]}>Loading...</Text>
+    </View>
+  );
+}
+
+function AppConfigErrorScreen() {
+  const { colors } = useTheme();
+  return (
+    <View style={[tw`flex-1 justify-center items-center`, { backgroundColor: colors.background }]}>
+      <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>Configuration Error</Text>
+      <Text style={[tw`text-sm mt-2 text-center px-4`, { color: colors.mutedForeground }]}>
+        The app is not properly configured. Please contact support.
+      </Text>
+    </View>
+  );
+}
 
 export default App;

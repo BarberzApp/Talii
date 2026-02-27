@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../hooks/useAuth';
 import { useSafeNavigation } from '../../hooks/useSafeNavigation';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { logger } from '../../lib/logger';
 import tw from 'twrnc';
 
@@ -19,6 +19,7 @@ export function AuthGuard({
   fallbackRoute = 'Login',
   showLoading = true 
 }: AuthGuardProps) {
+  const { colors } = useTheme();
   const { user, userProfile, loading } = useAuth();
   const { push, reset } = useSafeNavigation();
   const [isChecking, setIsChecking] = useState(true);
@@ -60,8 +61,8 @@ export function AuthGuard({
     if (!showLoading) return null;
     
     return (
-      <View style={[tw`flex-1 justify-center items-center`, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+      <View style={[tw`flex-1 justify-center items-center`, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import tw from 'twrnc';
 
 interface SeparatorProps {
@@ -12,11 +12,12 @@ const Separator: React.FC<SeparatorProps> = ({
   orientation = 'horizontal',
   className = '',
 }) => {
+  const { colors } = useTheme();
   return (
     <View
       style={[
         orientation === 'horizontal' ? tw`h-px w-full` : tw`w-px h-full`,
-        { backgroundColor: theme.colors.border },
+        { backgroundColor: colors.border },
       ]}
     />
   );

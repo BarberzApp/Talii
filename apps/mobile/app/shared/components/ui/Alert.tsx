@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, ViewStyle, TextStyle } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
-type AlertVariant = 'default' | 'destructive';
+type AlertVariant = 'default' | 'destructive' | 'info';
 
 interface AlertProps {
   children: React.ReactNode;
@@ -23,15 +23,21 @@ interface AlertDescriptionProps {
 }
 
 const Alert: React.FC<AlertProps> = ({ children, variant = 'default', style, className }) => {
+  const { colors } = useTheme();
+
   const variantStyles: Record<AlertVariant, any> = {
     default: {
-      backgroundColor: theme.colors.background,
-      borderColor: theme.colors.border,
+      backgroundColor: colors.background,
+      borderColor: colors.border,
     },
     destructive: {
-      backgroundColor: theme.colors.destructive,
-      borderColor: theme.colors.destructive,
-    }
+      backgroundColor: colors.destructive,
+      borderColor: colors.destructive,
+    },
+    info: {
+      backgroundColor: colors.primarySubtle,
+      borderColor: colors.info,
+    },
   };
 
   return (
@@ -48,11 +54,12 @@ const Alert: React.FC<AlertProps> = ({ children, variant = 'default', style, cla
 };
 
 const AlertTitle: React.FC<AlertTitleProps> = ({ children, style }) => {
+  const { colors } = useTheme();
   return (
     <Text
       style={[
         tw`mb-1 font-medium leading-none tracking-tight`,
-        { color: theme.colors.foreground },
+        { color: colors.foreground },
         style
       ]}
     >
@@ -62,11 +69,12 @@ const AlertTitle: React.FC<AlertTitleProps> = ({ children, style }) => {
 };
 
 const AlertDescription: React.FC<AlertDescriptionProps> = ({ children, style }) => {
+  const { colors } = useTheme();
   return (
     <Text
       style={[
         tw`text-sm leading-relaxed`,
-        { color: theme.colors.mutedForeground },
+        { color: colors.mutedForeground },
         style
       ]}
     >
@@ -75,4 +83,4 @@ const AlertDescription: React.FC<AlertDescriptionProps> = ({ children, style }) 
   );
 };
 
-export { Alert, AlertTitle, AlertDescription }; 
+export { Alert, AlertTitle, AlertDescription };

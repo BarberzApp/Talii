@@ -10,9 +10,9 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { MapPin, ChevronDown, X } from 'lucide-react-native';
-import { theme } from '../../lib/theme';
 import { getAddressSuggestionsNominatim } from '../../lib/geocode';
 import { logger } from '../../lib/logger';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface LocationInputProps {
   value: string;
@@ -44,6 +44,7 @@ export function LocationInput({
   error,
   disabled = false
 }: LocationInputProps) {
+  const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -130,18 +131,18 @@ export function LocationInput({
     <TouchableOpacity
       style={[
         tw`p-4 border-b`,
-        { borderBottomColor: 'rgba(255,255,255,0.1)' }
+        { borderBottomColor: colors.glassBorder }
       ]}
       onPress={() => handleSelectSuggestion(item)}
     >
       <View style={tw`flex-row items-start`}>
-        <MapPin size={16} color={theme.colors.mutedForeground} style={tw`mr-3 mt-1`} />
+        <MapPin size={16} color={colors.mutedForeground} style={tw`mr-3 mt-1`} />
         <View style={tw`flex-1`}>
-          <Text style={[tw`text-base`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-base`, { color: colors.foreground }]}>
             {formatSuggestion(item)}
           </Text>
           {item.address && (
-            <Text style={[tw`text-sm mt-1`, { color: theme.colors.mutedForeground }]}>
+            <Text style={[tw`text-sm mt-1`, { color: colors.mutedForeground }]}>
               {[
                 item.address.house_number,
                 item.address.road,
@@ -162,8 +163,8 @@ export function LocationInput({
         style={[
           tw`flex-row items-center justify-between p-3 rounded-xl border`,
           { 
-            backgroundColor: 'rgba(255,255,255,0.05)',
-            borderColor: error ? theme.colors.destructive : 'rgba(255,255,255,0.2)',
+            backgroundColor: colors.glass,
+            borderColor: error ? colors.destructive : colors.glassBorder,
             opacity: disabled ? 0.5 : 1
           }
         ]}
@@ -171,12 +172,12 @@ export function LocationInput({
         disabled={disabled}
       >
         <View style={tw`flex-1 flex-row items-center`}>
-          <MapPin size={18} color={theme.colors.mutedForeground} style={tw`mr-3`} />
+          <MapPin size={18} color={colors.mutedForeground} style={tw`mr-3`} />
           <Text 
             style={[
               tw`text-base flex-1`,
               { 
-                color: value ? theme.colors.foreground : 'rgba(255,255,255,0.6)'
+                color: value ? colors.foreground : colors.mutedForeground
               }
             ]}
             numberOfLines={1}
@@ -184,11 +185,11 @@ export function LocationInput({
             {value || placeholder}
           </Text>
         </View>
-        <ChevronDown size={16} color={theme.colors.mutedForeground} />
+        <ChevronDown size={16} color={colors.mutedForeground} />
       </TouchableOpacity>
 
       {error && (
-        <Text style={[tw`text-sm`, { color: theme.colors.destructive }]}>
+        <Text style={[tw`text-sm`, { color: colors.destructive }]}>
           {error}
         </Text>
       )}
@@ -198,14 +199,14 @@ export function LocationInput({
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+        <View style={[tw`flex-1`, { backgroundColor: colors.background }]}>
           {/* Header */}
-          <View style={tw`flex-row items-center justify-between p-4 border-b border-white/10`}>
-            <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+          <View style={[tw`flex-row items-center justify-between p-4 border-b`, { borderColor: colors.glassBorder }]}>
+            <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
               Select Location
             </Text>
             <TouchableOpacity onPress={handleCloseModal}>
-              <X size={24} color={theme.colors.foreground} />
+              <X size={24} color={colors.foreground} />
             </TouchableOpacity>
           </View>
 
@@ -215,13 +216,13 @@ export function LocationInput({
               style={[
                 tw`p-3 rounded-xl border`,
                 { 
-                  backgroundColor: 'rgba(255,255,255,0.05)',
-                  borderColor: 'rgba(255,255,255,0.2)',
-                  color: theme.colors.foreground
+                  backgroundColor: colors.glass,
+                  borderColor: colors.glassBorder,
+                  color: colors.foreground
                 }
               ]}
               placeholder="Search for an address..."
-              placeholderTextColor="rgba(255,255,255,0.6)"
+              placeholderTextColor={colors.mutedForeground}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoFocus
@@ -231,8 +232,8 @@ export function LocationInput({
           {/* Suggestions List */}
           {loading ? (
             <View style={tw`flex-1 justify-center items-center`}>
-              <ActivityIndicator size="large" color={theme.colors.secondary} />
-              <Text style={[tw`mt-4 text-sm`, { color: theme.colors.mutedForeground }]}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[tw`mt-4 text-sm`, { color: colors.mutedForeground }]}>
                 Searching addresses...
               </Text>
             </View>
@@ -246,13 +247,13 @@ export function LocationInput({
               ListEmptyComponent={
                 searchQuery.length >= 3 ? (
                   <View style={tw`flex-1 justify-center items-center p-8`}>
-                    <Text style={[tw`text-center text-sm`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-center text-sm`, { color: colors.mutedForeground }]}>
                       No addresses found for &quot;{searchQuery}&quot;
                     </Text>
                   </View>
                 ) : (
                   <View style={tw`flex-1 justify-center items-center p-8`}>
-                    <Text style={[tw`text-center text-sm`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-center text-sm`, { color: colors.mutedForeground }]}>
                       Start typing to search for addresses
                     </Text>
                   </View>

@@ -1,10 +1,10 @@
 import React, { useRef } from 'react';
 import { TouchableOpacity, Text, Animated, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { ArrowRight } from 'lucide-react-native';
 import { theme } from '../lib/theme';
+import { useTheme } from './theme/ThemeProvider';
 
 interface ActionButtonProps {
   children: React.ReactNode;
@@ -23,6 +23,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   style = {},
   disabled = false,
 }) => {
+  const { colors } = useTheme();
   const scaleValue = useRef(new Animated.Value(1)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
   
@@ -85,7 +86,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
         {
           width: '100%',
           height: 56,
-          borderRadius: 20,
+          borderRadius: theme.borderRadius['3xl'],
           overflow: 'hidden',
           marginBottom: 16,
           opacity: disabled ? 0.6 : 1,
@@ -111,7 +112,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
               alignItems: 'center',
               flexDirection: 'row',
               paddingHorizontal: 24,
-              shadowColor: theme.colors.secondary,
+              shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 20,
@@ -122,7 +123,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
               style={{
                 fontSize: 20,
                 fontWeight: '600',
-                color: theme.colors.background,
+                color: colors.primaryForeground,
                 marginRight: icon ? 12 : 0,
               }}
             >
@@ -139,13 +140,13 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
                   }],
                 }}
               >
-                <ArrowRight size={24} color={theme.colors.background} />
+                <ArrowRight size={24} color={colors.primaryForeground} />
               </Animated.View>
             )}
           </LinearGradient>
         ) : isSecondary ? (
           // Secondary button with glass effect
-          <View style={{ flex: 1, borderRadius: 20, overflow: 'hidden' }}>
+          <View style={{ flex: 1, borderRadius: theme.borderRadius['3xl'], overflow: 'hidden' }}>
             <View
               style={{
                 flex: 1,
@@ -154,16 +155,16 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
                 flexDirection: 'row',
                 paddingHorizontal: 24,
                 borderWidth: 2,
-                borderColor: theme.colors.secondary,
-                borderRadius: 20,
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderColor: colors.primary,
+                borderRadius: theme.borderRadius['3xl'],
+                backgroundColor: colors.muted,
               }}
             >
               <Text
                 style={{
                   fontSize: 20,
                   fontWeight: '600',
-                  color: theme.colors.secondary,
+                  color: colors.primary,
                   marginRight: icon ? 12 : 0,
                 }}
               >
@@ -180,7 +181,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
                     }],
                   }}
                 >
-                  <ArrowRight size={24} color={theme.colors.secondary} />
+                  <ArrowRight size={24} color={colors.primary} />
                 </Animated.View>
               )}
             </View>
@@ -199,7 +200,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
               style={{
                 fontSize: 18,
                 fontWeight: '500',
-                color: theme.colors.muted,
+                color: colors.mutedForeground,
                 textDecorationLine: 'underline',
               }}
             >
@@ -217,13 +218,13 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
               left: 0,
               right: 0,
               bottom: 0,
-              borderRadius: 20,
-              backgroundColor: theme.colors.secondary,
+              borderRadius: theme.borderRadius['3xl'],
+              backgroundColor: colors.primary,
               opacity: glowOpacity.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0, 0.2],
               }),
-              shadowColor: theme.colors.secondary,
+              shadowColor: colors.primary,
               shadowOffset: { width: 0, height: 0 },
               shadowOpacity: glowOpacity.interpolate({
                 inputRange: [0, 1],

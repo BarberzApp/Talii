@@ -9,28 +9,27 @@ import {
     TouchableOpacity,
     Alert,
     StatusBar,
-    Animated,
-    TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Scissors, User, ArrowLeft, Eye, EyeOff, Check } from 'lucide-react-native';
 import { RootStackParamList } from '../shared/types';
 import { supabase } from '../shared/lib/supabase';
-import { theme } from '../shared/lib/theme';
 import { logger } from '../shared/lib/logger';
+import { useTheme } from '../shared/components/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
-import { AnimatedText } from '../shared/components/AnimatedText';
 import { ActionButton } from '../shared/components/ActionButton';
+import { Card } from '../shared/components/ui/Card';
+import Input from '../shared/components/ui/Input';
+import { theme } from '../shared/lib/theme';
 
 type SignUpScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type UserType = 'client' | 'barber';
 
 export default function SignUpPage() {
+    const { colors, colorScheme } = useTheme();
     const navigation = useNavigation<SignUpScreenNavigationProp>();
     const [userType, setUserType] = useState<UserType>('client');
     const [fullName, setFullName] = useState('');
@@ -194,8 +193,8 @@ export default function SignUpPage() {
                 Alert.alert(
                     'Registration Successful',
                     userType === 'barber' 
-                        ? 'Welcome to BOCM! Please complete your business profile setup.'
-                        : 'Welcome to BOCM!',
+                        ?                                 'Welcome to Talii! Please complete your business profile setup.'
+                        : 'Welcome to Talii!',
                     [
                         {
                             text: 'OK',
@@ -242,8 +241,11 @@ export default function SignUpPage() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-            <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+            <StatusBar
+                barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+                backgroundColor={colors.background}
+            />
             
             {/* Animated Background */}
             <AnimatedBackground />
@@ -259,13 +261,14 @@ export default function SignUpPage() {
                     width: 44,
                     height: 44,
                     borderRadius: 22,
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.border,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    backdropFilter: 'blur(10px)',
                 }}
             >
-                <ArrowLeft size={24} color={theme.colors.foreground} />
+                <ArrowLeft size={24} color={colors.foreground} />
             </TouchableOpacity>
 
             <KeyboardAvoidingView
@@ -283,50 +286,39 @@ export default function SignUpPage() {
                         {/* Header */}
                         {showContent && (
                             <View style={{ alignItems: 'center', marginBottom: 32 }}>
-                                <AnimatedText
-                                    text="CREATE ACCOUNT"
-                                    type="welcome"
-                                    delay={1000}
-                                />
+                                <Text style={{
+                                fontSize: 28,
+                                fontWeight: '700',
+                                color: colors.foreground,
+                                textAlign: 'center',
+                            }}>
+                                Create an Account
+                            </Text>
                                 
                                 <Text style={{
                                     fontSize: 18,
-                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    color: colors.mutedForeground,
                                     textAlign: 'center',
                                     marginTop: 12,
                                 }}>
-                                    Join BOCM and start your journey
+                                    Join Talii and start your journey
                                 </Text>
                             </View>
                         )}
 
                         {/* Sign Up Form */}
                         {showContent && (
-                            <View style={{
-                                width: '100%',
-                                borderRadius: 24,
-                                overflow: 'hidden',
-                            }}>
-                                <BlurView
-                                    intensity={20}
-                                    style={{
-                                        padding: 32,
-                                        borderWidth: 1,
-                                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                    }}
-                                >
-                                    {/* Error Display */}
+                            <Card variant="hero" style={{ backgroundColor: colors.surface }}>
                                     {errors.general && (
                                         <View style={{
                                             padding: 16,
                                             marginBottom: 24,
-                                            borderRadius: 12,
-                                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                            borderRadius: theme.borderRadius.xl,
+                                            backgroundColor: colors.muted,
                                             borderWidth: 1,
-                                            borderColor: 'rgba(239, 68, 68, 0.2)',
+                                            borderColor: colors.destructive,
                                         }}>
-                                            <Text style={{ color: '#ef4444', textAlign: 'center', fontSize: 14 }}>
+                                            <Text style={{ color: colors.destructive, textAlign: 'center', fontSize: 14 }}>
                                                 {errors.general}
                                             </Text>
                                         </View>
@@ -336,8 +328,8 @@ export default function SignUpPage() {
                                     <View style={{
                                         flexDirection: 'row',
                                         marginBottom: 24,
-                                        borderRadius: 20,
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        borderRadius: theme.borderRadius['3xl'],
+                                        backgroundColor: colors.muted,
                                         padding: 4,
                                     }}>
                                         <TouchableOpacity
@@ -345,11 +337,11 @@ export default function SignUpPage() {
                                                 flex: 1,
                                                 paddingVertical: 12,
                                                 paddingHorizontal: 16,
-                                                borderRadius: 12,
+                                                borderRadius: theme.borderRadius.xl,
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                backgroundColor: userType === 'client' ? theme.colors.secondary : 'transparent',
+                                                backgroundColor: userType === 'client' ? colors.primary : 'transparent',
                                             }}
                                             onPress={() => {
                                                 setUserType('client');
@@ -357,10 +349,10 @@ export default function SignUpPage() {
                                             }}
                                             disabled={isLoading}
                                         >
-                                            <User size={18} color={userType === 'client' ? theme.colors.background : theme.colors.foreground} style={{ marginRight: 8 }} />
+                                            <User size={18} color={userType === 'client' ? colors.primaryForeground : colors.foreground} style={{ marginRight: 8 }} />
                                             <Text style={{
                                                 fontWeight: '600',
-                                                color: userType === 'client' ? theme.colors.background : theme.colors.foreground,
+                                                color: userType === 'client' ? colors.primaryForeground : colors.foreground,
                                             }}>
                                                 Client
                                             </Text>
@@ -370,11 +362,11 @@ export default function SignUpPage() {
                                                 flex: 1,
                                                 paddingVertical: 12,
                                                 paddingHorizontal: 16,
-                                                borderRadius: 12,
+                                                borderRadius: theme.borderRadius.xl,
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                backgroundColor: userType === 'barber' ? theme.colors.secondary : 'transparent',
+                                                backgroundColor: userType === 'barber' ? colors.primary : 'transparent',
                                             }}
                                             onPress={() => {
                                                 setUserType('barber');
@@ -382,214 +374,98 @@ export default function SignUpPage() {
                                             }}
                                             disabled={isLoading}
                                         >
-                                            <Scissors size={18} color={userType === 'barber' ? theme.colors.background : theme.colors.foreground} style={{ marginRight: 8 }} />
+                                            <Scissors size={18} color={userType === 'barber' ? colors.primaryForeground : colors.foreground} style={{ marginRight: 8 }} />
                                             <Text style={{
                                                 fontWeight: '600',
-                                                color: userType === 'barber' ? theme.colors.background : theme.colors.foreground,
+                                                color: userType === 'barber' ? colors.primaryForeground : colors.foreground,
                                             }}>
                                                 Barber
                                             </Text>
                                         </TouchableOpacity>
                                     </View>
 
-                                    {/* Full Name Input */}
-                                    <View style={{ marginBottom: 20 }}>
-                                        <Text style={{
-                                            fontSize: 14,
-                                            fontWeight: '600',
-                                            color: theme.colors.foreground,
-                                            marginBottom: 8,
-                                        }}>
-                                            Full Name
-                                        </Text>
-                                        <View style={{
-                                            height: 56,
-                                            borderRadius: 20,
-                                            borderWidth: 1,
-                                            borderColor: errors.fullName ? '#ef4444' : 'rgba(255, 255, 255, 0.2)',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                            paddingHorizontal: 16,
-                                            justifyContent: 'center',
-                                        }}>
-                                            <TextInput
-                                                placeholder="John Doe"
-                                                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                                value={fullName}
-                                                onChangeText={(text) => {
-                                                    setFullName(text);
-                                                    setErrors({ ...errors, fullName: '' });
-                                                }}
-                                                style={{
-                                                    color: theme.colors.foreground,
-                                                    fontSize: 16,
-                                                }}
-                                                autoCapitalize="words"
-                                                autoCorrect={false}
-                                                editable={!isLoading}
-                                            />
-                                        </View>
-                                        {errors.fullName && (
-                                            <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
-                                                {errors.fullName}
-                                            </Text>
-                                        )}
-                                    </View>
-                                    
-                                    {/* Email Input */}
-                                    <View style={{ marginBottom: 20 }}>
-                                        <Text style={{
-                                            fontSize: 14,
-                                            fontWeight: '600',
-                                            color: theme.colors.foreground,
-                                            marginBottom: 8,
-                                        }}>
-                                            Email
-                                        </Text>
-                                        <View style={{
-                                            height: 56,
-                                            borderRadius: 20,
-                                            borderWidth: 1,
-                                            borderColor: errors.email ? '#ef4444' : 'rgba(255, 255, 255, 0.2)',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                            paddingHorizontal: 16,
-                                            justifyContent: 'center',
-                                        }}>
-                                            <TextInput
-                                                placeholder="you@example.com"
-                                                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                                value={email}
-                                                onChangeText={(text) => {
-                                                    setEmail(text);
-                                                    setErrors({ ...errors, email: '' });
-                                                }}
-                                                style={{
-                                                    color: theme.colors.foreground,
-                                                    fontSize: 16,
-                                                }}
-                                                keyboardType="email-address"
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                                editable={!isLoading}
-                                            />
-                                        </View>
-                                        {errors.email && (
-                                            <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
-                                                {errors.email}
-                                            </Text>
-                                        )}
-                                    </View>
+                                    <Input
+                                        label="Full Name"
+                                        placeholder="John Doe"
+                                        value={fullName}
+                                        onChangeText={(text) => {
+                                            setFullName(text);
+                                            setErrors({ ...errors, fullName: '' });
+                                        }}
+                                        error={errors.fullName || undefined}
+                                        autoCapitalize="words"
+                                        autoCorrect={false}
+                                        editable={!isLoading}
+                                    />
 
-                                    {/* Password Input */}
-                                    <View style={{ marginBottom: 20 }}>
-                                        <Text style={{
-                                            fontSize: 14,
-                                            fontWeight: '600',
-                                            color: theme.colors.foreground,
-                                            marginBottom: 8,
-                                        }}>
-                                            Password
-                                        </Text>
-                                        <View style={{
-                                            height: 56,
-                                            borderRadius: 20,
-                                            borderWidth: 1,
-                                            borderColor: errors.password ? '#ef4444' : 'rgba(255, 255, 255, 0.2)',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                            paddingHorizontal: 16,
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                        }}>
-                                            <TextInput
-                                                placeholder="Enter your password"
-                                                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                                value={password}
-                                                onChangeText={(text) => {
-                                                    setPassword(text);
-                                                    setErrors({ ...errors, password: '' });
-                                                }}
-                                                secureTextEntry={!showPassword}
-                                                style={{
-                                                    color: theme.colors.foreground,
-                                                    fontSize: 16,
-                                                    flex: 1,
-                                                }}
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                                editable={!isLoading}
-                                            />
+                                    <Input
+                                        label="Email"
+                                        placeholder="you@example.com"
+                                        value={email}
+                                        onChangeText={(text) => {
+                                            setEmail(text);
+                                            setErrors({ ...errors, email: '' });
+                                        }}
+                                        error={errors.email || undefined}
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        editable={!isLoading}
+                                    />
+
+                                    <Input
+                                        label="Password"
+                                        placeholder="Enter your password"
+                                        value={password}
+                                        onChangeText={(text) => {
+                                            setPassword(text);
+                                            setErrors({ ...errors, password: '' });
+                                        }}
+                                        error={errors.password || undefined}
+                                        secureTextEntry={!showPassword}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        editable={!isLoading}
+                                        rightIcon={
                                             <TouchableOpacity
                                                 onPress={() => setShowPassword(!showPassword)}
                                                 style={{ padding: 8 }}
                                             >
                                                 {showPassword ? (
-                                                    <EyeOff size={20} color="rgba(255, 255, 255, 0.6)" />
+                                                    <EyeOff size={20} color={colors.mutedForeground} />
                                                 ) : (
-                                                    <Eye size={20} color="rgba(255, 255, 255, 0.6)" />
+                                                    <Eye size={20} color={colors.mutedForeground} />
                                                 )}
                                             </TouchableOpacity>
-                                        </View>
-                                        {errors.password && (
-                                            <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
-                                                {errors.password}
-                                            </Text>
-                                        )}
-                                    </View>
+                                        }
+                                    />
 
-                                    {/* Confirm Password Input */}
-                                    <View style={{ marginBottom: 24 }}>
-                                        <Text style={{
-                                            fontSize: 14,
-                                            fontWeight: '600',
-                                            color: theme.colors.foreground,
-                                            marginBottom: 8,
-                                        }}>
-                                            Confirm Password
-                                        </Text>
-                                        <View style={{
-                                            height: 56,
-                                            borderRadius: 20,
-                                            borderWidth: 1,
-                                            borderColor: errors.confirmPassword ? '#ef4444' : 'rgba(255, 255, 255, 0.2)',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                            paddingHorizontal: 16,
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                        }}>
-                                            <TextInput
-                                                placeholder="Re-enter your password"
-                                                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                                value={confirmPassword}
-                                                onChangeText={(text) => {
-                                                    setConfirmPassword(text);
-                                                    setErrors({ ...errors, confirmPassword: '' });
-                                                }}
-                                                secureTextEntry={!showConfirmPassword}
-                                                style={{
-                                                    color: theme.colors.foreground,
-                                                    fontSize: 16,
-                                                    flex: 1,
-                                                }}
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                                editable={!isLoading}
-                                            />
+                                    <Input
+                                        label="Confirm Password"
+                                        placeholder="Re-enter your password"
+                                        value={confirmPassword}
+                                        onChangeText={(text) => {
+                                            setConfirmPassword(text);
+                                            setErrors({ ...errors, confirmPassword: '' });
+                                        }}
+                                        error={errors.confirmPassword || undefined}
+                                        secureTextEntry={!showConfirmPassword}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        editable={!isLoading}
+                                        rightIcon={
                                             <TouchableOpacity
                                                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                                                 style={{ padding: 8 }}
                                             >
                                                 {showConfirmPassword ? (
-                                                    <EyeOff size={20} color="rgba(255, 255, 255, 0.6)" />
+                                                    <EyeOff size={20} color={colors.mutedForeground} />
                                                 ) : (
-                                                    <Eye size={20} color="rgba(255, 255, 255, 0.6)" />
+                                                    <Eye size={20} color={colors.mutedForeground} />
                                                 )}
                                             </TouchableOpacity>
-                                        </View>
-                                        {errors.confirmPassword && (
-                                            <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
-                                                {errors.confirmPassword}
-                                            </Text>
-                                        )}
-                                    </View>
+                                        }
+                                    />
 
                                     {/* Terms Agreement */}
                                     <TouchableOpacity
@@ -608,28 +484,28 @@ export default function SignUpPage() {
                                         <View style={{
                                             width: 20,
                                             height: 20,
-                                            borderRadius: 4,
+                                            borderRadius: theme.borderRadius.sm,
                                             borderWidth: 2,
-                                            borderColor: errors.terms ? '#ef4444' : 'rgba(255, 255, 255, 0.4)',
-                                            backgroundColor: agreeToTerms ? theme.colors.secondary : 'transparent',
+                                            borderColor: errors.terms ? colors.destructive : colors.border,
+                                            backgroundColor: agreeToTerms ? colors.primary : 'transparent',
                                             justifyContent: 'center',
                                             alignItems: 'center',
                                             marginRight: 12,
                                         }}>
                                             {agreeToTerms && (
-                                                <Check size={12} color={theme.colors.background} />
+                                                <Check size={12} color={colors.primaryForeground} />
                                             )}
                                         </View>
                                         <Text style={{
                                             fontSize: 14,
-                                            color: theme.colors.foreground,
+                                            color: colors.foreground,
                                             flex: 1,
                                         }}>
                                             I agree to the{' '}
                                             <Text
                                                 onPress={handleTermsPress}
                                                 style={{
-                                                    color: theme.colors.secondary,
+                                                    color: colors.primary,
                                                     textDecorationLine: 'underline',
                                                     fontWeight: '600',
                                                 }}
@@ -643,7 +519,7 @@ export default function SignUpPage() {
                                                     navigation.navigate('PrivacyPolicy' as any);
                                                 }}
                                                 style={{
-                                                    color: theme.colors.secondary,
+                                                    color: colors.primary,
                                                     textDecorationLine: 'underline',
                                                     fontWeight: '600',
                                                 }}
@@ -653,12 +529,11 @@ export default function SignUpPage() {
                                         </Text>
                                     </TouchableOpacity>
                                     {errors.terms && (
-                                        <Text style={{ color: '#ef4444', fontSize: 12, marginBottom: 16 }}>
+                                        <Text style={{ color: colors.destructive, fontSize: 12, marginBottom: 16 }}>
                                             {errors.terms}
                                         </Text>
                                     )}
 
-                                    {/* Create Account Button */}
                                     <ActionButton
                                         variant="primary"
                                         onPress={handleSignUp}
@@ -666,10 +541,7 @@ export default function SignUpPage() {
                                     >
                                         {isLoading ? 'Creating account...' : 'Create account'}
                                     </ActionButton>
-
-                                    {/* Google Sign-Up removed - feature not yet implemented */}
-                                </BlurView>
-                            </View>
+                            </Card>
                         )}
                         {showContent && (
                             <>
@@ -677,14 +549,14 @@ export default function SignUpPage() {
                                 <View style={{ alignItems: 'center', marginTop: 32 }}>
                                     <Text style={{
                                         fontSize: 14,
-                                        color: 'rgba(255, 255, 255, 0.8)',
+                                        color: colors.mutedForeground,
                                         textAlign: 'center',
                                     }}>
                                         Already have an account?{' '}
                                         <Text
                                             onPress={handleSignIn}
                                             style={{
-                                                color: theme.colors.secondary,
+                                                color: colors.primary,
                                                 textDecorationLine: 'underline',
                                                 fontWeight: '600',
                                             }}

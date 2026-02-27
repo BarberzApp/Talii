@@ -7,7 +7,7 @@ import tw from 'twrnc';
 import Button from '../shared/components/ui/Button';
 import { useAuth } from '../shared/hooks/useAuth';
 import { supabase } from '../shared/lib/supabase';
-import { theme } from '../shared/lib/theme';
+import { useTheme } from '../shared/components/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 import { Card, CardContent } from '../shared/components/ui';
 import { logger } from '../shared/lib/logger';
@@ -27,6 +27,7 @@ type EmailConfirmationScreenRouteProp = RouteProp<
 >;
 
 export default function EmailConfirmationScreen() {
+  const { colors, colorScheme } = useTheme();
   const navigation = useNavigation<EmailConfirmationScreenNavigationProp>();
   const route = useRoute<EmailConfirmationScreenRouteProp>();
   const { user } = useAuth();
@@ -124,8 +125,11 @@ export default function EmailConfirmationScreen() {
   };
 
   return (
-    <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+    <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
+      <StatusBar
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <AnimatedBackground />
 
       <View style={tw`flex-1 justify-center px-6`}>
@@ -134,52 +138,52 @@ export default function EmailConfirmationScreen() {
           onPress={() => navigation.goBack()}
           style={[
             tw`absolute left-4 top-12 w-11 h-11 rounded-full items-center justify-center`,
-            { backgroundColor: 'rgba(255,255,255,0.08)', zIndex: 10 },
+            { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, zIndex: 10 },
           ]}
         >
-          <ArrowLeft size={22} color={theme.colors.foreground} />
+          <ArrowLeft size={22} color={colors.foreground} />
         </TouchableOpacity>
 
-        <Card style={[tw`w-full max-w-md self-center rounded-2xl`, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+        <Card style={[tw`w-full max-w-md self-center rounded-2xl`, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
           <CardContent style={tw`p-6`}>
             <View style={tw`items-center mb-4`}>
               <View
                 style={[
                   tw`w-16 h-16 rounded-full items-center justify-center mb-3`,
-                  { backgroundColor: theme.colors.secondary + '30' },
+                  { backgroundColor: colors.muted },
                 ]}
               >
-                <MailCheck size={28} color={theme.colors.secondary} />
+                <MailCheck size={28} color={colors.primary} />
             </View>
-              <Text style={[tw`text-xl font-bold text-center`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-xl font-bold text-center`, { color: colors.foreground }]}>
                 Check your email
             </Text>
-              <Text style={[tw`text-sm text-center mt-2`, { color: theme.colors.mutedForeground }]}>
+              <Text style={[tw`text-sm text-center mt-2`, { color: colors.mutedForeground }]}>
                 We sent a verification link to:
             </Text>
-              <Text style={[tw`text-base font-semibold mt-1 text-center`, { color: theme.colors.secondary }]}>
+              <Text style={[tw`text-base font-semibold mt-1 text-center`, { color: colors.primary }]}>
               {email}
             </Text>
           </View>
 
-            <Text style={[tw`text-center mb-6 text-sm leading-5`, { color: theme.colors.mutedForeground }]}>
+            <Text style={[tw`text-center mb-6 text-sm leading-5`, { color: colors.mutedForeground }]}>
               Click the link in your inbox to verify. We&apos;ll redirect once it&apos;s confirmed.
           </Text>
 
             <View style={tw`gap-3`}>
             {checking ? (
-                <View style={[tw`py-3 rounded-xl flex-row items-center justify-center`, { backgroundColor: theme.colors.secondary }]}>
-                <ActivityIndicator color={theme.colors.foreground} />
-                  <Text style={[tw`ml-2 font-semibold`, { color: theme.colors.foreground }]}>Checking...</Text>
+                <View style={[tw`py-3 rounded-xl flex-row items-center justify-center`, { backgroundColor: colors.primary }]}>
+                <ActivityIndicator color={colors.primaryForeground} />
+                  <Text style={[tw`ml-2 font-semibold`, { color: colors.primaryForeground }]}>Checking...</Text>
               </View>
             ) : (
               <Button
                 onPress={checkEmailConfirmation}
                 size="lg"
-                  style={[tw`w-full flex-row items-center justify-center gap-2`, { backgroundColor: theme.colors.secondary }]}
+                  style={[tw`w-full flex-row items-center justify-center gap-2`, { backgroundColor: colors.primary }]}
               >
-                  <MailCheck size={18} color={theme.colors.primaryForeground} />
-                  <Text style={[tw`font-semibold`, { color: theme.colors.primaryForeground }]}>
+                  <MailCheck size={18} color={colors.primaryForeground} />
+                  <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>
                     I&apos;ve confirmed my email
                   </Text>
               </Button>
@@ -188,10 +192,10 @@ export default function EmailConfirmationScreen() {
               <Button
                 variant="outline"
               onPress={resendConfirmationEmail}
-                style={tw`w-full flex-row items-center justify-center gap-2 border border-white/10`}
+                style={[tw`w-full flex-row items-center justify-center gap-2`, { borderWidth: 1, borderColor: colors.border }]}
             >
-                <RefreshCw size={18} color={theme.colors.secondary} />
-                <Text style={[tw`font-semibold`, { color: theme.colors.secondary }]}>Resend email</Text>
+                <RefreshCw size={18} color={colors.primary} />
+                <Text style={[tw`font-semibold`, { color: colors.primary }]}>Resend email</Text>
               </Button>
 
               <Button
@@ -199,8 +203,8 @@ export default function EmailConfirmationScreen() {
               onPress={goToLogin}
                 style={tw`w-full flex-row items-center justify-center gap-2`}
             >
-                <LogIn size={18} color={theme.colors.mutedForeground} />
-                <Text style={[tw`font-semibold`, { color: theme.colors.mutedForeground }]}>
+                <LogIn size={18} color={colors.mutedForeground} />
+                <Text style={[tw`font-semibold`, { color: colors.mutedForeground }]}>
                 Already confirmed? Go to login
               </Text>
               </Button>

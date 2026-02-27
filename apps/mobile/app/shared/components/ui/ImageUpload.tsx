@@ -12,7 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Camera, Upload, X } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import tw from 'twrnc';
 import { logger } from '../../lib/logger';
 import { validateImageContent } from '../../lib/contentModeration';
@@ -44,6 +44,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   customPath = 'uploads',
   upsert = false,
 }) => {
+  const { colors } = useTheme();
   const [uploading, setUploading] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
 
@@ -311,7 +312,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           style={[
             tw`flex-row items-center justify-center p-6 rounded-2xl border-2 border-dashed`,
             { 
-              backgroundColor: 'rgba(255,255,255,0.05)',
+              backgroundColor: colors.glass,
               borderColor: 'rgba(255,255,255,0.2)'
             }
           ]}
@@ -319,19 +320,19 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           disabled={uploading}
         >
           {uploading ? (
-            <ActivityIndicator size="large" color={theme.colors.secondary} />
+            <ActivityIndicator size="large" color={colors.primary} />
           ) : (
             <View style={tw`items-center`}>
               <View style={[
                 tw`w-12 h-12 rounded-full items-center justify-center mb-3`,
-                { backgroundColor: 'rgba(255,255,255,0.1)' }
+                { backgroundColor: colors.glassBorder }
               ]}>
-                <Upload size={24} color={theme.colors.secondary} />
+                <Upload size={24} color={colors.primary} />
               </View>
-              <Text style={[tw`font-semibold text-base`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`font-semibold text-base`, { color: colors.foreground }]}>
                 {title}
               </Text>
-              <Text style={[tw`text-sm mt-1`, { color: theme.colors.mutedForeground }]}>
+              <Text style={[tw`text-sm mt-1`, { color: colors.mutedForeground }]}>
                 {description}
               </Text>
             </View>
@@ -342,7 +343,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       {/* Existing Images Grid */}
       {existingImages.length > 0 && (
         <View style={tw`space-y-3`}>
-          <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
             Uploaded Images ({existingImages.length}/{maxImages})
           </Text>
           <View style={tw`flex-row flex-wrap gap-3`}>
@@ -357,14 +358,14 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                         { 
                           width: 100, 
                           height: 100 / aspectRatio,
-                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          backgroundColor: colors.glassBorder,
                           borderWidth: 1,
                           borderColor: 'rgba(255,255,255,0.2)',
                         }
                       ]}
                     >
-                      <Camera size={24} color={theme.colors.mutedForeground} />
-                      <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>
+                      <Camera size={24} color={colors.mutedForeground} />
+                      <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
                         Failed to load
                       </Text>
                     </View>
@@ -417,7 +418,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                     <TouchableOpacity
                       style={[
                         tw`absolute -top-2 -right-2 w-6 h-6 rounded-full items-center justify-center`,
-                        { backgroundColor: theme.colors.destructive }
+                        { backgroundColor: colors.destructive }
                       ]}
                       onPress={() => onRemoveImage(index)}
                     >

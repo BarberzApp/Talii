@@ -32,7 +32,7 @@ interface ServiceAddon {
   updated_at: string;
 }
 import { useAuth } from '../hooks/useAuth';
-import { theme } from '../lib/theme';
+import { useTheme } from '../components/theme';
 import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/api-client';
 import { notificationService, formatAppointmentTime } from '../lib/notifications';
@@ -66,6 +66,7 @@ export default function BookingForm({
   preSelectedService,
   onBookingCreated 
 }: BookingFormProps) {
+  const { colors } = useTheme();
   const navigation = useNavigation<BookingFormNavigationProp>();
   const { user, userProfile } = useAuth();
 
@@ -485,26 +486,26 @@ export default function BookingForm({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={tw`px-5 pt-4 pb-6 border-b border-white/10`}>
+        <View style={[tw`px-5 pt-4 pb-6 border-b`, { borderColor: colors.glassBorder }]}>
           <View style={tw`flex-row items-center justify-between mb-4`}>
             <TouchableOpacity testID="close-button" onPress={onClose}>
-              <Icon name="x" size={24} color={theme.colors.secondary} />
+              <Icon name="x" size={24} color={colors.primary} />
             </TouchableOpacity>
-            <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+            <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
               {getStepTitle()}
             </Text>
             <View style={tw`w-6`} />
           </View>
 
           {/* Progress Bar */}
-          <View style={tw`w-full bg-white/10 rounded-full h-2 mb-4`}>
+          <View style={[tw`w-full rounded-full h-2 mb-4`, { backgroundColor: colors.glass }]}>
             <View 
               style={[
                 tw`h-2 rounded-full`,
                 { 
-                  backgroundColor: theme.colors.secondary,
+                  backgroundColor: colors.primary,
                   width: `${(currentStep / totalSteps) * 100}%` 
                 }
               ]}
@@ -518,14 +519,14 @@ export default function BookingForm({
                 <View style={[
                   tw`w-8 h-8 rounded-full items-center justify-center`,
                   currentStep >= step 
-                    ? { backgroundColor: theme.colors.secondary }
-                    : { backgroundColor: 'rgba(255,255,255,0.1)' }
+                    ? { backgroundColor: colors.primary }
+                    : { backgroundColor: colors.glass }
                 ]}>
                   <Text style={[
                     tw`text-sm font-medium`,
                     currentStep >= step 
-                      ? { color: theme.colors.background }
-                      : { color: theme.colors.mutedForeground }
+                      ? { color: colors.background }
+                      : { color: colors.mutedForeground }
                   ]}>
                     {step}
                   </Text>
@@ -541,21 +542,21 @@ export default function BookingForm({
             {currentStep === 1 && (
               <View style={tw`space-y-6`}>
                 <View style={tw`items-center mb-6`}>
-                  <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${theme.colors.secondary}20` }]}>
-                    <Icon name="scissors" size={24} color={theme.colors.secondary} />
+                  <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${colors.primary}20` }]}>
+                    <Icon name="scissors" size={24} color={colors.primary} />
                   </View>
-                  <Text style={[tw`text-xl font-bold mb-2`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-xl font-bold mb-2`, { color: colors.foreground }]}>
                     What service do you need?
                   </Text>
-                  <Text style={[tw`text-center`, { color: theme.colors.mutedForeground }]}>
+                  <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
                     Choose from our available services
                   </Text>
                 </View>
 
                 {loading ? (
                   <View style={tw`items-center py-8`}>
-                    <ActivityIndicator size="large" color={theme.colors.secondary} />
-                    <Text style={[tw`mt-4`, { color: theme.colors.mutedForeground }]}>Loading services...</Text>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[tw`mt-4`, { color: colors.mutedForeground }]}>Loading services...</Text>
                   </View>
                 ) : (
                   <View style={tw`gap-6`}>
@@ -568,37 +569,37 @@ export default function BookingForm({
                           tw`p-4 rounded-2xl border-2`,
                           selectedService?.id === service.id
                             ? { 
-                                borderColor: theme.colors.secondary, 
-                                backgroundColor: `${theme.colors.secondary}10` 
+                                borderColor: colors.primary, 
+                                backgroundColor: `${colors.primary}10` 
                               }
                             : { 
-                                borderColor: 'rgba(255,255,255,0.1)', 
-                                backgroundColor: 'rgba(255,255,255,0.05)' 
+                                borderColor: colors.glassBorder, 
+                                backgroundColor: colors.glass 
                               }
                         ]}>
                           {selectedService?.id === service.id && (
-                            <View style={[tw`absolute bottom-4 right-4 w-15 h-6 rounded-full items-center justify-center`, { backgroundColor: theme.colors.secondary }]}>
+                            <View style={[tw`absolute bottom-4 right-4 w-15 h-6 rounded-full items-center justify-center`, { backgroundColor: colors.primary }]}>
                             </View>
                           )}
                           
                           <View style={tw`flex-row justify-between items-start`}>
                             <View style={tw`flex-1`}>
-                              <Text style={[tw`text-lg font-semibold mb-1`, { color: theme.colors.foreground }]}>
+                              <Text style={[tw`text-lg font-semibold mb-1`, { color: colors.foreground }]}>
                                 {service.name}
                               </Text>
                               {service.description && (
-                                <Text style={[tw`text-sm mb-2`, { color: theme.colors.mutedForeground }]}>
+                                <Text style={[tw`text-sm mb-2`, { color: colors.mutedForeground }]}>
                                   {service.description}
                                 </Text>
                               )}
                               <View style={tw`flex-row items-center`}>
-                                <Icon name="clock" size={16} color={theme.colors.mutedForeground} />
-                                <Text style={[tw`ml-1 text-sm`, { color: theme.colors.mutedForeground }]}>
+                                <Icon name="clock" size={16} color={colors.mutedForeground} />
+                                <Text style={[tw`ml-1 text-sm`, { color: colors.mutedForeground }]}>
                                   {service.duration} min
                                 </Text>
                               </View>
                             </View>
-                            <Text style={[tw`text-lg font-bold`, { color: theme.colors.secondary }]}>
+                            <Text style={[tw`text-lg font-bold`, { color: colors.primary }]}>
                               ${service.price.toFixed(2)}
                             </Text>
                           </View>
@@ -612,8 +613,8 @@ export default function BookingForm({
                 {addons.length > 0 && (
                   <View style={tw`mt-6`}>
                     <View style={tw`items-center mb-4`}>
-                      <Icon name="package" size={20} color={theme.colors.secondary} />
-                      <Text style={[tw`text-lg font-semibold mt-2`, { color: theme.colors.foreground }]}>
+                      <Icon name="package" size={20} color={colors.primary} />
+                      <Text style={[tw`text-lg font-semibold mt-2`, { color: colors.foreground }]}>
                         Enhance Your Service (Optional)
                       </Text>
                     </View>
@@ -635,37 +636,37 @@ export default function BookingForm({
                             tw`p-4 rounded-xl border-2`,
                             selectedAddonIds.includes(addon.id)
                               ? { 
-                                  borderColor: theme.colors.secondary, 
-                                  backgroundColor: `${theme.colors.secondary}10` 
+                                  borderColor: colors.primary, 
+                                  backgroundColor: `${colors.primary}10` 
                                 }
                               : { 
-                                  borderColor: 'rgba(255,255,255,0.1)', 
-                                  backgroundColor: 'rgba(255,255,255,0.05)' 
+                                  borderColor: colors.glassBorder, 
+                                  backgroundColor: colors.glass 
                                 }
                           ]}>
                             <View style={tw`flex-row items-center justify-between`}>
                               <View style={tw`flex-1`}>
-                                <Text style={[tw`text-lg font-semibold mb-1`, { color: theme.colors.foreground }]}>
+                                <Text style={[tw`text-lg font-semibold mb-1`, { color: colors.foreground }]}>
                                   {addon.name}
                                 </Text>
                                 {addon.description && (
-                                  <Text style={[tw`text-sm mb-2`, { color: theme.colors.mutedForeground }]}>
+                                  <Text style={[tw`text-sm mb-2`, { color: colors.mutedForeground }]}>
                                     {addon.description}
                                   </Text>
                                 )}
                               </View>
                               <View style={tw`items-end`}>
-                                <Text style={[tw`text-lg font-bold`, { color: theme.colors.secondary }]}>
+                                <Text style={[tw`text-lg font-bold`, { color: colors.primary }]}>
                                   +${addon.price.toFixed(2)}
                                 </Text>
                                 <View style={[
                                   tw`w-6 h-6 rounded-full items-center justify-center mt-2`,
                                   selectedAddonIds.includes(addon.id)
-                                    ? { backgroundColor: theme.colors.secondary }
-                                    : { backgroundColor: 'rgba(255,255,255,0.1)' }
+                                    ? { backgroundColor: colors.primary }
+                                    : { backgroundColor: colors.glass }
                                 ]}>
                                   {selectedAddonIds.includes(addon.id) && (
-                                    <Icon name="check" size={16} color={theme.colors.background} />
+                                    <Icon name="check" size={16} color={colors.background} />
                                   )}
                                 </View>
                               </View>
@@ -677,22 +678,22 @@ export default function BookingForm({
 
                     {/* Add-ons Summary */}
                     {selectedAddonIds.length > 0 && (
-                      <View style={[tw`mt-4 p-4 rounded-xl`, { backgroundColor: `${theme.colors.secondary}10`, borderWidth: 1, borderColor: `${theme.colors.secondary}20` }]}>
+                      <View style={[tw`mt-4 p-4 rounded-xl`, { backgroundColor: `${colors.primary}10`, borderWidth: 1, borderColor: `${colors.primary}20` }]}>
                         <View style={tw`flex-row items-center justify-between mb-2`}>
-                          <Text style={[tw`font-medium`, { color: theme.colors.foreground }]}>
+                          <Text style={[tw`font-medium`, { color: colors.foreground }]}>
                             Selected Add-ons ({selectedAddonIds.length})
                           </Text>
-                          <Text style={[tw`font-semibold text-lg`, { color: theme.colors.secondary }]}>
+                          <Text style={[tw`font-semibold text-lg`, { color: colors.primary }]}>
                             +${getSelectedAddonsTotal().toFixed(2)}
                           </Text>
                         </View>
                         <View style={tw`space-y-1`}>
                           {getSelectedAddons().map((addon) => (
                             <View key={addon.id} style={tw`flex-row justify-between`}>
-                              <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                              <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                                 {addon.name}
                               </Text>
-                              <Text style={[tw`text-sm`, { color: theme.colors.secondary }]}>
+                              <Text style={[tw`text-sm`, { color: colors.primary }]}>
                                 +${addon.price.toFixed(2)}
                               </Text>
                             </View>
@@ -709,20 +710,20 @@ export default function BookingForm({
             {currentStep === 2 && (
               <View style={tw`space-y-6`}>
                 <View style={tw`items-center mb-6`}>
-                  <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${theme.colors.secondary}20` }]}>
-                    <Icon name="calendar" size={24} color={theme.colors.secondary} />
+                  <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${colors.primary}20` }]}>
+                    <Icon name="calendar" size={24} color={colors.primary} />
                   </View>
-                  <Text style={[tw`text-xl font-bold mb-2`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-xl font-bold mb-2`, { color: colors.foreground }]}>
                     Pick Your Time
                   </Text>
-                  <Text style={[tw`text-center`, { color: theme.colors.mutedForeground }]}>
+                  <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
                     Choose your preferred appointment time
                   </Text>
                 </View>
 
                 {/* Date Selection */}
                 <View>
-                  <Text style={[tw`text-lg font-semibold mb-4`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-lg font-semibold mb-4`, { color: colors.foreground }]}>
                     Select Date
                   </Text>
                   <ScrollView
@@ -739,31 +740,31 @@ export default function BookingForm({
                         <View style={[
                           tw`rounded-xl p-4 items-center min-w-[80px]`,
                           selectedDate && isSameDay(selectedDate, day.date)
-                            ? { backgroundColor: theme.colors.secondary }
-                            : { backgroundColor: 'rgba(255,255,255,0.05)' },
-                          day.isToday && { borderWidth: 1, borderColor: theme.colors.secondary }
+                            ? { backgroundColor: colors.primary }
+                            : { backgroundColor: colors.glass },
+                          day.isToday && { borderWidth: 1, borderColor: colors.primary }
                         ]}>
                           <Text style={[
                             tw`text-xs font-medium`,
                             selectedDate && isSameDay(selectedDate, day.date)
-                              ? { color: theme.colors.background }
-                              : { color: theme.colors.mutedForeground }
+                              ? { color: colors.background }
+                              : { color: colors.mutedForeground }
                           ]}>
                             {day.dayName}
                           </Text>
                           <Text style={[
                             tw`text-xl font-bold my-1`,
                             selectedDate && isSameDay(selectedDate, day.date)
-                              ? { color: theme.colors.background }
-                              : { color: theme.colors.foreground }
+                              ? { color: colors.background }
+                              : { color: colors.foreground }
                           ]}>
                             {day.dayNumber}
                           </Text>
                           <Text style={[
                             tw`text-xs`,
                             selectedDate && isSameDay(selectedDate, day.date)
-                              ? { color: theme.colors.background }
-                              : { color: theme.colors.mutedForeground }
+                              ? { color: colors.background }
+                              : { color: colors.mutedForeground }
                           ]}>
                             {day.monthName}
                           </Text>
@@ -776,13 +777,13 @@ export default function BookingForm({
                 {/* Time Selection */}
                 {selectedDate && (
                   <View>
-                    <Text style={[tw`text-lg font-semibold mb-4`, { color: theme.colors.foreground }]}>
+                    <Text style={[tw`text-lg font-semibold mb-4`, { color: colors.foreground }]}>
                       Select Time
                     </Text>
                     {loadingSlots ? (
                       <View style={tw`items-center py-8`}>
-                        <ActivityIndicator size="small" color={theme.colors.secondary} />
-                        <Text style={[tw`mt-2`, { color: theme.colors.mutedForeground }]}>Loading times...</Text>
+                        <ActivityIndicator size="small" color={colors.primary} />
+                        <Text style={[tw`mt-2`, { color: colors.mutedForeground }]}>Loading times...</Text>
                       </View>
                     ) : (
                       <View style={tw`flex-row flex-wrap -mx-1`}>
@@ -797,14 +798,14 @@ export default function BookingForm({
                               <View style={[
                                 tw`rounded-lg py-3 items-center`,
                                 selectedTime === slot.time
-                                  ? { backgroundColor: theme.colors.secondary }
-                                  : { backgroundColor: 'rgba(255,255,255,0.05)' }
+                                  ? { backgroundColor: colors.primary }
+                                  : { backgroundColor: colors.glass }
                               ]}>
                                 <Text style={[
                                   tw`text-sm font-medium`,
                                   selectedTime === slot.time
-                                    ? { color: theme.colors.background }
-                                    : { color: theme.colors.foreground }
+                                    ? { color: colors.background }
+                                    : { color: colors.foreground }
                                 ]}>
                                   {formatTime(slot.time)}
                                 </Text>
@@ -822,55 +823,55 @@ export default function BookingForm({
             {currentStep === 3 && (
               <View style={tw`space-y-6`}>
                 <View style={tw`items-center mb-6`}>
-                  <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${theme.colors.secondary}20` }]}>
-                    <Icon name="user" size={24} color={theme.colors.secondary} />
+                  <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${colors.primary}20` }]}>
+                    <Icon name="user" size={24} color={colors.primary} />
                   </View>
-                  <Text style={[tw`text-xl font-bold mb-2`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-xl font-bold mb-2`, { color: colors.foreground }]}>
                     Tell us about yourself
                   </Text>
-                  <Text style={[tw`text-center`, { color: theme.colors.mutedForeground }]}>
+                  <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
                     We&apos;ll use this to confirm your booking
                   </Text>
                 </View>
 
                 {!user ? (
-                  <View style={[tw`p-6 rounded-2xl`, { backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' }]}>
+                  <View style={[tw`p-6 rounded-2xl`, { backgroundColor: colors.destructiveSubtle, borderWidth: 1, borderColor: colors.destructive }]}>
                     <View style={tw`items-center`}>
-                      <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-4`, { backgroundColor: 'rgba(239,68,68,0.2)' }]}>
-                        <Icon name="lock" size={24} color="#ef4444" />
+                      <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-4`, { backgroundColor: colors.destructiveSubtle }]}>
+                        <Icon name="lock" size={24} color={colors.destructive} />
                       </View>
-                      <Text style={[tw`text-lg font-semibold mb-2`, { color: theme.colors.foreground }]}>
+                      <Text style={[tw`text-lg font-semibold mb-2`, { color: colors.foreground }]}>
                         Sign In Required
                       </Text>
-                      <Text style={[tw`text-center mb-4`, { color: theme.colors.mutedForeground }]}>
+                      <Text style={[tw`text-center mb-4`, { color: colors.mutedForeground }]}>
                         You can add a note below, but you must sign in to complete your booking.
                       </Text>
                       <View style={tw`w-full flex-row gap-3`}>
                         <TouchableOpacity
-                          style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: theme.colors.secondary }]}
+                          style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: colors.primary }]}
                           onPress={() => closeAndNavigateToAuth('Login')}
                         >
-                          <Text style={[tw`font-semibold`, { color: theme.colors.background }]}>Log In</Text>
+                          <Text style={[tw`font-semibold`, { color: colors.background }]}>Log In</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }]}
+                          style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }]}
                           onPress={() => closeAndNavigateToAuth('SignUp')}
                         >
-                          <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>Sign Up</Text>
+                          <Text style={[tw`font-semibold`, { color: colors.foreground }]}>Sign Up</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   </View>
                 ) : (
-                  <View style={[tw`p-6 rounded-2xl`, { backgroundColor: `${theme.colors.secondary}10`, borderWidth: 1, borderColor: `${theme.colors.secondary}20` }]}>
+                  <View style={[tw`p-6 rounded-2xl`, { backgroundColor: `${colors.primary}10`, borderWidth: 1, borderColor: `${colors.primary}20` }]}>
                     <View style={tw`items-center`}>
-                      <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-4`, { backgroundColor: `${theme.colors.secondary}20` }]}>
-                        <Icon name="check" size={24} color={theme.colors.secondary} />
+                      <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-4`, { backgroundColor: `${colors.primary}20` }]}>
+                        <Icon name="check" size={24} color={colors.primary} />
                       </View>
-                      <Text style={[tw`text-lg font-semibold mb-2`, { color: theme.colors.foreground }]}>
+                      <Text style={[tw`text-lg font-semibold mb-2`, { color: colors.foreground }]}>
                         Welcome back, {userProfile?.name}!
                       </Text>
-                      <Text style={[tw`text-center`, { color: theme.colors.mutedForeground }]}>
+                      <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
                         We&apos;ll use your account information for this booking
                       </Text>
                     </View>
@@ -882,10 +883,10 @@ export default function BookingForm({
                   <TextInput
                     style={[
                       tw`px-4 py-3 rounded-xl min-h-[100px]`,
-                      { backgroundColor: 'rgba(255,255,255,0.1)', color: theme.colors.foreground }
+                      { backgroundColor: colors.glass, color: colors.foreground }
                     ]}
                     placeholder="Any special requests or notes... (Optional)"
-                    placeholderTextColor={theme.colors.mutedForeground}
+                    placeholderTextColor={colors.mutedForeground}
                     value={guestInfo.notes}
                     onChangeText={(text) => setGuestInfo({ ...guestInfo, notes: text })}
                     multiline
@@ -899,48 +900,48 @@ export default function BookingForm({
             {currentStep === 4 && (
               <View style={tw`space-y-6`}>
                 <View style={tw`items-center mb-6`}>
-                  <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${theme.colors.secondary}20` }]}>
-                    <Icon name="credit-card" size={24} color={theme.colors.secondary} />
+                  <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${colors.primary}20` }]}>
+                    <Icon name="credit-card" size={24} color={colors.primary} />
                   </View>
-                  <Text style={[tw`text-xl font-bold mb-2`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-xl font-bold mb-2`, { color: colors.foreground }]}>
                     Review Your Booking
                   </Text>
-                  <Text style={[tw`text-center`, { color: theme.colors.mutedForeground }]}>
+                  <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
                     Confirm your details and complete payment
                   </Text>
                 </View>
 
                 {/* Booking Summary */}
-                <View style={[tw`p-4 rounded-xl`, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-                  <Text style={[tw`font-semibold mb-4`, { color: theme.colors.secondary }]}>
+                <View style={[tw`p-4 rounded-xl`, { backgroundColor: colors.glass }]}>
+                  <Text style={[tw`font-semibold mb-4`, { color: colors.primary }]}>
                     Booking Summary
                   </Text>
                   <View style={tw`space-y-2`}>
                     <View style={tw`flex-row justify-between`}>
-                      <Text style={{ color: theme.colors.mutedForeground }}>Service:</Text>
-                      <Text style={{ color: theme.colors.foreground }}>{selectedService?.name}</Text>
+                      <Text style={{ color: colors.mutedForeground }}>Service:</Text>
+                      <Text style={{ color: colors.foreground }}>{selectedService?.name}</Text>
                     </View>
                     <View style={tw`flex-row justify-between`}>
-                      <Text style={{ color: theme.colors.mutedForeground }}>Date:</Text>
-                      <Text style={{ color: theme.colors.foreground }}>
+                      <Text style={{ color: colors.mutedForeground }}>Date:</Text>
+                      <Text style={{ color: colors.foreground }}>
                         {selectedDate && format(selectedDate, 'MMM d, yyyy')}
                       </Text>
                     </View>
                     <View style={tw`flex-row justify-between`}>
-                      <Text style={{ color: theme.colors.mutedForeground }}>Time:</Text>
-                      <Text style={{ color: theme.colors.foreground }}>
+                      <Text style={{ color: colors.mutedForeground }}>Time:</Text>
+                      <Text style={{ color: colors.foreground }}>
                         {formatTime(selectedTime)}
                       </Text>
                     </View>
                     <View style={tw`flex-row justify-between`}>
-                      <Text style={{ color: theme.colors.mutedForeground }}>Duration:</Text>
-                      <Text style={{ color: theme.colors.foreground }}>
+                      <Text style={{ color: colors.mutedForeground }}>Duration:</Text>
+                      <Text style={{ color: colors.foreground }}>
                         {selectedService?.duration} min
                       </Text>
                     </View>
                     <View style={tw`flex-row justify-between`}>
-                      <Text style={{ color: theme.colors.mutedForeground }}>Price:</Text>
-                      <Text style={{ color: theme.colors.foreground }}>
+                      <Text style={{ color: colors.mutedForeground }}>Price:</Text>
+                      <Text style={{ color: colors.foreground }}>
                         ${selectedService?.price.toFixed(2)}
                       </Text>
                     </View>
@@ -948,26 +949,26 @@ export default function BookingForm({
                     {/* Add-ons */}
                     {selectedAddonIds.length > 0 && (
                       <>
-                        <View style={tw`border-t border-white/10 pt-2 mt-2`}>
-                          <Text style={[tw`font-medium mb-2`, { color: theme.colors.foreground }]}>
+                        <View style={[tw`border-t pt-2 mt-2`, { borderColor: colors.glassBorder }]}>
+                          <Text style={[tw`font-medium mb-2`, { color: colors.foreground }]}>
                             Add-ons:
                           </Text>
                           {getSelectedAddons().map((addon) => (
                             <View key={addon.id} style={tw`flex-row justify-between`}>
-                              <Text style={{ color: theme.colors.mutedForeground }}>
+                              <Text style={{ color: colors.mutedForeground }}>
                                 {addon.name}
                               </Text>
-                              <Text style={{ color: theme.colors.foreground }}>
+                              <Text style={{ color: colors.foreground }}>
                                 +${addon.price.toFixed(2)}
                               </Text>
                             </View>
                           ))}
                         </View>
-                        <View style={tw`flex-row justify-between pt-2 border-t border-white/10`}>
-                          <Text style={[tw`font-semibold`, { color: theme.colors.foreground }]}>
+                        <View style={[tw`flex-row justify-between pt-2 border-t`, { borderColor: colors.glassBorder }]}>
+                          <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
                             Total Service Cost:
                           </Text>
-                          <Text style={[tw`font-semibold`, { color: theme.colors.secondary }]}>
+                          <Text style={[tw`font-semibold`, { color: colors.primary }]}>
                             ${((selectedService?.price || 0) + getSelectedAddonsTotal()).toFixed(2)}
                           </Text>
                         </View>
@@ -978,19 +979,19 @@ export default function BookingForm({
 
                 {/* Payment Information */}
                 <View>
-                  <Text style={[tw`text-lg font-semibold mb-4`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-lg font-semibold mb-4`, { color: colors.foreground }]}>
                     Payment
                   </Text>
-                  <View style={[tw`p-4 rounded-xl`, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+                  <View style={[tw`p-4 rounded-xl`, { backgroundColor: colors.glass }]}>
                     <View style={tw`flex-row justify-between items-center`}>
-                      <Text style={{ color: theme.colors.foreground }}>
+                      <Text style={{ color: colors.foreground }}>
                         Booking Fee
                       </Text>
-                      <Text style={[tw`font-semibold`, { color: theme.colors.secondary }]}>
+                      <Text style={[tw`font-semibold`, { color: colors.primary }]}>
                         {BOOKING_FEE_LABEL}
                       </Text>
                     </View>
-                    <Text style={[tw`text-sm mt-2`, { color: theme.colors.mutedForeground }]}>
+                    <Text style={[tw`text-sm mt-2`, { color: colors.mutedForeground }]}>
                       {isDeveloperAccount 
                         ? 'Developer account - no platform fees charged. Service cost and any add-ons will be paid directly to the barber at your appointment.'
                         : 'Service cost and any add-ons are paid directly to your barber at your appointment.'
@@ -1009,17 +1010,17 @@ export default function BookingForm({
                   <View style={[
                     tw`w-20 h-20 rounded-full items-center justify-center mb-4`,
                     { 
-                      backgroundColor: `${theme.colors.secondary}20`,
+                      backgroundColor: `${colors.primary}20`,
                       borderWidth: 2,
-                      borderColor: `${theme.colors.secondary}40`
+                      borderColor: `${colors.primary}40`
                     }
                   ]}>
-                    <Icon name="credit-card" size={28} color={theme.colors.secondary} />
+                    <Icon name="credit-card" size={28} color={colors.primary} />
                   </View>
-                  <Text style={[tw`text-2xl font-bold mb-3`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`text-2xl font-bold mb-3`, { color: colors.foreground }]}>
                     Secure Payment
                   </Text>
-                  <Text style={[tw`text-center text-base leading-6`, { color: theme.colors.mutedForeground }]}>
+                  <Text style={[tw`text-center text-base leading-6`, { color: colors.mutedForeground }]}>
                     Your payment information is encrypted and secure
                   </Text>
                 </View>
@@ -1027,10 +1028,10 @@ export default function BookingForm({
                 {/* Security Badge */}
                 <View style={[
                   tw`flex-row items-center justify-center p-3 rounded-full mb-6`,
-                  { backgroundColor: `${theme.colors.secondary}15` }
+                  { backgroundColor: `${colors.primary}15` }
                 ]}>
-                  <Icon name="shield" size={16} color={theme.colors.secondary} />
-                  <Text style={[tw`ml-2 text-sm font-medium`, { color: theme.colors.secondary }]}>
+                  <Icon name="shield" size={16} color={colors.primary} />
+                  <Text style={[tw`ml-2 text-sm font-medium`, { color: colors.primary }]}>
                     Powered by Stripe • PCI Compliant
                   </Text>
                 </View>
@@ -1039,14 +1040,14 @@ export default function BookingForm({
                 <View style={[
                   tw`p-6 rounded-2xl mb-8`,
                   { 
-                    backgroundColor: 'rgba(255,255,255,0.08)',
+                    backgroundColor: colors.glass,
                     borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.1)'
+                    borderColor: colors.glassBorder
                   }
                 ]}>
                   <View style={tw`flex-row items-center mb-4`}>
-                    <Icon name="credit-card" size={20} color={theme.colors.secondary} />
-                    <Text style={[tw`ml-2 text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                    <Icon name="credit-card" size={20} color={colors.primary} />
+                    <Text style={[tw`ml-2 text-lg font-semibold`, { color: colors.foreground }]}>
                       Card Information
                     </Text>
                   </View>
@@ -1057,12 +1058,12 @@ export default function BookingForm({
                       number: "4242 4242 4242 4242",
                     }}
                     cardStyle={{
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                      textColor: theme.colors.foreground,
+                      backgroundColor: colors.glass,
+                      textColor: colors.foreground,
                       fontSize: 16,
                       borderRadius: 12,
                       borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.2)',
+                      borderColor: colors.glassBorder,
                     }}
                     style={{
                       width: '100%',
@@ -1072,8 +1073,8 @@ export default function BookingForm({
                   />
                   
                   <View style={tw`flex-row items-center mt-2`}>
-                    <Icon name="info" size={14} color={theme.colors.mutedForeground} />
-                    <Text style={[tw`ml-2 text-xs`, { color: theme.colors.mutedForeground }]}>
+                    <Icon name="info" size={14} color={colors.mutedForeground} />
+                    <Text style={[tw`ml-2 text-xs`, { color: colors.mutedForeground }]}>
                       All transactions are processed securely by Stripe.
                     </Text>
                   </View>
@@ -1083,33 +1084,33 @@ export default function BookingForm({
                 <View style={[
                   tw`p-6 rounded-2xl`,
                   { 
-                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    backgroundColor: colors.glass,
                     borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.1)'
+                    borderColor: colors.glassBorder
                   }
                 ]}>
                   <View style={tw`flex-row items-center mb-3`}>
-                    <Icon name="file-text" size={20} color={theme.colors.secondary} />
-                    <Text style={[tw`ml-2 text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                    <Icon name="file-text" size={20} color={colors.primary} />
+                    <Text style={[tw`ml-2 text-lg font-semibold`, { color: colors.foreground }]}>
                       Payment Summary
                     </Text>
                   </View>
                   
                   <View style={tw`space-y-3`}>
                     <View style={tw`flex-row justify-between items-center`}>
-                      <Text style={[tw`text-base`, { color: theme.colors.mutedForeground }]}>
+                      <Text style={[tw`text-base`, { color: colors.mutedForeground }]}>
                         Service
                       </Text>
-                      <Text style={[tw`text-base font-medium`, { color: theme.colors.foreground }]}>
+                      <Text style={[tw`text-base font-medium`, { color: colors.foreground }]}>
                         {selectedService?.name}
                       </Text>
                     </View>
                     
                     <View style={tw`flex-row justify-between items-center`}>
-                      <Text style={[tw`text-base`, { color: theme.colors.mutedForeground }]}>
+                      <Text style={[tw`text-base`, { color: colors.mutedForeground }]}>
                         Booking Fee
                       </Text>
-                      <Text style={[tw`text-base font-medium`, { color: theme.colors.foreground }]}>
+                      <Text style={[tw`text-base font-medium`, { color: colors.foreground }]}>
                         {BOOKING_FEE_LABEL}
                       </Text>
                     </View>
@@ -1119,29 +1120,30 @@ export default function BookingForm({
                       <View style={tw`space-y-2`}>
                         {getSelectedAddons().map((addon) => (
                           <View key={addon.id} style={tw`flex-row justify-between items-center`}>
-                            <Text style={[tw`text-sm`, { color: theme.colors.mutedForeground }]}>
+                            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
                               + {addon.name}
                             </Text>
-                            <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
+                            <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>
                               +${addon.price.toFixed(2)}
                             </Text>
                           </View>
                         ))}
-                        <Text style={[tw`text-xs mt-2`, { color: theme.colors.mutedForeground }]}>
+                        <Text style={[tw`text-xs mt-2`, { color: colors.mutedForeground }]}>
                           Add-ons are paid at your appointment (not charged now).
                         </Text>
                       </View>
                     )}
                     
                     <View style={[
-                      tw`border-t border-white/10 pt-3 mt-3`,
-                      { borderTopWidth: 1 }
+                      tw`border-t pt-3 mt-3`,
+                      { borderTopWidth: 1 },
+                      { borderColor: colors.glassBorder },
                     ]}>
                       <View style={tw`flex-row justify-between items-center`}>
-                        <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+                        <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
                           Total
                         </Text>
-                        <Text style={[tw`text-xl font-bold`, { color: theme.colors.secondary }]}>
+                        <Text style={[tw`text-xl font-bold`, { color: colors.primary }]}>
                           {BOOKING_FEE_LABEL}
                         </Text>
                       </View>
@@ -1153,20 +1155,20 @@ export default function BookingForm({
                 <View style={tw`items-center mt-4`}>
                   <View style={tw`flex-row items-center space-x-4`}>
                     <View style={tw`items-center mr-4`}>
-                      <Icon name="lock" size={16} color={theme.colors.mutedForeground} />
-                      <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>
+                      <Icon name="lock" size={16} color={colors.mutedForeground} />
+                      <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
                         Encrypted
                       </Text>
                     </View>
                     <View style={tw`items-center`}>
-                      <Icon name="shield" size={16} color={theme.colors.mutedForeground} />
-                      <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>
+                      <Icon name="shield" size={16} color={colors.mutedForeground} />
+                      <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
                         Secure
                       </Text>
                     </View>
                     <View style={tw`items-center ml-4`}>
-                      <Icon name="check-circle" size={16} color={theme.colors.mutedForeground} />
-                      <Text style={[tw`text-xs mt-1`, { color: theme.colors.mutedForeground }]}>
+                      <Icon name="check-circle" size={16} color={colors.mutedForeground} />
+                      <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
                         Verified
                       </Text>
                     </View>
@@ -1180,7 +1182,7 @@ export default function BookingForm({
         </ScrollView>
 
         {/* Footer with Navigation */}
-        <View style={tw`p-5 border-t border-white/10`}>
+        <View style={[tw`p-5 border-t`, { borderColor: colors.glassBorder }]}>
           <View style={tw`flex-row gap-3`}>
             {currentStep > 1 && (
               <TouchableOpacity
@@ -1189,9 +1191,9 @@ export default function BookingForm({
               >
                 <View style={[
                   tw`py-4 rounded-full items-center`,
-                  { backgroundColor: 'rgba(255,255,255,0.1)' }
+                  { backgroundColor: colors.glass }
                 ]}>
-                  <Text style={[tw`font-medium`, { color: theme.colors.foreground }]}>
+                  <Text style={[tw`font-medium`, { color: colors.foreground }]}>
                     Back
                   </Text>
                 </View>
@@ -1206,10 +1208,10 @@ export default function BookingForm({
               >
                 <View style={[
                   tw`py-4 rounded-full items-center`,
-                  { backgroundColor: theme.colors.secondary },
+                  { backgroundColor: colors.primary },
                   !validateStep() && { opacity: 0.5 }
                 ]}>
-                  <Text style={[tw`font-medium`, { color: theme.colors.background }]}>
+                  <Text style={[tw`font-medium`, { color: colors.background }]}>
                     Continue
                   </Text>
                 </View>
@@ -1222,12 +1224,12 @@ export default function BookingForm({
               >
                 <View style={[
                   tw`py-4 rounded-full items-center`,
-                  { backgroundColor: theme.colors.secondary }
+                  { backgroundColor: colors.primary }
                 ]}>
                   {bookingLoading ? (
-                    <ActivityIndicator color={theme.colors.background} size="small" />
+                    <ActivityIndicator color={colors.background} size="small" />
                   ) : (
-                    <Text style={[tw`font-medium`, { color: theme.colors.background }]}>
+                    <Text style={[tw`font-medium`, { color: colors.background }]}>
                       Complete Booking
                     </Text>
                   )}

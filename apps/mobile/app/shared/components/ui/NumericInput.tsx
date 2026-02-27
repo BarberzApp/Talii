@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, TextInputProps, ViewStyle } from 'react-native';
 import tw from 'twrnc';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface NumericInputProps extends Omit<TextInputProps, 'keyboardType' | 'value' | 'onChangeText'> {
   label: string;
@@ -24,16 +24,17 @@ export const NumericInput: React.FC<NumericInputProps> = ({
   placeholder,
   ...props
 }) => {
+  const { colors } = useTheme();
   return (
     <View style={[tw`flex-1`, containerStyle]}>
-      <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
+      <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
         {label}
       </Text>
       <View style={tw`relative`}>
         {prefix && (
           <Text style={[
             tw`absolute left-4 top-3 text-base z-10`,
-            { color: theme.colors.mutedForeground }
+            { color: colors.mutedForeground }
           ]}>
             {prefix}
           </Text>
@@ -44,14 +45,14 @@ export const NumericInput: React.FC<NumericInputProps> = ({
             prefix && tw`pl-8`,
             suffix && tw`pr-8`,
             {
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              color: theme.colors.foreground,
+              backgroundColor: colors.glass,
+              color: colors.foreground,
               borderWidth: 1,
-              borderColor: error ? theme.colors.destructive : 'rgba(255,255,255,0.1)',
+              borderColor: error ? colors.destructive : colors.glassBorder,
             }
           ]}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.mutedForeground}
+          placeholderTextColor={colors.mutedForeground}
           value={value.toString()}
           onChangeText={(text) => {
             const numValue = text === '' ? 0 : parseFloat(text) || 0;
@@ -63,14 +64,14 @@ export const NumericInput: React.FC<NumericInputProps> = ({
         {suffix && (
           <Text style={[
             tw`absolute right-4 top-3 text-base`,
-            { color: theme.colors.mutedForeground }
+            { color: colors.mutedForeground }
           ]}>
             {suffix}
           </Text>
         )}
       </View>
       {error && (
-        <Text style={[tw`text-xs mt-1`, { color: theme.colors.destructive }]}>
+        <Text style={[tw`text-xs mt-1`, { color: colors.destructive }]}>
           {error}
         </Text>
       )}

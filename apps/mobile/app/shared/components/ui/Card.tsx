@@ -1,10 +1,14 @@
 import React from 'react';
 import { View, Text, ViewStyle, TextStyle, StyleProp } from 'react-native';
 import tw from 'twrnc';
+import { useTheme } from '../theme/ThemeProvider';
 import { theme } from '../../lib/theme';
+
+type CardVariant = 'default' | 'elevated' | 'hero';
 
 interface CardProps {
   children: React.ReactNode;
+  variant?: CardVariant;
   style?: StyleProp<ViewStyle>;
   className?: string;
 }
@@ -39,14 +43,32 @@ interface CardFooterProps {
   className?: string;
 }
 
-const Card: React.FC<CardProps> = ({ children, style, className }) => {
+const variantMap: Record<CardVariant, ViewStyle> = {
+  default: {
+    borderRadius: theme.borderRadius.lg,
+    ...theme.shadows.sm,
+  },
+  elevated: {
+    borderRadius: theme.borderRadius['2xl'],
+    ...theme.shadows.md,
+  },
+  hero: {
+    borderRadius: theme.borderRadius['3xl'],
+    padding: 32,
+    ...theme.shadows.lg,
+  },
+};
+
+const Card: React.FC<CardProps> = ({ children, variant = 'default', style, className }) => {
+  const { colors } = useTheme();
   return (
     <View 
       style={[
-        tw`rounded-lg border shadow-sm`,
+        { borderWidth: 1, overflow: 'hidden' },
+        variantMap[variant],
         { 
-          backgroundColor: theme.colors.card,
-          borderColor: theme.colors.border,
+          backgroundColor: colors.card,
+          borderColor: colors.border,
         },
         style
       ]}
@@ -65,11 +87,12 @@ const CardHeader: React.FC<CardHeaderProps> = ({ children, style, className }) =
 };
 
 const CardTitle: React.FC<CardTitleProps> = ({ children, style, className }) => {
+  const { colors } = useTheme();
   return (
     <Text
       style={[
         tw`text-2xl font-semibold leading-none tracking-tight`,
-        { color: theme.colors.cardForeground },
+        { color: colors.cardForeground },
         style
       ]}
     >
@@ -79,11 +102,12 @@ const CardTitle: React.FC<CardTitleProps> = ({ children, style, className }) => 
 };
 
 const CardDescription: React.FC<CardDescriptionProps> = ({ children, style, className }) => {
+  const { colors } = useTheme();
   return (
     <Text
       style={[
         tw`text-sm`,
-        { color: theme.colors.mutedForeground },
+        { color: colors.mutedForeground },
         style
       ]}
     >

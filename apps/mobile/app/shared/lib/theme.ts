@@ -2,38 +2,53 @@ import { ANIMATION_TIMING, SPRING_CONFIG } from '../constants/animations';
 
 export const theme = {
   colors: {
-    // Core colors - Talii brand
-    background: '#272a2f', // Dark grey background
-    foreground: '#fff', // White text
-    card: '#fff',
-    cardForeground: '#272a2f',
-    popover: '#fff',
-    popoverForeground: '#272a2f',
-    primary: '#d2793e', // Talii brand orange (from logo)
-    primaryForeground: '#fff',
-    secondary: '#d2793e', // Talii orange - for buttons and accents
-    secondaryForeground: '#fff',
-    muted: '#f5f5f5', // Light grey muted
-    mutedForeground: '#b0b0b0', // Medium grey text
-    accent: '#d2793e', // Talii orange accent
-    accentForeground: '#fff',
-    destructive: '#ff4d4f', // Red for errors
-    destructiveForeground: '#fff',
-    border: '#e5e7eb', // Light grey border
-    input: '#e5e7eb',
-    ring: '#d2793e', // Talii orange focus ring
-    radius: '0.5rem', // 8px equivalent
-    
-    // Talii brand colors (replaces BOCM palette)
-    grey: '#272a2f', // Dark grey
-    saffronBrown: '#d2793e', // Talii brand orange
-    coffeeBrown: '#b85c2a', // Darker Talii variant
-    beige: '#f5f5f5', // Beige/light grey
-    
-    // Additional colors
-    darkGrey: '#2d2a26', // Darker grey
-    lightGrey: '#f5f5f5', // Light grey
-    
+    // Backgrounds
+    background: '#FFFFFF',
+    foreground: '#1C1917',
+    card: '#FFFFFF',
+    cardForeground: '#1C1917',
+    popover: '#FFFFFF',
+    popoverForeground: '#1C1917',
+
+    // Primary (Talii brand orange)
+    primary: '#EE6D23',
+    primaryForeground: '#FFFFFF',
+    primaryDark: '#D85A1A',
+    primarySubtle: '#FFF4EE',
+    primaryTint: '#FFE4D1',
+
+    // Secondary (outlined style — not another orange)
+    secondary: '#FFFFFF',
+    secondaryForeground: '#EE6D23',
+
+    // Muted
+    muted: '#F5F5F4',
+    mutedForeground: '#78716C',
+
+    // Accent (repurposed as orange tint, not a duplicate of primary)
+    accent: '#FFF4EE',
+    accentForeground: '#EE6D23',
+
+    // Utility
+    destructive: '#EF4444',
+    destructiveForeground: '#FFFFFF',
+    border: '#E7E5E4',
+    input: '#F3F4F6',
+    ring: '#EE6D23',
+    radius: '0.5rem',
+
+    // Surface colors for cards and elevated elements
+    surface: '#FAFAF9',
+    surfaceForeground: '#1C1917',
+
+    // @deprecated — retained for legacy references, migrate away from these
+    grey: '#272a2f',
+    saffronBrown: '#EE6D23',
+    coffeeBrown: '#D85A1A',
+    beige: '#F5F5F5',
+    darkGrey: '#272a2f',
+    lightGrey: '#F5F5F5',
+
     // Social Media Colors
     bookingHighlight: '#ff3b30',
     socialInstagram: '#e1306c',
@@ -41,23 +56,67 @@ export const theme = {
     socialTiktok: '#000000',
     socialFacebook: '#1877f3',
 
-    // Enhanced colors for new design
-    success: '#10b981',
-    warning: '#f59e0b',
-    premium: '#ffd700',
-    glass: 'rgba(255, 255, 255, 0.1)',
-    glassBorder: 'rgba(255, 255, 255, 0.1)',
+    // Status colors
+    success: '#10B981',
+    successForeground: '#FFFFFF',
+    successSubtle: '#DCFCE7',
+    warning: '#FB923C',
+    warningForeground: '#FFFFFF',
+    premium: '#F59E0B',
+    premiumSubtle: 'rgba(245, 158, 11, 0.15)',
+    info: '#3B82F6',
+    infoForeground: '#FFFFFF',
+    infoSubtle: 'rgba(59, 130, 246, 0.1)',
+    infoBorder: 'rgba(59, 130, 246, 0.3)',
+    destructiveSubtle: '#FEE2E2',
+
+    // Glass / overlay tokens (tuned per mode)
+    glass: 'rgba(39, 42, 47, 0.06)',
+    glassBorder: 'rgba(39, 42, 47, 0.12)',
+    backdrop: 'rgba(39, 42, 47, 0.45)',
+    surfaceElevated: '#FFFFFF',
+
+    // Dark theme overrides
+    dark: {
+      background: '#1C1917',
+      foreground: '#FAFAF9',
+      card: '#292524',
+      cardForeground: '#FAFAF9',
+      popover: '#292524',
+      popoverForeground: '#FAFAF9',
+      surface: '#292524',
+      surfaceForeground: '#FAFAF9',
+      surfaceElevated: '#3C3835',
+      muted: '#44403C',
+      mutedForeground: '#A8A29E',
+      border: '#44403C',
+      input: '#44403C',
+      glass: 'rgba(0, 0, 0, 0.25)',
+      glassBorder: 'rgba(255, 255, 255, 0.12)',
+      backdrop: 'rgba(0, 0, 0, 0.65)',
+      primarySubtle: '#3A2418',
+      primaryTint: '#52311E',
+      accent: '#3A2418',
+      accentForeground: '#EE6D23',
+      info: '#60A5FA',
+      successSubtle: 'rgba(34, 197, 94, 0.2)',
+      destructiveSubtle: 'rgba(239, 68, 68, 0.2)',
+      infoSubtle: 'rgba(59, 130, 246, 0.15)',
+      infoBorder: 'rgba(59, 130, 246, 0.4)',
+      premiumSubtle: 'rgba(245, 158, 11, 0.2)',
+    },
   },
   
-  // Enhanced gradient definitions - Talii brand
+  // Enhanced gradient definitions - Talii brand (matching web)
   gradients: {
-    primary: ['#d2793e', '#b85c2a'],
-    background: ['#272a2f', '#2d2a26'],
-    glass: ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)'],
-    logo: ['#d2793e', '#b85c2a'],
-    text: ['#d2793e', '#b85c2a'],
-    button: ['#d2793e', '#b85c2a'],
-    glow: ['rgba(210, 121, 62, 0.3)', 'rgba(210, 121, 62, 0.1)'],
+    primary: ['#EE6D23', '#D85A1A'],
+    background: ['#FFFFFF', '#FAFAF9'],
+    backgroundDark: ['#1C1917', '#292524'],
+    glass: ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.02)'],
+    logo: ['#EE6D23', '#D85A1A'],
+    text: ['#EE6D23', '#D85A1A'],
+    button: ['#EE6D23', '#D85A1A'],
+    glow: ['rgba(238, 109, 35, 0.35)', 'rgba(238, 109, 35, 0.08)'],
   },
 
   // Animation configuration
@@ -168,4 +227,61 @@ export const theme = {
   },
 } as const;
 
-export type Theme = typeof theme; 
+export type Theme = typeof theme;
+
+export type ColorScheme = 'light' | 'dark';
+
+export type ResolvedColors = typeof theme.colors & {
+  background: string;
+  foreground: string;
+  card: string;
+  cardForeground: string;
+  popover: string;
+  popoverForeground: string;
+  surface: string;
+  surfaceForeground: string;
+  surfaceElevated: string;
+  muted: string;
+  mutedForeground: string;
+  border: string;
+  input: string;
+  glass: string;
+  glassBorder: string;
+  backdrop: string;
+  primary: string;
+  primaryForeground: string;
+  primaryDark: string;
+  primarySubtle: string;
+  primaryTint: string;
+  secondary: string;
+  secondaryForeground: string;
+  accent: string;
+  accentForeground: string;
+  destructive: string;
+  destructiveForeground: string;
+  destructiveSubtle: string;
+  success: string;
+  successForeground: string;
+  successSubtle: string;
+  warning: string;
+  warningForeground: string;
+  premium: string;
+  premiumSubtle: string;
+  info: string;
+  infoForeground: string;
+  infoSubtle: string;
+  infoBorder: string;
+};
+
+export function getResolvedColors(mode: ColorScheme): ResolvedColors {
+  const colors = theme?.colors;
+  if (!colors || typeof colors !== 'object') {
+    throw new Error('Theme colors not initialized');
+  }
+  const { dark: darkOverrides, ...lightColors } = colors as typeof colors & { dark: Record<string, string> };
+  const light = lightColors as Record<string, string>;
+  if (mode === 'dark' && darkOverrides && typeof darkOverrides === 'object') {
+    return { ...light, ...darkOverrides } as unknown as ResolvedColors;
+  }
+  return light as unknown as ResolvedColors;
+} 

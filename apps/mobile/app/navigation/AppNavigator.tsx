@@ -28,6 +28,7 @@ import CalendarPage from '../pages/CalendarPage';
 import CutsPage from '../pages/CutsPage';
 import { linking } from '../shared/config/deepLinking';
 import { AuthGuard, BarberGuard } from '../shared/components/auth/AuthGuard';
+import { useTheme } from '../shared/components/theme';
 import { ROUTE_MAPPING, isRouteProtected, getRouteRole } from '../shared/config/routeMapping';
 import { setRouteContext } from '../shared/lib/sentry';
 
@@ -40,6 +41,7 @@ function GuestBrowseScreen() {
 }
 
 function GlassyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const { colors, colorScheme } = useTheme();
   const { width: screenWidth } = Dimensions.get('window');
   const insets = useSafeAreaInsets();
   const isSmallScreen = screenWidth < 375;
@@ -63,15 +65,15 @@ function GlassyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   return (
     <BlurView
       intensity={60}
-      tint="dark"
+      tint={colorScheme === 'dark' ? 'dark' : 'light'}
       style={[
         tw`absolute left-0 right-0 bottom-0 flex-row items-center justify-center`,
         { 
           borderTopLeftRadius: 24, 
           borderTopRightRadius: 24, 
-          backgroundColor: 'rgba(0, 0, 0, 0.3)', 
+          backgroundColor: colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.9)', 
           borderTopWidth: 1, 
-          borderColor: 'rgba(255, 255, 255, 0.10)',
+          borderColor: colors.border,
           height: navHeight + insets.bottom,
           paddingHorizontal: itemPadding,
           paddingVertical: 4,
@@ -109,9 +111,9 @@ function GlassyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             style={[
               tw`flex flex-col items-center justify-center rounded-2xl`,
               {
-                backgroundColor: isFocused ? 'rgba(180, 138, 60, 0.15)' : 'transparent',
+                backgroundColor: isFocused ? colors.muted : 'transparent',
                 borderWidth: isFocused ? 1 : 0,
-                borderColor: isFocused ? 'rgba(180, 138, 60, 0.3)' : 'transparent',
+                borderColor: isFocused ? colors.primary : 'transparent',
                 paddingVertical: isSmallScreen ? 3 : 4,
                 paddingHorizontal: isSmallScreen ? 8 : 10,
                 minWidth: isSmallScreen ? 50 : 56,
@@ -120,14 +122,14 @@ function GlassyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           >
             <IconComponent
               size={iconSize}
-              color={isFocused ? '#b48a3c' : 'rgba(255, 255, 255, 0.8)'}
+              color={isFocused ? colors.primary : colors.mutedForeground}
               style={tw`mb-2`}
             />
             <Text
               style={[
                 tw`font-semibold tracking-wide`,
                 { 
-                  color: isFocused ? '#b48a3c' : 'rgba(255, 255, 255, 0.8)',
+                  color: isFocused ? colors.primary : colors.mutedForeground,
                   fontSize: textSize,
                 }
               ]}
@@ -229,9 +231,9 @@ function GlassyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             style={[
               tw`flex flex-col items-center justify-center rounded-2xl`,
               {
-                backgroundColor: isFocused ? 'rgba(180, 138, 60, 0.15)' : 'transparent',
+                backgroundColor: isFocused ? colors.muted : 'transparent',
                 borderWidth: isFocused ? 1 : 0,
-                borderColor: isFocused ? 'rgba(180, 138, 60, 0.3)' : 'transparent',
+                borderColor: isFocused ? colors.primary : 'transparent',
                 paddingVertical: isSmallScreen ? 3 : 4,
                 paddingHorizontal: isSmallScreen ? 8 : 10,
                 minWidth: isSmallScreen ? 50 : 56,
@@ -240,14 +242,14 @@ function GlassyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           >
             <IconComponent
               size={iconSize}
-              color={isFocused ? '#b48a3c' : 'rgba(255, 255, 255, 0.8)'}
+              color={isFocused ? colors.primary : colors.mutedForeground}
               style={tw`mb-2`}
             />
             <Text
               style={[
                 tw`font-semibold tracking-wide`,
                 { 
-                  color: isFocused ? '#b48a3c' : 'rgba(255, 255, 255, 0.8)',
+                  color: isFocused ? colors.primary : colors.mutedForeground,
                   fontSize: textSize,
                 }
               ]}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import tw from 'twrnc';
 
 interface LabelProps {
@@ -16,17 +16,18 @@ const Label: React.FC<LabelProps> = ({
   className = '',
   required = false 
 }) => {
+  const { colors } = useTheme();
   return (
     <View style={tw`mb-2`}>
       <Text
         style={[
           tw`text-sm font-medium`,
-          { color: theme.colors.foreground },
+          { color: colors.foreground },
         ]}
       >
         {children}
         {required && (
-          <Text style={{ color: theme.colors.destructive }}> *</Text>
+          <Text style={{ color: colors.destructive }}> *</Text>
         )}
       </Text>
     </View>

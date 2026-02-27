@@ -11,7 +11,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Play, Upload, X } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import tw from 'twrnc';
 import { logger } from '../../lib/logger';
 
@@ -28,6 +28,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
   title = 'Upload Video',
   description = 'Select a video from your gallery or record a new one',
 }) => {
+  const { colors } = useTheme();
   const [uploading, setUploading] = useState(false);
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDescription, setVideoDescription] = useState('');
@@ -169,7 +170,7 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
           style={[
             tw`flex-row items-center justify-center p-6 rounded-2xl border-2 border-dashed`,
             { 
-              backgroundColor: 'rgba(255,255,255,0.05)',
+              backgroundColor: colors.glass,
               borderColor: 'rgba(255,255,255,0.2)'
             }
           ]}
@@ -179,14 +180,14 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
           <View style={tw`items-center`}>
             <View style={[
               tw`w-12 h-12 rounded-full items-center justify-center mb-3`,
-              { backgroundColor: 'rgba(255,255,255,0.1)' }
+              { backgroundColor: colors.glassBorder }
             ]}>
-              <Play size={24} color={theme.colors.secondary} />
+              <Play size={24} color={colors.primary} />
             </View>
-            <Text style={[tw`font-semibold text-base`, { color: theme.colors.foreground }]}>
+            <Text style={[tw`font-semibold text-base`, { color: colors.foreground }]}>
               {title}
             </Text>
-            <Text style={[tw`text-sm mt-1`, { color: theme.colors.mutedForeground }]}>
+            <Text style={[tw`text-sm mt-1`, { color: colors.mutedForeground }]}>
               {description}
             </Text>
           </View>
@@ -195,16 +196,16 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
         // Video Details Form
         <View style={[
           tw`p-4 rounded-2xl`,
-          { backgroundColor: 'rgba(255,255,255,0.05)' }
+          { backgroundColor: colors.glass }
         ]}>
           <View style={tw`flex-row items-center justify-between mb-4`}>
-            <Text style={[tw`font-semibold text-lg`, { color: theme.colors.foreground }]}>
+            <Text style={[tw`font-semibold text-lg`, { color: colors.foreground }]}>
               Video Details
             </Text>
             <TouchableOpacity
               style={[
                 tw`w-6 h-6 rounded-full items-center justify-center`,
-                { backgroundColor: theme.colors.destructive }
+                { backgroundColor: colors.destructive }
               ]}
               onPress={cancelSelection}
             >
@@ -214,16 +215,16 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
 
           <View style={tw`space-y-4`}>
             <View style={tw`space-y-2`}>
-              <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>
                 Video Title *
               </Text>
               <TextInput
                 style={[
                   tw`h-12 p-3 rounded-xl border`,
                   { 
-                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    backgroundColor: colors.glassBorder,
                     borderColor: 'rgba(255,255,255,0.2)',
-                    color: theme.colors.foreground
+                    color: colors.foreground
                   }
                 ]}
                 placeholder="Enter video title"
@@ -234,16 +235,16 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
             </View>
 
             <View style={tw`space-y-2`}>
-              <Text style={[tw`text-sm font-medium`, { color: theme.colors.foreground }]}>
+              <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>
                 Description (Optional)
               </Text>
               <TextInput
                 style={[
                   tw`p-3 rounded-xl border min-h-[80px]`,
                   { 
-                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    backgroundColor: colors.glassBorder,
                     borderColor: 'rgba(255,255,255,0.2)',
-                    color: theme.colors.foreground
+                    color: colors.foreground
                   }
                 ]}
                 placeholder="Describe your video..."
@@ -259,17 +260,17 @@ export const VideoUpload: React.FC<VideoUploadProps> = ({
             <TouchableOpacity
               style={[
                 tw`flex-row items-center justify-center p-4 rounded-xl`,
-                { backgroundColor: theme.colors.secondary }
+                { backgroundColor: colors.primary }
               ]}
               onPress={uploadVideo}
               disabled={uploading}
             >
               {uploading ? (
-                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <ActivityIndicator size="small" color={colors.primaryForeground} />
               ) : (
                 <>
-                  <Upload size={20} color={theme.colors.primary} style={tw`mr-2`} />
-                  <Text style={[tw`font-semibold`, { color: theme.colors.primary }]}>
+                  <Upload size={20} color={colors.primaryForeground} style={tw`mr-2`} />
+                  <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>
                     Upload Video
                   </Text>
                 </>

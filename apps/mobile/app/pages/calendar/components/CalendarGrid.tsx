@@ -3,7 +3,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import tw from 'twrnc';
 import { isSameDay, isSameMonth, isToday } from 'date-fns';
-import { theme } from '../../../shared/lib/theme';
+import { useTheme } from '../../../shared/components/theme';
 import type { CalendarEvent } from '../../../shared/lib/calendar';
 
 type Props = {
@@ -37,13 +37,14 @@ export default function CalendarGrid({
   hasUpcomingEvents,
   screenWidth,
 }: Props) {
+  const { colors } = useTheme();
   return (
     <>
       {/* Header with Navigation - Enhanced */}
       <View style={[tw`flex-row items-center justify-between mb-6 p-4 rounded-2xl`, {
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        backgroundColor: colors.glass,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: colors.glassBorder,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
@@ -54,18 +55,18 @@ export default function CalendarGrid({
           testID="prev-month-button"
           onPress={onPrevMonth}
           style={[tw`p-3 rounded-2xl items-center justify-center`, {
-            backgroundColor: `${theme.colors.secondary}15`,
+            backgroundColor: `${colors.primary}15`,
             borderWidth: 1,
-            borderColor: `${theme.colors.secondary}30`,
+            borderColor: `${colors.primary}30`,
             minWidth: 52,
             minHeight: 52
           }]}
         >
-          <ChevronLeft size={24} color={theme.colors.secondary} />
+          <ChevronLeft size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={[tw`text-xl font-bold text-center flex-1 mx-6`, {
-          color: theme.colors.foreground,
-          textShadowColor: 'rgba(0, 0, 0, 0.3)',
+          color: colors.foreground,
+          textShadowColor: colors.backdrop,
           textShadowOffset: { width: 0, height: 2 },
           textShadowRadius: 4
         }]}>
@@ -75,14 +76,14 @@ export default function CalendarGrid({
           testID="next-month-button"
           onPress={onNextMonth}
           style={[tw`p-3 rounded-2xl items-center justify-center`, {
-            backgroundColor: `${theme.colors.secondary}15`,
+            backgroundColor: `${colors.primary}15`,
             borderWidth: 1,
-            borderColor: `${theme.colors.secondary}30`,
+            borderColor: `${colors.primary}30`,
             minWidth: 52,
             minHeight: 52
           }]}
         >
-          <ChevronRight size={24} color={theme.colors.secondary} />
+          <ChevronRight size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -91,9 +92,9 @@ export default function CalendarGrid({
         {weekdays.map((day, index) => (
           <View key={index} style={{ width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 8 }}>
             <Text style={[tw`text-xs font-bold uppercase tracking-wider text-center`, {
-              color: theme.colors.secondary,
+              color: colors.primary,
               fontSize: 12,
-              textShadowColor: 'rgba(0, 0, 0, 0.3)',
+              textShadowColor: colors.backdrop,
               textShadowOffset: { width: 0, height: 1 },
               textShadowRadius: 2
             }]}>
@@ -125,14 +126,14 @@ export default function CalendarGrid({
                 marginVertical: 4,
                 borderRadius: 14,
                 backgroundColor: isCurrentMonth
-                  ? 'rgba(255,255,255,0.02)'
-                  : 'rgba(255,255,255,0.005)',
+                  ? colors.glass
+                  : 'transparent',
                 borderWidth: isSelected ? 2 : 1,
                 borderColor: isSelected
-                  ? theme.colors.secondary
-                  : 'rgba(255,255,255,0.03)',
+                  ? colors.primary
+                  : colors.glassBorder,
                 transform: [{ scale: isSelected ? 1.02 : 1 }],
-                shadowColor: isSelected ? theme.colors.secondary : 'transparent',
+                shadowColor: isSelected ? colors.primary : 'transparent',
                 shadowOffset: { width: 0, height: isSelected ? 1 : 0 },
                 shadowOpacity: isSelected ? 0.08 : 0,
                 shadowRadius: isSelected ? 6 : 0,
@@ -146,10 +147,10 @@ export default function CalendarGrid({
                   lineHeight: screenWidth < 400 ? 18 : 20,
                   textAlign: 'center',
                   color: isSelected || isTodayDate
-                    ? theme.colors.secondary
+                    ? colors.primary
                     : isCurrentMonth
-                      ? theme.colors.foreground
-                      : 'rgba(255,255,255,0.15)',
+                      ? colors.foreground
+                      : colors.mutedForeground,
                 }
               ]}>
                 {date.getDate()}
@@ -159,10 +160,10 @@ export default function CalendarGrid({
               {dateEvents.length > 0 && (
                 <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
                   {hasPast && (
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22c55e' }} />
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
                   )}
                   {hasUpcoming && (
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.colors.secondary }} />
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary }} />
                   )}
                 </View>
               )}
@@ -174,7 +175,7 @@ export default function CalendarGrid({
       {/* Today Button - Enhanced with glow */}
       <View
         style={{
-          shadowColor: theme.colors.secondary,
+          shadowColor: colors.primary,
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.2,
           shadowRadius: 15,
@@ -184,8 +185,8 @@ export default function CalendarGrid({
         <TouchableOpacity
           onPress={onGoToToday}
           style={[tw`mt-6 py-4 rounded-2xl items-center`, {
-            backgroundColor: theme.colors.secondary,
-            shadowColor: theme.colors.secondary,
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
             shadowOffset: { width: 0, height: 8 },
             shadowOpacity: 0.3,
             shadowRadius: 25,
@@ -193,8 +194,8 @@ export default function CalendarGrid({
           }]}
         >
           <Text style={[tw`font-bold text-lg`, {
-            color: theme.colors.primaryForeground,
-            textShadowColor: 'rgba(0, 0, 0, 0.2)',
+            color: colors.primaryForeground,
+            textShadowColor: colors.backdrop,
             textShadowOffset: { width: 0, height: 1 },
             textShadowRadius: 2
           }]}>

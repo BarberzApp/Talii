@@ -6,10 +6,6 @@ export type FeedItem = {
   posterUrl?: string; // TODO: Precomputed thumbnail or storage URL
   caption?: string;
   username?: string;
-  music?: string;
-  likes?: number;
-  comments?: number;
-  shares?: number;
   // BocmApp specific fields
   barber_id?: string;
   barber_name?: string;

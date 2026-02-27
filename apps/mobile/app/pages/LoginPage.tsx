@@ -9,23 +9,20 @@ import {
   Alert,
   StatusBar,
   ScrollView,
-  Animated,
-  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Scissors, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
-import { User, Barber } from '../shared/types';
 import { useAuth } from '../shared/hooks/useAuth';
 import { supabase } from '../shared/lib/supabase';
-import { theme } from '../shared/lib/theme';
 import { logger } from '../shared/lib/logger';
+import { useTheme } from '../shared/components/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
-import { AnimatedText } from '../shared/components/AnimatedText';
 import { ActionButton } from '../shared/components/ActionButton';
+import { Card } from '../shared/components/ui/Card';
+import Input from '../shared/components/ui/Input';
+import { theme } from '../shared/lib/theme';
 
 type RootStackParamList = {
   Home: undefined;
@@ -38,8 +35,9 @@ type RootStackParamList = {
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
 export default function LoginPage() {
+  const { colors, colorScheme } = useTheme();
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -361,17 +359,21 @@ export default function LoginPage() {
 
   if (checkingSession) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <StatusBar
+          barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+        />
         <AnimatedBackground />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <View style={{
             padding: 24,
-            borderRadius: 20,
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
+            borderRadius: theme.borderRadius['3xl'],
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
           }}>
-            <Text style={{ color: theme.colors.secondary, fontSize: 18, fontWeight: '600' }}>
+            <Text style={{ color: colors.primary, fontSize: 18, fontWeight: '600' }}>
               Checking session...
             </Text>
           </View>
@@ -381,8 +383,11 @@ export default function LoginPage() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       
       {/* Animated Background */}
       <AnimatedBackground />
@@ -397,14 +402,15 @@ export default function LoginPage() {
           zIndex: 10,
           width: 44,
           height: 44,
-          borderRadius: 22,
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: theme.borderRadius.full,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
           justifyContent: 'center',
           alignItems: 'center',
-          backdropFilter: 'blur(10px)',
         }}
       >
-        <ArrowLeft size={24} color={theme.colors.foreground} />
+        <ArrowLeft size={24} color={colors.foreground} />
       </TouchableOpacity>
 
       <KeyboardAvoidingView
@@ -425,24 +431,29 @@ export default function LoginPage() {
                 <View style={{
                   width: 80,
                   height: 80,
-                  borderRadius: 40,
-                  backgroundColor: 'rgba(199, 142, 63, 0.2)',
+                  borderRadius: theme.borderRadius.full,
+                  backgroundColor: colors.muted,
+                  borderWidth: 1,
+                  borderColor: colors.border,
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginBottom: 24,
                 }}>
-                  <Scissors size={40} color={theme.colors.secondary} />
+                  <Scissors size={40} color={colors.primary} />
                 </View>
                 
-                <AnimatedText
-                  text="WELCOME BACK"
-                  type="welcome"
-                  delay={1000}
-                />
+                <Text style={{
+                  fontSize: 28,
+                  fontWeight: '700',
+                  color: colors.foreground,
+                  textAlign: 'center',
+                }}>
+                  Welcome back
+                </Text>
                 
                 <Text style={{
                   fontSize: 18,
-                  color: 'rgba(255, 255, 255, 0.8)',
+                  color: colors.mutedForeground,
                   textAlign: 'center',
                   marginTop: 12,
                 }}>
@@ -454,141 +465,77 @@ export default function LoginPage() {
             {/* Login Form */}
             {showContent && (
               <View style={{ width: '100%' }}>
-                <View style={{
-                  width: '100%',
-                  borderRadius: 24,
-                  overflow: 'hidden',
-                }}>
-                  <BlurView
-                    intensity={20}
-                    style={{
-                      padding: 32,
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.1)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    }}
-                  >
-                  {/* Error Display */}
+                <Card variant="hero" style={{ backgroundColor: colors.surface }}>
                   {error && (
                     <View style={{
                       padding: 16,
                       marginBottom: 24,
-                      borderRadius: 12,
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      borderRadius: theme.borderRadius.xl,
+                      backgroundColor: colors.muted,
                       borderWidth: 1,
-                      borderColor: 'rgba(239, 68, 68, 0.2)',
+                      borderColor: colors.destructive,
                     }}>
-                      <Text style={{ color: '#ef4444', textAlign: 'center', fontSize: 14 }}>
+                      <Text style={{ color: colors.destructive, textAlign: 'center', fontSize: 14 }}>
                         {error}
                       </Text>
                     </View>
                   )}
 
-                  {/* Email Input */}
-                  <View style={{ marginBottom: 20 }}>
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: '600',
-                      color: theme.colors.foreground,
-                      marginBottom: 8,
-                    }}>
-                      Email
-                    </Text>
-                    <View style={{
-                      height: 56,
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      paddingHorizontal: 16,
-                      justifyContent: 'center',
-                    }}>
-                      <TextInput
-                        placeholder="name@example.com"
-                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                        value={email}
-                        onChangeText={(text) => {
-                          setEmail(text);
-                          setError(null);
-                        }}
-                        style={{
-                          color: theme.colors.foreground,
-                          fontSize: 16,
-                        }}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        editable={!isLoading}
-                      />
-                    </View>
-                  </View>
+                  <Input
+                    label="Email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      setError(null);
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
 
-                  {/* Password Input */}
-                  <View style={{ marginBottom: 24 }}>
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: '600',
-                      color: theme.colors.foreground,
-                      marginBottom: 8,
-                    }}>
-                      Password
-                    </Text>
-                    <View style={{
-                      height: 56,
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      paddingHorizontal: 16,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}>
-                      <TextInput
-                        placeholder="Enter your password"
-                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                        value={password}
-                        onChangeText={(text) => {
-                          setPassword(text);
-                          setError(null);
-                        }}
-                        secureTextEntry={!showPassword}
-                        style={{
-                          color: theme.colors.foreground,
-                          fontSize: 16,
-                          flex: 1,
-                        }}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        editable={!isLoading}
-                      />
+                  <Input
+                    label="Password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      setError(null);
+                    }}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                    containerStyle={{ marginBottom: 0 }}
+                    rightIcon={
                       <TouchableOpacity
                         onPress={() => setShowPassword(!showPassword)}
                         style={{ padding: 8 }}
                       >
                         {showPassword ? (
-                          <EyeOff size={20} color="rgba(255, 255, 255, 0.6)" />
+                          <EyeOff size={20} color={colors.mutedForeground} />
                         ) : (
-                          <Eye size={20} color="rgba(255, 255, 255, 0.6)" />
+                          <Eye size={20} color={colors.mutedForeground} />
                         )}
                       </TouchableOpacity>
-                    </View>
-                    
-                    <TouchableOpacity
-                      onPress={handleForgotPassword}
-                      disabled={isLoading}
-                      style={{ alignSelf: 'flex-end', marginTop: 8 }}
-                    >
-                      <Text style={{
-                        fontSize: 14,
-                        color: theme.colors.secondary,
-                        textDecorationLine: 'underline',
-                      }}>
-                        Forgot password?
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                    }
+                  />
 
-                  {/* Sign In Button */}
+                  <TouchableOpacity
+                    onPress={handleForgotPassword}
+                    disabled={isLoading}
+                    style={{ alignSelf: 'flex-end', marginTop: 8, marginBottom: 24 }}
+                  >
+                    <Text style={{
+                      fontSize: 14,
+                      color: colors.primary,
+                      textDecorationLine: 'underline',
+                    }}>
+                      Forgot password?
+                    </Text>
+                  </TouchableOpacity>
+
                   <ActionButton
                     variant="primary"
                     onPress={handleSignIn}
@@ -596,23 +543,20 @@ export default function LoginPage() {
                   >
                     {isLoading ? 'Signing in...' : 'Sign in'}
                   </ActionButton>
-
-                  {/* Google Sign-In removed - feature not yet implemented */}
-                </BlurView>
-                </View>
+                </Card>
 
                 {/* Sign Up Link */}
                 <View style={{ alignItems: 'center', marginTop: 32 }}>
                   <Text style={{
                     fontSize: 14,
-                    color: 'rgba(255, 255, 255, 0.8)',
+                    color: colors.mutedForeground,
                     textAlign: 'center',
                   }}>
                     Don&apos;t have an account?{' '}
                     <Text
                       onPress={handleSignUp}
                       style={{
-                        color: theme.colors.secondary,
+                        color: colors.primary,
                         textDecorationLine: 'underline',
                         fontWeight: '600',
                       }}

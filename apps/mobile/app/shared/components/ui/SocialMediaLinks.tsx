@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { Instagram, Twitter, Facebook, Share2, Copy, Check } from 'lucide-react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -85,6 +85,7 @@ export function SocialMediaLinks({
   shareUrl,
   shareTitle = 'Check out this barber!'
 }: SocialMediaLinksProps) {
+  const { colors } = useTheme();
   const [copied, setCopied] = useState(false);
   const [socialData, setSocialData] = useState({
     instagram,
@@ -151,7 +152,7 @@ export function SocialMediaLinks({
       <View style={tw`mb-4`}>
         <View style={tw`flex-row items-center mb-2`}>
           {icon}
-          <Text style={[tw`ml-2 text-sm font-medium`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`ml-2 text-sm font-medium`, { color: colors.foreground }]}>
             {platform.charAt(0).toUpperCase() + platform.slice(1)}
           </Text>
         </View>
@@ -159,9 +160,9 @@ export function SocialMediaLinks({
           style={[
             tw`p-3 rounded-xl border`,
             { 
-              backgroundColor: 'rgba(255,255,255,0.05)',
+              backgroundColor: colors.glass,
               borderColor: 'rgba(255,255,255,0.2)',
-              color: theme.colors.foreground
+              color: colors.foreground
             }
           ]}
           placeholder={placeholder}
@@ -179,20 +180,20 @@ export function SocialMediaLinks({
     <View style={tw`space-y-4`}>
       {renderSocialInput(
         'instagram',
-        <Instagram size={iconSizes[size]} color={theme.colors.foreground} />,
+        <Instagram size={iconSizes[size]} color={colors.foreground} />,
         '@username or Instagram URL'
       )}
       
       {renderSocialInput(
         'twitter',
-        <Twitter size={iconSizes[size]} color={theme.colors.foreground} />,
+        <Twitter size={iconSizes[size]} color={colors.foreground} />,
         '@username or Twitter URL'
       )}
       
       {renderSocialInput(
         'tiktok',
         <View style={[tw`items-center justify-center`, sizeClasses[size]]}>
-          <Text style={[tw`text-xs font-bold`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-xs font-bold`, { color: colors.foreground }]}>
             TT
           </Text>
         </View>,
@@ -201,25 +202,25 @@ export function SocialMediaLinks({
       
       {renderSocialInput(
         'facebook',
-        <Facebook size={iconSizes[size]} color={theme.colors.foreground} />,
+        <Facebook size={iconSizes[size]} color={colors.foreground} />,
         'Page name or Facebook URL'
       )}
 
       {showShare && shareUrl && (
         <View style={tw`mt-4`}>
-          <Text style={[tw`text-sm font-medium mb-2`, { color: theme.colors.foreground }]}>
+          <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
             Share your profile
           </Text>
           <View style={tw`flex-row space-x-2`}>
             <TouchableOpacity
               style={[
                 tw`flex-1 flex-row items-center justify-center py-2 px-4 rounded-xl`,
-                { backgroundColor: theme.colors.secondary }
+                { backgroundColor: colors.primary }
               ]}
               onPress={handleShare}
             >
-              <Share2 size={16} color={theme.colors.primaryForeground} style={tw`mr-2`} />
-              <Text style={[tw`font-medium`, { color: theme.colors.primaryForeground }]}>
+              <Share2 size={16} color={colors.primaryForeground} style={tw`mr-2`} />
+              <Text style={[tw`font-medium`, { color: colors.primaryForeground }]}>
                 Share
               </Text>
             </TouchableOpacity>
@@ -227,14 +228,14 @@ export function SocialMediaLinks({
             <TouchableOpacity
               style={[
                 tw`flex-row items-center justify-center py-2 px-4 rounded-xl`,
-                { backgroundColor: 'rgba(255,255,255,0.1)' }
+                { backgroundColor: colors.glassBorder }
               ]}
               onPress={handleCopyLink}
             >
               {copied ? (
-                <Check size={16} color={theme.colors.secondary} />
+                <Check size={16} color={colors.primary} />
               ) : (
-                <Copy size={16} color={theme.colors.foreground} />
+                <Copy size={16} color={colors.foreground} />
               )}
             </TouchableOpacity>
           </View>

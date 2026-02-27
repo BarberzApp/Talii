@@ -3,7 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react-native';
 import { format } from 'date-fns';
 import tw from 'twrnc';
-import { theme } from '../../../shared/lib/theme';
+import { useTheme } from '../../../shared/components/theme';
 import { logger } from '../../../shared/lib/logger';
 import type { CalendarEvent } from '../../../shared/lib/calendar';
 
@@ -24,13 +24,14 @@ export default function EventsPanel({
   onEventClick,
   formatTime,
 }: Props) {
+  const { colors } = useTheme();
   if (!selectedDate) return null;
 
   return (
     <View style={[tw`mt-6 p-6 rounded-2xl`, {
-      backgroundColor: 'rgba(0, 0, 0, 0.2)',
+      backgroundColor: colors.glass,
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderColor: colors.glassBorder,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.3,
@@ -38,8 +39,8 @@ export default function EventsPanel({
       elevation: 8
     }]}>
       <View style={tw`flex-row items-center mb-4`}>
-        <CalendarIcon size={20} color={theme.colors.secondary} style={tw`mr-2`} />
-        <Text style={[tw`font-bold text-lg`, { color: theme.colors.foreground }]}>
+        <CalendarIcon size={20} color={colors.primary} style={tw`mr-2`} />
+        <Text style={[tw`font-bold text-lg`, { color: colors.foreground }]}>
           {format(selectedDate, 'EEEE, MMMM d, yyyy')}
         </Text>
       </View>
@@ -47,8 +48,8 @@ export default function EventsPanel({
       <ScrollView style={tw`max-h-80`} showsVerticalScrollIndicator={false}>
         {eventsForSelectedDate.length === 0 ? (
           <View style={tw`items-center py-8`}>
-            <CalendarIcon size={48} color="rgba(255,255,255,0.3)" style={tw`mb-3`} />
-            <Text style={[tw`text-sm`, { color: 'rgba(255,255,255,0.6)' }]}>
+            <CalendarIcon size={48} color={colors.mutedForeground} style={tw`mb-3`} />
+            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
               No events scheduled for this date
             </Text>
           </View>
@@ -66,30 +67,30 @@ export default function EventsPanel({
                   onPress={() => onEventClick(event)}
                   style={[tw`p-4 rounded-2xl`, {
                     backgroundColor: isMissed
-                      ? 'rgba(239, 68, 68, 0.08)'
+                      ? colors.destructiveSubtle
                       : isPast
-                        ? 'rgba(34, 197, 94, 0.08)'
-                        : `${theme.colors.secondary}08`,
+                        ? colors.successSubtle
+                        : `${colors.primary}08`,
                     borderWidth: 1,
                     borderColor: isMissed
-                      ? 'rgba(239, 68, 68, 0.2)'
+                      ? colors.destructive
                       : isPast
-                        ? 'rgba(34, 197, 94, 0.2)'
-                        : `${theme.colors.secondary}20`
+                        ? colors.success
+                        : `${colors.primary}20`
                   }]}
                 >
                   <View style={tw`flex-row items-center justify-between`}>
                     <View style={tw`flex-1`}>
-                      <Text style={[tw`font-semibold text-sm mb-1`, { color: theme.colors.foreground }]}>
+                      <Text style={[tw`font-semibold text-sm mb-1`, { color: colors.foreground }]}>
                         {event.extendedProps.serviceName}
                       </Text>
-                      <Text style={[tw`text-xs mb-2`, { color: 'rgba(255,255,255,0.8)' }]}>
+                      <Text style={[tw`text-xs mb-2`, { color: colors.mutedForeground }]}>
                         {event.extendedProps.clientName}
                       </Text>
                       <View style={tw`flex-row items-center`}>
-                        <Clock size={12} color={isMissed ? '#ef4444' : isPast ? '#22c55e' : theme.colors.secondary} style={tw`mr-1`} />
+                        <Clock size={12} color={isMissed ? colors.destructive : isPast ? colors.success : colors.primary} style={tw`mr-1`} />
                         <Text style={[tw`text-xs font-medium`, {
-                          color: isMissed ? '#ef4444' : isPast ? '#22c55e' : theme.colors.secondary
+                          color: isMissed ? colors.destructive : isPast ? colors.success : colors.primary
                         }]}>
                           {formatTime(new Date(event.start))}
                         </Text>
@@ -97,19 +98,19 @@ export default function EventsPanel({
                     </View>
                     <View style={[tw`px-2 py-1 rounded-full`, {
                       backgroundColor: isMissed
-                        ? 'rgba(239, 68, 68, 0.2)'
+                        ? colors.destructiveSubtle
                         : isPast
-                          ? 'rgba(34, 197, 94, 0.2)'
-                          : `${theme.colors.secondary}20`,
+                          ? colors.successSubtle
+                          : `${colors.primary}20`,
                       borderWidth: 1,
                       borderColor: isMissed
-                        ? 'rgba(239, 68, 68, 0.3)'
+                        ? colors.destructive
                         : isPast
-                          ? 'rgba(34, 197, 94, 0.3)'
-                          : `${theme.colors.secondary}30`
+                          ? colors.success
+                          : `${colors.primary}30`
                     }]}>
                       <Text style={[tw`text-xs font-semibold`, {
-                        color: isMissed ? '#ef4444' : isPast ? '#22c55e' : theme.colors.secondary
+                        color: isMissed ? colors.destructive : isPast ? colors.success : colors.primary
                       }]}>
                         ${(() => {
                           if (userRole === 'client') {

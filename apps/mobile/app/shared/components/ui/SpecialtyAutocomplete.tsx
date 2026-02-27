@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { Check, X, ChevronDown } from 'lucide-react-native';
-import { theme } from '../../lib/theme';
+import { useTheme } from '../theme/ThemeProvider';
 import { BARBER_SPECIALTIES } from '../../utils/settings.utils';
 
 interface SpecialtyAutocompleteProps {
@@ -28,6 +28,7 @@ export function SpecialtyAutocomplete({
   maxSelections = 10,
   disabled = false
 }: SpecialtyAutocompleteProps) {
+  const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -62,15 +63,15 @@ export function SpecialtyAutocomplete({
       <TouchableOpacity
         style={[
           tw`flex-row items-center justify-between p-3 border-b`,
-          { borderBottomColor: 'rgba(255,255,255,0.1)' }
+          { borderBottomColor: colors.glassBorder }
         ]}
         onPress={() => handleSelect(item)}
       >
-        <Text style={[tw`text-base`, { color: theme.colors.foreground }]}>
+        <Text style={[tw`text-base`, { color: colors.foreground }]}>
           {item}
         </Text>
         {isSelected && (
-          <Check size={20} color={theme.colors.secondary} />
+          <Check size={20} color={colors.primary} />
         )}
       </TouchableOpacity>
     );
@@ -82,8 +83,8 @@ export function SpecialtyAutocomplete({
         style={[
           tw`flex-row items-center justify-between p-3 rounded-xl border`,
           { 
-            backgroundColor: 'rgba(255,255,255,0.05)',
-            borderColor: 'rgba(255,255,255,0.2)',
+            backgroundColor: colors.glass,
+            borderColor: colors.glassBorder,
             opacity: disabled ? 0.5 : 1
           }
         ]}
@@ -104,20 +105,20 @@ export function SpecialtyAutocomplete({
                   { backgroundColor: 'rgba(255,255,255,0.2)' }
                 ]}
               >
-                <Text style={[tw`text-xs`, { color: theme.colors.foreground }]}>
+                <Text style={[tw`text-xs`, { color: colors.foreground }]}>
                   {specialty}
                 </Text>
                 <TouchableOpacity
                   style={tw`ml-1`}
                   onPress={() => handleRemove(specialty)}
                 >
-                  <X size={12} color={theme.colors.foreground} />
+                  <X size={12} color={colors.foreground} />
                 </TouchableOpacity>
               </View>
             ))
           )}
         </View>
-        <ChevronDown size={16} color={theme.colors.mutedForeground} />
+        <ChevronDown size={16} color={colors.mutedForeground} />
       </TouchableOpacity>
 
       {value.length > 0 && (
@@ -125,7 +126,7 @@ export function SpecialtyAutocomplete({
           style={tw`self-start`}
           onPress={handleClearAll}
         >
-          <Text style={[tw`text-sm`, { color: theme.colors.secondary }]}>
+          <Text style={[tw`text-sm`, { color: colors.primary }]}>
             Clear all
           </Text>
         </TouchableOpacity>
@@ -136,14 +137,14 @@ export function SpecialtyAutocomplete({
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={[tw`flex-1`, { backgroundColor: theme.colors.background }]}>
+        <View style={[tw`flex-1`, { backgroundColor: colors.background }]}>
           {/* Header */}
           <View style={tw`flex-row items-center justify-between p-4 border-b`}>
-            <Text style={[tw`text-lg font-semibold`, { color: theme.colors.foreground }]}>
+            <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
               Select Specialties
             </Text>
             <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Text style={[tw`text-base`, { color: theme.colors.secondary }]}>
+              <Text style={[tw`text-base`, { color: colors.primary }]}>
                 Done
               </Text>
             </TouchableOpacity>
@@ -155,9 +156,9 @@ export function SpecialtyAutocomplete({
               style={[
                 tw`p-3 rounded-xl border`,
                 { 
-                  backgroundColor: 'rgba(255,255,255,0.05)',
-                  borderColor: 'rgba(255,255,255,0.2)',
-                  color: theme.colors.foreground
+                  backgroundColor: colors.glass,
+                  borderColor: colors.glassBorder,
+                  color: colors.foreground
                 }
               ]}
               placeholder="Search specialties..."
