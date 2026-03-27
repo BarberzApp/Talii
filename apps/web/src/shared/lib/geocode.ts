@@ -1,9 +1,10 @@
-// Geocoding helper using OpenStreetMap Nominatim
+// Geocoding helpers — backed by Google Maps Platform (Places API + Geocoding API)
+// All requests go through the /api/nominatim server-side proxy to keep the API key safe.
 import { logger } from './logger';
 
 export async function geocodeAddress(address: string): Promise<{ lat: number, lon: number } | null> {
   if (typeof window === 'undefined') return null;
-  const url = `/api/nominatim?q=${encodeURIComponent(address)}`;
+  const url = `/api/nominatim?type=geocode&q=${encodeURIComponent(address)}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
@@ -17,19 +18,22 @@ export async function geocodeAddress(address: string): Promise<{ lat: number, lo
   }
 }
 
-// Get address suggestions for autocomplete
-export async function getAddressSuggestions(query: string): Promise<Array<{ name: string, city?: string, country?: string, lat: number, lon: number }>> {
+/** Address autocomplete suggestions (Google Places Autocomplete) */
+export async function getAddressSuggestions(
+  query: string
+): Promise<Array<{ name: string; city?: string; country?: string; lat: number; lon: number }>> {
   if (typeof window === 'undefined') return [];
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`;
+  if (!query || query.length < 3) return [];
+  const url = `/api/nominatim?q=${encodeURIComponent(query)}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
-    return (data.features || []).map((feature: any) => ({
-      name: feature.properties.name || feature.properties.label,
-      city: feature.properties.city,
-      country: feature.properties.country,
-      lat: feature.geometry.coordinates[1],
-      lon: feature.geometry.coordinates[0],
+    return (data || []).map((item: any) => ({
+      name: item.display_name,
+      city: item.address?.city,
+      country: item.address?.country,
+      lat: parseFloat(item.lat),
+      lon: parseFloat(item.lon),
     }));
   } catch (error) {
     logger.error('Error fetching address suggestions', error);
@@ -37,35 +41,39 @@ export async function getAddressSuggestions(query: string): Promise<Array<{ name
   }
 }
 
+/**
+ * Address autocomplete suggestions — returns raw normalized objects.
+ * This name is kept for backward compatibility with all existing import sites.
+ */
 export async function getAddressSuggestionsNominatim(query: string): Promise<Array<any>> {
   if (typeof window === 'undefined') return [];
+  if (!query || query.length < 3) return [];
   const url = `/api/nominatim?q=${encodeURIComponent(query)}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
-    return data;
+    return data || [];
   } catch (error) {
-    logger.error('Error fetching Nominatim address suggestions', error);
+    logger.error('Error fetching address suggestions', error);
     return [];
   }
 }
 
-export async function reverseGeocode(lat: number, lon: number): Promise<{ name: string, city?: string, country?: string } | null> {
-  const url = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&limit=1`;
+export async function reverseGeocode(
+  lat: number,
+  lon: number
+): Promise<{ name: string; city?: string; country?: string } | null> {
+  if (typeof window === 'undefined') return null;
+  const url = `/api/nominatim?type=reverse&latlng=${lat},${lon}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
-    if (data.features && data.features.length > 0) {
-      const feature = data.features[0];
-      return {
-        name: feature.properties.name || feature.properties.label,
-        city: feature.properties.city,
-        country: feature.properties.country,
-      };
+    if (data && data.name) {
+      return { name: data.name, city: data.city, country: data.country };
     }
     return null;
   } catch (error) {
     logger.error('Error reverse geocoding', error);
     return null;
   }
-} 
+}

@@ -1177,7 +1177,7 @@ const handleMuteToggle = useCallback((index: number, e: React.MouseEvent) => {
           <div className="mb-6">
             <Sparkles className="h-16 w-16 text-secondary mx-auto mb-4" />
             <h2 className="text-2xl font-bebas text-white mb-2 tracking-wide">No cuts found</h2>
-            <p className="text-white/60 mb-6 font-pacifico">
+            <p className="text-white/60 mb-6">
               {locationFilter.city || locationFilter.state || locationFilter.useCurrentLocation 
                 ? 'No cuts found in your selected location. Try adjusting your filters.'
                 : 'No cuts available yet. Be the first to upload!'
@@ -1465,7 +1465,7 @@ const handleMuteToggle = useCallback((index: number, e: React.MouseEvent) => {
                   <div className="mb-4 max-w-[80%]">
                     <p 
                       className={cn(
-                        "text-white font-pacifico text-sm leading-relaxed transition-all duration-300 cursor-pointer",
+                        "text-white text-sm leading-relaxed transition-all duration-300 cursor-pointer",
                         expandedDescriptions[cut.id] ? "" : "line-clamp-1"
                       )}
                       onClick={() => toggleDescription(cut.id)}

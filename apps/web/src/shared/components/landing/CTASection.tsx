@@ -81,8 +81,10 @@ export function CTASection({
 
   return (
     <LandingSection maxWidth="4xl" className={cn("text-center", className)}>
-        <Card className="bg-gradient-to-br from-muted/60 via-muted/30 to-transparent dark:from-secondary/20 dark:via-secondary/10 dark:to-transparent border border-border shadow-xl dark:shadow-2xl rounded-3xl px-8 sm:px-12 py-[var(--landing-cta-inner-py)] sm:py-[var(--landing-cta-inner-py-sm)]">
-          <CardContent className="p-0">
+        <Card className="group bg-surface/60 dark:bg-white/5 backdrop-blur-xl border border-border/50 dark:border-white/10 shadow-xl dark:shadow-2xl rounded-[2rem] px-8 sm:px-12 py-[var(--landing-cta-inner-py)] sm:py-[var(--landing-cta-inner-py-sm)] transition-all duration-500 hover:shadow-2xl hover:border-primary/40 dark:hover:border-primary/40 relative overflow-hidden">
+          {/* Subtle gradient overlay for extra glass effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2rem] pointer-events-none" />
+          <CardContent className="p-0 relative z-10">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
               {title}
             </h2>

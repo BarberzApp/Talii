@@ -264,15 +264,15 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
               <Scissors className="h-6 w-6 text-secondary" />
             </div>
             <div>
-              <h3 className="text-xl sm:text-2xl font-bebas text-white tracking-wide">
+              <h3 className="text-xl sm:text-2xl font-bebas text-foreground tracking-wide">
                 Services
               </h3>
-              <p className="text-white/80 mt-1">Manage your service offerings</p>
+              <p className="text-foreground/80 mt-1">Manage your service offerings</p>
             </div>
           </div>
         </div>
         
-        <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl">
+        <Card className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl">
           <CardContent className="p-6">
             <div className="flex items-center justify-center min-h-[200px]">
               <div className="text-center space-y-4">
@@ -280,7 +280,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                   <Loader2 className="h-8 w-8 animate-spin mx-auto text-secondary" />
                   <div className="absolute inset-0 rounded-full bg-secondary/20 animate-ping" />
                 </div>
-                <p className="text-white/60 font-medium">Loading services...</p>
+                <p className="text-foreground/60 font-medium">Loading services...</p>
               </div>
             </div>
           </CardContent>
@@ -298,18 +298,18 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
             <Scissors className="h-8 w-8 text-secondary" />
           </div>
           <div>
-            <h2 className="text-3xl sm:text-4xl font-bebas text-white tracking-wide">
+            <h2 className="text-3xl sm:text-4xl font-bebas text-foreground tracking-wide">
               Services Management
             </h2>
-            <p className="text-white/70 text-lg mt-2">Create and manage your service offerings</p>
+            <p className="text-foreground/70 text-lg mt-2">Create and manage your service offerings</p>
           </div>
         </div>
       </div>
 
       {/* Enhanced Add Service Form */}
-      <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-secondary/10 to-transparent border-b border-white/10 p-6">
-          <CardTitle className="text-white flex items-center gap-3 text-2xl">
+      <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-secondary/10 to-transparent border-b border-black/5 dark:border-white/10 p-6">
+          <CardTitle className="text-foreground flex items-center gap-3 text-2xl">
             {editingService ? (
               <>
                 <div className="p-2 bg-secondary/20 rounded-xl">
@@ -326,7 +326,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
               </>
             )}
           </CardTitle>
-          <CardDescription className="text-white/70 text-base">
+          <CardDescription className="text-foreground/70 text-base">
             {editingService ? 'Update your service details and pricing' : 'Add a new service to your offerings and set competitive pricing'}
           </CardDescription>
         </CardHeader>
@@ -335,14 +335,14 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label htmlFor="name" className="text-white font-semibold text-lg flex items-center gap-2">
+                <Label htmlFor="name" className="text-foreground font-semibold text-lg flex items-center gap-2">
                   <Scissors className="h-4 w-4 text-secondary" />
                   Service Name *
                 </Label>
                 <Input
                   id="name"
                   {...register('name')}
-                  className="bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary rounded-xl h-12 text-lg"
+                  className="bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary rounded-xl h-12 text-lg"
                   placeholder="e.g., Haircut, Beard Trim"
                 />
                 {validationErrors.name && (
@@ -354,7 +354,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
               </div>
               
               <div className="space-y-3">
-                <Label htmlFor="price" className="text-white font-semibold text-lg flex items-center gap-2">
+                <Label htmlFor="price" className="text-foreground font-semibold text-lg flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-secondary" />
                   Price ($) *
                 </Label>
@@ -364,7 +364,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                   step="0.01"
                   min="0"
                   {...register('price', { valueAsNumber: true })}
-                  className="bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary rounded-xl h-12 text-lg"
+                  className="bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary rounded-xl h-12 text-lg"
                   placeholder="25.00"
                 />
                 {validationErrors.price && (
@@ -378,7 +378,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <Label htmlFor="duration" className="text-white font-semibold text-lg flex items-center gap-2">
+                <Label htmlFor="duration" className="text-foreground font-semibold text-lg flex items-center gap-2">
                   <Clock className="h-4 w-4 text-secondary" />
                   Duration (minutes) *
                 </Label>
@@ -387,7 +387,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                   type="number"
                   min="1"
                   {...register('duration', { valueAsNumber: true })}
-                  className="bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary rounded-xl h-12 text-lg"
+                  className="bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary rounded-xl h-12 text-lg"
                   placeholder="30"
                 />
                 {validationErrors.duration && (
@@ -399,14 +399,14 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
               </div>
               
               <div className="space-y-3">
-                <Label htmlFor="description" className="text-white font-semibold text-lg flex items-center gap-2">
+                <Label htmlFor="description" className="text-foreground font-semibold text-lg flex items-center gap-2">
                   <Package className="h-4 w-4 text-secondary" />
                   Description
                 </Label>
                 <Textarea
                   id="description"
                   {...register('description')}
-                  className="bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary rounded-xl text-lg min-h-[80px] resize-none"
+                  className="bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary rounded-xl text-lg min-h-[80px] resize-none"
                   placeholder="Brief description of the service"
                   rows={3}
                 />
@@ -432,7 +432,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                   type="button"
                   onClick={cancelEdit}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10 rounded-xl px-8 py-3 text-lg"
+                  className="border-black/10 dark:border-white/20 text-foreground hover:bg-black/5 dark:bg-white/10 rounded-xl px-8 py-3 text-lg"
                 >
                   Cancel
                 </Button>
@@ -449,7 +449,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
             <div className="p-2 bg-secondary/20 rounded-xl">
               <Scissors className="h-5 w-5 text-secondary" />
             </div>
-            <h3 className="text-2xl font-bebas text-white tracking-wide">Your Services</h3>
+            <h3 className="text-2xl font-bebas text-foreground tracking-wide">Your Services</h3>
           </div>
           <Badge variant="secondary" className="text-sm px-4 py-2 bg-secondary/20 text-secondary border-secondary/30">
             {services.length} {services.length === 1 ? 'Service' : 'Services'}
@@ -457,15 +457,15 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
         </div>
         
         {services.length === 0 ? (
-          <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-white/10 shadow-xl backdrop-blur-xl rounded-3xl">
+          <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-3xl">
             <CardContent className="p-12 text-center">
               <div className="flex flex-col items-center gap-6">
                 <div className="p-6 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-3xl">
                   <Sparkles className="h-12 w-12 text-secondary" />
                 </div>
                 <div className="space-y-3">
-                  <h4 className="text-2xl font-bebas text-white tracking-wide">No Services Yet</h4>
-                  <p className="text-white/60 text-lg">Add your first service to start accepting bookings</p>
+                  <h4 className="text-2xl font-bebas text-foreground tracking-wide">No Services Yet</h4>
+                  <p className="text-foreground/60 text-lg">Add your first service to start accepting bookings</p>
                 </div>
                 <Button
                   onClick={() => document.getElementById('name')?.focus()}
@@ -480,22 +480,22 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
         ) : (
           <div className="grid gap-6">
             {services.map((service) => (
-              <Card key={service.id} className="bg-gradient-to-br from-white/5 to-white/3 border border-white/10 shadow-xl backdrop-blur-xl hover:shadow-2xl hover:border-secondary/20 transition-all duration-300 rounded-3xl group">
+              <Card key={service.id} className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl hover:shadow-2xl hover:border-secondary/20 transition-all duration-300 rounded-3xl group">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-4 mb-3">
-                        <h4 className="text-xl font-bebas text-white tracking-wide">{service.name}</h4>
+                        <h4 className="text-xl font-bebas text-foreground tracking-wide">{service.name}</h4>
                         <Badge variant="secondary" className="text-sm px-3 py-1 bg-secondary/20 text-secondary border-secondary/30">
                           ${service.price}
                         </Badge>
-                        <div className="flex items-center gap-2 text-white/60 text-sm bg-white/5 px-3 py-1 rounded-full">
+                        <div className="flex items-center gap-2 text-foreground/60 text-sm bg-black/5 dark:bg-white/5 px-3 py-1 rounded-full">
                           <Clock className="h-4 w-4" />
                           {formatDuration(service.duration)}
                         </div>
                       </div>
                       {service.description && (
-                        <p className="text-white/70 text-base leading-relaxed" style={{ whiteSpace: 'pre-line' }}>{service.description}</p>
+                        <p className="text-foreground/70 text-base leading-relaxed" style={{ whiteSpace: 'pre-line' }}>{service.description}</p>
                       )}
                     </div>
                     
@@ -504,7 +504,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                         size="sm"
                         variant="ghost"
                         onClick={() => editService(service)}
-                        className="text-white/70 hover:text-white hover:bg-white/10 rounded-xl p-3"
+                        className="text-foreground/70 hover:text-foreground hover:bg-black/5 dark:bg-white/10 rounded-xl p-3"
                       >
                         <Edit className="h-5 w-5" />
                       </Button>
@@ -534,8 +534,8 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
               <Sparkles className="h-6 w-6 text-secondary" />
             </div>
             <div className="space-y-4">
-              <h4 className="text-xl font-bebas text-white tracking-wide">Pro Tips for Success</h4>
-              <ul className="text-white/70 space-y-3">
+              <h4 className="text-xl font-bebas text-foreground tracking-wide">Pro Tips for Success</h4>
+              <ul className="text-foreground/70 space-y-3">
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>
                   <span className="text-base">Set competitive prices based on your location and experience level</span>

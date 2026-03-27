@@ -268,7 +268,7 @@ export function SettingsPage() {
             <SettingsIcon className="h-12 w-12 animate-spin mx-auto text-secondary" />
             <div className="absolute inset-0 rounded-full bg-secondary/20 animate-ping" />
           </div>
-          <p className="text-white/60 font-medium">Loading your settings...</p>
+          <p className="text-muted-foreground dark:text-white/60 font-medium">Loading your settings...</p>
         </div>
       </div>
     )
@@ -284,11 +284,11 @@ export function SettingsPage() {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-secondary/5 rounded-full blur-3xl" />
         </div>
         
-        <Card className="max-w-md bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl relative z-10">
+        <Card className="max-w-md bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl relative z-10">
           <CardContent className="p-6">
             <Alert className="border-secondary/20 bg-secondary/10">
               <AlertCircle className="h-4 w-4 text-secondary" />
-              <AlertDescription className="text-white">
+              <AlertDescription className="text-foreground dark:text-white">
                 Please log in to access your settings.
               </AlertDescription>
             </Alert>
@@ -315,8 +315,8 @@ export function SettingsPage() {
             <div className="p-5 bg-secondary/20 rounded-full shadow-lg mb-4 flex items-center justify-center">
               <SettingsIcon className="h-10 w-10 text-secondary" />
             </div>
-            <h1 className="text-4xl font-bebas font-bold text-white mb-2">Settings</h1>
-            <p className="text-white/70 text-base max-w-xs font-pacifico">
+            <h1 className="text-4xl font-bebas font-bold text-foreground dark:text-white mb-2">Settings</h1>
+            <p className="text-muted-foreground dark:text-white/70 text-base max-w-xs font-pacifico">
               Manage your profile, services, and preferences
             </p>
           </div>
@@ -355,13 +355,13 @@ export function SettingsPage() {
 
           {/* Progress Section - Only show if there are incomplete sections */}
           {getCompletionPercentage() < 100 && (
-            <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl">
+            <Card className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-5 w-5 text-secondary" />
-                      <span className="text-sm font-medium text-white">Profile Completion</span>
+                      <span className="text-sm font-medium text-foreground dark:text-white">Profile Completion</span>
                     </div>
                     <Badge variant="secondary" className="bg-secondary/20 text-secondary border-secondary/30">
                       {getCompletionPercentage()}% Complete
@@ -370,11 +370,11 @@ export function SettingsPage() {
                   <div className="relative">
                     <Progress 
                       value={getCompletionPercentage()} 
-                      className="h-3 bg-white/10 border border-white/20" 
+                      className="h-3 bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 to-secondary/40 rounded-full" style={{ width: `${getCompletionPercentage()}%` }} />
                   </div>
-                  <p className="text-sm text-white/60 text-center">
+                  <p className="text-sm text-muted-foreground dark:text-white/60 text-center">
                     Complete all sections to optimize your profile for clients
                   </p>
                   {user?.role === 'barber' && (
@@ -394,18 +394,18 @@ export function SettingsPage() {
           )}
 
           {/* Main Settings Card */}
-          <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl overflow-hidden">
+          <Card className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl overflow-hidden">
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               {/* Modern Tab Navigation */}
-              <div className="p-6 border-b border-white/10">
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl rounded-2xl p-2">
+              <div className="p-6 border-b border-black/10 dark:border-white/10">
+                <div className="bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 shadow-xl rounded-2xl p-2">
                   <TabsList className="flex w-full gap-2 bg-transparent">
                     <TabsTrigger 
                       value="profile" 
                       className={`relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 text-xs sm:text-sm font-medium snap-start ${
                         activeTab === 'profile' 
                           ? 'bg-secondary text-primary shadow-lg' 
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                          : 'text-muted-foreground dark:text-white/70 hover:text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10'
                       }`}
                     >
                       <User className="h-4 w-4" />
@@ -419,7 +419,7 @@ export function SettingsPage() {
                           className={`relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 text-xs sm:text-sm font-medium snap-start ${
                             activeTab === 'services' 
                               ? 'bg-secondary text-primary shadow-lg' 
-                              : 'text-white/70 hover:text-white hover:bg-white/10'
+                              : 'text-muted-foreground dark:text-white/70 hover:text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10'
                           }`}
                         >
                           <Scissors className="h-4 w-4" />
@@ -431,7 +431,7 @@ export function SettingsPage() {
                           className={`relative flex items-center gap-2 px-4 py-3 sm:px-6 sm:py-4 rounded-xl transition-all duration-200 text-sm sm:text-base font-semibold snap-start ${
                             activeTab === 'earnings' 
                               ? 'bg-secondary text-primary shadow-lg scale-105' 
-                              : 'text-white/80 hover:text-white hover:bg-white/10 bg-secondary/10 border border-secondary/20'
+                              : 'text-white/80 hover:text-white hover:bg-black/10 dark:bg-white/10 bg-secondary/10 border border-secondary/20'
                           }`}
                         >
                           <DollarSign className="h-5 w-5" />
@@ -443,7 +443,7 @@ export function SettingsPage() {
                           className={`relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 text-xs sm:text-sm font-medium snap-start ${
                             activeTab === 'addons' 
                               ? 'bg-secondary text-primary shadow-lg' 
-                              : 'text-white/70 hover:text-white hover:bg-white/10'
+                              : 'text-muted-foreground dark:text-white/70 hover:text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10'
                           }`}
                         >
                           <Package className="h-4 w-4" />
@@ -455,7 +455,7 @@ export function SettingsPage() {
                           className={`relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 text-xs sm:text-sm font-medium snap-start ${
                             activeTab === 'availability' 
                               ? 'bg-secondary text-primary shadow-lg' 
-                              : 'text-white/70 hover:text-white hover:bg-white/10'
+                              : 'text-muted-foreground dark:text-white/70 hover:text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10'
                           }`}
                         >
                           <Calendar className="h-4 w-4" />
@@ -499,8 +499,8 @@ export function SettingsPage() {
                     <TabsContent value="earnings" className="mt-0">
                       <div className="space-y-6">
                         <div className="text-center space-y-2">
-                          <h2 className="text-2xl font-bebas font-bold text-white">Earnings & Payments</h2>
-                          <p className="text-white/60 font-pacifico">Track your earnings and manage payments</p>
+                          <h2 className="text-2xl font-bebas font-bold text-foreground dark:text-white">Earnings & Payments</h2>
+                          <p className="text-muted-foreground dark:text-white/60 font-pacifico">Track your earnings and manage payments</p>
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <EarningsDashboard barberId={barberId} />

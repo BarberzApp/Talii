@@ -12,6 +12,7 @@ interface InputProps extends TextInputProps {
   focusBorderColor?: string;
   className?: string;
   icon?: any;
+  leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   description?: string;
 }
@@ -25,6 +26,7 @@ const Input: React.FC<InputProps> = ({
   focusBorderColor,
   className,
   icon: Icon,
+  leftIcon,
   rightIcon,
   description,
   ...props
@@ -58,6 +60,7 @@ const Input: React.FC<InputProps> = ({
           },
         ]}
       >
+        {leftIcon}
         <TextInput
           style={[
             {

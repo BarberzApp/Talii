@@ -26,9 +26,10 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         {/* Background Elements */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-secondary/5 rounded-full blur-3xl" />
+          <div className="absolute inset-0 h-[85vh] bg-gradient-to-b from-primary/[0.12] via-primary/[0.05] to-transparent dark:from-primary/[0.08] dark:via-primary/[0.03] dark:to-transparent" />
+          <div className="absolute top-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl bg-primary/15 dark:bg-primary/12" />
+          <div className="absolute bottom-1/4 left-0 w-80 h-80 rounded-full blur-3xl bg-primary/12 dark:bg-primary/10" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl bg-primary/8 dark:bg-primary/5" />
         </div>
         
         <div className="text-center space-y-4 relative z-10">
@@ -36,7 +37,7 @@ export default function ProfilePage() {
             <Loader2 className="h-12 w-12 animate-spin mx-auto text-secondary" />
             <div className="absolute inset-0 rounded-full bg-secondary/20 animate-ping" />
           </div>
-          <p className="text-white/60 font-medium font-pacifico">Loading your profile...</p>
+          <p className="text-muted-foreground font-medium">Loading your profile...</p>
         </div>
       </div>
     )
@@ -50,9 +51,10 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background">
       {/* Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-secondary/5 rounded-full blur-3xl" />
+        <div className="absolute inset-0 h-[85vh] bg-gradient-to-b from-primary/[0.12] via-primary/[0.05] to-transparent dark:from-primary/[0.08] dark:via-primary/[0.03] dark:to-transparent" />
+        <div className="absolute top-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl bg-primary/15 dark:bg-primary/12" />
+        <div className="absolute bottom-1/4 left-0 w-80 h-80 rounded-full blur-3xl bg-primary/12 dark:bg-primary/10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl bg-primary/8 dark:bg-primary/5" />
       </div>
 
       {/* Main Content */}

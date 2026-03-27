@@ -108,7 +108,7 @@ export function ClientProfile({ user }: ClientProfileProps) {
                   <div className="relative">
                     <Avatar className="h-24 w-24 border-4 border-saffron/20">
                       {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name || 'Avatar'} />}
-                      <AvatarFallback className="bg-saffron text-primary font-bold text-xl">{user.name?.charAt(0) || "U"}</AvatarFallback>
+                      <AvatarFallback className="bg-saffron text-primary-foreground font-bold text-xl">{user.name?.charAt(0) || "U"}</AvatarFallback>
                     </Avatar>
                     <button
                       type="button"
@@ -175,7 +175,7 @@ export function ClientProfile({ user }: ClientProfileProps) {
                   <Button 
                     type="submit" 
                     disabled={avatarLoading}
-                    className="w-full bg-saffron text-primary font-semibold hover:bg-saffron/90"
+                    className="w-full bg-saffron text-primary-foreground font-semibold hover:bg-saffron/90"
                   >
                     Save Changes
                   </Button>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Button } from '@/shared/components/ui/button'
-import { Search, Scissors, User, Calendar, Settings } from 'lucide-react'
+import { Search, Scissors, User, Calendar, Settings, ArrowLeft, Home, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
@@ -30,9 +30,9 @@ export default function NotFound() {
       if (user?.role === 'barber') {
         suggestions.push({
           title: 'Barber Dashboard',
-          description: 'Access your barber dashboard',
-          href: '/barber',
-          icon: <Scissors className="h-4 w-4" />
+          description: 'Access your settings',
+          href: '/settings',
+          icon: <Settings className="h-4 w-4" />
         })
       } else {
         suggestions.push({
@@ -53,9 +53,9 @@ export default function NotFound() {
       })
       if (user) {
         suggestions.push({
-          title: 'My Bookings',
+          title: 'My Calendar',
           description: 'View your existing bookings',
-          href: '/booking',
+          href: '/calendar',
           icon: <Calendar className="h-4 w-4" />
         })
       }
@@ -105,17 +105,17 @@ export default function NotFound() {
     if (user) {
       if (user.role === 'barber') {
         suggestions.push({
-          title: 'Barber Dashboard',
-          description: 'Manage your services and bookings',
-          href: '/barber',
-          icon: <Scissors className="h-4 w-4" />
+          title: 'Settings',
+          description: 'Manage your settings and availability',
+          href: '/settings',
+          icon: <Settings className="h-4 w-4" />
         })
       }
       
       suggestions.push({
-        title: 'My Bookings',
+        title: 'My Calendar',
         description: 'View your appointment history',
-        href: '/booking',
+        href: '/calendar',
         icon: <Calendar className="h-4 w-4" />
       })
     }
@@ -142,140 +142,107 @@ export default function NotFound() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center px-4">
-      <div className="max-w-2xl mx-auto text-center space-y-8">
-        {/* Logo and Brand */}
-        <div className="flex items-center justify-center mb-8">
-          <div className="relative">
-            <img src="/BocmLogo.png" alt="BOCM Logo" className="h-16 w-16 sm:h-20 sm:w-20" />
-            <div className="absolute inset-0 bg-saffron/20 rounded-full blur-xl opacity-50" />
-          </div>
-          <span className="font-bebas text-4xl sm:text-5xl font-bold text-saffron ml-4">BOCM</span>
-        </div>
+    <div className="min-h-screen bg-background relative overflow-hidden flex flex-col items-center justify-center p-4">
+      {/* Heavy Talii Landing Page Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 h-full bg-gradient-to-b from-primary/[0.12] via-primary/[0.05] to-transparent dark:from-primary/[0.08] dark:via-primary/[0.03] dark:to-transparent" />
+        <div className="absolute top-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl bg-primary/15 dark:bg-primary/12" />
+        <div className="absolute bottom-1/4 left-0 w-80 h-80 rounded-full blur-3xl bg-secondary/12 dark:bg-secondary/10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl bg-primary/8 dark:bg-primary/5" />
+      </div>
 
-        {/* 404 Animation */}
-        <div className="relative">
-          <h1 className="text-8xl sm:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-saffron via-yellow-400 to-saffron animate-pulse">
+      <div className="relative z-10 w-full max-w-5xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-20">
+        
+        {/* Left Column: 404 Visual Display */}
+        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
+          <div className="inline-flex items-center justify-center p-3 sm:p-4 rounded-2xl bg-white/5 dark:bg-white/10 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-xl mb-4">
+            <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-secondary mr-3" />
+            <span className="font-bebas text-2xl sm:text-3xl tracking-wide text-foreground">Page Not Found</span>
+          </div>
+          
+          <h1 className="text-[120px] sm:text-[160px] lg:text-[200px] leading-none font-black font-bebas text-transparent bg-clip-text bg-gradient-to-br from-secondary via-[#FF8C00] to-secondary drop-shadow-2xl animate-pulse">
             404
           </h1>
-        </div>
-
-        {/* Error Message */}
-        <div className="space-y-4">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white">
-            Oops! Page Not Found
-          </h2>
-          <p className="text-lg text-gray-300 max-w-lg mx-auto leading-relaxed">
-            Looks like this page took a little too much off the top. 
-            The page you're looking for doesn't exist or has been moved.
+          
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-lg leading-relaxed font-medium">
+            Looks like this page took a little too much off the top. The link you followed is either broken or the page has been moved.
           </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 pt-6 w-full sm:w-auto">
+            <Button 
+              onClick={() => router.back()}
+              className="h-14 px-8 rounded-xl bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground hover:bg-black/5 dark:hover:bg-white/10 font-bold text-lg transition-all duration-300 shadow-sm"
+              variant="outline"
+            >
+              <ArrowLeft className="mr-2 h-5 w-5" />
+              Go Back
+            </Button>
+            
+            <Button 
+              asChild 
+              className="h-14 px-8 rounded-xl bg-gradient-to-r from-secondary to-[#FF8C00] text-primary-foreground font-bold text-lg transition-all duration-300 shadow-lg shadow-secondary/30 hover:shadow-secondary/50 hover:scale-105"
+            >
+              <Link href="/landing">
+                <Home className="mr-2 h-5 w-5" />
+                Return Home
+              </Link>
+            </Button>
+            
+            {!user && (
+              <Button 
+                onClick={handleLoginRedirect}
+                variant="outline" 
+                className="h-14 px-8 rounded-xl bg-transparent border-foreground/20 text-foreground hover:bg-foreground/5 font-bold text-lg transition-all duration-300"
+              >
+                Login
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Smart Suggestions */}
+        {/* Right Column: Smart Suggestions Glass Card */}
         {smartSuggestions.length > 0 && (
-          <div className="space-y-4">
-            <p className="text-gray-300 text-lg">
-              Based on where you were trying to go, you might be looking for:
-            </p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {smartSuggestions.map((suggestion, index) => (
-                <Button
-                  key={index}
-                  asChild
-                  variant="outline"
-                  className="h-auto p-4 bg-gray-800/50 border-gray-700 hover:bg-saffron/10 hover:border-saffron transition-all duration-300"
-                >
-                  <Link href={suggestion.href}>
-                    <div className="flex flex-col items-center text-center space-y-2">
-                      <div className="text-saffron">
+          <div className="flex-1 w-full max-w-md">
+            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl">
+              <h3 className="text-xl font-bold text-foreground mb-2">Looking for something else?</h3>
+              <p className="text-muted-foreground text-sm mb-6">Based on your navigation, try these:</p>
+              
+              <div className="space-y-4">
+                {smartSuggestions.map((suggestion, index) => (
+                  <Link 
+                    key={index} 
+                    href={suggestion.href}
+                    className="group block p-4 rounded-2xl bg-white/50 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-white dark:hover:bg-white/10 hover:border-secondary/50 transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.02]"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-secondary/10 dark:bg-secondary/20 text-secondary group-hover:bg-secondary group-hover:text-primary-foreground transition-colors duration-300">
                         {suggestion.icon}
                       </div>
-                      <div className="font-semibold text-white text-sm">
-                        {suggestion.title}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        {suggestion.description}
+                      <div>
+                        <div className="font-bold text-foreground text-base group-hover:text-secondary transition-colors duration-300">
+                          {suggestion.title}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {suggestion.description}
+                        </div>
                       </div>
                     </div>
                   </Link>
-                </Button>
-              ))}
+                ))}
+              </div>
+
+              {/* Developer Contact Footer within card */}
+              <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/10 text-center">
+                <Link 
+                  href="/support"
+                  className="text-sm text-muted-foreground hover:text-secondary font-medium transition-colors"
+                >
+                  Report a broken link →
+                </Link>
+              </div>
             </div>
           </div>
         )}
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
-          <Button 
-            onClick={() => router.back()}
-            variant="outline" 
-            className="w-full sm:w-auto bg-transparent border-saffron text-saffron hover:bg-saffron hover:text-black transition-all duration-300"
-          >
-            Go Back
-          </Button>
-          
-          <Button asChild className="w-full sm:w-auto bg-saffron text-black hover:bg-saffron/90 transition-all duration-300">
-            <Link href="/landing">
-              Return Home
-            </Link>
-          </Button>
-          
-          {!user && (
-            <Button 
-              onClick={handleLoginRedirect}
-              variant="outline" 
-              className="w-full sm:w-auto bg-transparent border-white text-white hover:bg-white hover:text-black transition-all duration-300"
-            >
-              Login
-            </Button>
-          )}
-          
-          <Button 
-            asChild
-            variant="outline" 
-            className="w-full sm:w-auto bg-transparent border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
-          >
-            <Link href={`mailto:primbocm@gmail.com?subject=404 Error Report&body=I encountered a 404 error on: ${pathname || 'unknown page'}`}>
-              Contact Developer
-            </Link>
-          </Button>
-        </div>
-
-        {/* Additional Context */}
-        <div className="pt-8 border-t border-gray-800">
-          {pathname && (
-            <div className="mb-4 text-sm text-gray-400">
-              <p>You tried to access: <code className="bg-gray-800 px-2 py-1 rounded text-saffron">{pathname}</code></p>
-            </div>
-          )}
-          
-          <p className="text-gray-400 mb-4">Need help finding something?</p>
-          <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <Link href="/browse" className="text-saffron hover:text-saffron/80 transition-colors">
-              Browse Barbers
-            </Link>
-            {user && (
-              <>
-                <Link href="/profile" className="text-saffron hover:text-saffron/80 transition-colors">
-                  My Profile
-                </Link>
-                <Link href="/booking" className="text-saffron hover:text-saffron/80 transition-colors">
-                  My Bookings
-                </Link>
-                <Link href="/settings" className="text-saffron hover:text-saffron/80 transition-colors">
-                  Settings
-                </Link>
-              </>
-            )}
-            {user?.role === 'barber' && (
-              <Link href="/barber" className="text-saffron hover:text-saffron/80 transition-colors">
-                Barber Dashboard
-              </Link>
-            )}
-          </div>
-        </div>
-
-
       </div>
     </div>
   )

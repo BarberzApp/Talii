@@ -215,7 +215,7 @@ export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalPr
           <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
             <Avatar className="h-12 w-12">
               <AvatarImage src={barber.image} alt={barber.name} />
-              <AvatarFallback className="bg-secondary text-primary font-bold">
+              <AvatarFallback className="bg-secondary text-primary-foreground font-bold">
                 {barber.name.split(" ").map(n => n[0]).join("")}
               </AvatarFallback>
             </Avatar>
@@ -323,7 +323,7 @@ export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalPr
             Cancel
           </Button>
           <Button
-            className="flex-1 bg-secondary hover:bg-secondary/90 text-primary font-semibold"
+            className="flex-1 bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold"
             onClick={handleSubmit}
             disabled={!rating || !reviewText.trim() || isSubmitting || moderationStatus === 'flagged' || !isContentValid}
           >

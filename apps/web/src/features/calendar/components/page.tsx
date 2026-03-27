@@ -360,7 +360,7 @@ export default function CalendarPage() {
           <p className="text-red-400">Error loading calendar: {error}</p>
           <Button 
             onClick={() => window.location.reload()} 
-            className="mt-4 bg-saffron hover:bg-saffron/90 text-primary"
+            className="mt-4 bg-saffron hover:bg-saffron/90 text-primary-foreground"
           >
             Try Again
           </Button>

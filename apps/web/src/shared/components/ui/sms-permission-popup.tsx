@@ -171,7 +171,7 @@ export function SMSPermissionPopup({ isOpen, onClose, onEnableSMS }: SMSPermissi
                 <Checkbox
                   id="dont-show-again"
                   checked={dontShowAgain}
-                  onCheckedChange={(checked) => setDontShowAgain(checked as boolean)}
+                  onCheckedChange={(checked: any) => setDontShowAgain(checked as boolean)}
                   className="border-white/30 bg-white/10 rounded focus:ring-secondary"
                 />
                 <Label 
@@ -193,7 +193,7 @@ export function SMSPermissionPopup({ isOpen, onClose, onEnableSMS }: SMSPermissi
                     id="phone"
                     type="tel"
                     value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    onChange={(e: any) => setPhoneNumber(e.target.value)}
                     placeholder="(555) 123-4567"
                     autoComplete="tel"
                     name="phone"
@@ -346,7 +346,7 @@ export function useSMSPermissionPopup() {
   }
 
   return {
-    shouldShowPopup,
+    shouldShowPopup: false, // Force disabled based on UI audit
     enableSMS,
     dismissPopup
   }

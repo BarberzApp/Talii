@@ -91,7 +91,7 @@ export function CalendarWeekView({ date, events, onEventClick }: CalendarWeekVie
                 className={cn(
                   "text-2xl font-bold flex items-center justify-center w-10 h-10",
                   isToday(day)
-                    ? "bg-saffron text-primary rounded-full shadow-lg border-2 border-saffron/60"
+                    ? "bg-saffron text-primary-foreground rounded-full shadow-lg border-2 border-saffron/60"
                     : "text-white"
                 )}
               >

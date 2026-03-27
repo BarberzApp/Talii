@@ -221,17 +221,17 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
   }
 
   return (
-    <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl">
-      <CardHeader className="bg-white/5 border-b border-white/10">
+    <Card className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl">
+      <CardHeader className="bg-black/5 dark:bg-white/5 border-b border-black/10 dark:border-white/10">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-saffron/20 rounded-full">
-            <Package className="h-5 w-5 text-saffron" />
+          <div className="p-2 bg-secondary/20 rounded-full">
+            <Package className="h-5 w-5 text-secondary" />
           </div>
           <div>
-            <CardTitle className="text-xl font-bebas text-white tracking-wide">
+            <CardTitle className="text-xl font-bebas text-foreground dark:text-white tracking-wide">
               Service Add-ons
             </CardTitle>
-            <CardDescription className="text-white/70">
+            <CardDescription className="text-muted-foreground dark:text-white/70">
               Manage additional services and items you offer (e.g., towels, premium products)
             </CardDescription>
           </div>
@@ -243,12 +243,12 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-white">Add-on Name</Label>
+              <Label htmlFor="name" className="text-foreground dark:text-white">Add-on Name</Label>
               <Input
                 id="name"
                 {...register('name', { required: 'Name is required' })}
                 placeholder="e.g., Fresh Towel, Premium Shampoo"
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/50"
+                className="bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/50"
               />
               {errors.name && (
                 <p className="text-red-400 text-sm">{errors.name.message}</p>
@@ -256,7 +256,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="price" className="text-white">Price ($)</Label>
+              <Label htmlFor="price" className="text-foreground dark:text-white">Price ($)</Label>
               <Input
                 id="price"
                 type="number"
@@ -267,7 +267,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                   min: { value: 0, message: 'Price must be positive' }
                 })}
                 placeholder="5.00"
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/50"
+                className="bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/50"
               />
               {errors.price && (
                 <p className="text-red-400 text-sm">{errors.price.message}</p>
@@ -276,12 +276,12 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-white">Description (Optional)</Label>
+            <Label htmlFor="description" className="text-foreground dark:text-white">Description (Optional)</Label>
             <Textarea
               id="description"
               {...register('description')}
               placeholder="Brief description of what this add-on includes..."
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/50"
+              className="bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/50"
               rows={3}
             />
           </div>
@@ -290,16 +290,16 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
             <Switch
               id="is_active"
               checked={isActive}
-              onCheckedChange={(checked) => setValue('is_active', checked)}
+              onCheckedChange={(checked: boolean) => setValue('is_active', checked)}
             />
-            <Label htmlFor="is_active" className="text-white">Active (available for booking)</Label>
+            <Label htmlFor="is_active" className="text-foreground dark:text-white">Active (available for booking)</Label>
           </div>
           
           <div className="flex gap-2">
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-saffron hover:bg-saffron/90 text-black font-semibold"
+              className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingAddon ? 'Update Add-on' : 'Add Add-on'}
@@ -310,7 +310,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                 type="button"
                 variant="outline"
                 onClick={handleCancel}
-                className="border-white/20 text-white hover:bg-white/10"
+                className="border-black/20 dark:border-white/20 text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10"
               >
                 Cancel
               </Button>
@@ -320,15 +320,15 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
 
         {/* Add-ons List */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Package className="h-4 w-4 text-saffron" />
+          <h3 className="text-lg font-semibold text-foreground dark:text-white flex items-center gap-2">
+            <Package className="h-4 w-4 text-secondary" />
             Your Add-ons ({addons.length})
           </h3>
           
           {addons.length === 0 ? (
-            <Alert className="bg-white/5 border-white/10 rounded-2xl">
-              <Package className="h-4 w-4 text-white/60" />
-              <AlertDescription className="text-white/70">
+            <Alert className="bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 rounded-2xl">
+              <Package className="h-4 w-4 text-muted-foreground dark:text-white/60" />
+              <AlertDescription className="text-muted-foreground dark:text-white/70">
                 No add-ons created yet. Add your first add-on above to get started.
               </AlertDescription>
             </Alert>
@@ -337,11 +337,11 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
               {addons.map((addon) => (
                 <div
                   key={addon.id}
-                  className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10"
+                  className="flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/10 dark:border-white/10"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-white">{addon.name}</h4>
+                      <h4 className="font-semibold text-foreground dark:text-white">{addon.name}</h4>
                       <Badge 
                         variant={addon.is_active ? "default" : "secondary"}
                         className={addon.is_active ? "bg-green-500/20 text-green-400" : "bg-gray-500/20 text-gray-400"}
@@ -350,9 +350,9 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                       </Badge>
                     </div>
                     {addon.description && (
-                      <p className="text-white/60 text-sm mb-2">{addon.description}</p>
+                      <p className="text-muted-foreground dark:text-white/60 text-sm mb-2">{addon.description}</p>
                     )}
-                    <div className="flex items-center gap-2 text-saffron font-semibold">
+                    <div className="flex items-center gap-2 text-secondary font-semibold">
                       <DollarSign className="h-4 w-4" />
                       <span>${addon.price.toFixed(2)}</span>
                     </div>
@@ -363,7 +363,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(addon)}
-                      className="border-white/20 text-white hover:bg-white/10"
+                      className="border-black/20 dark:border-white/20 text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>

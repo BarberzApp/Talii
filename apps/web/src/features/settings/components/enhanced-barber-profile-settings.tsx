@@ -127,7 +127,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
   const [locationInput, setLocationInput] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   const form = useForm<BarberProfileFormData>({
@@ -455,23 +455,23 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
             <User className="h-6 w-6 text-secondary" />
           </div>
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bebas text-white tracking-wide">
+            <h2 className="text-2xl sm:text-3xl font-bebas text-foreground tracking-wide">
               Barber Profile Settings
             </h2>
-            <p className="text-white/70 text-sm sm:text-base">
+            <p className="text-foreground/70 text-sm sm:text-base">
               Manage your profile information that appears in search results and booking pages
             </p>
           </div>
         </div>
       </div>
 
-      <Card className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl">
-        <CardHeader className="bg-white/5 rounded-t-2xl border-b border-white/10 p-6">
-          <CardTitle className="flex items-center gap-2 text-white text-2xl font-bebas">
+      <Card className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl">
+        <CardHeader className="bg-black/5 dark:bg-white/5 rounded-t-2xl border-b border-black/5 dark:border-white/10 p-6">
+          <CardTitle className="flex items-center gap-2 text-foreground text-2xl font-bebas">
             <Building2 className="h-5 w-5 text-secondary" />
             Profile Information
           </CardTitle>
-          <CardDescription className="text-white/80">
+          <CardDescription className="text-foreground/80">
             Update your basic information and business details
           </CardDescription>
         </CardHeader>
@@ -485,7 +485,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   <div className="w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center">
                     <User className="h-4 w-4 text-secondary" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">Basic Information</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Basic Information</h3>
                 </div>
                 <Separator className="my-2 bg-secondary/40" />
                 
@@ -495,9 +495,9 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white font-semibold">Full Name *</FormLabel>
+                        <FormLabel className="text-foreground font-semibold">Full Name *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your full name" {...field} className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl" />
+                          <Input placeholder="Your full name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -509,11 +509,11 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     name="username"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white font-semibold">Username *</FormLabel>
+                        <FormLabel className="text-foreground font-semibold">Username *</FormLabel>
                         <FormControl>
-                          <Input placeholder="your_username" {...field} className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl" />
+                          <Input placeholder="your_username" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
                         </FormControl>
-                        <FormDescription className="text-white/60">
+                        <FormDescription className="text-foreground/60">
                           Used in your booking link: bocmstyle.com/book/{field.value || 'your_username'}
                         </FormDescription>
                         <FormMessage />
@@ -527,9 +527,9 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   name="businessName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white font-semibold">Business Name *</FormLabel>
+                      <FormLabel className="text-foreground font-semibold">Business Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your business name" {...field} className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl" />
+                        <Input placeholder="Your business name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -541,11 +541,11 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   name="bio"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white font-semibold">Bio</FormLabel>
+                      <FormLabel className="text-foreground font-semibold">Bio</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Tell clients about yourself, your experience, and what makes you unique..."
-                          className="min-h-[100px] bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                          className="min-h-[100px] bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl"
                           {...field}
                         />
                       </FormControl>
@@ -563,13 +563,13 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     name="location"
                     render={({ field }) => (
                       <FormItem className="relative">
-                        <FormLabel className="text-white font-semibold">Location *</FormLabel>
+                        <FormLabel className="text-foreground font-semibold">Location *</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-secondary" />
                             <Input
                               placeholder="City, State or Zip Code"
-                              className="pl-10 bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                              className="pl-10 bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl"
                               value={locationInput ?? ''}
                               onChange={handleLocationChange}
                               onFocus={() => setShowSuggestions(true)}
@@ -578,9 +578,9 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                             />
                             {/* Suggestions dropdown */}
                             {showSuggestions && (locationSuggestions.length > 0 || suggestionsLoading) && (
-                              <div className="absolute z-50 left-0 right-0 mt-1 bg-black border border-white/20 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                              <div className="absolute z-50 left-0 right-0 mt-1 bg-black border border-black/10 dark:border-white/20 rounded-xl shadow-xl max-h-48 overflow-y-auto">
                                 {suggestionsLoading && (
-                                  <div className="px-4 py-2 text-white/60 text-sm">
+                                  <div className="px-4 py-2 text-foreground/60 text-sm">
                                     <div className="flex items-center gap-2">
                                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-secondary"></div>
                                       Searching...
@@ -591,7 +591,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                                   <button
                                     key={`${s.place_id || i}-${s.display_name}`}
                                     type="button"
-                                    className="w-full text-left px-4 py-2 text-white hover:bg-secondary/20"
+                                    className="w-full text-left px-4 py-2 text-foreground hover:bg-secondary/20"
                                     onMouseDown={() => handleSuggestionSelect(s)}
                                   >
                                     {s.display_name || s.name || 'Unknown location'}
@@ -611,9 +611,9 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-white font-semibold">Phone Number *</FormLabel>
+                        <FormLabel className="text-foreground font-semibold">Phone Number *</FormLabel>
                         <FormControl>
-                          <Input placeholder="+1 (555) 123-4567" {...field} className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl" />
+                          <Input placeholder="+1 (555) 123-4567" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -628,22 +628,16 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
                         Carrier *
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <span>We need your carrier to send you free SMS reminders. If you’re unsure, check your phone bill or carrier app.</span>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <span title="We need your carrier to send you free SMS reminders. If you’re unsure, check your phone bill or carrier app.">
+                          <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
+                        </span>
                       </FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className={`bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary rounded-xl flex items-center gap-2 ${form.formState.errors.carrier ? 'border-red-400' : ''}`}>
+                        <SelectTrigger className={`bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary rounded-xl flex items-center gap-2 ${form.formState.errors.carrier ? 'border-red-400' : ''}`}>
                           <Phone className="h-4 w-4 text-secondary mr-2" />
                           <SelectValue placeholder="Select your carrier…" />
                         </SelectTrigger>
-                        <SelectContent className="bg-darkpurple border-white/20 text-white">
+                        <SelectContent className="bg-darkpurple border-black/10 dark:border-white/20 text-foreground">
                           {CARRIER_OPTIONS.map((carrier) => (
                             <SelectItem key={carrier.value} value={carrier.value} className="flex items-center justify-between">
                               <span>{carrier.label}</span>
@@ -666,8 +660,8 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                         size="sm"
                         className={
                           field.value
-                            ? 'bg-green-600 text-white font-semibold rounded-lg px-4 py-2 shadow flex items-center gap-2 hover:bg-green-700 transition'
-                            : 'bg-secondary text-primary font-semibold rounded-lg px-4 py-2 shadow hover:bg-secondary/90 transition'
+                            ? 'bg-green-600 text-foreground font-semibold rounded-lg px-4 py-2 shadow flex items-center gap-2 hover:bg-green-700 transition'
+                            : 'bg-secondary text-primary-foreground font-semibold rounded-lg px-4 py-2 shadow hover:bg-secondary/90 transition'
                         }
                         onClick={() => field.onChange(!field.value)}
                       >
@@ -686,7 +680,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   <div className="w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center">
                     <Scissors className="h-4 w-4 text-secondary" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">Professional Information</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Professional Information</h3>
                 </div>
                 <Separator className="my-2 bg-secondary/40" />
                 
@@ -695,7 +689,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   name="specialties"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white font-semibold">Specialties *</FormLabel>
+                      <FormLabel className="text-foreground font-semibold">Specialties *</FormLabel>
                       <FormControl>
                         <SpecialtyAutocomplete
                           value={field.value}
@@ -717,14 +711,14 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   name="priceRange"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white font-semibold">Price Range *</FormLabel>
+                      <FormLabel className="text-foreground font-semibold">Price Range *</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className="bg-white/10 border-white/20 text-white focus:border-secondary rounded-xl">
+                          <SelectTrigger className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl">
                             <SelectValue placeholder="Select your price range" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="bg-black/90 border border-white/10 backdrop-blur-xl rounded-2xl text-white">
+                        <SelectContent className="bg-black/90 border border-black/5 dark:border-white/10 backdrop-blur-xl rounded-2xl text-foreground">
                           {PRICE_RANGES.map((range) => (
                             <SelectItem key={range.value} value={range.value}>
                               <div className="flex flex-col">
@@ -752,10 +746,10 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   <div className="w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center">
                     <Sparkles className="h-4 w-4 text-secondary" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">Social Media</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Social Media</h3>
                 </div>
                 <Separator className="my-2 bg-secondary/40" />
-                <p className="text-sm text-white/80">
+                <p className="text-sm text-foreground/80">
                   Add your social media handles (just your @ or username, not the full link).
                 </p>
                 
@@ -765,14 +759,14 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     name="instagram"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-white font-semibold">
+                        <FormLabel className="flex items-center gap-2 text-foreground font-semibold">
                           <Instagram className="h-4 w-4 text-[#E1306C]" />
                           Instagram
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="@yourusername" {...field} className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl" />
+                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
                         </FormControl>
-                        <FormDescription className="text-white/60">
+                        <FormDescription className="text-foreground/60">
                           Only your handle (e.g., @yourusername)
                         </FormDescription>
                         <FormMessage />
@@ -785,14 +779,14 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     name="twitter"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-white font-semibold">
+                        <FormLabel className="flex items-center gap-2 text-foreground font-semibold">
                           <Twitter className="h-4 w-4 text-[#1DA1F2]" />
                           Twitter/X
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="@yourusername" {...field} className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl" />
+                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
                         </FormControl>
-                        <FormDescription className="text-white/60">
+                        <FormDescription className="text-foreground/60">
                           Only your handle (e.g., @yourusername)
                         </FormDescription>
                         <FormMessage />
@@ -805,14 +799,14 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     name="tiktok"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-white font-semibold">
+                        <FormLabel className="flex items-center gap-2 text-foreground font-semibold">
                           <Music className="h-4 w-4 text-[#000000]" />
                           TikTok
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="@yourusername" {...field} className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl" />
+                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
                         </FormControl>
-                        <FormDescription className="text-white/60">
+                        <FormDescription className="text-foreground/60">
                           Only your handle (e.g., @yourusername)
                         </FormDescription>
                         <FormMessage />
@@ -825,14 +819,14 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     name="facebook"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-white font-semibold">
+                        <FormLabel className="flex items-center gap-2 text-foreground font-semibold">
                           <Facebook className="h-4 w-4 text-[#1877F3]" />
                           Facebook
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="yourpagename" {...field} className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl" />
+                          <Input placeholder="yourpagename" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
                         </FormControl>
-                        <FormDescription className="text-white/60">
+                        <FormDescription className="text-foreground/60">
                           Only your page name (e.g., yourpagename)
                         </FormDescription>
                         <FormMessage />
@@ -850,7 +844,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   <div className="w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center">
                     <AlertCircle className="h-4 w-4 text-secondary" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">Visibility Settings</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Visibility Settings</h3>
                 </div>
                 <Separator className="my-2 bg-secondary/40" />
                 
@@ -858,9 +852,9 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   control={form.control}
                   name="isPublic"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-xl border p-6 bg-white/10 border-white/20">
+                    <FormItem className="flex flex-row items-center justify-between rounded-xl border p-6 bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base text-white font-semibold">Public Profile</FormLabel>
+                        <FormLabel className="text-base text-foreground font-semibold">Public Profile</FormLabel>
                         <FormDescription>
                           When enabled, your profile appears in search results and can be discovered by new clients.
                         </FormDescription>
@@ -876,7 +870,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                 />
 
                 {!form.watch('isPublic') && (
-                  <Alert className="bg-red-900/30 border-red-400/30 text-white">
+                  <Alert className="bg-red-900/30 border-red-400/30 text-foreground">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       Your profile is currently private and won't appear in search results. Enable public profile to start receiving bookings from new clients.
@@ -890,7 +884,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                 <Button 
                   type="submit" 
                   disabled={loading} 
-                  className="min-w-[140px] bg-secondary text-primary font-semibold rounded-xl px-8 py-3 hover:bg-secondary/90 shadow-lg text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-darkpurple"
+                  className="min-w-[140px] bg-secondary text-primary-foreground font-semibold rounded-xl px-8 py-3 hover:bg-secondary/90 shadow-lg text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-darkpurple"
                 >
                   {loading ? (
                     <>

@@ -480,7 +480,7 @@ export default function ClientPortfolio() {
             <Loader2 className="h-12 w-12 animate-spin mx-auto text-secondary" />
             <div className="absolute inset-0 rounded-full bg-secondary/20 animate-ping" />
           </div>
-          <p className="text-white/60 font-medium font-pacifico">Loading your profile...</p>
+          <p className="text-muted-foreground font-medium">Loading your profile...</p>
         </div>
       </div>
     )
@@ -536,12 +536,12 @@ export default function ClientPortfolio() {
           <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 z-20">
             <Avatar className="w-28 h-28 border-4 border-secondary/80 shadow-xl bg-white/10">
               <AvatarImage src={profile?.avatar_url} alt={profile?.name} />
-              <AvatarFallback className="bg-secondary text-primary font-bold text-3xl">{profile?.name?.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="bg-secondary text-primary-foreground font-bold text-3xl">{profile?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <Button
               size="sm"
               variant="ghost"
-              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-secondary text-primary hover:bg-secondary/90"
+              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-secondary text-primary-foreground hover:bg-secondary/90"
               onClick={() => avatarFileInputRef.current?.click()}
               disabled={avatarLoading}
             >
@@ -567,7 +567,7 @@ export default function ClientPortfolio() {
             <div className="text-secondary text-lg font-mono mb-2">@{profile.username}</div>
           )}
           {profile?.location && (
-            <div className="text-white/80 text-base font-medium mb-2 font-pacifico">{profile.location}</div>
+            <div className="text-white/80 text-base font-medium mb-2">{profile.location}</div>
           )}
         </div>
       </div>
@@ -619,7 +619,7 @@ export default function ClientPortfolio() {
                   </p>
                   <Button
                     onClick={() => window.location.href = '/cuts'}
-                    className="bg-secondary text-primary hover:bg-secondary/90"
+                    className="bg-secondary text-primary-foreground hover:bg-secondary/90"
                   >
                     Browse Cuts
                   </Button>
@@ -680,7 +680,7 @@ export default function ClientPortfolio() {
                             <div className="flex items-center gap-1">
                               <Avatar className="h-4 w-4">
                                 <AvatarImage src={video.barber.image} alt={video.barber.name} />
-                                <AvatarFallback className="text-xs bg-secondary text-primary text-[8px]">
+                                <AvatarFallback className="text-xs bg-secondary text-primary-foreground text-[8px]">
                                   {video.barber.name?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
@@ -703,7 +703,7 @@ export default function ClientPortfolio() {
                   <p className="text-white/60 text-sm mb-6">Book appointments to see your stylists here</p>
                   <Button
                     onClick={() => window.location.href = '/browse'}
-                    className="bg-secondary text-primary hover:bg-secondary/90"
+                    className="bg-secondary text-primary-foreground hover:bg-secondary/90"
                   >
                     Browse Barbers
                   </Button>
@@ -749,7 +749,7 @@ export default function ClientPortfolio() {
                   </p>
                   <Button
                     onClick={() => window.location.href = '/browse'}
-                    className="bg-secondary text-primary hover:bg-secondary/90"
+                    className="bg-secondary text-primary-foreground hover:bg-secondary/90"
                   >
                     Browse Barbers
                   </Button>
@@ -765,7 +765,7 @@ export default function ClientPortfolio() {
                               src={review.barber?.profiles?.avatar_url} 
                               alt={review.barber?.profiles?.name} 
                             />
-                            <AvatarFallback className="bg-secondary text-primary text-sm">
+                            <AvatarFallback className="bg-secondary text-primary-foreground text-sm">
                               {review.barber?.profiles?.name?.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
@@ -894,7 +894,7 @@ export default function ClientPortfolio() {
                 <div className="flex items-center gap-3 mb-4">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={selectedVideo.barber.image} alt={selectedVideo.barber.name} />
-                    <AvatarFallback className="text-xs bg-secondary text-primary">{selectedVideo.barber.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="text-xs bg-secondary text-primary-foreground">{selectedVideo.barber.name?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div>
                     <h3 className="text-white font-bebas font-bold text-xl">{selectedVideo.title}</h3>

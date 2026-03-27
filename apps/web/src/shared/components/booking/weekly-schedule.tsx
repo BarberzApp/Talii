@@ -151,14 +151,14 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
   const availableDays = schedule.filter(day => day.isAvailable).length;
 
   return (
-    <div className="space-y-8 bg-background">
+    <div className="space-y-8">
       {/* Unified Header */}
       <div className="text-center space-y-2 mb-4">
         <div className="flex items-center justify-center gap-3">
           <Calendar className="h-7 w-7 text-secondary" />
-          <h2 className="text-2xl sm:text-3xl font-bebas text-white tracking-wide">Weekly Schedule</h2>
+          <h2 className="text-2xl sm:text-3xl font-bebas text-foreground tracking-wide">Weekly Schedule</h2>
         </div>
-        <p className="text-white/70 text-base mt-1">Set your regular working hours for each day</p>
+        <p className="text-muted-foreground text-base mt-1">Set your regular working hours for each day</p>
       </div>
 
       {/* Schedule Grid - glassmorphism card style */}
@@ -166,7 +166,7 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
         {schedule.map((slot) => (
           <div
             key={slot.day_of_week}
-            className={`rounded-xl border border-white/10 bg-white/5 shadow-lg transition-all duration-300 overflow-hidden group px-0`}
+            className={`rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl shadow-lg transition-all duration-300 overflow-hidden group px-0`}
           >
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-5">
               <div className="flex items-center space-x-5">
@@ -180,13 +180,13 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
                     aria-label={`Toggle ${DAYS[slot.day_of_week]}`}
                   />
                   <span
-                    className="w-12 h-6 flex items-center transition-all duration-300 rounded-full border-2 border-white/20 peer-checked:bg-secondary peer-checked:border-secondary bg-white/10 peer-focus:ring-2 peer-focus:ring-secondary peer-focus:ring-offset-2 peer-focus:ring-offset-background hover:scale-105"
+                    className="w-12 h-6 flex items-center transition-all duration-300 rounded-full border-2 border-black/10 dark:border-white/20 peer-checked:bg-secondary peer-checked:border-secondary bg-black/5 dark:bg-white/10 peer-focus:ring-2 peer-focus:ring-secondary peer-focus:ring-offset-2 peer-focus:ring-offset-background hover:scale-105"
                   >
                     <span className={`w-3 h-3 bg-white rounded-full transition-transform duration-300 ml-1 ${slot.isAvailable ? 'translate-x-6' : 'translate-x-0'}`} />
                   </span>
                 </label>
                 <div>
-                  <span className={`font-bebas text-xl tracking-wide ${slot.isAvailable ? 'text-white' : 'text-white/60'}`}>{DAYS[slot.day_of_week]}</span>
+                  <span className={`font-bebas text-xl tracking-wide ${slot.isAvailable ? 'text-foreground' : 'text-muted-foreground'}`}>{DAYS[slot.day_of_week]}</span>
                   {slot.isAvailable && (
                     <p className="text-xs text-secondary flex items-center gap-1 mt-1">
                       <Clock className="h-3 w-3" />
@@ -198,7 +198,7 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
               {slot.isAvailable && (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-6 w-full md:w-auto">
                   <div className="space-y-2 w-full sm:w-auto">
-                    <Label htmlFor={`start-${slot.day_of_week}`} className="text-white/80 text-xs font-medium flex items-center gap-2">
+                    <Label htmlFor={`start-${slot.day_of_week}`} className="text-muted-foreground text-xs font-medium flex items-center gap-2">
                       <Clock className="h-3 w-3" />
                       Start Time
                     </Label>
@@ -207,11 +207,11 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
                       type="time"
                       value={slot.start_time}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, 'start_time', e.target.value)}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary focus:ring-secondary rounded-lg h-10 text-base"
+                      className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary focus:ring-secondary rounded-lg h-10 text-base"
                     />
                   </div>
                   <div className="space-y-2 w-full sm:w-auto">
-                    <Label htmlFor={`end-${slot.day_of_week}`} className="text-white/80 text-xs font-medium flex items-center gap-2">
+                    <Label htmlFor={`end-${slot.day_of_week}`} className="text-muted-foreground text-xs font-medium flex items-center gap-2">
                       <Clock className="h-3 w-3" />
                       End Time
                     </Label>
@@ -220,7 +220,7 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
                       type="time"
                       value={slot.end_time}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, 'end_time', e.target.value)}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary focus:ring-secondary rounded-lg h-10 text-base"
+                      className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary focus:ring-secondary rounded-lg h-10 text-base"
                     />
                   </div>
                 </div>
@@ -235,7 +235,7 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
         <Button
           onClick={handleSave}
           disabled={isSaving}
-          className="bg-secondary text-primary font-semibold shadow-lg px-10 py-3 rounded-xl transition-all duration-300 hover:bg-secondary/90 text-base"
+          className="bg-secondary text-secondary-foreground font-semibold shadow-lg px-10 py-3 rounded-xl transition-all duration-300 hover:bg-secondary/90 text-base"
         >
           {isSaving ? (
             <>
@@ -252,13 +252,13 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
       </div>
       {/* Tips Section - info card style */}
       <div className="mt-8">
-        <div className="bg-white/5 border border-white/10 rounded-xl shadow-lg p-6 flex items-start gap-4">
+        <div className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-xl shadow-lg p-6 flex items-start gap-4">
           <div className="p-2 bg-secondary/10 rounded-lg">
             <Sparkles className="h-6 w-6 text-secondary" />
           </div>
           <div className="space-y-2">
-            <h4 className="text-lg font-bebas text-white tracking-wide">Schedule Tips</h4>
-            <ul className="text-white/70 space-y-2 text-sm">
+            <h4 className="text-lg font-bebas text-foreground tracking-wide">Schedule Tips</h4>
+            <ul className="text-muted-foreground space-y-2 text-sm">
               <li className="flex items-start gap-2">
                 <span className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></span>
                 <span>Set realistic hours that you can consistently maintain</span>

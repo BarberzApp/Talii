@@ -87,13 +87,13 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
           <Umbrella className="h-5 w-5 text-saffron" />
         </div>
         <div>
-          <h3 className="text-xl font-bebas text-white">Time Off</h3>
-          <p className="text-white/70 text-sm">Schedule your vacation and personal time off</p>
+          <h3 className="text-xl font-bebas text-foreground">Time Off</h3>
+          <p className="text-muted-foreground text-sm">Schedule your vacation and personal time off</p>
         </div>
       </div>
 
       {/* Stats Card */}
-      <Card className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl">
+      <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-2xl">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -101,8 +101,8 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
                 <Calendar className="h-4 w-4 text-saffron" />
               </div>
               <div>
-                <p className="text-white/60 text-sm">Time Off</p>
-                <p className="text-white font-semibold text-lg">{timeOff.length} periods</p>
+                <p className="text-muted-foreground text-sm">Time Off</p>
+                <p className="text-foreground font-semibold text-lg">{timeOff.length} periods</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -115,13 +115,13 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
       </Card>
 
       {/* Add Form */}
-      <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl">
-        <CardHeader className="bg-white/5 border-b border-white/10">
-          <CardTitle className="text-white flex items-center gap-2">
+      <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl">
+        <CardHeader className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border-b border-black/5 dark:border-white/10">
+          <CardTitle className="text-foreground flex items-center gap-2">
             <Plus className="h-5 w-5 text-saffron" />
             Add Time Off
           </CardTitle>
-          <CardDescription className="text-white/70">
+          <CardDescription className="text-muted-foreground">
             Schedule vacation, personal days, or sick leave
           </CardDescription>
         </CardHeader>
@@ -129,35 +129,35 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
         <CardContent className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start_date" className="text-white/80 text-sm font-medium">Start Date</Label>
+              <Label htmlFor="start_date" className="text-muted-foreground text-sm font-medium">Start Date</Label>
               <Input
                 id="start_date"
                 type="date"
                 value={newTimeOff.start_date}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTimeOff({ ...newTimeOff, start_date: e.target.value })}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
+                className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-saffron focus:ring-saffron rounded-xl"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end_date" className="text-white/80 text-sm font-medium">End Date</Label>
+              <Label htmlFor="end_date" className="text-muted-foreground text-sm font-medium">End Date</Label>
               <Input
                 id="end_date"
                 type="date"
                 value={newTimeOff.end_date}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTimeOff({ ...newTimeOff, end_date: e.target.value })}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
+                className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-saffron focus:ring-saffron rounded-xl"
               />
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="reason" className="text-white/80 text-sm font-medium">Reason (optional)</Label>
+            <Label htmlFor="reason" className="text-muted-foreground text-sm font-medium">Reason (optional)</Label>
             <Input
               id="reason"
               value={newTimeOff.reason}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTimeOff({ ...newTimeOff, reason: e.target.value })}
               placeholder="e.g. Vacation, Personal Day, Sick Leave"
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
+              className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-saffron focus:ring-saffron rounded-xl"
             />
           </div>
 
@@ -175,17 +175,17 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
       {/* Current Time Off */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <h4 className="text-lg font-semibold text-white">Scheduled Time Off</h4>
-          <Badge variant="outline" className="text-xs border-white/20 text-white/60">
+          <h4 className="text-lg font-semibold text-foreground">Scheduled Time Off</h4>
+          <Badge variant="outline" className="text-xs border-black/10 dark:border-white/20 text-muted-foreground">
             {timeOff.length} periods
           </Badge>
         </div>
         
         {timeOff.length === 0 ? (
-          <Card className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
-            <Calendar className="h-12 w-12 text-white/40 mx-auto mb-4" />
-            <h3 className="text-white font-semibold mb-2">No time off scheduled</h3>
-            <p className="text-white/60 text-sm">
+          <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-8 text-center">
+            <Calendar className="h-12 w-12 text-foreground/40 mx-auto mb-4" />
+            <h3 className="text-foreground font-semibold mb-2">No time off scheduled</h3>
+            <p className="text-muted-foreground text-sm">
               Add vacation, personal days, or sick leave periods
             </p>
           </Card>
@@ -194,13 +194,13 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
             {timeOff.map((item) => (
               <Card 
                 key={item.id} 
-                className="bg-white/5 border border-white/10 rounded-2xl hover:border-white/20 transition-all duration-200 overflow-hidden"
+                className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl hover:border-black/10 dark:border-white/20 transition-all duration-200 overflow-hidden"
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-white">
+                        <span className="font-medium text-foreground">
                           {formatDateRange(item.start_date, item.end_date)}
                         </span>
                         <Badge variant="glassy-saffron" className="text-xs">
@@ -208,7 +208,7 @@ export function TimeOffManager({ timeOff, onAdd, onRemove }: TimeOffManagerProps
                         </Badge>
                       </div>
                       {item.reason && (
-                        <p className="text-sm text-white/60">{item.reason}</p>
+                        <p className="text-sm text-muted-foreground">{item.reason}</p>
                       )}
                     </div>
                     <Button

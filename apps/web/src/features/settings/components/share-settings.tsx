@@ -175,7 +175,7 @@ export function ShareSettings() {
 
   if (isLoading) {
     return (
-      <Card className="mb-6 bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl">
+      <Card className="mb-6 bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-2xl rounded-3xl">
         <CardContent className="p-6">
           <div className="flex items-center justify-center min-h-[200px]">
             <div className="text-center space-y-4">
@@ -183,7 +183,7 @@ export function ShareSettings() {
                 <Share2 className="h-8 w-8 animate-spin mx-auto text-secondary" />
                 <div className="absolute inset-0 rounded-full bg-secondary/20 animate-ping" />
               </div>
-              <p className="text-white/60 font-medium">Loading booking link...</p>
+              <p className="text-muted-foreground font-medium">Loading booking link...</p>
             </div>
           </div>
         </CardContent>
@@ -192,17 +192,17 @@ export function ShareSettings() {
   }
 
   return (
-    <Card className="mb-6 bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden">
-      <CardHeader className="p-6 border-b border-white/10">
+    <Card className="mb-6 bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-2xl rounded-3xl overflow-hidden">
+      <CardHeader className="p-6 border-b border-black/5 dark:border-white/10">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-secondary/20 rounded-full">
             <Share2 className="h-6 w-6 text-secondary" />
           </div>
           <div>
-            <CardTitle className="text-xl font-bebas text-white tracking-wide">
+            <CardTitle className="text-xl font-bebas text-foreground tracking-wide">
               Share Your Booking Link
             </CardTitle>
-            <CardDescription className="text-white/80 mt-1">
+            <CardDescription className="text-muted-foreground mt-1">
               Share your professional booking link with clients
             </CardDescription>
           </div>
@@ -230,7 +230,7 @@ export function ShareSettings() {
         {/* Booking Link Display */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium text-white">Your Booking Link</Label>
+            <Label className="text-sm font-medium text-foreground">Your Booking Link</Label>
             <Badge variant="secondary" className="text-xs bg-secondary/20 text-secondary border-secondary/30">
               {isLinkValid ? 'Active' : 'Incomplete Profile'}
             </Badge>
@@ -240,7 +240,7 @@ export function ShareSettings() {
             <Input
               value={bookingLink}
               readOnly
-              className="bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary pr-28 flex-1"
+              className="bg-white/50 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary pr-28 flex-1"
               placeholder="Complete your profile to get your booking link"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -249,7 +249,7 @@ export function ShareSettings() {
                 variant="ghost"
                 onClick={copyToClipboard}
                 disabled={!isLinkValid}
-                className="h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
               >
                 {copied ? <CheckCircle className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
               </Button>
@@ -258,7 +258,7 @@ export function ShareSettings() {
                 variant="ghost"
                 onClick={openBookingLink}
                 disabled={!isLinkValid}
-                className="h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10"
               >
                 <ExternalLink className="h-4 w-4" />
               </Button>
@@ -271,7 +271,7 @@ export function ShareSettings() {
           <Button
             onClick={shareLink}
             disabled={!isLinkValid}
-            className="flex-1 bg-secondary hover:bg-secondary/90 text-primary font-semibold shadow-lg"
+            className="flex-1 bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-lg"
           >
             <Share2 className="h-4 w-4 mr-2" />
             Share Link
@@ -290,11 +290,11 @@ export function ShareSettings() {
 
         {/* QR Code Modal */}
         {showQR && isLinkValid && (
-          <div className="mt-6 p-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl">
+          <div className="mt-6 p-6 bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-3xl backdrop-blur-xl">
             <div className="text-center space-y-4">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <QrCode className="h-5 w-5 text-secondary" />
-                <h3 className="text-lg font-semibold text-white">QR Code</h3>
+                <h3 className="text-lg font-semibold text-foreground">QR Code</h3>
               </div>
               <div className="flex justify-center">
                 <div className="p-6 bg-white rounded-3xl shadow-lg">
@@ -309,10 +309,10 @@ export function ShareSettings() {
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-muted-foreground">
                   Clients can scan this QR code to access your booking page
                 </p>
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-muted-foreground/60">
                   {profileData.business_name || profileData.name || 'Your'} Booking Link
                 </p>
               </div>
@@ -371,14 +371,14 @@ export function ShareSettings() {
         )}
 
         {/* Tips Section */}
-        <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-3xl">
+        <div className="mt-6 p-4 bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-secondary/20 rounded-full">
               <Sparkles className="h-4 w-4 text-secondary" />
             </div>
             <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-white">Pro Tips</h4>
-              <ul className="text-xs text-white/70 space-y-1">
+              <h4 className="text-sm font-semibold text-foreground">Pro Tips</h4>
+              <ul className="text-xs text-muted-foreground space-y-1">
                 <li>• Add this link to your social media profiles</li>
                 <li>• Include it in your business cards and marketing materials</li>
                 <li>• Share it directly with clients via text or email</li>

@@ -1,8 +1,12 @@
+// Geocoding helpers for React Native — backed by Google Maps Platform APIs
+// Requests are proxied through the Next.js backend to keep the API key server-side.
 import { logger } from './logger';
 
-// Geocoding helper using OpenStreetMap Nominatim for React Native
-export async function geocodeAddress(address: string): Promise<{ lat: number, lon: number } | null> {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://www.bocmstyle.com';
+
+/** Geocode a full address string to { lat, lon } */
+export async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
+  const url = `${API_BASE_URL}/api/nominatim?type=geocode&q=${encodeURIComponent(address)}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
@@ -16,35 +20,35 @@ export async function geocodeAddress(address: string): Promise<{ lat: number, lo
   }
 }
 
-// Get address suggestions for autocomplete using Nominatim
+/** Get address autocomplete suggestions (Google Places Autocomplete) */
 export async function getAddressSuggestionsNominatim(query: string): Promise<Array<any>> {
   if (!query || query.length < 3) return [];
-  
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+  const url = `${API_BASE_URL}/api/nominatim?q=${encodeURIComponent(query)}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
     return data || [];
   } catch (error) {
-    logger.error('Error fetching Nominatim address suggestions:', error);
+    logger.error('Error fetching address suggestions:', error);
     return [];
   }
 }
 
-// Get address suggestions using Photon (Komoot's geocoding service)
-export async function getAddressSuggestions(query: string): Promise<Array<{ name: string, city?: string, country?: string, lat: number, lon: number }>> {
+/** Get structured address suggestions (alias for autocomplete, Google Places backed) */
+export async function getAddressSuggestions(
+  query: string
+): Promise<Array<{ name: string; city?: string; country?: string; lat: number; lon: number }>> {
   if (!query || query.length < 3) return [];
-  
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`;
+  const url = `${API_BASE_URL}/api/nominatim?q=${encodeURIComponent(query)}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
-    return (data.features || []).map((feature: any) => ({
-      name: feature.properties.name || feature.properties.label,
-      city: feature.properties.city,
-      country: feature.properties.country,
-      lat: feature.geometry.coordinates[1],
-      lon: feature.geometry.coordinates[0],
+    return (data || []).map((item: any) => ({
+      name: item.display_name,
+      city: item.address?.city,
+      country: item.address?.country,
+      lat: parseFloat(item.lat),
+      lon: parseFloat(item.lon),
     }));
   } catch (error) {
     logger.error('Error fetching address suggestions:', error);
@@ -52,18 +56,17 @@ export async function getAddressSuggestions(query: string): Promise<Array<{ name
   }
 }
 
-export async function reverseGeocode(lat: number, lon: number): Promise<{ name: string, city?: string, country?: string } | null> {
-  const url = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&limit=1`;
+/** Reverse geocode a lat/lon to an address object (Google Geocoding API) */
+export async function reverseGeocode(
+  lat: number,
+  lon: number
+): Promise<{ name: string; city?: string; country?: string } | null> {
+  const url = `${API_BASE_URL}/api/nominatim?type=reverse&latlng=${lat},${lon}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
-    if (data.features && data.features.length > 0) {
-      const feature = data.features[0];
-      return {
-        name: feature.properties.name || feature.properties.label,
-        city: feature.properties.city,
-        country: feature.properties.country,
-      };
+    if (data && data.name) {
+      return { name: data.name, city: data.city, country: data.country };
     }
     return null;
   } catch (error) {
@@ -72,10 +75,9 @@ export async function reverseGeocode(lat: number, lon: number): Promise<{ name: 
   }
 }
 
-// Validate address using Nominatim
+/** Validate an address string — returns true if Google can geocode it */
 export async function validateAddress(address: string): Promise<boolean> {
-  const query = encodeURIComponent(address);
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`;
+  const url = `${API_BASE_URL}/api/nominatim?type=geocode&q=${encodeURIComponent(address)}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
@@ -84,4 +86,4 @@ export async function validateAddress(address: string): Promise<boolean> {
     logger.error('Error validating address:', error);
     return false;
   }
-} 
+}

@@ -7,6 +7,8 @@ import { ArrowRight, Play } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/shared/lib/utils";
 import { AnimatedSection } from "@/shared/components/ui/animated-section";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerItem } from "@/shared/lib/animations";
 
 export interface HeroSectionProps {
   /** Optional overline badge text (e.g., "FOR BEAUTY & GROOMING PROS") */
@@ -53,26 +55,34 @@ export function HeroSection({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-[var(--landing-hero-gap)] lg:gap-[var(--landing-hero-gap-lg)] items-center">
           {/* Left Column - Content */}
-          <AnimatedSection delay={0.1} className="space-y-8">
+          <motion.div 
+            className="space-y-8"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.1 }}
+          >
             <div className="space-y-6">
               {overline && (
-                <div className="flex items-center gap-3">
+                <motion.div variants={staggerItem} className="flex items-center gap-3">
                   <Badge className="bg-secondary/10 text-secondary border border-secondary/20 dark:bg-secondary/15 dark:border-secondary/25 px-3 py-1 text-xs font-medium tracking-wider">
                     {overline}
                   </Badge>
-                </div>
+                </motion.div>
               )}
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bebas font-bold text-foreground leading-tight">
-                {headline}
-              </h1>
+              <motion.div variants={staggerItem}>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bebas font-bold text-foreground leading-tight">
+                  {headline}
+                </h1>
+              </motion.div>
 
-              <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl">
+              <motion.p variants={staggerItem} className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl">
                 {subheadline}
-              </p>
+              </motion.p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            <motion.div variants={staggerItem} className="flex flex-col sm:flex-row gap-4">
               <Button
                 href={primaryCta.href}
                 size="lg"
@@ -92,16 +102,16 @@ export function HeroSection({
                   {secondaryCta.label}
                 </Button>
               )}
-            </div>
+            </motion.div>
 
             {proof && (
-              <div className="pt-6 sm:pt-8">
+              <motion.div variants={staggerItem} className="pt-6 sm:pt-8">
                 <p className="text-sm sm:text-base text-muted-foreground text-center sm:text-left">
                   {proof}
                 </p>
-              </div>
+              </motion.div>
             )}
-          </AnimatedSection>
+          </motion.div>
 
           {/* Right Column - Visual */}
           {visual && (

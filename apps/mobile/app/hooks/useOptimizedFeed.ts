@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import { supabase } from '../shared/lib/supabase';
 import { logger } from '../shared/lib/logger';
+import { geocodeAddress } from '../shared/lib/geocode';
 import type { FeedItem, FeedOptions } from '../types/feed.types';
 
 export function useOptimizedFeed(opts: FeedOptions = {}) {
@@ -259,27 +260,18 @@ export function useOptimizedFeed(opts: FeedOptions = {}) {
     }
   }, [requestLocationPermission, refresh]);
 
-  // Simple geocoding function using Nominatim (free)
+  // Geocode a location string to coordinates using the shared helper (Google Maps backed)
   const geocodeLocation = useCallback(async (locationText: string): Promise<{lat: number, lng: number} | null> => {
     try {
-      const encodedLocation = encodeURIComponent(locationText);
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedLocation}&limit=1`
-      );
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon)
-        };
-      }
+      const coords = await geocodeAddress(locationText);
+      if (coords) return { lat: coords.lat, lng: coords.lon };
       return null;
     } catch (error) {
       logger.error('Geocoding error:', error);
       return null;
     }
   }, []);
+
 
   // Fetch available specialties from barbers
   const fetchAvailableSpecialties = useCallback(async () => {

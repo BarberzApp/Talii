@@ -927,15 +927,15 @@ export default function ProfilePortfolio() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-white">
-        <div className="text-xl font-bebas font-bold animate-pulse text-white">Loading profile...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="text-xl font-bebas font-bold animate-pulse text-foreground">Loading profile...</div>
       </div>
     );
   }
 
   // Main layout and header (new design)
   return (
-    <div className="min-h-screen bg-background text-white pb-32">
+    <div className="min-h-screen bg-background text-foreground pb-32">
       {/* Cover Photo */}
       <div className="relative h-48 sm:h-64 md:h-80 w-full">
         {profile?.coverphoto ? (
@@ -955,7 +955,7 @@ export default function ProfilePortfolio() {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 bg-black/30 text-white hover:bg-black/50"
+            className="absolute top-2 right-2 bg-black/30 text-foreground hover:bg-black/50"
             onClick={() => document.getElementById('cover-upload')?.click()}
           >
             <Camera className="h-5 w-5" />
@@ -964,15 +964,15 @@ export default function ProfilePortfolio() {
         {/* Avatar */}
         <div className="absolute left-1/2 -bottom-16 transform -translate-x-1/2 z-10">
           <Avatar className="h-32 w-32 border-4 border-black shadow-xl">
-            <AvatarImage src={profile?.avatar_url || '/placeholder.svg'} alt={profile?.name || 'Avatar'} />
-            <AvatarFallback>{profile?.name?.charAt(0) || 'U'}</AvatarFallback>
+            <AvatarImage src={profile?.avatar_url || ''} alt={profile?.name || 'Avatar'} />
+            <AvatarFallback className="bg-primary/10 text-primary font-bold uppercase text-2xl">{profile?.name?.charAt(0) || 'U'}</AvatarFallback>
           </Avatar>
           {/* Avatar upload button */}
           {isOwner && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute -bottom-1 -right-1 h-8 w-8 bg-white text-black hover:bg-white/90 rounded-full"
+              className="absolute -bottom-1 -right-1 h-8 w-8 bg-secondary text-primary-foreground shadow-md hover:bg-secondary/90 rounded-full"
               onClick={() => avatarFileInputRef.current?.click()}
               disabled={avatarLoading}
             >
@@ -1005,11 +1005,11 @@ export default function ProfilePortfolio() {
 
       {/* Name, Username, Stats */}
       <div className="pt-20 pb-6 px-4 text-center">
-        <h1 className="text-3xl font-bebas font-bold mb-1 text-white">{profile?.name || 'Your Name'}</h1>
+        <h1 className="text-3xl font-bebas font-bold mb-1 text-foreground">{profile?.name || 'Your Name'}</h1>
         <div className="text-secondary text-lg font-semibold mb-2">@{profile?.username || profile?.name?.toLowerCase().replace(/\s+/g, '') || 'username'}</div>
         {/* City and State */}
         {profile?.location && (
-          <div className="text-white/70 text-base font-medium mb-2 font-pacifico">
+          <div className="text-foreground/70 text-base font-medium mb-2">
             {(() => {
               const parts = profile.location.split(',').map(s => s.trim());
               logger.debug('Location parts', { parts })
@@ -1046,42 +1046,42 @@ export default function ProfilePortfolio() {
         {/* Stats Row */}
         <div className="flex justify-center gap-10 mt-4 w-full">
           <div className="flex flex-col items-center">
-            <span className="font-bold text-2xl text-white">{cuts.length}</span>
-            <span className="text-xs text-white/60 uppercase tracking-wide">Cuts</span>
+            <span className="font-bold text-2xl text-foreground">{cuts.length}</span>
+            <span className="text-xs text-foreground/60 uppercase tracking-wide">Cuts</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="font-bold text-2xl text-white">{portfolio.length}</span>
-            <span className="text-xs text-white/60 uppercase tracking-wide">Portfolio</span>
+            <span className="font-bold text-2xl text-foreground">{portfolio.length}</span>
+            <span className="text-xs text-foreground/60 uppercase tracking-wide">Portfolio</span>
           </div>
         </div>
       </div>
       {/* Tabs Section (modern, mobile-first) */}
       <div className="max-w-3xl mx-auto w-full px-2 sm:px-4">
         <Tabs defaultValue="portfolio" className="w-full">
-          <TabsList className="w-full flex justify-between bg-white/5 border border-white/10 backdrop-blur-xl p-1 rounded-lg mb-6 sticky top-0 z-20">
-            <TabsTrigger value="portfolio" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary">Portfolio</TabsTrigger>
-            <TabsTrigger value="reels" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary">
+          <TabsList className="w-full flex justify-between bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-xl p-1 rounded-lg mb-6 sticky top-0 z-20">
+            <TabsTrigger value="portfolio" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">Portfolio</TabsTrigger>
+            <TabsTrigger value="reels" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">
               <div className="flex items-center gap-2">
                 <VideoIcon className="h-4 w-4" />
                 Cuts
                 {cutsLoading && <Loader2 className="h-3 w-3 animate-spin" />}
               </div>
             </TabsTrigger>
-            <TabsTrigger value="services" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary">Services</TabsTrigger>
-            <TabsTrigger value="reviews" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary">Reviews</TabsTrigger>
+            <TabsTrigger value="services" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">Services</TabsTrigger>
+            <TabsTrigger value="reviews" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">Reviews</TabsTrigger>
           </TabsList>
 
           {/* Reels Tab */}
           <TabsContent value="reels">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-bebas font-bold text-xl">Your Cuts ({cuts.length})</h3>
+              <h3 className="text-foreground font-bebas font-bold text-xl">Your Cuts ({cuts.length})</h3>
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={refreshCuts}
                   disabled={cutsLoading}
-                  className="text-white/60 hover:text-white"
+                  className="text-foreground/60 hover:text-foreground"
                 >
                   <Loader2 className={cn("h-4 w-4", cutsLoading && "animate-spin")} />
                 </Button>
@@ -1089,7 +1089,7 @@ export default function ProfilePortfolio() {
                   <Button
                     onClick={() => setOpenDialog('upload')}
                     size="sm"
-                    className="bg-secondary text-primary hover:bg-secondary/90"
+                    className="bg-secondary text-primary-foreground hover:bg-secondary/90"
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     Upload Cut
@@ -1102,22 +1102,22 @@ export default function ProfilePortfolio() {
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                   <Loader2 className="h-8 w-8 animate-spin text-secondary mx-auto mb-4" />
-                  <p className="text-white/60">Loading your cuts...</p>
+                  <p className="text-foreground/60">Loading your cuts...</p>
                 </div>
               </div>
             ) : cuts.length === 0 ? (
               <div className="text-center py-12">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-8 max-w-md mx-auto">
-                  <VideoIcon className="h-12 w-12 text-white/40 mx-auto mb-4" />
-                  <h3 className="text-white font-bebas font-bold text-xl mb-2">No cuts yet</h3>
-                  <p className="text-white/60 text-sm mb-6">
+                <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-8 max-w-md mx-auto">
+                  <VideoIcon className="h-12 w-12 text-foreground/40 mx-auto mb-4" />
+                  <h3 className="text-foreground font-bebas font-bold text-xl mb-2">No cuts yet</h3>
+                  <p className="text-foreground/60 text-sm mb-6">
                     Start sharing your work by uploading your first cut
                   </p>
                   {isOwner && (
                     <div className="space-y-3">
                       <Button
                         onClick={() => setOpenDialog('upload')}
-                        className="bg-secondary text-primary hover:bg-secondary/90 w-full"
+                        className="bg-secondary text-primary-foreground hover:bg-secondary/90 w-full"
                       >
                         <Upload className="h-4 w-4 mr-2" />
                         Upload First Cut
@@ -1151,7 +1151,7 @@ export default function ProfilePortfolio() {
                           }
                         }}
                         variant="outline"
-                        className="w-full border-white/20 text-white hover:bg-white/10"
+                        className="w-full border-black/10 dark:border-white/20 text-foreground hover:bg-black/5 dark:bg-white/10"
                       >
                         Create Test Cut
                       </Button>
@@ -1202,7 +1202,7 @@ export default function ProfilePortfolio() {
                     {/* Overlay with stats */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="absolute bottom-2 left-2 right-2">
-                        <div className="flex items-center justify-between text-white text-xs">
+                        <div className="flex items-center justify-between text-foreground text-xs">
                           <div className="flex items-center gap-2">
                             <Heart className="h-3 w-3" />
                             <span>{cut.likes || 0}</span>
@@ -1222,22 +1222,22 @@ export default function ProfilePortfolio() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 bg-black/50 hover:bg-black/70 text-white"
+                              className="h-8 w-8 p-0 bg-black/50 hover:bg-black/70 text-foreground"
                             >
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-black/90 border-white/20">
+                          <DropdownMenuContent align="end" className="bg-black/90 border-black/10 dark:border-white/20">
                             <DropdownMenuItem
                               onClick={() => handleEditCut(cut)}
-                              className="text-white hover:bg-white/10"
+                              className="text-foreground hover:bg-black/5 dark:bg-white/10"
                             >
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleToggleCutVisibility(cut.id, !cut.is_public)}
-                              className="text-white hover:bg-white/10"
+                              className="text-foreground hover:bg-black/5 dark:bg-white/10"
                             >
                               {cut.is_public ? (
                                 <>
@@ -1253,7 +1253,7 @@ export default function ProfilePortfolio() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleToggleFeatured(cut.id, !cut.is_featured)}
-                              className="text-white hover:bg-white/10"
+                              className="text-foreground hover:bg-black/5 dark:bg-white/10"
                             >
                               {cut.is_featured ? (
                                 <>
@@ -1269,7 +1269,7 @@ export default function ProfilePortfolio() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => openStatsDialog(cut)}
-                              className="text-white hover:bg-white/10"
+                              className="text-foreground hover:bg-black/5 dark:bg-white/10"
                             >
                               <Award className="h-4 w-4 mr-2" />
                               View Stats
@@ -1294,12 +1294,12 @@ export default function ProfilePortfolio() {
           {/* Portfolio Tab */}
           <TabsContent value="portfolio">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-bebas font-bold text-xl">Portfolio ({portfolio.length})</h3>
+              <h3 className="text-foreground font-bebas font-bold text-xl">Portfolio ({portfolio.length})</h3>
               {isOwner && (
                 <Button
                   onClick={() => setOpenDialog('portfolio-upload')}
                   size="sm"
-                  className="bg-secondary text-primary hover:bg-secondary/90"
+                  className="bg-secondary text-primary-foreground hover:bg-secondary/90"
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Add to Portfolio
@@ -1309,16 +1309,16 @@ export default function ProfilePortfolio() {
             
             {portfolio.length === 0 ? (
               <div className="text-center py-12">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-8 max-w-md mx-auto">
-                  <ImageIcon className="h-12 w-12 text-white/40 mx-auto mb-4" />
-                  <h3 className="text-white font-bebas font-bold text-xl mb-2">No portfolio items yet</h3>
-                  <p className="text-white/60 text-sm mb-6">
+                <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-8 max-w-md mx-auto">
+                  <ImageIcon className="h-12 w-12 text-foreground/40 mx-auto mb-4" />
+                  <h3 className="text-foreground font-bebas font-bold text-xl mb-2">No portfolio items yet</h3>
+                  <p className="text-foreground/60 text-sm mb-6">
                     Showcase your best work by adding photos and videos to your portfolio
                   </p>
                   {isOwner && (
                     <Button
                       onClick={() => setOpenDialog('portfolio-upload')}
-                      className="bg-secondary text-primary hover:bg-secondary/90 w-full"
+                      className="bg-secondary text-primary-foreground hover:bg-secondary/90 w-full"
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       Add First Portfolio Item
@@ -1337,7 +1337,7 @@ export default function ProfilePortfolio() {
                     )}
                     {/* Delete button (visible on hover) */}
                     <button
-                      className="absolute top-2 right-2 bg-white/90 hover:bg-red-600 text-red-600 hover:text-white rounded-full p-1.5 shadow-lg focus:outline-none border-2 border-white/40 transition-colors opacity-0 group-hover:opacity-100"
+                      className="absolute top-2 right-2 bg-white/90 hover:bg-red-600 text-red-600 hover:text-foreground rounded-full p-1.5 shadow-lg focus:outline-none border-2 border-white/40 transition-colors opacity-0 group-hover:opacity-100"
                       onClick={() => handleDeletePortfolio(item)}
                       aria-label="Delete portfolio item"
                       type="button"
@@ -1345,7 +1345,7 @@ export default function ProfilePortfolio() {
                       <Trash2 className="h-5 w-5" />
                     </button>
                     <div className="absolute bottom-2 left-2 right-2">
-                      <div className="flex items-center justify-between text-white text-xs">
+                      <div className="flex items-center justify-between text-foreground text-xs">
                         <div className="flex items-center gap-2">
                           <Heart className="h-3 w-3" />
                           <span>{item.likes || 0}</span>
@@ -1365,14 +1365,14 @@ export default function ProfilePortfolio() {
           {/* Services Tab */}
           <TabsContent value="services">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-bebas font-bold text-xl">Services & Add-ons</h3>
+              <h3 className="text-foreground font-bebas font-bold text-xl">Services & Add-ons</h3>
               {isOwner && (
                 <div className="flex gap-2">
                   <Button
                     onClick={() => setOpenDialog('addons')}
                     size="sm"
                     variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10 px-2 py-1 text-xs"
+                    className="border-black/10 dark:border-white/20 text-foreground hover:bg-black/5 dark:bg-white/10 px-2 py-1 text-xs"
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     Add-on
@@ -1381,7 +1381,7 @@ export default function ProfilePortfolio() {
                     onClick={() => setOpenDialog('services')}
                     size="sm"
                     variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10 px-2 py-1 text-xs"
+                    className="border-black/10 dark:border-white/20 text-foreground hover:bg-black/5 dark:bg-white/10 px-2 py-1 text-xs"
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     Add Service
@@ -1392,11 +1392,11 @@ export default function ProfilePortfolio() {
             
             {/* Sub-tabs for Services and Add-ons */}
             <Tabs defaultValue="services" className="w-full">
-              <TabsList className="w-full flex bg-white/5 border border-white/10 p-1 rounded-lg mb-4">
-                <TabsTrigger value="services" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary">
+              <TabsList className="w-full flex bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 p-1 rounded-lg mb-4">
+                <TabsTrigger value="services" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">
                   Services ({services.length})
                 </TabsTrigger>
-                <TabsTrigger value="addons" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary">
+                <TabsTrigger value="addons" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">
                   Add-ons ({addons.length})
                 </TabsTrigger>
               </TabsList>
@@ -1407,21 +1407,21 @@ export default function ProfilePortfolio() {
                   <div className="flex items-center justify-center py-12">
                     <div className="text-center">
                                         <Loader2 className="h-8 w-8 animate-spin text-secondary mx-auto mb-4" />
-                  <p className="text-white/60">Loading services...</p>
+                  <p className="text-foreground/60">Loading services...</p>
                     </div>
                   </div>
                 ) : services.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="bg-white/5 border border-white/10 rounded-xl p-8 max-w-md mx-auto">
-                      <Building className="h-12 w-12 text-white/40 mx-auto mb-4" />
-                      <h3 className="text-white font-bebas font-bold text-xl mb-2">No services yet</h3>
-                      <p className="text-white/60 text-sm mb-6">
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-8 max-w-md mx-auto">
+                      <Building className="h-12 w-12 text-foreground/40 mx-auto mb-4" />
+                      <h3 className="text-foreground font-bebas font-bold text-xl mb-2">No services yet</h3>
+                      <p className="text-foreground/60 text-sm mb-6">
                         Add your services to let clients know what you offer
                       </p>
                       {isOwner && (
                         <Button
                           onClick={() => setOpenDialog('services')}
-                          className="bg-secondary text-primary hover:bg-secondary/90"
+                          className="bg-secondary text-primary-foreground hover:bg-secondary/90"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add First Service
@@ -1432,20 +1432,20 @@ export default function ProfilePortfolio() {
                 ) : (
                   <div className="space-y-4">
                     {services.map((service) => (
-                      <div key={service.id} className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div key={service.id} className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-white">{service.name}</h3>
+                          <h3 className="font-semibold text-foreground">{service.name}</h3>
                           <div className="text-right">
-                            <div className="font-bold text-white">${service.price}</div>
-                            <div className="text-white/70 text-sm">{service.duration}</div>
+                            <div className="font-bold text-foreground">${service.price}</div>
+                            <div className="text-foreground/70 text-sm">{service.duration}</div>
                           </div>
                         </div>
                         {service.description && (
-                          <p className="text-white/80 text-sm mb-3">{service.description}</p>
+                          <p className="text-foreground/80 text-sm mb-3">{service.description}</p>
                         )}
                         <Button 
                           onClick={() => handleBookService(service)}
-                          className="w-full bg-secondary text-primary hover:bg-secondary/90"
+                          className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90"
                         >
                           Book This Service
                         </Button>
@@ -1461,21 +1461,21 @@ export default function ProfilePortfolio() {
                   <div className="flex items-center justify-center py-12">
                     <div className="text-center">
                                         <Loader2 className="h-8 w-8 animate-spin text-secondary mx-auto mb-4" />
-                  <p className="text-white/60">Loading add-ons...</p>
+                  <p className="text-foreground/60">Loading add-ons...</p>
                     </div>
                   </div>
                 ) : addons.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="bg-white/5 border border-white/10 rounded-xl p-8 max-w-md mx-auto">
-                      <Plus className="h-12 w-12 text-white/40 mx-auto mb-4" />
-                      <h3 className="text-white font-bebas font-bold text-xl mb-2">No add-ons yet</h3>
-                      <p className="text-white/60 text-sm mb-6">
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-8 max-w-md mx-auto">
+                      <Plus className="h-12 w-12 text-foreground/40 mx-auto mb-4" />
+                      <h3 className="text-foreground font-bebas font-bold text-xl mb-2">No add-ons yet</h3>
+                      <p className="text-foreground/60 text-sm mb-6">
                         Add extra services that clients can choose from
                       </p>
                       {isOwner && (
                         <Button
                           onClick={() => setOpenDialog('addons')}
-                          className="bg-secondary text-primary hover:bg-secondary/90"
+                          className="bg-secondary text-primary-foreground hover:bg-secondary/90"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add First Add-on
@@ -1486,20 +1486,20 @@ export default function ProfilePortfolio() {
                 ) : (
                   <div className="space-y-4">
                     {addons.map((addon) => (
-                      <div key={addon.id} className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div key={addon.id} className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-white">{addon.name}</h3>
+                          <h3 className="font-semibold text-foreground">{addon.name}</h3>
                           <div className="text-right">
-                            <div className="font-bold text-white">${addon.price}</div>
-                            <div className="text-white/70 text-sm">{addon.duration || 'Quick add-on'}</div>
+                            <div className="font-bold text-foreground">${addon.price}</div>
+                            <div className="text-foreground/70 text-sm">{addon.duration || 'Quick add-on'}</div>
                           </div>
                         </div>
                         {addon.description && (
-                          <p className="text-white/80 text-sm mb-3">{addon.description}</p>
+                          <p className="text-foreground/80 text-sm mb-3">{addon.description}</p>
                         )}
                         <Button 
                           onClick={() => handleAddToBooking(addon)}
-                          className="w-full bg-secondary text-primary hover:bg-secondary/90"
+                          className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90"
                         >
                           Add to Booking
                         </Button>
@@ -1527,20 +1527,20 @@ export default function ProfilePortfolio() {
           setVideoPreviewUrl(null);
         }
       }}>
-        <DialogContent className="max-w-md w-full bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+        <DialogContent className="max-w-md w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-white">Upload New Cut</DialogTitle>
-            <DialogDescription className="text-white/80">
+            <DialogTitle className="text-2xl font-bold text-foreground">Upload New Cut</DialogTitle>
+            <DialogDescription className="text-foreground/80">
               Share your latest work with the community
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             {/* Video Selection */}
             <div>
-              <Label htmlFor="video-upload" className="text-white font-medium mb-2 block">
+              <Label htmlFor="video-upload" className="text-foreground font-medium mb-2 block">
                 Select Video File
               </Label>
-              <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-secondary/50 transition-colors">
+              <div className="border-2 border-dashed border-black/10 dark:border-white/20 rounded-xl p-8 text-center hover:border-secondary/50 transition-colors">
                 <input
                   ref={fileInputRef}
                   id="video-upload"
@@ -1553,7 +1553,7 @@ export default function ProfilePortfolio() {
                 <Button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="bg-secondary text-primary font-bold rounded-xl px-8 py-3 mb-4"
+                  className="bg-secondary text-primary-foreground font-bold rounded-xl px-8 py-3 mb-4"
                 >
                   {uploading ? (
                     <>
@@ -1567,15 +1567,15 @@ export default function ProfilePortfolio() {
                     </>
                   )}
                 </Button>
-                <p className="text-white/60 text-sm">
+                <p className="text-foreground/60 text-sm">
                   MP4, MOV, or AVI up to 270MB
                 </p>
               </div>
             </div>
             {/* Video Preview */}
             {videoPreviewUrl && (
-              <div className="bg-white/5 rounded-xl p-4">
-                <h4 className="text-white font-medium mb-3">Video Preview</h4>
+              <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4">
+                <h4 className="text-foreground font-medium mb-3">Video Preview</h4>
                 <div className="aspect-video rounded-lg overflow-hidden">
                   <video src={videoPreviewUrl} className="w-full h-full object-cover" controls />
                 </div>
@@ -1585,7 +1585,7 @@ export default function ProfilePortfolio() {
             {selectedVideoFile && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="title" className="text-white font-medium mb-2 block">
+                  <Label htmlFor="title" className="text-foreground font-medium mb-2 block">
                     Title
                   </Label>
                   <Input
@@ -1593,11 +1593,11 @@ export default function ProfilePortfolio() {
                     placeholder="Enter video title"
                     value={uploadForm.title}
                     onChange={(e) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                    className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="description" className="text-white font-medium mb-2 block">
+                  <Label htmlFor="description" className="text-foreground font-medium mb-2 block">
                     Description
                   </Label>
                   <Textarea
@@ -1626,7 +1626,7 @@ export default function ProfilePortfolio() {
                   <Button
                     onClick={handlePostCut}
                     disabled={uploading}
-                    className="flex-1 bg-secondary text-primary font-bold rounded-xl px-6 py-3 hover:bg-secondary/90"
+                    className="flex-1 bg-secondary text-primary-foreground font-bold rounded-xl px-6 py-3 hover:bg-secondary/90"
                   >
                     {uploading ? (
                       <>
@@ -1777,7 +1777,7 @@ export default function ProfilePortfolio() {
               <Button
                 onClick={handleUpdateCut}
                 disabled={uploading}
-                className="flex-1 bg-secondary text-primary font-bold rounded-xl px-6 py-3 hover:bg-secondary/90"
+                className="flex-1 bg-secondary text-primary-foreground font-bold rounded-xl px-6 py-3 hover:bg-secondary/90"
               >
                 {uploading ? (
                   <>
@@ -1964,7 +1964,7 @@ export default function ProfilePortfolio() {
                 onClick={() => {
                   setShowLocationFilter(false);
                 }}
-                className="bg-secondary text-primary font-bold rounded-xl px-6 py-3 flex-1"
+                className="bg-secondary text-primary-foreground font-bold rounded-xl px-6 py-3 flex-1"
               >
                 Apply Filter
               </Button>
@@ -2117,7 +2117,7 @@ export default function ProfilePortfolio() {
           )}
           <div className="flex gap-3 mt-4">
             <Button onClick={() => setCoverCropDialogOpen(false)} variant="outline" className="flex-1 border-white/20 text-white hover:bg-white/10">Cancel</Button>
-            <Button onClick={handleCoverCropSave} className="flex-1 bg-secondary text-primary font-bold">Save Cover</Button>
+            <Button onClick={handleCoverCropSave} className="flex-1 bg-secondary text-primary-foreground font-bold">Save Cover</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -2196,7 +2196,7 @@ export default function ProfilePortfolio() {
                   })
                   setOpenDialog(null)
                 }}
-                className="flex-1 bg-secondary text-primary hover:bg-secondary/90"
+                className="flex-1 bg-secondary text-primary-foreground hover:bg-secondary/90"
               >
                 Add Service
               </Button>
@@ -2277,7 +2277,7 @@ export default function ProfilePortfolio() {
                   })
                   setOpenDialog(null)
                 }}
-                className="flex-1 bg-secondary text-primary hover:bg-secondary/90"
+                className="flex-1 bg-secondary text-primary-foreground hover:bg-secondary/90"
               >
                 Add Add-on
               </Button>
@@ -2318,7 +2318,7 @@ export default function ProfilePortfolio() {
                 />
                 <Button
                   onClick={() => document.getElementById('portfolio-upload')?.click()}
-                  className="bg-secondary text-primary font-bold rounded-xl px-8 py-3 mb-4"
+                  className="bg-secondary text-primary-foreground font-bold rounded-xl px-8 py-3 mb-4"
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Choose File

@@ -151,16 +151,27 @@ export default function RegisterPage() {
   )
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col relative">
+      {/* Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute inset-0 h-[85vh] bg-gradient-to-b from-primary/[0.12] via-primary/[0.05] to-transparent dark:from-primary/[0.08] dark:via-primary/[0.03] dark:to-transparent" />
+        <div className="absolute top-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl bg-primary/15 dark:bg-primary/12" />
+        <div className="absolute bottom-1/4 left-0 w-80 h-80 rounded-full blur-3xl bg-primary/12 dark:bg-primary/10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl bg-primary/8 dark:bg-primary/5" />
+      </div>
+
       {/* Header */}
-      <header className="w-full py-6 px-6 bg-background">
+      <header className="w-full py-6 px-6 bg-transparent relative z-10">
         <div className="max-w-7xl mx-auto flex items-center">
           {/* Logo removed as requested */}
         </div>
       </header>
       {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center">
-        <Card className="bg-card border border-border shadow-xl rounded-3xl w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center relative z-10 p-4">
+        <Card className="bg-surface/60 dark:bg-white/5 backdrop-blur-xl border border-border/50 dark:border-white/10 shadow-xl dark:shadow-2xl rounded-[2rem] w-full max-w-md relative overflow-hidden group">
+          {/* Subtle gradient overlay for extra glass effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2rem] pointer-events-none" />
+          <div className="relative z-10">
           <CardHeader className="text-center">
             <Scissors className="mx-auto h-10 w-10 text-primary mb-2" />
             <CardTitle className="text-3xl font-bebas text-foreground">Create Your Account</CardTitle>
@@ -307,6 +318,7 @@ export default function RegisterPage() {
               </Link>
             </div>
           </CardFooter>
+          </div>
         </Card>
       </div>
     </div>

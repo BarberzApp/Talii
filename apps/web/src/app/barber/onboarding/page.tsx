@@ -69,10 +69,10 @@ interface ValidationErrors {
   [key: string]: string
 }
 
-// Add async address validation function
+// Address validation via Google Maps Geocoding API (through the /api/nominatim proxy)
 async function validateAddress(address: string, city: string, state: string, zip: string): Promise<boolean> {
   const query = encodeURIComponent(`${address}, ${city}, ${state} ${zip}`)
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}`
+  const url = `/api/nominatim?type=geocode&q=${query}`
   try {
     const res = await fetch(url)
     const data = await res.json()
@@ -897,13 +897,13 @@ export default function BarberOnboardingPage() {
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="businessName" className="text-sm font-medium text-white">Business Name *</Label>
+              <Label htmlFor="businessName" className="text-sm font-medium text-foreground dark:text-white">Business Name *</Label>
               <Input
                 id="businessName"
                 name="businessName"
                 value={formData.businessName}
                 onChange={handleChange}
-                className={`h-11 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary ${validationErrors.businessName ? 'border-red-500' : ''}`}
+                className={`h-11 bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/50 focus:border-secondary ${validationErrors.businessName ? 'border-red-500' : ''}`}
                 placeholder="Enter your business name"
               />
               {validationErrors.businessName && (
@@ -911,14 +911,14 @@ export default function BarberOnboardingPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone" className="text-sm font-medium text-white">Phone Number *</Label>
+              <Label htmlFor="phone" className="text-sm font-medium text-foreground dark:text-white">Phone Number *</Label>
               <Input
                 id="phone"
                 name="phone"
                 type="tel"
                 value={formData.phone}
                 onChange={handleChange}
-                className={`h-11 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary ${validationErrors.phone ? 'border-red-500' : ''}`}
+                className={`h-11 bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/50 focus:border-secondary ${validationErrors.phone ? 'border-red-500' : ''}`}
                 placeholder="(555) 123-4567"
               />
               {validationErrors.phone && (
@@ -926,19 +926,19 @@ export default function BarberOnboardingPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location" className="text-sm font-medium text-white">Location *</Label>
+              <Label htmlFor="location" className="text-sm font-medium text-foreground dark:text-white">Location *</Label>
               <Input
                 id="location"
                 name="location"
                 value={locationInput}
                 onChange={handleLocationChange}
                 onFocus={() => setShowSuggestions(true)}
-                className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
                 placeholder="Start typing your address..."
                 autoComplete="off"
               />
               {showSuggestions && locationSuggestions.length > 0 && (
-                <div className="absolute z-50 mt-1 w-full bg-black border border-white/20 rounded-xl shadow-lg max-h-60 overflow-auto">
+                <div className="absolute z-50 mt-1 w-full bg-black border border-black/20 dark:border-white/20 rounded-xl shadow-lg max-h-60 overflow-auto">
                   {locationSuggestions.map((suggestion, idx) => {
                     const display = suggestion.display_name || suggestion.name;
                     return (
@@ -958,13 +958,13 @@ export default function BarberOnboardingPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="bio" className="text-sm font-medium text-white">Bio *</Label>
+              <Label htmlFor="bio" className="text-sm font-medium text-foreground dark:text-white">Bio *</Label>
               <Textarea
                 id="bio"
                 name="bio"
                 value={formData.bio}
                 onChange={handleChange}
-                className={`bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary ${validationErrors.bio ? 'border-red-500' : ''}`}
+                className={`bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/50 focus:border-secondary ${validationErrors.bio ? 'border-red-500' : ''}`}
                 placeholder="Tell us about your business, experience, and what makes you unique..."
                 rows={4}
               />
@@ -973,14 +973,14 @@ export default function BarberOnboardingPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="specialties" className="text-sm font-medium text-white">Specialties</Label>
+              <Label htmlFor="specialties" className="text-sm font-medium text-foreground dark:text-white">Specialties</Label>
               <SpecialtyAutocomplete
                 value={formData.specialties}
                 onChange={handleSpecialtiesChange}
                 placeholder="Select your specialties..."
                 maxSelections={15}
               />
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-muted-foreground dark:text-white/60">
                 List your specialties to help clients find you
               </p>
             </div>
@@ -988,10 +988,10 @@ export default function BarberOnboardingPage() {
             {/* Social Media Section */}
             <div className="space-y-4">
               <div>
-                <Label className="text-base font-medium text-white flex items-center gap-2">
+                <Label className="text-base font-medium text-foreground dark:text-white flex items-center gap-2">
                   <span>Social Media (Optional)</span>
                 </Label>
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-muted-foreground dark:text-white/60">
                   Add your social media handles to help clients connect with you
                 </p>
               </div>
@@ -1008,7 +1008,7 @@ export default function BarberOnboardingPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="socialMedia.instagram" className="text-white font-semibold flex items-center gap-2">
+                  <Label htmlFor="socialMedia.instagram" className="text-foreground dark:text-white font-semibold flex items-center gap-2">
                     <Instagram className="h-4 w-4 text-[#E1306C]" /> Instagram
                   </Label>
                   <Input
@@ -1016,13 +1016,13 @@ export default function BarberOnboardingPage() {
                     name="socialMedia.instagram"
                     value={formData.socialMedia.instagram}
                     onChange={handleChange}
-                    className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
                     placeholder="@yourusername"
                   />
-                  <p className="text-xs text-white/60">Only your handle (e.g., @yourusername)</p>
+                  <p className="text-xs text-muted-foreground dark:text-white/60">Only your handle (e.g., @yourusername)</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="socialMedia.twitter" className="text-white font-semibold flex items-center gap-2">
+                  <Label htmlFor="socialMedia.twitter" className="text-foreground dark:text-white font-semibold flex items-center gap-2">
                     <Twitter className="h-4 w-4 text-[#1DA1F2]" /> Twitter/X
                   </Label>
                   <Input
@@ -1030,13 +1030,13 @@ export default function BarberOnboardingPage() {
                     name="socialMedia.twitter"
                     value={formData.socialMedia.twitter}
                     onChange={handleChange}
-                    className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
                     placeholder="@yourusername"
                   />
-                  <p className="text-xs text-white/60">Only your handle (e.g., @yourusername)</p>
+                  <p className="text-xs text-muted-foreground dark:text-white/60">Only your handle (e.g., @yourusername)</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="socialMedia.tiktok" className="text-white font-semibold flex items-center gap-2">
+                  <Label htmlFor="socialMedia.tiktok" className="text-foreground dark:text-white font-semibold flex items-center gap-2">
                     <Music className="h-4 w-4 text-black" /> TikTok
                   </Label>
                   <Input
@@ -1044,13 +1044,13 @@ export default function BarberOnboardingPage() {
                     name="socialMedia.tiktok"
                     value={formData.socialMedia.tiktok}
                     onChange={handleChange}
-                    className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
                     placeholder="@yourusername"
                   />
-                  <p className="text-xs text-white/60">Only your handle (e.g., @yourusername)</p>
+                  <p className="text-xs text-muted-foreground dark:text-white/60">Only your handle (e.g., @yourusername)</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="socialMedia.facebook" className="text-white font-semibold flex items-center gap-2">
+                  <Label htmlFor="socialMedia.facebook" className="text-foreground dark:text-white font-semibold flex items-center gap-2">
                     <Facebook className="h-4 w-4 text-[#1877F3]" /> Facebook
                   </Label>
                   <Input
@@ -1058,10 +1058,10 @@ export default function BarberOnboardingPage() {
                     name="socialMedia.facebook"
                     value={formData.socialMedia.facebook}
                     onChange={handleChange}
-                    className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
                     placeholder="yourpagename"
                   />
-                  <p className="text-xs text-white/60">Only your page name (e.g., yourpagename)</p>
+                  <p className="text-xs text-muted-foreground dark:text-white/60">Only your page name (e.g., yourpagename)</p>
                 </div>
               </div>
             </div>
@@ -1087,14 +1087,14 @@ export default function BarberOnboardingPage() {
             )}
             
             {formData.services.map((service, index) => (
-              <div key={index} className="space-y-4 p-4 border border-white/10 rounded-lg bg-white/5">
+              <div key={index} className="space-y-4 p-4 border border-black/10 dark:border-white/10 rounded-lg bg-black/5 dark:bg-white/5">
                 <div className="space-y-2">
-                  <Label htmlFor={`service-${index}-name`} className="text-sm font-medium text-white">Service Name *</Label>
+                  <Label htmlFor={`service-${index}-name`} className="text-sm font-medium text-foreground dark:text-white">Service Name *</Label>
                   <Input
                     id={`service-${index}-name`}
                     value={service.name}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleServiceChange(index, 'name', e.target.value)}
-                    className={`h-11 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary ${validationErrors[`service-${index}-name`] ? 'border-red-500' : ''}`}
+                    className={`h-11 bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/50 focus:border-secondary ${validationErrors[`service-${index}-name`] ? 'border-red-500' : ''}`}
                     placeholder="e.g., Haircut"
                   />
                   {validationErrors[`service-${index}-name`] && (
@@ -1103,7 +1103,7 @@ export default function BarberOnboardingPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor={`service-${index}-price`} className="text-sm font-medium text-white">Price ($) *</Label>
+                    <Label htmlFor={`service-${index}-price`} className="text-sm font-medium text-foreground dark:text-white">Price ($) *</Label>
                     <Input
                       id={`service-${index}-price`}
                       type="number"
@@ -1113,7 +1113,7 @@ export default function BarberOnboardingPage() {
                         const numVal = val === '' ? 0 : parseFloat(val);
                         handleServiceChange(index, 'price', numVal);
                       }}
-                      className={`h-11 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary ${validationErrors[`service-${index}-price`] ? 'border-red-500' : ''}`}
+                      className={`h-11 bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/50 focus:border-secondary ${validationErrors[`service-${index}-price`] ? 'border-red-500' : ''}`}
                       min="0"
                       step="0.01"
                       placeholder="25.00"
@@ -1123,7 +1123,7 @@ export default function BarberOnboardingPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={`service-${index}-duration`} className="text-sm font-medium text-white">Duration (minutes) *</Label>
+                    <Label htmlFor={`service-${index}-duration`} className="text-sm font-medium text-foreground dark:text-white">Duration (minutes) *</Label>
                     <Input
                       id={`service-${index}-duration`}
                       type="number"
@@ -1133,7 +1133,7 @@ export default function BarberOnboardingPage() {
                         const numVal = val === '' ? 0 : parseInt(val);
                         handleServiceChange(index, 'duration', numVal);
                       }}
-                      className={`h-11 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-secondary ${validationErrors[`service-${index}-duration`] ? 'border-red-500' : ''}`}
+                      className={`h-11 bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/50 focus:border-secondary ${validationErrors[`service-${index}-duration`] ? 'border-red-500' : ''}`}
                       min="1"
                       step="1"
                       placeholder="30"
@@ -1154,7 +1154,7 @@ export default function BarberOnboardingPage() {
                 </Button>
               </div>
             ))}
-            <Button type="button" onClick={addService} variant="outline" className="border-white/20 text-white hover:bg-white/10">
+            <Button type="button" onClick={addService} variant="outline" className="border-black/20 dark:border-white/20 text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10">
               Add Service
             </Button>
           </div>
@@ -1178,10 +1178,10 @@ export default function BarberOnboardingPage() {
               </Alert>
             ) : stripeStatus === null ? (
               <>
-                <p className="text-white/80">
+                <p className="text-muted-foreground dark:text-white/80">
                   To receive payments, you need to connect your Stripe account. This will allow you to:
                 </p>
-                <ul className="list-disc list-inside space-y-2 text-white/80">
+                <ul className="list-disc list-inside space-y-2 text-muted-foreground dark:text-white/80">
                   <li>Accept credit card payments securely</li>
                   <li>Receive payments directly to your bank account</li>
                   <li>Manage your earnings and payouts</li>
@@ -1211,16 +1211,16 @@ export default function BarberOnboardingPage() {
                 </Button>
                 
                 <div className="flex flex-col gap-3">
-                  <p className="text-xs text-white/60 text-center">
+                  <p className="text-xs text-muted-foreground dark:text-white/60 text-center">
                     You'll be redirected to Stripe to complete the setup. This process is secure and takes about 5 minutes.
                   </p>
                   
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-white/20" />
+                      <span className="w-full border-t border-black/20 dark:border-white/20" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-darkpurple px-2 text-white/60">Or</span>
+                      <span className="bg-darkpurple px-2 text-muted-foreground dark:text-white/60">Or</span>
                     </div>
                   </div>
                   
@@ -1228,12 +1228,12 @@ export default function BarberOnboardingPage() {
                     variant="outline"
                     onClick={handleSkip}
                     disabled={loading}
-                    className="border-white/20 text-white hover:bg-white/10"
+                    className="border-black/20 dark:border-white/20 text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10"
                   >
                     Skip for Now
                   </Button>
                   
-                  <p className="text-xs text-white/40 text-center">
+                  <p className="text-xs text-muted-foreground dark:text-white/40 text-center">
                     You can set up payments later in your settings
                   </p>
                 </div>
@@ -1278,7 +1278,7 @@ export default function BarberOnboardingPage() {
       </div>
       {/* Step Title Header */}
       <div className="w-full max-w-2xl mx-auto pt-8 pb-2 px-4">
-        <h1 className="text-3xl sm:text-4xl font-bebas font-bold text-white text-center">
+        <h1 className="text-3xl sm:text-4xl font-bebas font-bold text-foreground dark:text-white text-center">
           {steps[currentStep].title}
         </h1>
       </div>
@@ -1288,14 +1288,14 @@ export default function BarberOnboardingPage() {
         <div className="flex items-center justify-between mb-4">
           {steps.map((step, idx) => (
             <div key={step.id} className="flex-1 flex flex-col items-center">
-              <div className={`rounded-full border-2 ${currentStep === idx ? 'border-secondary bg-secondary/20' : 'border-white/20 bg-white/10'} w-12 h-12 flex items-center justify-center mb-2 transition-all`}>
-                <step.icon className={`h-6 w-6 ${currentStep === idx ? 'text-secondary' : 'text-white/60'}`} />
+              <div className={`rounded-full border-2 ${currentStep === idx ? 'border-secondary bg-secondary/20' : 'border-black/20 dark:border-white/20 bg-black/10 dark:bg-white/10'} w-12 h-12 flex items-center justify-center mb-2 transition-all`}>
+                <step.icon className={`h-6 w-6 ${currentStep === idx ? 'text-secondary' : 'text-muted-foreground dark:text-white/60'}`} />
               </div>
-              <span className={`text-xs font-semibold ${currentStep === idx ? 'text-secondary' : 'text-white/60'}`}>{step.title}</span>
+              <span className={`text-xs font-semibold ${currentStep === idx ? 'text-secondary' : 'text-muted-foreground dark:text-white/60'}`}>{step.title}</span>
             </div>
           ))}
         </div>
-        <Progress value={getProgressPercentage()} className="h-2 bg-white/10 rounded-full" />
+        <Progress value={getProgressPercentage()} className="h-2 bg-black/10 dark:bg-white/10 rounded-full" />
       </div>
 
       {/* Main Content */}
@@ -1305,7 +1305,7 @@ export default function BarberOnboardingPage() {
           {/* Onboarding Complete Banner */}
           {onboardingComplete && showCompleteBanner && (
             <div className="flex justify-center mb-8">
-              <Card className="bg-white/10 border border-white/20 shadow-2xl rounded-3xl max-w-lg w-full relative">
+              <Card className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 shadow-2xl rounded-3xl max-w-lg w-full relative">
                 <button
                   className="absolute top-4 right-4 text-green-200 hover:text-green-100 rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-green-400"
                   aria-label="Dismiss"
@@ -1317,14 +1317,14 @@ export default function BarberOnboardingPage() {
                   <div className="flex items-center justify-center mb-2">
                     <CheckCircle className="h-10 w-10 text-secondary drop-shadow-lg" />
                   </div>
-                  <CardTitle className="text-2xl font-bebas font-bold text-white text-center">Onboarding Complete!</CardTitle>
-                  <CardDescription className="text-white text-center mt-2 font-medium">
+                  <CardTitle className="text-2xl font-bebas font-bold text-foreground dark:text-white text-center">Onboarding Complete!</CardTitle>
+                  <CardDescription className="text-foreground dark:text-white text-center mt-2 font-medium">
                     Your profile is ready. You can now receive bookings and payments.<br />
                     Welcome to the platform!
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center pb-8 pt-2">
-                  <Button asChild className="bg-secondary text-black font-bebas font-bold rounded-xl px-8 py-3 mt-4 hover:bg-secondary/90 shadow-md text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-black">
+                  <Button asChild className="bg-secondary text-primary-foreground font-bebas font-bold rounded-xl px-8 py-3 mt-4 hover:bg-secondary/90 shadow-md text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-black">
                     <Link href="/profile">Go to Profile</Link>
                   </Button>
                 </CardContent>
@@ -1333,15 +1333,15 @@ export default function BarberOnboardingPage() {
           )}
 
           {/* Step Card */}
-          <Card className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-3xl">
-            <CardHeader className="bg-white/5 border-b border-white/10 rounded-t-3xl">
-              <CardTitle className="text-white flex flex-col items-center gap-2 text-center font-bebas font-bold text-3xl">
+          <Card className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-3xl">
+            <CardHeader className="bg-black/5 dark:bg-white/5 border-b border-black/10 dark:border-white/10 rounded-t-3xl">
+              <CardTitle className="text-foreground dark:text-white flex flex-col items-center gap-2 text-center font-bebas font-bold text-3xl">
                 <span className="flex items-center justify-center gap-2">
                   {React.createElement(steps[currentStep].icon, { className: 'h-6 w-6 text-secondary' })}
                   {steps[currentStep].title}
                 </span>
               </CardTitle>
-              <CardDescription className="text-white/70 font-medium text-center">
+              <CardDescription className="text-muted-foreground dark:text-white/70 font-medium text-center">
                 {steps[currentStep].description}
               </CardDescription>
             </CardHeader>
@@ -1363,7 +1363,7 @@ export default function BarberOnboardingPage() {
             </Button>
             <Button
               type="button"
-              className="bg-secondary text-black font-bebas font-bold rounded-xl px-8 py-3 hover:bg-secondary/90 shadow-md text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-black"
+              className="bg-secondary text-primary-foreground font-bebas font-bold rounded-xl px-8 py-3 hover:bg-secondary/90 shadow-md text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-black"
               onClick={async () => {
                 if (await validateStep(currentStep)) {
                   if (currentStep < steps.length - 1) {

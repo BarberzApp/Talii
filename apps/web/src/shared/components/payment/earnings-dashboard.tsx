@@ -312,26 +312,26 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
 
   const cardCls = isLight
     ? "bg-surface border border-border shadow-2xl rounded-2xl min-h-[400px]"
-    : "bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl min-h-[400px]"
-  const titleCls = isLight ? "text-2xl font-bebas text-foreground tracking-wide" : "text-2xl font-bebas text-white tracking-wide"
-  const descCls = isLight ? "text-muted-foreground" : "text-white/80"
+    : "bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-2xl min-h-[400px]"
+  const titleCls = isLight ? "text-2xl font-bebas text-foreground tracking-wide" : "text-2xl font-bebas text-foreground dark:text-white tracking-wide"
+  const descCls = isLight ? "text-muted-foreground" : "text-muted-foreground dark:text-white/80"
   const mainBoxCls = isLight
     ? "relative bg-muted border border-border rounded-2xl p-8"
-    : "relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8"
-  const breakdownLabelCls = isLight ? "text-lg font-semibold text-foreground" : "text-lg font-semibold text-white"
+    : "relative bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-black/20 dark:border-white/20 rounded-2xl p-8"
+  const breakdownLabelCls = isLight ? "text-lg font-semibold text-foreground" : "text-lg font-semibold text-foreground dark:text-white"
   const smallCardCls = isLight
     ? "p-4 space-y-2 bg-muted border border-border rounded-xl"
-    : "p-4 space-y-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl"
-  const smallLabelCls = isLight ? "text-sm text-muted-foreground" : "text-sm text-white/60"
-  const smallValueCls = isLight ? "text-2xl font-bold text-foreground" : "text-2xl font-bold text-white"
-  const smallHintCls = isLight ? "text-xs text-muted-foreground/80" : "text-xs text-white/40"
+    : "p-4 space-y-2 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:bg-white/10 rounded-xl"
+  const smallLabelCls = isLight ? "text-sm text-muted-foreground" : "text-sm text-muted-foreground dark:text-white/60"
+  const smallValueCls = isLight ? "text-2xl font-bold text-foreground" : "text-2xl font-bold text-foreground dark:text-white"
+  const smallHintCls = isLight ? "text-xs text-muted-foreground/80" : "text-xs text-muted-foreground dark:text-white/40"
   const trendUpCls = isLight ? "h-5 w-5 text-green-600" : "h-5 w-5 text-green-400"
   const trendDownCls = isLight ? "h-5 w-5 text-red-600" : "h-5 w-5 text-red-400"
 
   if (isLoading) {
     logger.debug('Loading state active')
     return (
-      <div className={cn("rounded-2xl min-h-[300px]", isLight ? "bg-surface border border-border" : "bg-white/5 border border-white/10")}>
+      <div className={cn("rounded-2xl min-h-[300px]", isLight ? "bg-surface border border-border" : "bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10")}>
         <CardContent className="pt-6 flex justify-center items-center min-h-[300px]">
           <LoadingSpinner size="md" text="Loading earnings..." />
         </CardContent>
@@ -409,8 +409,8 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
 
           {/* Payment Setup Section - hidden in preview */}
           {!preview && !hasStripeAccount && (
-            <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-white/10")}>
-              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-white/10 rounded-xl"}>
+            <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
+              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl"}>
                 <p className={cn("mb-4", descCls)}>
                   Set up your payment account to start receiving payments
                 </p>
@@ -432,12 +432,12 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
 
           {/* Stripe Dashboard Access - hidden in preview */}
           {!preview && hasStripeAccount && (
-            <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-white/10")}>
-              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-white/10 rounded-xl"}>
+            <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
+              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl"}>
                 <Button
                   onClick={handleAccessDashboard}
                   variant="outline"
-                  className={isLight ? "border-border text-foreground hover:bg-muted" : "border-white/20 text-white hover:bg-white/10 font-semibold"}
+                  className={isLight ? "border-border text-foreground hover:bg-muted" : "border-black/20 dark:border-white/20 text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10 font-semibold"}
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
                   Access Stripe Dashboard

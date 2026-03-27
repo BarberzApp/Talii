@@ -176,26 +176,26 @@ export default function BookingsPage() {
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-md z-10" />
                 {/* Floating details card - refined for Bitesight style */}
                 <div className="relative z-20 px-4 pb-24 pt-8 flex flex-col justify-end h-full">
-                  <div className="max-w-xl mx-auto bg-white/10 border border-white/30 rounded-2xl shadow-2xl backdrop-blur-xl p-5 flex flex-col gap-2 animate-fade-in">
+                  <div className="max-w-xl mx-auto bg-black/10 dark:bg-white/10 border border-black/30 dark:border-white/30 rounded-2xl shadow-2xl backdrop-blur-xl p-5 flex flex-col gap-2 animate-fade-in">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="text-xl font-bebas text-white font-bold tracking-wide mb-1">
+                        <h3 className="text-xl font-bebas text-foreground dark:text-white font-bold tracking-wide mb-1">
                           {booking.barber?.user?.name || booking.barber?.business_name || 'Barber'}
                         </h3>
-                        <div className="text-white/80 text-base mb-2">No description available.</div>
+                        <div className="text-muted-foreground dark:text-white/80 text-base mb-2">No description available.</div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" className="bg-white/10 border-white/20 text-white/80 p-2 rounded-full shadow-md">
+                        <Button variant="ghost" className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-muted-foreground dark:text-white/80 p-2 rounded-full shadow-md">
                           <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
                         </Button>
-                        <Button variant="ghost" className="bg-white/10 border-white/20 text-white/80 p-2 rounded-full shadow-md">
+                        <Button variant="ghost" className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-muted-foreground dark:text-white/80 p-2 rounded-full shadow-md">
                           <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M16 8a6 6 0 0 1-8 8" /></svg>
                         </Button>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mb-1">
                       <Calendar className="h-4 w-4 text-saffron" />
-                      <span className="text-white/80 text-base font-semibold">
+                      <span className="text-muted-foreground dark:text-white/80 text-base font-semibold">
                         {new Date(booking.date).toLocaleDateString("en-US", {
                           weekday: "short",
                           month: "short",
@@ -203,7 +203,7 @@ export default function BookingsPage() {
                         })}
                       </span>
                       <Clock className="h-4 w-4 text-saffron ml-2" />
-                      <span className="text-white/70 text-sm">
+                      <span className="text-muted-foreground dark:text-white/70 text-sm">
                         {new Date(booking.date).toLocaleTimeString("en-US", {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -215,7 +215,7 @@ export default function BookingsPage() {
                       <div className="flex-1 text-saffron font-semibold text-sm leading-tight whitespace-pre-line">
                         {booking.barber?.user?.location || booking.barber?.city || booking.barber?.state || 'Barber Shop'}
                       </div>
-                      <div className="text-white/60 text-xs ml-2 text-right min-w-[60px]">0.6 miles away</div>
+                      <div className="text-muted-foreground dark:text-white/60 text-xs ml-2 text-right min-w-[60px]">0.6 miles away</div>
                     </div>
                     {/* Tags and ratings row */}
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -224,18 +224,18 @@ export default function BookingsPage() {
                       ))}
                       <Badge variant="glassy-saffron" className="text-xs">{booking.status === 'confirmed' ? 'CONFIRMED' : 'UPCOMING'}</Badge>
                       <Badge variant="glassy-saffron" className="text-xs">POPULAR</Badge>
-                      <span className="flex items-center gap-1 text-white/80 text-xs"><span className="font-bold">4.3</span>★ (660+)</span>
-                      <span className="flex items-center gap-1 text-white/80 text-xs"><span className="font-bold">3.9</span>★ (330+)</span>
+                      <span className="flex items-center gap-1 text-muted-foreground dark:text-white/80 text-xs"><span className="font-bold">4.3</span>★ (660+)</span>
+                      <span className="flex items-center gap-1 text-muted-foreground dark:text-white/80 text-xs"><span className="font-bold">3.9</span>★ (330+)</span>
                     </div>
                   </div>
                 </div>
                 {/* Sticky bottom action bar for this booking */}
                 <div className="absolute left-0 right-0 bottom-0 z-30 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-4 flex justify-center">
                   <div className="w-full max-w-xl flex items-center gap-4">
-                    <Button className="flex-1 bg-saffron text-primary font-bold text-lg py-4 rounded-xl shadow-xl hover:bg-saffron/90 transition-all">
+                    <Button className="flex-1 bg-saffron text-primary-foreground font-bold text-lg py-4 rounded-xl shadow-xl hover:bg-saffron/90 transition-all">
                       {booking.status === 'confirmed' ? 'Cancel' : 'Rebook'}
                     </Button>
-                    <div className="bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white font-bold text-lg shadow-xl">
+                    <div className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 rounded-xl px-4 py-3 text-foreground dark:text-white font-bold text-lg shadow-xl">
                       ${booking.price?.toFixed(2) || '—'}
                     </div>
                   </div>

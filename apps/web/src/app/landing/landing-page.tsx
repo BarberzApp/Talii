@@ -196,7 +196,7 @@ export default function LandingPage() {
       <FeatureGrid
         id="features"
         features={features}
-        columns={4}
+        columns={3}
         title="Everything You Need to Scale"
         subtitle="From booking automation to revenue optimization, Talii gives you the tools to transform your cosmetology business."
       />

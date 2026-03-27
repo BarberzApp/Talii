@@ -45,11 +45,13 @@ export function TestimonialCard({
   return (
     <Card
       className={cn(
-        "bg-surface border border-border shadow-lg dark:shadow-xl rounded-2xl p-6 sm:p-8 hover:shadow-xl dark:hover:shadow-2xl hover:-translate-y-1 transition-all duration-300",
+        "group bg-surface/60 dark:bg-white/5 backdrop-blur-xl border border-border/50 dark:border-white/10 shadow-xl dark:shadow-2xl rounded-[2rem] p-6 sm:p-8 hover:shadow-2xl dark:hover:shadow-3xl hover:border-primary/40 dark:hover:border-primary/40 transition-all duration-500 hover:-translate-y-2 relative overflow-hidden",
         className
       )}
     >
-      <CardContent className="p-0">
+      {/* Subtle gradient overlay for extra glass effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2rem] pointer-events-none" />
+      <CardContent className="p-0 relative z-10">
         <div className="flex items-start gap-4 mb-6">
           <div
             className={cn(

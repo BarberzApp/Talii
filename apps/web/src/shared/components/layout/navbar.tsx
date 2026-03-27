@@ -43,6 +43,20 @@ export function Navbar() {
   // Don't show on home page, but show on all other pages including settings
   if (pathname === '/') return null;
 
+  if (status === 'loading') {
+    return (
+      <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-xl shadow-md">
+        <div className="container mx-auto flex h-16 items-center justify-between px-6">
+          <div className="h-8 w-24 bg-muted animate-pulse rounded-md" />
+          <div className="hidden md:flex items-center space-x-6">
+            <div className="h-8 w-16 bg-muted animate-pulse rounded-md" />
+            <div className="h-10 w-10 bg-muted animate-pulse rounded-full" />
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   const roleSpecificNavItems = () => {
     if (!user) return []
 
@@ -79,7 +93,7 @@ export function Navbar() {
   }
 
   const isDark = mounted && resolvedTheme === "dark";
-  const logoSrc = isDark ? "/brand/talii-logo-zoomed-dark.png" : "/brand/talii-logo-zoomed.png";
+  const logoSrc = isDark ? "/brand/Talii_Logo_Dark_Zoomed.png" : "/brand/talii_logo_light_zoomed.png";
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-xl shadow-md">
@@ -106,7 +120,7 @@ export function Navbar() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "text-muted-foreground hover:text-primary transition-all duration-300 font-medium px-4 py-2 rounded-xl flex items-center gap-2 group relative",
+                    "text-foreground/80 hover:text-primary transition-all duration-300 font-medium px-4 py-2 rounded-xl flex items-center gap-2 group relative",
                     isActive 
                       ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 border border-primary/30" 
                       : "hover:bg-muted hover:shadow-md"
@@ -128,7 +142,7 @@ export function Navbar() {
             <Link 
               href="/browse" 
               className={cn(
-                "text-muted-foreground hover:text-primary transition-all duration-300 font-medium px-4 py-2 rounded-xl flex items-center gap-2 group relative",
+                "text-foreground/80 hover:text-primary transition-all duration-300 font-medium px-4 py-2 rounded-xl flex items-center gap-2 group relative",
                 pathname === "/browse" || pathname?.startsWith("/browse")
                   ? "text-primary bg-primary/10 shadow-lg shadow-primary/20 border border-primary/30" 
                   : "hover:bg-muted hover:shadow-md"

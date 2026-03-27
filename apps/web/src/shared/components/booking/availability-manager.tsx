@@ -187,40 +187,40 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="bg-gradient-to-br from-white/5 to-white/3 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl p-12 text-center">
+        <div className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-2xl rounded-[2rem] p-12 text-center">
           <div className="relative">
             <Loader2 className="h-12 w-12 animate-spin text-saffron mx-auto" />
             <div className="absolute inset-0 rounded-full bg-saffron/20 animate-ping" />
           </div>
-          <p className="text-white/70 mt-6 text-lg font-medium">Loading availability settings...</p>
-          <p className="text-white/50 mt-2 text-sm">Please wait while we fetch your schedule data</p>
+          <p className="text-foreground mt-6 text-lg font-medium">Loading availability settings...</p>
+          <p className="text-muted-foreground mt-2 text-sm">Please wait while we fetch your schedule data</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8 bg-background">
+    <div className="space-y-8">
       {/* Unified Header */}
       <div className="text-center space-y-2 mb-4">
         <div className="flex items-center justify-center gap-3">
           <Settings className="h-7 w-7 text-secondary" />
-          <h2 className="text-2xl sm:text-3xl font-bebas text-white tracking-wide">Schedule Management</h2>
+          <h2 className="text-2xl sm:text-3xl font-bebas text-foreground tracking-wide">Schedule Management</h2>
         </div>
-        <p className="text-white/70 text-base mt-1">Manage your availability, special hours, and time off</p>
+        <p className="text-muted-foreground text-base mt-1">Manage your availability, special hours, and time off</p>
       </div>
       {/* Main Content - glassmorphism card style */}
-      <Card className="bg-white/5 border border-white/10 shadow-lg rounded-xl overflow-hidden">
+      <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-lg rounded-[2rem] overflow-hidden">
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="border-b border-white/10 bg-white/5">
+            <div className="border-b border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-[40px]">
               <TabsList className="grid w-full grid-cols-3 bg-transparent border-0 p-0 h-auto">
                 <TabsTrigger 
                   value="weekly" 
                   className={`relative flex items-center gap-3 px-8 py-6 rounded-none border-b-2 transition-all duration-300 text-base font-semibold ${
                     activeTab === 'weekly' 
                       ? 'bg-transparent text-secondary border-secondary' 
-                      : 'text-white/70 hover:text-white border-transparent hover:border-white/20'
+                      : 'text-muted-foreground hover:text-foreground border-transparent hover:border-black/5 dark:hover:border-white/20'
                   }`}
                 >
                   <Calendar className="h-5 w-5" />
@@ -231,7 +231,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   className={`relative flex items-center gap-3 px-8 py-6 rounded-none border-b-2 transition-all duration-300 text-base font-semibold ${
                     activeTab === 'special-hours' 
                       ? 'bg-transparent text-secondary border-secondary' 
-                      : 'text-white/70 hover:text-white border-transparent hover:border-white/20'
+                      : 'text-muted-foreground hover:text-foreground border-transparent hover:border-black/5 dark:hover:border-white/20'
                   }`}
                 >
                   <Clock className="h-5 w-5" />
@@ -242,7 +242,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   className={`relative flex items-center gap-3 px-8 py-6 rounded-none border-b-2 transition-all duration-300 text-base font-semibold ${
                     activeTab === 'time-off' 
                       ? 'bg-transparent text-secondary border-secondary' 
-                      : 'text-white/70 hover:text-white border-transparent hover:border-white/20'
+                      : 'text-muted-foreground hover:text-foreground border-transparent hover:border-black/5 dark:hover:border-white/20'
                   }`}
                 >
                   <Umbrella className="h-5 w-5" />

@@ -559,15 +559,7 @@ export default function BrowsePage() {
             <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto font-medium text-center">
               Connect with talented stylists and cosmetologists who match your style and preferences. Book appointments with confidence.
             </p>
-            {/* Cuts Button */}
-            <div className="flex justify-center pt-6">
-              <Link href="/cuts">
-                <Button className="bg-secondary text-primary-foreground font-bebas font-bold px-8 py-4 rounded-xl shadow-md shadow-secondary/15 hover:bg-secondary/90 transition-all text-lg flex items-center justify-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  Watch Stylist Cuts
-                </Button>
-              </Link>
-            </div>
+
           </div>
 
           {/* Search and Filters Section */}
@@ -601,7 +593,7 @@ export default function BrowsePage() {
             {/* Location Filter Indicator */}
             {(locationFilter.city || locationFilter.state || locationFilter.useCurrentLocation) && (
               <div className="max-w-2xl mx-auto">
-                <Card className="bg-primary/20 border border-primary/30 rounded-2xl">
+                <Card className="bg-primary/20 border border-primary/30 rounded-[2rem]">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-foreground">
@@ -628,7 +620,7 @@ export default function BrowsePage() {
             )}
 
             {/* Filters and Sort Controls */}
-            <Card className="bg-card border border-border shadow-xl backdrop-blur-xl rounded-2xl">
+            <Card className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-[2rem]">
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                   <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -669,31 +661,31 @@ export default function BrowsePage() {
                             </div>
                           </div>
 
-                          <Separator className="bg-white/10" />
+                          <Separator className="bg-background dark:bg-white/10" />
 
                           {/* Price Range Filter */}
                           <div className="space-y-3">
-                            <Label className="text-sm font-medium text-white">Price Range</Label>
+                            <Label className="text-sm font-medium text-foreground">Price Range</Label>
                             <Select value={priceRange} onValueChange={setPriceRange}>
-                              <SelectTrigger className="bg-white/10 border-white/20 text-white focus:border-saffron rounded-xl">
+                              <SelectTrigger className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground focus:border-saffron rounded-xl">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent className="bg-black/90 border border-white/10 backdrop-blur-xl">
-                                <SelectItem value="all" className="text-white hover:bg-white/10">All Prices</SelectItem>
-                                <SelectItem value="Budget" className="text-white hover:bg-white/10">Budget</SelectItem>
-                                <SelectItem value="Mid-range" className="text-white hover:bg-white/10">Mid-range</SelectItem>
-                                <SelectItem value="Premium" className="text-white hover:bg-white/10">Premium</SelectItem>
+                                <SelectItem value="all" className="text-foreground hover:bg-background dark:bg-white/10">All Prices</SelectItem>
+                                <SelectItem value="Budget" className="text-foreground hover:bg-background dark:bg-white/10">Budget</SelectItem>
+                                <SelectItem value="Mid-range" className="text-foreground hover:bg-background dark:bg-white/10">Mid-range</SelectItem>
+                                <SelectItem value="Premium" className="text-foreground hover:bg-background dark:bg-white/10">Premium</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
 
-                          <Separator className="bg-white/10" />
+                          <Separator className="bg-background dark:bg-white/10" />
 
                           {/* Clear Filters */}
                           <Button 
                             variant="outline" 
                             onClick={clearAllFilters}
-                            className="w-full border-white/20 text-white hover:bg-white/10 rounded-xl"
+                            className="w-full border-input dark:border-white/20 text-foreground hover:bg-background dark:bg-white/10 rounded-xl"
                           >
                             Clear All Filters
                           </Button>
@@ -702,7 +694,7 @@ export default function BrowsePage() {
                     </Sheet>
 
                     {activeFiltersCount > 0 && (
-                      <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-white/60 hover:text-white text-sm">
+                      <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-muted-foreground hover:text-foreground text-sm">
                         Clear all
                       </Button>
                     )}
@@ -711,16 +703,16 @@ export default function BrowsePage() {
                   {/* Sort Controls */}
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                      <SelectTrigger className="w-full sm:w-[140px] bg-white/10 border-white/20 text-white focus:border-saffron rounded-xl">
+                      <SelectTrigger className="w-full sm:w-[140px] bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground focus:border-saffron rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-black/90 border border-white/10 backdrop-blur-xl">
-                        <SelectItem value="name" className="text-white hover:bg-white/10">Name</SelectItem>
-                        <SelectItem value="rating" className="text-white hover:bg-white/10">Rating</SelectItem>
-                        <SelectItem value="location" className="text-white hover:bg-white/10">Location</SelectItem>
-                        <SelectItem value="price" className="text-white hover:bg-white/10">Price</SelectItem>
+                        <SelectItem value="name" className="text-foreground hover:bg-background dark:bg-white/10">Name</SelectItem>
+                        <SelectItem value="rating" className="text-foreground hover:bg-background dark:bg-white/10">Rating</SelectItem>
+                        <SelectItem value="location" className="text-foreground hover:bg-background dark:bg-white/10">Location</SelectItem>
+                        <SelectItem value="price" className="text-foreground hover:bg-background dark:bg-white/10">Price</SelectItem>
                         {userLocation && (
-                          <SelectItem value="distance" className="text-white hover:bg-white/10">Distance</SelectItem>
+                          <SelectItem value="distance" className="text-foreground hover:bg-background dark:bg-white/10">Distance</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
@@ -728,7 +720,7 @@ export default function BrowsePage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl flex-shrink-0"
+                      className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground hover:bg-white/20 rounded-xl flex-shrink-0"
                     >
                       {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
                     </Button>
@@ -740,9 +732,9 @@ export default function BrowsePage() {
 
           {/* Error Alert */}
           {error && (
-            <Alert variant="destructive" className="bg-red-900/30 border-red-400/30 rounded-2xl">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-white">{error}</AlertDescription>
+            <Alert variant="destructive" className="bg-red-100 dark:bg-red-900/30 border-red-200 dark:border-red-400/30 rounded-[2rem]">
+              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <AlertDescription className="text-red-800 dark:text-red-200">{error}</AlertDescription>
             </Alert>
           )}
 
@@ -795,15 +787,15 @@ export default function BrowsePage() {
 
           {/* No Results */}
           {!error && filteredBarbers.length === 0 && !loading && (
-            <Card className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl">
+            <Card className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-[2rem]">
               <CardContent className="p-16 text-center">
                 <div className="space-y-6">
-                  <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto">
-                    <AlertCircle className="h-10 w-10 text-white/60" />
+                  <div className="w-20 h-20 bg-background dark:bg-white/10 rounded-full flex items-center justify-center mx-auto">
+                    <AlertCircle className="h-10 w-10 text-muted-foreground" />
                   </div>
                   <div className="space-y-3">
-                    <h3 className="text-2xl font-bebas font-bold text-white">No stylists found</h3>
-                    <p className="text-white/60 text-lg sm:text-xl max-w-md mx-auto font-medium">
+                    <h3 className="text-2xl font-bebas font-bold text-foreground">No stylists found</h3>
+                    <p className="text-muted-foreground text-lg sm:text-xl max-w-md mx-auto font-medium">
                       {activeFiltersCount > 0
                         ? "Try adjusting your filters or search terms to find more stylists or cosmetologists."
                         : "No stylists or cosmetologists are currently available. Please check back later."
@@ -825,12 +817,12 @@ export default function BrowsePage() {
             <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl">
               <CardContent className="p-16 text-center">
                 <div className="space-y-6">
-                  <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto">
-                    <Users className="h-10 w-10 text-white/60" />
+                  <div className="w-20 h-20 bg-background dark:bg-white/10 rounded-full flex items-center justify-center mx-auto">
+                    <Users className="h-10 w-10 text-muted-foreground" />
                   </div>
                   <div className="space-y-3">
-                    <h3 className="text-2xl font-bold text-white">No stylists available</h3>
-                    <p className="text-white/60 text-lg max-w-md mx-auto">
+                    <h3 className="text-2xl font-bold text-foreground">No stylists available</h3>
+                    <p className="text-muted-foreground text-lg max-w-md mx-auto">
                       No stylists or cosmetologists have set up their profiles yet. Check back soon!
                     </p>
                   </div>
@@ -845,8 +837,8 @@ export default function BrowsePage() {
       <Dialog open={showLocationFilter} onOpenChange={setShowLocationFilter}>
         <DialogContent className="max-w-md w-full bg-black/95 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-8 max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-white">Filter by Location</DialogTitle>
-            <DialogDescription className="text-white/80 text-base">
+            <DialogTitle className="text-2xl font-bold text-foreground">Filter by Location</DialogTitle>
+            <DialogDescription className="text-muted-foreground text-base">
               Find barbers in specific areas or near your current location
             </DialogDescription>
           </DialogHeader>
@@ -854,7 +846,7 @@ export default function BrowsePage() {
           <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-200px)] pr-2">
             <div className="space-y-4">
               <div>
-                <Label htmlFor="city" className="text-white font-medium mb-2 block text-base">
+                <Label htmlFor="city" className="text-foreground font-medium mb-2 block text-base">
                   City
                 </Label>
                 <div className="relative">
@@ -874,13 +866,13 @@ export default function BrowsePage() {
                         setShowLocationSuggestions(false);
                       }, 200);
                     }}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl"
+                    className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground placeholder:text-foreground/40 rounded-xl"
                   />
                   {/* Location suggestions dropdown */}
                   {showLocationSuggestions && (locationSuggestions.length > 0 || locationSuggestionsLoading) && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 bg-black border border-white/20 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-black border border-input dark:border-white/20 rounded-xl shadow-xl max-h-48 overflow-y-auto">
                       {locationSuggestionsLoading && (
-                        <div className="px-4 py-2 text-white/60 text-sm">
+                        <div className="px-4 py-2 text-muted-foreground text-sm">
                           <div className="flex items-center gap-2">
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-saffron"></div>
                             Searching...
@@ -888,13 +880,13 @@ export default function BrowsePage() {
                         </div>
                       )}
                       {!locationSuggestionsLoading && locationSuggestions.length === 0 && (
-                        <div className="px-4 py-2 text-white/60 text-sm">No results found</div>
+                        <div className="px-4 py-2 text-muted-foreground text-sm">No results found</div>
                       )}
                       {locationSuggestions.map((s, i) => (
                         <button
                           key={`${s.place_id || i}-${s.display_name}`}
                           type="button"
-                          className="w-full text-left px-4 py-2 text-white hover:bg-saffron/20"
+                          className="w-full text-left px-4 py-2 text-foreground hover:bg-saffron/20"
                           onMouseDown={() => handleLocationSuggestionSelect(s)}
                         >
                           {s.display_name || s.name || 'Unknown location'}
@@ -906,7 +898,7 @@ export default function BrowsePage() {
               </div>
                
               <div>
-                <Label htmlFor="state" className="text-white font-medium mb-2 block text-base">
+                <Label htmlFor="state" className="text-foreground font-medium mb-2 block text-base">
                   State/Province
                 </Label>
                 <Input
@@ -914,7 +906,7 @@ export default function BrowsePage() {
                   placeholder="Enter state or province"
                   value={locationFilter.state}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, state: e.target.value }))}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl"
+                  className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground placeholder:text-foreground/40 rounded-xl"
                 />
               </div>
                
@@ -925,30 +917,30 @@ export default function BrowsePage() {
                     id="useCurrentLocation"
                     checked={locationFilter.useCurrentLocation}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, useCurrentLocation: e.target.checked }))}
-                    className="rounded border-white/20 bg-white/10 text-saffron focus:ring-saffron"
+                    className="rounded border-input dark:border-white/20 bg-background dark:bg-white/10 text-saffron focus:ring-saffron"
                   />
-                  <Label htmlFor="useCurrentLocation" className="text-white font-medium text-base">
+                  <Label htmlFor="useCurrentLocation" className="text-foreground font-medium text-base">
                     Use my current location
                   </Label>
                 </div>
                 
                 {locationFilter.useCurrentLocation && (
                   <div>
-                    <Label htmlFor="range" className="text-white font-medium mb-2 block text-base">
+                    <Label htmlFor="range" className="text-foreground font-medium mb-2 block text-base">
                       Range (miles)
                     </Label>
                     <Select 
                       value={locationFilter.range.toString()} 
                       onValueChange={(value: string) => setLocationFilter(prev => ({ ...prev, range: parseInt(value) }))}
                     >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white rounded-xl">
+                      <SelectTrigger className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-black border-white/20">
-                        <SelectItem value="10" className="text-white">10 miles</SelectItem>
-                        <SelectItem value="25" className="text-white">25 miles</SelectItem>
-                        <SelectItem value="50" className="text-white">50 miles</SelectItem>
-                        <SelectItem value="100" className="text-white">100 miles</SelectItem>
+                      <SelectContent className="bg-black border-input dark:border-white/20">
+                        <SelectItem value="10" className="text-foreground">10 miles</SelectItem>
+                        <SelectItem value="25" className="text-foreground">25 miles</SelectItem>
+                        <SelectItem value="50" className="text-foreground">50 miles</SelectItem>
+                        <SelectItem value="100" className="text-foreground">100 miles</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -966,7 +958,7 @@ export default function BrowsePage() {
               <Button
                 variant="outline"
                 onClick={() => setShowLocationFilter(false)}
-                className="border-white/20 text-white hover:bg-white/10 rounded-xl"
+                className="border-input dark:border-white/20 text-foreground hover:bg-background dark:bg-white/10 rounded-xl"
               >
                 Cancel
               </Button>

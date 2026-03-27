@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { geocodeAddress } from '../../lib/geocode';
 import {
   View,
   Text,
@@ -201,37 +202,23 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
 
       if (profileError) throw profileError;
 
-      // If user is a barber and location changed, try to geocode and save coordinates
+      // If user is a barber and location changed, geocode and save coordinates
       if (isBarber && formData.location) {
         try {
-          const encodedLocation = encodeURIComponent(formData.location);
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodedLocation}&limit=1`
-          );
-          const data = await response.json();
-          
-          if (data && data.length > 0) {
-            const coordinates = {
-              latitude: parseFloat(data[0].lat),
-              longitude: parseFloat(data[0].lon)
-            };
-            
-            // Update barber table with coordinates
+          const coords = await geocodeAddress(formData.location);
+          if (coords) {
             const { error: barberError } = await supabase
               .from('barbers')
               .update({
-                latitude: coordinates.latitude,
-                longitude: coordinates.longitude,
-                city: data[0].address?.city || data[0].address?.town || data[0].address?.village,
-                state: data[0].address?.state,
+                latitude: coords.lat,
+                longitude: coords.lon,
                 updated_at: new Date().toISOString()
               })
               .eq('user_id', user?.id);
-              
             if (barberError) {
               logger.error('Error updating barber coordinates:', barberError);
             } else {
-              logger.log('✅ Barber coordinates updated:', coordinates);
+              logger.log('✅ Barber coordinates updated:', coords);
             }
           }
         } catch (geocodeError) {

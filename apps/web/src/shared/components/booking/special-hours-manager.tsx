@@ -101,13 +101,13 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
           <Calendar className="h-5 w-5 text-saffron" />
         </div>
         <div>
-          <h3 className="text-xl font-bebas text-white">Special Hours</h3>
-          <p className="text-white/70 text-sm">Set special hours for specific dates</p>
+          <h3 className="text-xl font-bebas text-foreground">Special Hours</h3>
+          <p className="text-muted-foreground text-sm">Set special hours for specific dates</p>
         </div>
       </div>
 
       {/* Stats Card */}
-      <Card className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl">
+      <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-xl rounded-2xl">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -115,8 +115,8 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
                 <Clock className="h-4 w-4 text-saffron" />
               </div>
               <div>
-                <p className="text-white/60 text-sm">Special Hours</p>
-                <p className="text-white font-semibold text-lg">{specialHours.length} dates</p>
+                <p className="text-muted-foreground text-sm">Special Hours</p>
+                <p className="text-foreground font-semibold text-lg">{specialHours.length} dates</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -132,13 +132,13 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
       </Card>
 
       {/* Add Form */}
-      <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl">
-        <CardHeader className="bg-white/5 border-b border-white/10">
-          <CardTitle className="text-white flex items-center gap-2">
+      <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-2xl rounded-3xl">
+        <CardHeader className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border-b border-black/5 dark:border-white/10">
+          <CardTitle className="text-foreground flex items-center gap-2">
             <Plus className="h-5 w-5 text-saffron" />
             Add Special Hours
           </CardTitle>
-          <CardDescription className="text-white/70">
+          <CardDescription className="text-muted-foreground">
             Override your regular schedule for holidays, events, or modified hours
           </CardDescription>
         </CardHeader>
@@ -146,56 +146,56 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
         <CardContent className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date" className="text-white/80 text-sm font-medium">Date</Label>
+              <Label htmlFor="date" className="text-muted-foreground text-sm font-medium">Date</Label>
               <Input
                 id="date"
                 type="date"
                 value={newHours.date}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, date: e.target.value })}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
+                className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-saffron focus:ring-saffron rounded-xl"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reason" className="text-white/80 text-sm font-medium">Reason</Label>
+              <Label htmlFor="reason" className="text-muted-foreground text-sm font-medium">Reason</Label>
               <Input
                 id="reason"
                 value={newHours.reason}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, reason: e.target.value })}
                 placeholder="e.g. Holiday Hours, Special Event"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
+                className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-saffron focus:ring-saffron rounded-xl"
               />
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-xl border border-white/10">
+          <div className="flex items-center space-x-3 p-4 bg-white/70 dark:bg-white/5 backdrop-blur-xl rounded-xl border border-black/5 dark:border-white/10">
             <Switch
               checked={newHours.is_closed}
               onCheckedChange={(checked: boolean) => setNewHours({ ...newHours, is_closed: checked as boolean })}
-              className="data-[state=checked]:bg-saffron"
+              className="data-[state=checked]:bg-saffron data-[state=unchecked]:bg-black/20 dark:data-[state=unchecked]:bg-white/20 border-2 border-transparent"
             />
-            <Label className="text-white/80 font-medium">Closed on this date</Label>
+            <Label className="text-muted-foreground font-medium">Closed on this date</Label>
           </div>
 
           {!newHours.is_closed && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="start_time" className="text-white/80 text-sm font-medium">Start Time</Label>
+                <Label htmlFor="start_time" className="text-muted-foreground text-sm font-medium">Start Time</Label>
                 <Input
                   id="start_time"
                   type="time"
                   value={newHours.start_time}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, start_time: e.target.value })}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
+                  className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-saffron focus:ring-saffron rounded-xl"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="end_time" className="text-white/80 text-sm font-medium">End Time</Label>
+                <Label htmlFor="end_time" className="text-muted-foreground text-sm font-medium">End Time</Label>
                 <Input
                   id="end_time"
                   type="time"
                   value={newHours.end_time}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, end_time: e.target.value })}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-saffron focus:ring-saffron rounded-xl"
+                  className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-saffron focus:ring-saffron rounded-xl"
                 />
               </div>
             </div>
@@ -214,17 +214,17 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
       {/* Current Special Hours */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <h4 className="text-lg font-semibold text-white">Current Special Hours</h4>
-          <Badge variant="outline" className="text-xs border-white/20 text-white/60">
+          <h4 className="text-lg font-semibold text-foreground">Current Special Hours</h4>
+          <Badge variant="outline" className="text-xs border-black/10 dark:border-white/20 text-muted-foreground">
             {specialHours.length} total
           </Badge>
         </div>
         
         {specialHours.length === 0 ? (
-          <Card className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
-            <Clock className="h-12 w-12 text-white/40 mx-auto mb-4" />
-            <h3 className="text-white font-semibold mb-2">No special hours added yet</h3>
-            <p className="text-white/60 text-sm">
+          <Card className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-8 text-center">
+            <Clock className="h-12 w-12 text-foreground/40 mx-auto mb-4" />
+            <h3 className="text-foreground font-semibold mb-2">No special hours added yet</h3>
+            <p className="text-muted-foreground text-sm">
               Add special hours for holidays, events, or modified schedules
             </p>
           </Card>
@@ -233,13 +233,13 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
             {specialHours.map((hours) => (
               <Card 
                 key={hours.id} 
-                className="bg-white/5 border border-white/10 rounded-2xl hover:border-white/20 transition-all duration-200 overflow-hidden"
+                className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl hover:border-black/10 dark:hover:border-white/20 transition-all duration-200 overflow-hidden"
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-white">
+                        <span className="font-medium text-foreground">
                           {new Date(hours.date).toLocaleDateString('en-US', { 
                             weekday: 'long', 
                             year: 'numeric', 
@@ -260,12 +260,12 @@ export function SpecialHoursManager({ specialHours, onAdd, onRemove, barberId }:
                       {hours.is_closed ? (
                         <p className="text-sm text-red-400 font-medium">Closed for the day</p>
                       ) : (
-                        <p className="text-sm text-white/70">
+                        <p className="text-sm text-muted-foreground">
                           {hours.start_time} - {hours.end_time}
                         </p>
                       )}
                       {hours.reason && (
-                        <p className="text-sm text-white/60 mt-1">{hours.reason}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{hours.reason}</p>
                       )}
                     </div>
                     <Button

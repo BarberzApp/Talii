@@ -469,15 +469,15 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               <User className="h-6 w-6 text-secondary" />
             </div>
             <div>
-              <h3 className="text-xl sm:text-2xl font-bebas text-white tracking-wide">
+              <h3 className="text-xl sm:text-2xl font-bebas text-foreground dark:text-white tracking-wide">
                 Profile Settings
               </h3>
-              <p className="text-white/80 mt-1">Manage your personal information</p>
+              <p className="text-muted-foreground dark:text-white/80 mt-1">Manage your personal information</p>
             </div>
           </div>
         </div>
         
-        <Card className="bg-darkpurple/90 border border-white/10 shadow-2xl backdrop-blur-xl">
+        <Card className="bg-darkpurple/90 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl">
           <CardContent className="p-6">
             <div className="flex items-center justify-center min-h-[200px]">
               <div className="text-center space-y-4">
@@ -485,7 +485,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                   <Loader2 className="h-8 w-8 animate-spin mx-auto text-secondary" />
                   <div className="absolute inset-0 rounded-full bg-secondary/20 animate-ping" />
                 </div>
-                <p className="text-white/60 font-medium">Loading profile...</p>
+                <p className="text-muted-foreground dark:text-white/60 font-medium">Loading profile...</p>
               </div>
             </div>
           </CardContent>
@@ -498,18 +498,18 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     <div className="space-y-6">
       {/* Header Section */}
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
-        <p className="text-white/60">Manage your personal information and preferences</p>
+        <h2 className="text-2xl font-bold text-foreground dark:text-white">Profile Settings</h2>
+        <p className="text-muted-foreground dark:text-white/60">Manage your personal information and preferences</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl">
-          <CardHeader className="bg-white/5 border-b border-white/10">
-            <CardTitle className="text-white flex items-center gap-2">
+        <Card className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl">
+          <CardHeader className="bg-black/5 dark:bg-white/5 border-b border-black/10 dark:border-white/10">
+            <CardTitle className="text-foreground dark:text-white flex items-center gap-2">
               <Camera className="h-5 w-5 text-secondary" />
               Personal Information
             </CardTitle>
-            <CardDescription className="text-white/70">
+            <CardDescription className="text-muted-foreground dark:text-white/70">
               Update your profile details and contact information
             </CardDescription>
           </CardHeader>
@@ -518,17 +518,17 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
             <div className="flex-1 w-full space-y-6">
                 {/* Basic Information Section */}
                 <div className="space-y-4">
-                  <h4 className="text-white font-semibold text-sm uppercase tracking-wide">Basic Information</h4>
+                  <h4 className="text-foreground dark:text-white font-semibold text-sm uppercase tracking-wide">Basic Information</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name" className="text-white font-medium flex items-center gap-2">
+                      <Label htmlFor="name" className="text-foreground dark:text-white font-medium flex items-center gap-2">
                         <User className="h-4 w-4 text-secondary" />
                         Full Name *
                       </Label>
                       <Input
                         id="name"
                         type="text"
-                        className={`bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary ${validationErrors.name ? 'border-red-400' : ''}`}
+                        className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary ${validationErrors.name ? 'border-red-400' : ''}`}
                         {...register('name', { required: 'Name is required' })}
                         placeholder="Enter your full name"
                       />
@@ -540,14 +540,14 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="username" className="text-white font-medium flex items-center gap-2">
+                      <Label htmlFor="username" className="text-foreground dark:text-white font-medium flex items-center gap-2">
                         <User className="h-4 w-4 text-secondary" />
                         Username *
                       </Label>
                       <Input
                         id="username"
                         type="text"
-                        className={`bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary ${validationErrors.username ? 'border-red-400' : ''}`}
+                        className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary ${validationErrors.username ? 'border-red-400' : ''}`}
                         {...register('username', { required: 'Username is required' })}
                         placeholder="your_username"
                       />
@@ -557,7 +557,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                           {validationErrors.username}
                         </p>
                       )}
-                      <p className="text-xs text-white/60">
+                      <p className="text-xs text-muted-foreground dark:text-white/60">
                         Used in your booking link: bocmstyle.com/book/{watch('username') || 'your_username'}
                       </p>
                     </div>
@@ -565,17 +565,17 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 </div>
                 {/* Contact Information Section */}
                 <div className="space-y-4">
-                  <h4 className="text-white font-semibold text-sm uppercase tracking-wide">Contact Information</h4>
+                  <h4 className="text-foreground dark:text-white font-semibold text-sm uppercase tracking-wide">Contact Information</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-white font-medium flex items-center gap-2">
+                      <Label htmlFor="email" className="text-foreground dark:text-white font-medium flex items-center gap-2">
                         <Mail className="h-4 w-4 text-secondary" />
                         Email Address *
                       </Label>
                       <Input
                         id="email"
                         type="email"
-                        className={`bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary ${validationErrors.email ? 'border-red-400' : ''}`}
+                        className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary ${validationErrors.email ? 'border-red-400' : ''}`}
                         {...register('email', { required: 'Email is required' })}
                         placeholder="Enter your email address"
                       />
@@ -587,14 +587,14 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-white font-medium flex items-center gap-2">
+                      <Label htmlFor="phone" className="text-foreground dark:text-white font-medium flex items-center gap-2">
                         <Phone className="h-4 w-4 text-secondary" />
                         Phone Number
                       </Label>
                       <Input
                         id="phone"
                         type="tel"
-                        className={`bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary ${validationErrors.phone ? 'border-red-400' : ''}`}
+                        className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary ${validationErrors.phone ? 'border-red-400' : ''}`}
                         {...register('phone')}
                         placeholder="(555) 123-4567"
                       />
@@ -609,30 +609,23 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 </div>
                 {/* SMS Notifications Section */}
                 <div className="space-y-4">
-                  <h4 className="text-white font-semibold text-sm uppercase tracking-wide">SMS Notifications</h4>
+                  <h4 className="text-foreground dark:text-white font-semibold text-sm uppercase tracking-wide">SMS Notifications</h4>
                   <div className="space-y-2">
-                    <Label htmlFor="carrier" className="text-white font-medium flex items-center gap-2">
+                    <Label htmlFor="carrier" className="text-foreground dark:text-white font-medium flex items-center gap-2">
                       <Phone className="h-4 w-4 text-secondary" />
                       Carrier *
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-secondary cursor-pointer" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span>We need your carrier to send you free SMS reminders. If you’re unsure, check your phone bill or carrier app.</span>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <span title="We need your carrier to send you free SMS reminders. If you’re unsure, check your phone bill or carrier app.">
+                        <Info className="h-4 w-4 text-secondary cursor-pointer" />
+                      </span>
                     </Label>
                     <Select
                       value={watch('carrier')}
-                      onValueChange={(value) => setValue('carrier', value)}
+                      onValueChange={(value: string) => setValue('carrier', value)}
                     >
-                      <SelectTrigger className={`h-12 px-4 bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary focus:ring-2 focus:ring-secondary/40 rounded-xl shadow-sm flex items-center gap-2 ${errors.carrier ? 'border-red-400' : ''}`}>
+                      <SelectTrigger className={`h-12 px-4 bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary focus:ring-2 focus:ring-secondary/40 rounded-xl shadow-sm flex items-center gap-2 ${errors.carrier ? 'border-red-400' : ''}`}>
                         <SelectValue placeholder="Select your carrier…" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white/10 border border-white/20 shadow-xl rounded-xl text-white">
+                      <SelectContent className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 shadow-xl rounded-xl text-foreground dark:text-white">
                         {CARRIER_OPTIONS.map((carrier) => (
                           <SelectItem key={carrier.value} value={carrier.value} className="flex items-center justify-between px-4 py-2 hover:bg-secondary/10 rounded-lg transition-colors">
                             <span>{carrier.label}</span>
@@ -646,45 +639,45 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="address" className="text-white font-medium flex items-center gap-2">
+                    <Label htmlFor="address" className="text-foreground dark:text-white font-medium flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-secondary" />
                       Address
                     </Label>
                     <Input
                       id="address"
                       type="text"
-                      className="bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary"
+                      className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary"
                       value={addressFields.address}
-                      onChange={(e) => setAddressFields(prev => ({ ...prev, address: e.target.value }))}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddressFields(prev => ({ ...prev, address: e.target.value }))}
                       placeholder="123 Main St"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="city" className="text-white font-medium flex items-center gap-2">
+                    <Label htmlFor="city" className="text-foreground dark:text-white font-medium flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-secondary" />
                       City
                     </Label>
                     <Input
                       id="city"
                       type="text"
-                      className="bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary"
+                      className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary"
                       value={addressFields.city}
-                      onChange={(e) => setAddressFields(prev => ({ ...prev, city: e.target.value }))}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddressFields(prev => ({ ...prev, city: e.target.value }))}
                       placeholder="New York"
                     />
                   </div>
 
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bio" className="text-white font-medium">
+                  <Label htmlFor="bio" className="text-foreground dark:text-white font-medium">
                     Bio
                   </Label>
                   <Textarea
                     id="bio"
                     rows={4}
-                    className={`bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:border-secondary resize-none ${validationErrors.bio ? 'border-red-400' : ''}`}
+                    className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary resize-none ${validationErrors.bio ? 'border-red-400' : ''}`}
                     {...register('bio')}
                     placeholder="Tell us about yourself..."
                   />
@@ -700,7 +693,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     <Button
                       type="button"
                       size="sm"
-                      className="mt-2 bg-secondary text-primary font-semibold rounded-lg px-4 py-2 shadow hover:bg-secondary/90 transition"
+                      className="mt-2 bg-secondary text-primary-foreground font-semibold rounded-lg px-4 py-2 shadow hover:bg-secondary/90 transition"
                       onClick={() => setValue('sms_notifications', true)}
                     >
                       Enable SMS Notifications
@@ -722,7 +715,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-secondary hover:bg-secondary/90 text-primary font-semibold shadow-lg px-8 py-3"
+                className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-lg px-8 py-3"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

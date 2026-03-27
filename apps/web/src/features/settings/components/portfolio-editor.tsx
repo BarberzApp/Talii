@@ -166,10 +166,10 @@ export function PortfolioEditor({ initialItems, open, onClose, onSave }: Portfol
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl w-full bg-darkpurple/90 border border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 overflow-y-auto max-h-[90vh]">
+      <DialogContent className="max-w-2xl w-full bg-darkpurple/90 border border-black/5 dark:border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 overflow-y-auto max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="text-3xl font-bebas text-white">Edit Portfolio</DialogTitle>
-          <DialogDescription className="text-white/80">
+          <DialogTitle className="text-3xl font-bebas text-foreground">Edit Portfolio</DialogTitle>
+          <DialogDescription className="text-foreground/80">
             Upload and organize your portfolio images and videos. Drag to reorder items.
           </DialogDescription>
         </DialogHeader>
@@ -202,7 +202,7 @@ export function PortfolioEditor({ initialItems, open, onClose, onSave }: Portfol
                 )}
               </Button>
             </div>
-            <span className="text-xs text-white/80 font-medium">{items.length}/40 items</span>
+            <span className="text-xs text-foreground/80 font-medium">{items.length}/40 items</span>
           </div>
           {error && <div className="text-sm text-red-500 font-semibold">{error}</div>}
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -221,8 +221,8 @@ export function PortfolioEditor({ initialItems, open, onClose, onSave }: Portfol
           </DndContext>
         </div>
         <div className="flex justify-end gap-4 mt-8">
-          <Button variant="outline" onClick={onClose} disabled={isSaving} className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl font-semibold px-6 py-2">Cancel</Button>
-          <Button onClick={handleSave} disabled={isSaving} className="bg-saffron text-primary font-semibold rounded-xl px-8 py-2 hover:bg-saffron/90">
+          <Button variant="outline" onClick={onClose} disabled={isSaving} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground hover:bg-white/20 rounded-xl font-semibold px-6 py-2">Cancel</Button>
+          <Button onClick={handleSave} disabled={isSaving} className="bg-saffron text-primary-foreground font-semibold rounded-xl px-8 py-2 hover:bg-saffron/90">
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -252,7 +252,7 @@ function SortablePortfolioItem({ id, item, onRemove }: { id: string, item: Portf
       ref={setNodeRef}
       style={style}
       className={cn(
-        'relative group rounded-2xl overflow-hidden border-2 border-white/10 bg-primary/80 aspect-square flex items-center justify-center shadow-lg',
+        'relative group rounded-2xl overflow-hidden border-2 border-black/5 dark:border-white/10 bg-primary/80 aspect-square flex items-center justify-center shadow-lg',
         isDragging && 'ring-2 ring-saffron'
       )}
       {...attributes} {...listeners}

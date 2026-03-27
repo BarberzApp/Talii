@@ -108,8 +108,10 @@ export function RevenueCalculator({
           </div>
         )}
 
-        <Card className="bg-surface border border-border shadow-xl dark:shadow-2xl rounded-3xl p-6 sm:p-8 lg:p-12">
-          <CardContent className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start">
+        <Card className="group bg-surface/60 dark:bg-white/5 backdrop-blur-xl border border-border/50 dark:border-white/10 shadow-xl dark:shadow-2xl rounded-[2rem] p-6 sm:p-8 lg:p-12 relative overflow-hidden transition-all duration-500 hover:shadow-2xl hover:border-primary/40 dark:hover:border-primary/40 min-h-[400px]">
+          {/* Subtle gradient overlay for extra glass effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2rem] pointer-events-none" />
+          <CardContent className="grid lg:grid-cols-2 gap-6 sm:gap-8 items-start relative z-10">
             {/* Calculator Input */}
             <div className="space-y-4 sm:space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">

@@ -77,10 +77,21 @@ export function FeatureGrid({
           whileInView="visible"
           viewport={{ once: true, amount: 0.1 }}
         >
-          {features.map((feature, index) => (
-            <motion.div key={index} variants={staggerItem} className="h-full">
-              <Card className="group bg-surface border border-border shadow-lg dark:shadow-xl rounded-2xl p-5 sm:p-6 hover:shadow-xl dark:hover:shadow-2xl hover:border-primary/30 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden h-full flex flex-col">
-              <CardContent className="p-0 flex flex-col flex-1">
+          {features.map((feature, index) => {
+            const isBento = features.length === 4;
+            const bentoClasses = isBento 
+              ? [
+                  "lg:col-span-2 lg:row-span-1",
+                  "lg:col-span-1 lg:row-span-1",
+                  "lg:col-span-1 lg:row-span-1",
+                  "lg:col-span-2 lg:row-span-1"
+                ][index]
+              : "";
+              
+            return (
+              <motion.div key={index} variants={staggerItem} className={cn("h-full", bentoClasses)}>
+                <Card className="group bg-surface/60 dark:bg-white/5 backdrop-blur-xl border border-border/50 dark:border-white/10 shadow-xl dark:shadow-2xl rounded-[2rem] p-6 sm:p-8 hover:shadow-2xl dark:hover:shadow-3xl hover:border-primary/40 dark:hover:border-primary/40 transition-all duration-500 hover:-translate-y-2 relative overflow-hidden h-full flex flex-col">
+                <CardContent className="p-0 flex flex-col flex-1 relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <div
                     className={cn(
@@ -107,10 +118,12 @@ export function FeatureGrid({
                 <p className="text-muted-foreground leading-relaxed text-sm sm:text-base flex-1">
                   {feature.description}
                 </p>
-              </CardContent>
-            </Card>
+                </CardContent>
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2rem]" />
+              </Card>
             </motion.div>
-          ))}
+          );
+        })}
         </motion.div>
     </LandingSection>
   );

@@ -229,7 +229,7 @@ export function BarberProfile() {
                     <div className="relative">
                       <Avatar className="h-24 w-24 border-4 border-saffron/20">
                         {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name || 'Avatar'} />}
-                        <AvatarFallback className="bg-saffron text-primary font-bold text-xl">{user.name?.charAt(0) || "B"}</AvatarFallback>
+                        <AvatarFallback className="bg-saffron text-primary-foreground font-bold text-xl">{user.name?.charAt(0) || "B"}</AvatarFallback>
                       </Avatar>
                       <button
                         type="button"

@@ -41,7 +41,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 z-20">
           <Avatar className="w-28 h-28 border-4 border-saffron/80 shadow-xl bg-white/10">
             {avatarUrl && <AvatarImage src={avatarUrl} alt={name} />}
-            <AvatarFallback className="bg-saffron text-primary font-bold text-3xl">{name.charAt(0)}</AvatarFallback>
+            <AvatarFallback className="bg-saffron text-primary-foreground font-bold text-3xl">{name.charAt(0)}</AvatarFallback>
           </Avatar>
         </div>
       </div>
@@ -53,7 +53,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         )}
         {isOwner && (
           <Button
-            className="mt-2 bg-saffron text-primary font-semibold px-6 py-2 rounded-full shadow-lg hover:bg-saffron/90"
+            className="mt-2 bg-saffron text-primary-foreground font-semibold px-6 py-2 rounded-full shadow-lg hover:bg-saffron/90"
             onClick={onEdit}
           >
             Edit Profile
