@@ -462,30 +462,30 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
 
   if (isInitialLoad) {
     return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-secondary/20 rounded-full">
-              <User className="h-6 w-6 text-secondary" />
+      <div className="space-y-8">
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="p-4 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl shadow-lg">
+              <User className="h-8 w-8 text-secondary" />
             </div>
             <div>
-              <h3 className="text-xl sm:text-2xl font-bebas text-foreground dark:text-white tracking-wide">
+              <h2 className="text-3xl sm:text-4xl font-bebas text-foreground tracking-wide">
                 Profile Settings
-              </h3>
-              <p className="text-muted-foreground dark:text-white/80 mt-1">Manage your personal information</p>
+              </h2>
+              <p className="text-foreground/70 text-lg mt-2">Manage your personal information</p>
             </div>
           </div>
         </div>
         
-        <Card className="bg-darkpurple/90 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl">
-          <CardContent className="p-6">
+        <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl">
+          <CardContent className="p-8">
             <div className="flex items-center justify-center min-h-[200px]">
               <div className="text-center space-y-4">
                 <div className="relative">
                   <Loader2 className="h-8 w-8 animate-spin mx-auto text-secondary" />
                   <div className="absolute inset-0 rounded-full bg-secondary/20 animate-ping" />
                 </div>
-                <p className="text-muted-foreground dark:text-white/60 font-medium">Loading profile...</p>
+                <p className="text-foreground/60 font-medium">Loading profile...</p>
               </div>
             </div>
           </CardContent>
@@ -495,232 +495,261 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-foreground dark:text-white">Profile Settings</h2>
-        <p className="text-muted-foreground dark:text-white/60">Manage your personal information and preferences</p>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-4">
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="p-4 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl shadow-lg">
+            <User className="h-8 w-8 text-secondary" />
+          </div>
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-bebas text-foreground tracking-wide">
+              Profile Settings
+            </h2>
+            <p className="text-foreground/70 text-lg mt-2">Manage your personal information and preferences</p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <Card className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl">
-          <CardHeader className="bg-black/5 dark:bg-white/5 border-b border-black/10 dark:border-white/10">
-            <CardTitle className="text-foreground dark:text-white flex items-center gap-2">
-              <Camera className="h-5 w-5 text-secondary" />
+        {/* Basic Info Card */}
+        <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-secondary/10 to-transparent border-b border-black/5 dark:border-white/10 p-6">
+            <CardTitle className="text-foreground flex items-center gap-3 text-2xl">
+              <div className="p-2 bg-secondary/20 rounded-xl">
+                <User className="h-6 w-6 text-secondary" />
+              </div>
               Personal Information
             </CardTitle>
-            <CardDescription className="text-muted-foreground dark:text-white/70">
+            <CardDescription className="text-foreground/70 text-base">
               Update your profile details and contact information
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6 space-y-6">
-            {/* Form Fields (avatar upload removed) */}
-            <div className="flex-1 w-full space-y-6">
-                {/* Basic Information Section */}
-                <div className="space-y-4">
-                  <h4 className="text-foreground dark:text-white font-semibold text-sm uppercase tracking-wide">Basic Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-foreground dark:text-white font-medium flex items-center gap-2">
-                        <User className="h-4 w-4 text-secondary" />
-                        Full Name *
-                      </Label>
-                      <Input
-                        id="name"
-                        type="text"
-                        className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary ${validationErrors.name ? 'border-red-400' : ''}`}
-                        {...register('name', { required: 'Name is required' })}
-                        placeholder="Enter your full name"
-                      />
-                      {validationErrors.name && (
-                        <p className="text-sm text-red-400 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {validationErrors.name}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="username" className="text-foreground dark:text-white font-medium flex items-center gap-2">
-                        <User className="h-4 w-4 text-secondary" />
-                        Username *
-                      </Label>
-                      <Input
-                        id="username"
-                        type="text"
-                        className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary ${validationErrors.username ? 'border-red-400' : ''}`}
-                        {...register('username', { required: 'Username is required' })}
-                        placeholder="your_username"
-                      />
-                      {validationErrors.username && (
-                        <p className="text-sm text-red-400 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {validationErrors.username}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground dark:text-white/60">
-                        Used in your booking link: bocmstyle.com/book/{watch('username') || 'your_username'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                {/* Contact Information Section */}
-                <div className="space-y-4">
-                  <h4 className="text-foreground dark:text-white font-semibold text-sm uppercase tracking-wide">Contact Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-foreground dark:text-white font-medium flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-secondary" />
-                        Email Address *
-                      </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary ${validationErrors.email ? 'border-red-400' : ''}`}
-                        {...register('email', { required: 'Email is required' })}
-                        placeholder="Enter your email address"
-                      />
-                      {validationErrors.email && (
-                        <p className="text-sm text-red-400 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {validationErrors.email}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-foreground dark:text-white font-medium flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-secondary" />
-                        Phone Number
-                      </Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary ${validationErrors.phone ? 'border-red-400' : ''}`}
-                        {...register('phone')}
-                        placeholder="(555) 123-4567"
-                      />
-                      {validationErrors.phone && (
-                        <p className="text-sm text-red-400 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {validationErrors.phone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {/* SMS Notifications Section */}
-                <div className="space-y-4">
-                  <h4 className="text-foreground dark:text-white font-semibold text-sm uppercase tracking-wide">SMS Notifications</h4>
-                  <div className="space-y-2">
-                    <Label htmlFor="carrier" className="text-foreground dark:text-white font-medium flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-secondary" />
-                      Carrier *
-                      <span title="We need your carrier to send you free SMS reminders. If you’re unsure, check your phone bill or carrier app.">
-                        <Info className="h-4 w-4 text-secondary cursor-pointer" />
-                      </span>
-                    </Label>
-                    <Select
-                      value={watch('carrier')}
-                      onValueChange={(value: string) => setValue('carrier', value)}
-                    >
-                      <SelectTrigger className={`h-12 px-4 bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary focus:ring-2 focus:ring-secondary/40 rounded-xl shadow-sm flex items-center gap-2 ${errors.carrier ? 'border-red-400' : ''}`}>
-                        <SelectValue placeholder="Select your carrier…" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 shadow-xl rounded-xl text-foreground dark:text-white">
-                        {CARRIER_OPTIONS.map((carrier) => (
-                          <SelectItem key={carrier.value} value={carrier.value} className="flex items-center justify-between px-4 py-2 hover:bg-secondary/10 rounded-lg transition-colors">
-                            <span>{carrier.label}</span>
-                            {watch('carrier') === carrier.value && <Check className="h-4 w-4 text-secondary ml-2" />}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.carrier && (
-                      <p className="text-red-400 text-sm">Carrier is required</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address" className="text-foreground dark:text-white font-medium flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-secondary" />
-                      Address
-                    </Label>
-                    <Input
-                      id="address"
-                      type="text"
-                      className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary"
-                      value={addressFields.address}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddressFields(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="123 Main St"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city" className="text-foreground dark:text-white font-medium flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-secondary" />
-                      City
-                    </Label>
-                    <Input
-                      id="city"
-                      type="text"
-                      className="bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary"
-                      value={addressFields.city}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddressFields(prev => ({ ...prev, city: e.target.value }))}
-                      placeholder="New York"
-                    />
-                  </div>
-
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bio" className="text-foreground dark:text-white font-medium">
-                    Bio
+          <CardContent className="p-8 space-y-8">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-5 bg-secondary rounded-full"></div>
+                <h4 className="text-foreground font-semibold text-sm uppercase tracking-widest">Basic Information</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="name" className="text-foreground font-semibold text-base flex items-center gap-2">
+                    <User className="h-4 w-4 text-secondary" />
+                    Full Name *
                   </Label>
-                  <Textarea
-                    id="bio"
-                    rows={4}
-                    className={`bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground dark:text-white/40 focus:border-secondary resize-none ${validationErrors.bio ? 'border-red-400' : ''}`}
-                    {...register('bio')}
-                    placeholder="Tell us about yourself..."
+                  <Input
+                    id="name"
+                    type="text"
+                    className={`bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl h-12 text-base backdrop-blur-sm transition-all duration-200 ${validationErrors.name ? 'border-red-400' : ''}`}
+                    {...register('name', { required: 'Name is required' })}
+                    placeholder="Enter your full name"
                   />
-                  {validationErrors.bio && (
+                  {validationErrors.name && (
                     <p className="text-sm text-red-400 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
-                      {validationErrors.bio}
+                      {validationErrors.name}
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  {!watch('sms_notifications') ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="mt-2 bg-secondary text-primary-foreground font-semibold rounded-lg px-4 py-2 shadow hover:bg-secondary/90 transition"
-                      onClick={() => setValue('sms_notifications', true)}
-                    >
-                      Enable SMS Notifications
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="mt-2 bg-green-600 text-white font-semibold rounded-lg px-4 py-2 shadow flex items-center gap-2 cursor-default"
-                      disabled
-                    >
-                      <Check className="h-4 w-4" /> SMS Notifications Enabled
-                    </Button>
+                <div className="space-y-3">
+                  <Label htmlFor="username" className="text-foreground font-semibold text-base flex items-center gap-2">
+                    <User className="h-4 w-4 text-secondary" />
+                    Username *
+                  </Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    className={`bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl h-12 text-base backdrop-blur-sm transition-all duration-200 ${validationErrors.username ? 'border-red-400' : ''}`}
+                    {...register('username', { required: 'Username is required' })}
+                    placeholder="your_username"
+                  />
+                  {validationErrors.username && (
+                    <p className="text-sm text-red-400 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.username}
+                    </p>
+                  )}
+                  <p className="text-xs text-foreground/60">
+                    Booking link: bocmstyle.com/book/{watch('username') || 'your_username'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-5 bg-secondary rounded-full"></div>
+                <h4 className="text-foreground font-semibold text-sm uppercase tracking-widest">Contact Information</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="email" className="text-foreground font-semibold text-base flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-secondary" />
+                    Email Address *
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    className={`bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl h-12 text-base backdrop-blur-sm transition-all duration-200 ${validationErrors.email ? 'border-red-400' : ''}`}
+                    {...register('email', { required: 'Email is required' })}
+                    placeholder="Enter your email address"
+                  />
+                  {validationErrors.email && (
+                    <p className="text-sm text-red-400 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.email}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="phone" className="text-foreground font-semibold text-base flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-secondary" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    className={`bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl h-12 text-base backdrop-blur-sm transition-all duration-200 ${validationErrors.phone ? 'border-red-400' : ''}`}
+                    {...register('phone')}
+                    placeholder="(555) 123-4567"
+                  />
+                  {validationErrors.phone && (
+                    <p className="text-sm text-red-400 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.phone}
+                    </p>
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Location */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-5 bg-secondary rounded-full"></div>
+                <h4 className="text-foreground font-semibold text-sm uppercase tracking-widest">Location</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="address" className="text-foreground font-semibold text-base flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-secondary" />
+                    Address
+                  </Label>
+                  <Input
+                    id="address"
+                    type="text"
+                    className="bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl h-12 text-base backdrop-blur-sm transition-all duration-200"
+                    value={addressFields.address}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddressFields(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="123 Main St"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="city" className="text-foreground font-semibold text-base flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-secondary" />
+                    City
+                  </Label>
+                  <Input
+                    id="city"
+                    type="text"
+                    className="bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl h-12 text-base backdrop-blur-sm transition-all duration-200"
+                    value={addressFields.city}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddressFields(prev => ({ ...prev, city: e.target.value }))}
+                    placeholder="New York"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bio */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-5 bg-secondary rounded-full"></div>
+                <h4 className="text-foreground font-semibold text-sm uppercase tracking-widest">Bio</h4>
+              </div>
+              <Textarea
+                id="bio"
+                rows={4}
+                className={`bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl text-base resize-none backdrop-blur-sm transition-all duration-200 ${validationErrors.bio ? 'border-red-400' : ''}`}
+                {...register('bio')}
+                placeholder="Tell us about yourself..."
+              />
+              {validationErrors.bio && (
+                <p className="text-sm text-red-400 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {validationErrors.bio}
+                </p>
+              )}
+            </div>
+
+            {/* SMS Notifications */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-5 bg-secondary rounded-full"></div>
+                <h4 className="text-foreground font-semibold text-sm uppercase tracking-widest">SMS Notifications</h4>
+              </div>
+              <div className="space-y-3">
+                <Label htmlFor="carrier" className="text-foreground font-semibold text-base flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-secondary" />
+                  Carrier *
+                  <span title="We need your carrier to send you free SMS reminders. If you're unsure, check your phone bill or carrier app.">
+                    <Info className="h-4 w-4 text-secondary cursor-pointer" />
+                  </span>
+                </Label>
+                <Select
+                  value={watch('carrier')}
+                  onValueChange={(value: string) => setValue('carrier', value)}
+                >
+                  <SelectTrigger className={`h-12 px-4 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl backdrop-blur-sm transition-all duration-200 ${errors.carrier ? 'border-red-400' : ''}`}>
+                    <SelectValue placeholder="Select your carrier…" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gradient-to-br from-white/10 to-white/5 dark:from-white/10 dark:to-white/5 backdrop-blur-2xl border-black/10 dark:border-white/20 rounded-2xl shadow-2xl p-2 text-foreground">
+                    {CARRIER_OPTIONS.map((carrier) => (
+                      <SelectItem key={carrier.value} value={carrier.value} className="flex items-center justify-between px-4 py-2 hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer mb-1 last:mb-0">
+                        <span className="font-medium text-base">{carrier.label}</span>
+                        {watch('carrier') === carrier.value && <Check className="h-4 w-4 text-secondary ml-2" />}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.carrier && (
+                  <p className="text-red-400 text-sm">Carrier is required</p>
+                )}
+              </div>
+              <div>
+                {!watch('sms_notifications') ? (
+                  <Button
+                    type="button"
+                    className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl px-6 py-2 text-base"
+                    onClick={() => setValue('sms_notifications', true)}
+                  >
+                    Enable SMS Notifications
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    className="bg-green-600/20 border border-green-500/30 text-green-400 font-semibold rounded-xl px-6 py-2 text-base flex items-center gap-2 cursor-default"
+                    disabled
+                  >
+                    <Check className="h-4 w-4" /> SMS Notifications Enabled
+                  </Button>
+                )}
+              </div>
+            </div>
+
             {/* Save Button */}
-            <div className="flex justify-end pt-6">
+            <div className="flex justify-end pt-2">
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-lg px-8 py-3"
+                className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl px-8 py-3 text-lg"
               >
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
                 ) : (
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="h-5 w-5 mr-2" />
                 )}
                 Save Changes
               </Button>
@@ -728,8 +757,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
           </CardContent>
         </Card>
       </form>
-
-
     </div>
   )
-} 
+}

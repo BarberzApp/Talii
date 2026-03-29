@@ -311,20 +311,20 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
   const isLight = variant === "light"
 
   const cardCls = isLight
-    ? "bg-surface border border-border shadow-2xl rounded-2xl min-h-[400px]"
-    : "bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-2xl min-h-[400px]"
+    ? "bg-surface border border-border shadow-2xl rounded-3xl min-h-[400px] overflow-hidden"
+    : "bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl min-h-[400px] overflow-hidden"
   const titleCls = isLight ? "text-2xl font-bebas text-foreground tracking-wide" : "text-2xl font-bebas text-foreground dark:text-white tracking-wide"
-  const descCls = isLight ? "text-muted-foreground" : "text-muted-foreground dark:text-white/80"
+  const descCls = isLight ? "text-foreground/70" : "text-foreground/70 dark:text-white/70"
   const mainBoxCls = isLight
-    ? "relative bg-muted border border-border rounded-2xl p-8"
-    : "relative bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-black/20 dark:border-white/20 rounded-2xl p-8"
-  const breakdownLabelCls = isLight ? "text-lg font-semibold text-foreground" : "text-lg font-semibold text-foreground dark:text-white"
+    ? "relative bg-muted border border-border rounded-2xl p-8 shadow-inner"
+    : "relative bg-black/10 dark:bg-white/10 backdrop-blur-xl border border-black/20 dark:border-white/20 rounded-2xl p-8 shadow-2xl"
+  const breakdownLabelCls = "text-xl font-bebas text-foreground dark:text-white tracking-wide"
   const smallCardCls = isLight
-    ? "p-4 space-y-2 bg-muted border border-border rounded-xl"
-    : "p-4 space-y-2 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:bg-white/10 rounded-xl"
-  const smallLabelCls = isLight ? "text-sm text-muted-foreground" : "text-sm text-muted-foreground dark:text-white/60"
-  const smallValueCls = isLight ? "text-2xl font-bold text-foreground" : "text-2xl font-bold text-foreground dark:text-white"
-  const smallHintCls = isLight ? "text-xs text-muted-foreground/80" : "text-xs text-muted-foreground dark:text-white/40"
+    ? "p-4 space-y-2 bg-muted border border-border rounded-xl transition-all hover:shadow-md"
+    : "p-4 space-y-2 bg-white/5 border border-black/10 dark:border-white/10 hover:bg-white/10 rounded-xl transition-all duration-300"
+  const smallLabelCls = "text-sm font-medium text-foreground/60 dark:text-white/60"
+  const smallValueCls = "text-2xl font-bebas text-foreground dark:text-white tracking-wide"
+  const smallHintCls = "text-xs text-foreground/40 dark:text-white/40"
   const trendUpCls = isLight ? "h-5 w-5 text-green-600" : "h-5 w-5 text-green-400"
   const trendDownCls = isLight ? "h-5 w-5 text-red-600" : "h-5 w-5 text-red-400"
 
@@ -348,16 +348,16 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
 
   return (
     <div className={cn(cardCls)}>
-      <CardHeader className="text-center">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <div className="p-2 bg-secondary/20 rounded-full">
+      <CardHeader className="bg-gradient-to-r from-secondary/10 to-transparent border-b border-black/5 dark:border-white/10 p-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 bg-secondary/20 rounded-xl">
             <DollarSign className="h-5 w-5 text-secondary" />
           </div>
           <CardTitle className={titleCls}>Monthly Earnings</CardTitle>
         </div>
         <CardDescription className={descCls}>Your earnings breakdown for this month</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-8">
         <div className="flex flex-col space-y-8">
           {/* Main Earnings Display */}
           <div className="text-center space-y-4">
@@ -410,19 +410,19 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
           {/* Payment Setup Section - hidden in preview */}
           {!preview && !hasStripeAccount && (
             <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
-              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl"}>
-                <p className={cn("mb-4", descCls)}>
+              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl backdrop-blur-md"}>
+                <p className={cn("mb-6 text-lg", descCls)}>
                   Set up your payment account to start receiving payments
                 </p>
                 <Button
                   onClick={handleSetupPayments}
                   disabled={isSettingUp}
-                  className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-lg"
+                  className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-bold shadow-xl rounded-xl px-10 py-6 text-lg transition-all duration-300 hover:scale-105 active:scale-95"
                 >
                   {isSettingUp ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <Loader2 className="h-5 w-5 animate-spin mr-3" />
                   ) : (
-                    <CreditCard className="h-4 w-4 mr-2" />
+                    <CreditCard className="h-5 w-5 mr-3" />
                   )}
                   {isSettingUp ? "Setting up..." : "Set up payments"}
                 </Button>
@@ -433,13 +433,13 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
           {/* Stripe Dashboard Access - hidden in preview */}
           {!preview && hasStripeAccount && (
             <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
-              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl"}>
+              <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl backdrop-blur-md"}>
                 <Button
                   onClick={handleAccessDashboard}
                   variant="outline"
-                  className={isLight ? "border-border text-foreground hover:bg-muted" : "border-black/20 dark:border-white/20 text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10 font-semibold"}
+                  className={isLight ? "border-border text-foreground hover:bg-muted" : "border-black/20 dark:border-white/20 text-foreground dark:text-white hover:bg-white/10 backdrop-blur-xl rounded-xl px-8 py-6 font-semibold transition-all duration-300"}
                 >
-                  <CreditCard className="h-4 w-4 mr-2" />
+                  <CreditCard className="h-5 w-5 mr-3" />
                   Access Stripe Dashboard
                 </Button>
               </div>

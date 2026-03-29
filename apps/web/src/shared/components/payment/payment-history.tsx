@@ -189,135 +189,142 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
 
   if (loading && payments.length === 0) {
     return (
-      <GlassyCard className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl">
+      <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-3xl overflow-hidden">
         <CardContent className="pt-6 flex justify-center items-center min-h-[300px]">
           <LoadingSpinner size="md" text="Loading payment history..." />
         </CardContent>
-      </GlassyCard>
+      </Card>
     )
   }
 
   if (error && payments.length === 0) {
     return (
-      <GlassyCard className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl">
+      <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-3xl overflow-hidden">
         <CardContent className="pt-6">
           <div className="text-center text-red-400">
-            <p>Error loading payment history: {error}</p>
+            <p className="text-lg font-bebas tracking-wide mb-4">Error loading payment history</p>
+            <p className="text-sm text-foreground/60 mb-6">{error}</p>
             <Button 
               onClick={() => loadPayments()} 
-              className="mt-4 bg-secondary hover:bg-secondary/90 text-primary font-semibold"
+              className="bg-secondary hover:bg-secondary/90 text-primary font-bold rounded-xl px-8 py-2 shadow-lg transition-all"
             >
               Try Again
             </Button>
           </div>
         </CardContent>
-      </GlassyCard>
+      </Card>
     )
   }
 
   return (
-    <GlassyCard className="bg-white/5 border border-white/10 shadow-xl backdrop-blur-xl rounded-2xl">
-      <CardHeader>
+    <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden">
+      <CardHeader className="bg-gradient-to-r from-secondary/10 to-transparent border-b border-black/5 dark:border-white/10 p-6">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-secondary/20 rounded-full">
+          <div className="p-2 bg-secondary/20 rounded-xl">
             <DollarSign className="h-5 w-5 text-secondary" />
           </div>
-          <CardTitle className="text-2xl font-bebas text-white tracking-wide">Payment History</CardTitle>
+          <CardTitle className="text-2xl font-bebas text-foreground tracking-wide">Payment History</CardTitle>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-8">
         {/* Summary Cards */}
         {totals && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <GlassyCard variant="hover" className="p-4">
+            <div className="bg-white/5 backdrop-blur-md border border-black/5 dark:border-white/10 rounded-2xl p-5 transition-all hover:bg-white/10 group">
               <div className="flex items-center gap-2 mb-2">
                 {earningsData?.trend === "up" ? (
                   <TrendingUp className="h-4 w-4 text-green-400" />
                 ) : (
                   <TrendingDown className="h-4 w-4 text-red-400" />
                 )}
-                <span className="text-sm text-white/60">Revenue Growth</span>
+                <span className="text-xs font-semibold text-foreground/60 uppercase tracking-widest">Growth</span>
               </div>
-              <div className={`text-2xl font-bold ${earningsData?.trend === "up" ? "text-green-400" : "text-red-400"}`}>
+              <div className={`text-2xl font-bebas tracking-wide ${earningsData?.trend === "up" ? "text-green-400" : "text-red-400"}`}>
                 {earningsData?.trend === "up" ? "+" : "-"}{earningsData?.percentage || 0}%
               </div>
-              <div className="text-xs text-white/40">vs last month</div>
-            </GlassyCard>
-            <GlassyCard variant="secondary" className="p-4">
+              <div className="text-[10px] text-foreground/40 mt-1 uppercase">vs last month</div>
+            </div>
+            
+            <div className="bg-secondary/10 border border-secondary/20 rounded-2xl p-5 transition-all hover:bg-secondary/20 group">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="h-4 w-4 text-secondary" />
-                <span className="text-sm text-secondary font-medium">Total Payout</span>
+                <span className="text-xs font-semibold text-secondary uppercase tracking-widest">Payout</span>
               </div>
-              <div className="text-2xl font-bold text-secondary">{formatCurrency(totals.totalBarberPayout)}</div>
-            </GlassyCard>
-            <GlassyCard variant="hover" className="p-4">
+              <div className="text-2xl font-bebas tracking-wide text-secondary">{formatCurrency(totals.totalBarberPayout)}</div>
+              <div className="text-[10px] text-secondary/60 mt-1 uppercase">Total earned</div>
+            </div>
+            
+            <div className="bg-white/5 backdrop-blur-md border border-black/5 dark:border-white/10 rounded-2xl p-5 transition-all hover:bg-white/10 group">
               <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-4 w-4 text-purple-400" />
-                <span className="text-sm text-white/60">Total Bookings</span>
+                <Calendar className="h-4 w-4 text-secondary/70" />
+                <span className="text-xs font-semibold text-foreground/60 uppercase tracking-widest">Bookings</span>
               </div>
-              <div className="text-2xl font-bold text-white">{totals.totalBookings}</div>
-            </GlassyCard>
+              <div className="text-2xl font-bebas tracking-wide text-foreground">{totals.totalBookings}</div>
+              <div className="text-[10px] text-foreground/40 mt-1 uppercase">Finalized count</div>
+            </div>
           </div>
         )}
 
         {/* Payment List */}
         <div className="space-y-4">
           {payments.map((payment) => (
-            <GlassyCard key={payment.id} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 space-y-3 hover:bg-white/10 transition-colors">
-              <div className="flex items-start justify-between">
+            <div key={payment.id} className="bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl p-5 hover:bg-white/10 hover:border-secondary/20 transition-all duration-300 group">
+              <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold text-white">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-lg font-bebas tracking-wide text-foreground">
                       {payment.services?.name || 'Unknown Service'}
                     </h3>
                     {getStatusBadge(payment.status)}
                   </div>
                   
-                  <div className="flex items-center gap-4 text-sm text-white/60">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
+                  <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm text-foreground/60">
+                    <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
+                      <Calendar className="h-3 w-3 text-secondary" />
                       {formatDate(payment.date)}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
+                    <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
+                      <Clock className="h-3 w-3 text-secondary" />
                       {formatTime(payment.date)}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <User className="h-4 w-4" />
+                    <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
+                      <User className="h-3 w-3 text-secondary" />
                       {payment.profiles?.name || payment.guest_name || 'Guest'}
                     </div>
                   </div>
                 </div>
                 
                 <div className="text-right">
-                  <div className="text-lg font-bold text-white">{formatCurrency(payment.price)}</div>
-                  <div className="text-sm text-secondary font-medium">
-                    You earned: {formatCurrency(payment.barber_payout)}
+                  <div className="text-xl font-bebas tracking-wide text-foreground mb-1">{formatCurrency(payment.price)}</div>
+                  <div className="text-xs font-semibold text-secondary uppercase tracking-widest bg-secondary/10 px-2 py-1 rounded-lg inline-block">
+                    Earned: {formatCurrency(payment.barber_payout)}
                   </div>
                 </div>
               </div>
               
               {payment.notes && (
-                <div className="text-sm text-white/60 bg-white/5 rounded-lg p-3">
-                  <strong className="text-white/80">Notes:</strong> {payment.notes}
+                <div className="text-sm text-foreground/60 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-4 mt-4 relative overflow-hidden group/note">
+                  <div className="absolute left-0 top-0 w-1 h-full bg-secondary/30 group-hover/note:bg-secondary transition-colors" />
+                  <span className="font-semibold text-foreground/80 block mb-1">Notes:</span>
+                  {payment.notes}
                 </div>
               )}
-            </GlassyCard>
+            </div>
           ))}
         </div>
 
         {/* Load More Button */}
         {hasMore && (
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center">
             <Button 
               onClick={loadMore} 
               disabled={loading}
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10 font-semibold"
+              className="border-black/10 dark:border-white/20 text-foreground hover:bg-black/5 dark:hover:bg-white/10 backdrop-blur-xl rounded-xl px-10 py-6 font-bold text-lg transition-all duration-300"
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="h-5 w-5 animate-spin mr-3" />
                   Loading...
                 </>
               ) : (
@@ -334,17 +341,19 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
         )}
 
         {payments.length === 0 && !loading && (
-          <div className="text-center py-12 text-white/60">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="p-3 bg-secondary/20 rounded-full">
+          <div className="text-center py-20">
+            <div className="flex flex-col items-center gap-6">
+              <div className="p-6 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-3xl shadow-lg">
                 <DollarSign className="h-12 w-12 text-secondary/50" />
               </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bebas tracking-wide text-foreground">No payment history found</h3>
+                <p className="text-foreground/60 text-lg">Your completed bookings will appear here</p>
+              </div>
             </div>
-            <p className="text-lg font-semibold text-white mb-2">No payment history found</p>
-            <p className="text-sm">Your completed bookings will appear here</p>
           </div>
         )}
       </CardContent>
-    </GlassyCard>
+    </Card>
   )
 } 

@@ -355,33 +355,36 @@ export function SettingsPage() {
 
           {/* Progress Section - Only show if there are incomplete sections */}
           {getCompletionPercentage() < 100 && (
-            <Card className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl">
-              <CardContent className="p-6">
-                <div className="space-y-4">
+            <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden">
+              <CardContent className="p-8">
+                <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-secondary" />
-                      <span className="text-sm font-medium text-foreground dark:text-white">Profile Completion</span>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-secondary/20 rounded-xl">
+                        <Sparkles className="h-5 w-5 text-secondary" />
+                      </div>
+                      <span className="text-lg font-bebas tracking-wide text-foreground">Profile Completion</span>
                     </div>
-                    <Badge variant="secondary" className="bg-secondary/20 text-secondary border-secondary/30">
+                    <Badge variant="secondary" className="bg-secondary/20 text-secondary border border-secondary/30 text-sm font-bold rounded-lg px-3 py-1">
                       {getCompletionPercentage()}% Complete
                     </Badge>
                   </div>
-                  <div className="relative">
-                    <Progress 
-                      value={getCompletionPercentage()} 
-                      className="h-3 bg-black/10 dark:bg-white/10 border border-black/20 dark:border-white/20" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-secondary/20 to-secondary/40 rounded-full" style={{ width: `${getCompletionPercentage()}%` }} />
+                  <div className="relative group">
+                    <div className="h-4 w-full bg-black/10 dark:bg-white/5 rounded-full overflow-hidden border border-black/5 dark:border-white/10 p-0.5">
+                      <div 
+                        className="h-full bg-gradient-to-r from-secondary/80 via-secondary to-secondary/90 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(var(--secondary),0.4)]"
+                        style={{ width: `${getCompletionPercentage()}%` }}
+                      />
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground dark:text-white/60 text-center">
-                    Complete all sections to optimize your profile for clients
+                  <p className="text-sm text-foreground/50 text-center font-medium">
+                    Complete all sections to optimize your profile and reach more clients
                   </p>
                   {user?.role === 'barber' && (
-                    <div className="flex justify-center">
+                    <div className="flex justify-center pt-2">
                       <Button 
                         onClick={() => safePush('/barber/onboarding')}
-                        className="bg-secondary hover:bg-secondary/90 text-primary font-semibold rounded-xl px-6 py-3"
+                        className="bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20 font-bold rounded-xl px-8 py-2 transition-all duration-300"
                         size="sm"
                       >
                         Complete Onboarding
@@ -394,79 +397,74 @@ export function SettingsPage() {
           )}
 
           {/* Main Settings Card */}
-          <Card className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl overflow-hidden">
+          <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-3xl rounded-[2.5rem] overflow-hidden">
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               {/* Modern Tab Navigation */}
-              <div className="p-6 border-b border-black/10 dark:border-white/10">
-                <div className="bg-black/5 dark:bg-white/5 backdrop-blur-xl border border-black/10 dark:border-white/10 shadow-xl rounded-2xl p-2">
-                  <TabsList className="flex w-full gap-2 bg-transparent">
+              <div className="p-8 border-b border-black/5 dark:border-white/10">
+                <div className="bg-black/5 dark:bg-black/20 border border-black/5 dark:border-white/10 shadow-2xl rounded-[1.5rem] p-1.5 backdrop-blur-xl">
+                  <TabsList className="flex w-full gap-2 bg-transparent overflow-x-auto no-scrollbar scroll-smooth">
                     <TabsTrigger 
                       value="profile" 
-                      className={`relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 text-xs sm:text-sm font-medium snap-start ${
+                      className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
                         activeTab === 'profile' 
-                          ? 'bg-secondary text-primary shadow-lg' 
-                          : 'text-muted-foreground dark:text-white/70 hover:text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10'
+                          ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                          : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                       }`}
                     >
-                      <User className="h-4 w-4" />
-                      <span className="hidden sm:inline">Profile</span>
+                      <User className="h-4.5 w-4.5" />
+                      Profile
                     </TabsTrigger>
                     
                     {user?.role === 'barber' && (
                       <>
                         <TabsTrigger 
                           value="services" 
-                          className={`relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 text-xs sm:text-sm font-medium snap-start ${
+                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
                             activeTab === 'services' 
-                              ? 'bg-secondary text-primary shadow-lg' 
-                              : 'text-muted-foreground dark:text-white/70 hover:text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10'
+                              ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                              : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
-                          <Scissors className="h-4 w-4" />
-                          <span className="hidden sm:inline">Services</span>
+                          <Scissors className="h-4.5 w-4.5" />
+                          Services
                         </TabsTrigger>
                         
                         <TabsTrigger 
                           value="earnings" 
-                          className={`relative flex items-center gap-2 px-4 py-3 sm:px-6 sm:py-4 rounded-xl transition-all duration-200 text-sm sm:text-base font-semibold snap-start ${
+                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
                             activeTab === 'earnings' 
-                              ? 'bg-secondary text-primary shadow-lg scale-105' 
-                              : 'text-white/80 hover:text-white hover:bg-black/10 dark:bg-white/10 bg-secondary/10 border border-secondary/20'
+                              ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                              : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
-                          <DollarSign className="h-5 w-5" />
-                          <span className="hidden sm:inline">Earnings</span>
+                          <DollarSign className="h-4.5 w-4.5" />
+                          Earnings
                         </TabsTrigger>
-                        
                         <TabsTrigger 
                           value="addons" 
-                          className={`relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 text-xs sm:text-sm font-medium snap-start ${
+                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
                             activeTab === 'addons' 
-                              ? 'bg-secondary text-primary shadow-lg' 
-                              : 'text-muted-foreground dark:text-white/70 hover:text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10'
+                              ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                              : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
-                          <Package className="h-4 w-4" />
-                          <span className="hidden sm:inline">Add-ons</span>
+                          <Package className="h-4.5 w-4.5" />
+                          Add-ons
                         </TabsTrigger>
                         
                         <TabsTrigger 
                           value="availability" 
-                          className={`relative flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 text-xs sm:text-sm font-medium snap-start ${
+                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
                             activeTab === 'availability' 
-                              ? 'bg-secondary text-primary shadow-lg' 
-                              : 'text-muted-foreground dark:text-white/70 hover:text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10'
+                              ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                              : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
-                          <Calendar className="h-4 w-4" />
-                          <span className="hidden sm:inline">Schedule</span>
+                          <Calendar className="h-4.5 w-4.5" />
+                          Availability
                         </TabsTrigger>
                       </>
                     )}
-                    
-
-                    
-
                   </TabsList>
                 </div>
               </div>
@@ -497,10 +495,17 @@ export function SettingsPage() {
                     </TabsContent>
                     
                     <TabsContent value="earnings" className="mt-0">
-                      <div className="space-y-6">
-                        <div className="text-center space-y-2">
-                          <h2 className="text-2xl font-bebas font-bold text-foreground dark:text-white">Earnings & Payments</h2>
-                          <p className="text-muted-foreground dark:text-white/60 font-pacifico">Track your earnings and manage payments</p>
+                      <div className="space-y-8">
+                        <div className="text-center space-y-4">
+                          <div className="flex items-center justify-center gap-4 mb-6">
+                            <div className="p-4 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl shadow-lg">
+                              <DollarSign className="h-8 w-8 text-secondary" />
+                            </div>
+                            <div>
+                              <h2 className="text-3xl sm:text-4xl font-bebas text-foreground tracking-wide">Earnings & Payments</h2>
+                              <p className="text-foreground/70 text-lg mt-2">Track your earnings and manage payments</p>
+                            </div>
+                          </div>
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <EarningsDashboard barberId={barberId} />

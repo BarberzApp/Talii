@@ -10,6 +10,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 interface Availability {
   id?: string
@@ -153,22 +154,28 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
   return (
     <div className="space-y-8">
       {/* Unified Header */}
-      <div className="text-center space-y-2 mb-4">
-        <div className="flex items-center justify-center gap-3">
-          <Calendar className="h-7 w-7 text-secondary" />
-          <h2 className="text-2xl sm:text-3xl font-bebas text-foreground tracking-wide">Weekly Schedule</h2>
+      <div className="flex items-center gap-4 mb-8">
+        <div className="p-4 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl shadow-lg">
+          <Calendar className="h-8 w-8 text-secondary" />
         </div>
-        <p className="text-muted-foreground text-base mt-1">Set your regular working hours for each day</p>
+        <div>
+          <h2 className="text-3xl sm:text-4xl font-bebas text-foreground tracking-wide">Weekly Schedule</h2>
+          <p className="text-foreground/70 text-lg mt-2">Manage your regular working hours and availability</p>
+        </div>
       </div>
 
-      {/* Schedule Grid - glassmorphism card style */}
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4">
         {schedule.map((slot) => (
           <div
             key={slot.day_of_week}
-            className={`rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl shadow-lg transition-all duration-300 overflow-hidden group px-0`}
+            className={cn(
+              "rounded-2xl border transition-all duration-300 overflow-hidden group",
+              slot.isAvailable 
+                ? "bg-white/5 border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl" 
+                : "bg-black/5 dark:bg-white/5 border-transparent opacity-60 hover:opacity-100"
+            )}
           >
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-5">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6">
               <div className="flex items-center space-x-5">
                 {/* Toggle switch */}
                 <label className="relative inline-flex items-center cursor-pointer group focus:outline-none">
@@ -179,48 +186,55 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
                     className="sr-only peer"
                     aria-label={`Toggle ${DAYS[slot.day_of_week]}`}
                   />
-                  <span
-                    className="w-12 h-6 flex items-center transition-all duration-300 rounded-full border-2 border-black/10 dark:border-white/20 peer-checked:bg-secondary peer-checked:border-secondary bg-black/5 dark:bg-white/10 peer-focus:ring-2 peer-focus:ring-secondary peer-focus:ring-offset-2 peer-focus:ring-offset-background hover:scale-105"
-                  >
-                    <span className={`w-3 h-3 bg-white rounded-full transition-transform duration-300 ml-1 ${slot.isAvailable ? 'translate-x-6' : 'translate-x-0'}`} />
-                  </span>
+                  <div className="w-14 h-7 flex items-center transition-all duration-300 rounded-full border border-black/10 dark:border-white/20 peer-checked:bg-secondary peer-checked:border-secondary/50 bg-black/10 dark:bg-white/10 peer-focus:ring-2 peer-focus:ring-secondary/50 shadow-inner group-hover:scale-105">
+                    <div className={cn(
+                      "w-5 h-5 bg-white rounded-full transition-all duration-300 shadow-lg",
+                      slot.isAvailable ? "translate-x-7 bg-primary" : "translate-x-1"
+                    )} />
+                  </div>
                 </label>
                 <div>
-                  <span className={`font-bebas text-xl tracking-wide ${slot.isAvailable ? 'text-foreground' : 'text-muted-foreground'}`}>{DAYS[slot.day_of_week]}</span>
+                  <span className={cn(
+                    "font-bebas text-2xl tracking-wide transition-colors",
+                    slot.isAvailable ? "text-foreground" : "text-foreground/40"
+                  )}>
+                    {DAYS[slot.day_of_week]}
+                  </span>
                   {slot.isAvailable && (
-                    <p className="text-xs text-secondary flex items-center gap-1 mt-1">
-                      <Clock className="h-3 w-3" />
-                      Available for bookings
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="h-1.5 w-1.5 rounded-full bg-secondary animate-pulse" />
+                      <p className="text-xs font-semibold text-secondary uppercase tracking-widest">Active</p>
+                    </div>
                   )}
                 </div>
               </div>
               {slot.isAvailable && (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-6 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row items-center gap-6 w-full md:w-auto">
                   <div className="space-y-2 w-full sm:w-auto">
-                    <Label htmlFor={`start-${slot.day_of_week}`} className="text-muted-foreground text-xs font-medium flex items-center gap-2">
-                      <Clock className="h-3 w-3" />
-                      Start Time
+                    <Label htmlFor={`start-${slot.day_of_week}`} className="text-foreground/60 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                      <Clock className="h-3 w-3 text-secondary" />
+                      Start
                     </Label>
                     <Input
                       id={`start-${slot.day_of_week}`}
                       type="time"
                       value={slot.start_time}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, 'start_time', e.target.value)}
-                      className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary focus:ring-secondary rounded-lg h-10 text-base"
+                      className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl h-11 text-base transition-all"
                     />
                   </div>
+                  <div className="h-8 w-px bg-white/10 hidden sm:block mt-6" />
                   <div className="space-y-2 w-full sm:w-auto">
-                    <Label htmlFor={`end-${slot.day_of_week}`} className="text-muted-foreground text-xs font-medium flex items-center gap-2">
-                      <Clock className="h-3 w-3" />
-                      End Time
+                    <Label htmlFor={`end-${slot.day_of_week}`} className="text-foreground/60 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                      <Clock className="h-3 w-3 text-secondary" />
+                      End
                     </Label>
                     <Input
                       id={`end-${slot.day_of_week}`}
                       type="time"
                       value={slot.end_time}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, 'end_time', e.target.value)}
-                      className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary focus:ring-secondary rounded-lg h-10 text-base"
+                      className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl h-11 text-base transition-all"
                     />
                   </div>
                 </div>
@@ -235,49 +249,52 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
         <Button
           onClick={handleSave}
           disabled={isSaving}
-          className="bg-secondary text-secondary-foreground font-semibold shadow-lg px-10 py-3 rounded-xl transition-all duration-300 hover:bg-secondary/90 text-base"
+          className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-bold shadow-2xl px-12 py-7 rounded-2xl transition-all duration-300 hover:scale-105 active:scale-95 text-lg"
         >
           {isSaving ? (
             <>
-              <Loader2 className="h-5 w-5 animate-spin mr-3" />
+              <Loader2 className="h-6 w-6 animate-spin mr-3" />
               Saving Schedule...
             </>
           ) : (
             <>
-              <Save className="h-5 w-5 mr-3" />
+              <Save className="h-6 w-6 mr-3" />
               Save Weekly Schedule
             </>
           )}
         </Button>
       </div>
-      {/* Tips Section - info card style */}
-      <div className="mt-8">
-        <div className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-xl shadow-lg p-6 flex items-start gap-4">
-          <div className="p-2 bg-secondary/10 rounded-lg">
-            <Sparkles className="h-6 w-6 text-secondary" />
-          </div>
-          <div className="space-y-2">
-            <h4 className="text-lg font-bebas text-foreground tracking-wide">Schedule Tips</h4>
-            <ul className="text-muted-foreground space-y-2 text-sm">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></span>
-                <span>Set realistic hours that you can consistently maintain</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></span>
-                <span>Consider travel time between appointments when setting hours</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></span>
-                <span>Leave buffer time for breaks and unexpected delays</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></span>
-                <span>Update your schedule regularly to reflect your availability</span>
-              </li>
-            </ul>
-          </div>
-        </div>
+      <div className="mt-12">
+        <Card className="bg-gradient-to-br from-secondary/10 via-secondary/5 to-transparent border border-secondary/20 shadow-xl backdrop-blur-xl rounded-3xl overflow-hidden">
+          <CardContent className="p-8">
+            <div className="flex items-start gap-6">
+              <div className="p-4 bg-gradient-to-br from-secondary/20 to-secondary/10 rounded-2xl shadow-lg">
+                <Sparkles className="h-8 w-8 text-secondary" />
+              </div>
+              <div className="space-y-4">
+                <h4 className="text-2xl font-bebas text-foreground tracking-wide">Schedule Optimization Pro Tips</h4>
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <li className="flex items-start gap-3 bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                    <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0 shadow-[0_0_10px_rgba(var(--secondary),0.5)]" />
+                    <span className="text-foreground/70 text-base leading-relaxed">Set realistic hours that you can consistently maintain across all seasons</span>
+                  </li>
+                  <li className="flex items-start gap-3 bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                    <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0 shadow-[0_0_10px_rgba(var(--secondary),0.5)]" />
+                    <span className="text-foreground/70 text-base leading-relaxed">Account for peak times in your area to maximize booking potential</span>
+                  </li>
+                  <li className="flex items-start gap-3 bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                    <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0 shadow-[0_0_10px_rgba(var(--secondary),0.5)]" />
+                    <span className="text-foreground/70 text-base leading-relaxed">Leave 15-minute buffer windows between complex services</span>
+                  </li>
+                  <li className="flex items-start gap-3 bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                    <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0 shadow-[0_0_10px_rgba(var(--secondary),0.5)]" />
+                    <span className="text-foreground/70 text-base leading-relaxed">Regularly update hours to reflect holiday breaks or vacations</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
