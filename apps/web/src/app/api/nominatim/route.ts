@@ -3,10 +3,9 @@ import { handleCorsPreflight, withCors } from '@/shared/lib/cors';
 import { logger } from '@/shared/lib/logger';
 
 // Google Maps Platform proxy
-// Replaces the old OpenStreetMap Nominatim proxy.
 // Supports:
-//   ?q=<query>           → Places Autocomplete (address suggestions)
-//   ?q=<query>&type=geocode  → Geocoding API (address → lat/lon)
+//   ?q=<query>                    → Places Autocomplete (address suggestions)
+//   ?q=<query>&type=geocode       → Geocoding API (address → lat/lon)
 //   ?latlng=<lat,lon>&type=reverse → Reverse Geocoding (lat/lon → address)
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;

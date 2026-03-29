@@ -42,10 +42,11 @@ export async function getAddressSuggestions(
 }
 
 /**
- * Address autocomplete suggestions — returns raw normalized objects.
- * This name is kept for backward compatibility with all existing import sites.
+ * Address autocomplete suggestions — returns raw normalized objects including
+ * the full `address` component map (house_number, road, city, state, etc.)
+ * from Google Places / Geocoding API.
  */
-export async function getAddressSuggestionsNominatim(query: string): Promise<Array<any>> {
+export async function getAddressSuggestionsDetailed(query: string): Promise<Array<any>> {
   if (typeof window === 'undefined') return [];
   if (!query || query.length < 3) return [];
   const url = `/api/nominatim?q=${encodeURIComponent(query)}`;
@@ -58,6 +59,12 @@ export async function getAddressSuggestionsNominatim(query: string): Promise<Arr
     return [];
   }
 }
+
+/**
+ * @deprecated Use `getAddressSuggestionsDetailed` instead.
+ * Kept for backward compatibility.
+ */
+export const getAddressSuggestionsNominatim = getAddressSuggestionsDetailed;
 
 export async function reverseGeocode(
   lat: number,

@@ -21,20 +21,6 @@ export async function geocodeAddress(address: string): Promise<{ lat: number; lo
 }
 
 /** Get address autocomplete suggestions (Google Places Autocomplete) */
-export async function getAddressSuggestionsNominatim(query: string): Promise<Array<any>> {
-  if (!query || query.length < 3) return [];
-  const url = `${API_BASE_URL}/api/nominatim?q=${encodeURIComponent(query)}`;
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    return data || [];
-  } catch (error) {
-    logger.error('Error fetching address suggestions:', error);
-    return [];
-  }
-}
-
-/** Get structured address suggestions (alias for autocomplete, Google Places backed) */
 export async function getAddressSuggestions(
   query: string
 ): Promise<Array<{ name: string; city?: string; country?: string; lat: number; lon: number }>> {
@@ -55,6 +41,30 @@ export async function getAddressSuggestions(
     return [];
   }
 }
+
+/**
+ * Get address autocomplete suggestions — returns raw normalized objects including
+ * the full `address` component map (house_number, road, city, state, etc.)
+ * from Google Places / Geocoding API.
+ */
+export async function getAddressSuggestionsDetailed(query: string): Promise<Array<any>> {
+  if (!query || query.length < 3) return [];
+  const url = `${API_BASE_URL}/api/nominatim?q=${encodeURIComponent(query)}`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data || [];
+  } catch (error) {
+    logger.error('Error fetching address suggestions:', error);
+    return [];
+  }
+}
+
+/**
+ * @deprecated Use `getAddressSuggestionsDetailed` instead.
+ * Kept for backward compatibility.
+ */
+export const getAddressSuggestionsNominatim = getAddressSuggestionsDetailed;
 
 /** Reverse geocode a lat/lon to an address object (Google Geocoding API) */
 export async function reverseGeocode(

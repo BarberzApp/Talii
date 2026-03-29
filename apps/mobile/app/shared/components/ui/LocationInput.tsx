@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { MapPin, ChevronDown, X } from 'lucide-react-native';
-import { getAddressSuggestionsNominatim } from '../../lib/geocode';
+import { getAddressSuggestionsDetailed } from '../../lib/geocode';
 import { logger } from '../../lib/logger';
 import { useTheme } from '../theme/ThemeProvider';
 
@@ -69,7 +69,7 @@ export function LocationInput({
 
     setLoading(true);
     try {
-      const results = await getAddressSuggestionsNominatim(query);
+      const results = await getAddressSuggestionsDetailed(query);
       setSuggestions(results);
     } catch (error) {
       logger.error('Error searching addresses:', error);

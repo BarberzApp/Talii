@@ -20,7 +20,7 @@ import { SpecialtyAutocomplete } from '@/shared/components/ui/specialty-autocomp
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { SocialMediaLinks } from '@/shared/components/social-media-links'
 import React from 'react'
-import { getAddressSuggestionsNominatim } from '@/shared/lib/geocode'
+import { getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
 
 const steps = [
   {
@@ -69,7 +69,7 @@ interface ValidationErrors {
   [key: string]: string
 }
 
-// Address validation via Google Maps Geocoding API (through the /api/nominatim proxy)
+// Address validation via Google Maps Geocoding API
 async function validateAddress(address: string, city: string, state: string, zip: string): Promise<boolean> {
   const query = encodeURIComponent(`${address}, ${city}, ${state} ${zip}`)
   const url = `/api/nominatim?type=geocode&q=${query}`
@@ -457,10 +457,10 @@ export default function BarberOnboardingPage() {
         // Only validate if the user hasn't entered any location data at all
         const hasLocationData = formData.address || formData.city || formData.state || formData.zipCode;
         
-        if (!hasLocationData) {
-          errors.address = 'Please enter your location';
-        }
-        // Skip OSM validation entirely - trust that user knows their own address
+      // Validate address — trust the user's input, Google geocoding is done on save
+      if (!hasLocationData) {
+        errors.address = 'Please enter your location';
+      }
       }
     }
 
@@ -840,7 +840,7 @@ export default function BarberOnboardingPage() {
     }
     setSuggestionsLoading(true);
     try {
-      const suggestions = await getAddressSuggestionsNominatim(query);
+      const suggestions = await getAddressSuggestionsDetailed(query);
       setLocationSuggestions(suggestions);
     } catch (error) {
       setLocationSuggestions([]);

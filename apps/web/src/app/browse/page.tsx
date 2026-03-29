@@ -49,7 +49,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shar
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
-import { getAddressSuggestionsNominatim } from '@/shared/lib/geocode'
+import { getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
 
 // Type for the raw data structure from the database
 type BarberFromDB = {
@@ -148,7 +148,7 @@ export default function BrowsePage() {
     
     setLocationSuggestionsLoading(true);
     try {
-      const suggestions = await getAddressSuggestionsNominatim(query);
+      const suggestions = await getAddressSuggestionsDetailed(query);
       setLocationSuggestions(suggestions);
     } catch (error) {
       logger.error('Error fetching location suggestions', error);

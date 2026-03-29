@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { supabase } from '@/shared/lib/supabase'
 import { Input } from '@/shared/components/ui/input'
@@ -21,6 +21,7 @@ import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { logger } from '@/shared/lib/logger'
+import { getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
 
 interface ProfileFormData {
   name: string
@@ -100,6 +101,13 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<ProfileFormData>()
   const [isDeveloper, setIsDeveloper] = useState(false)
 
+  // Location autocomplete state
+  const [locationInput, setLocationInput] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Add state for separate address fields (removed zipCode and state)
   const [addressFields, setAddressFields] = useState({
     address: '',
@@ -148,6 +156,64 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     const parts = [fields.address, fields.city].filter(Boolean);
     return parts.join(', ');
   }
+
+  // Sync locationInput with addressFields when loaded
+  useEffect(() => {
+    const combined = [addressFields.address, addressFields.city].filter(Boolean).join(', ');
+    setLocationInput(combined);
+  }, [addressFields.address, addressFields.city]);
+
+  // Debounced fetch suggestions
+  const fetchLocationSuggestions = useCallback(async (query: string) => {
+    if (query.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+    setSuggestionsLoading(true);
+    try {
+      const suggestions = await getAddressSuggestionsDetailed(query);
+      setLocationSuggestions(suggestions);
+    } catch (err) {
+      logger.error('Error fetching location suggestions', err);
+      setLocationSuggestions([]);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (locationDebounceRef.current) clearTimeout(locationDebounceRef.current);
+    if (showSuggestions && locationInput.length >= 3) {
+      locationDebounceRef.current = setTimeout(() => {
+        fetchLocationSuggestions(locationInput);
+      }, 300);
+    } else if (locationInput.length < 3) {
+      setLocationSuggestions([]);
+    }
+    return () => { if (locationDebounceRef.current) clearTimeout(locationDebounceRef.current); };
+  }, [locationInput, showSuggestions, fetchLocationSuggestions]);
+
+  const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocationInput(e.target.value);
+    setShowSuggestions(true);
+    // Update addressFields address while typing
+    setAddressFields(prev => ({ ...prev, address: e.target.value, city: '' }));
+  };
+
+  const handleLocationSelect = (suggestion: any) => {
+    const addr = suggestion.address || {};
+    const house = addr.house_number || '';
+    const road = addr.road || '';
+    const city = addr.city || addr.town || addr.village || addr.hamlet || '';
+    const state = addr.state || addr.state_code || '';
+    const line1 = [house, road].filter(Boolean).join(' ');
+    const line2 = [city, state].filter(Boolean).join(', ');
+    const formatted = [line1, line2].filter(Boolean).join(', ');
+    setLocationInput(formatted);
+    setAddressFields({ address: [house, road].filter(Boolean).join(' '), city: city });
+    setShowSuggestions(false);
+    setLocationSuggestions([]);
+  };
 
   const validateForm = (data: ProfileFormData): boolean => {
     const errors: {[key: string]: string} = {}
@@ -631,35 +697,56 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 <div className="w-1 h-5 bg-secondary rounded-full"></div>
                 <h4 className="text-foreground font-semibold text-sm uppercase tracking-widest">Location</h4>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label htmlFor="address" className="text-foreground font-semibold text-base flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-secondary" />
-                    Address
-                  </Label>
+              <div className="relative">
+                <Label htmlFor="location-input" className="text-foreground font-semibold text-base flex items-center gap-2 mb-3">
+                  <MapPin className="h-4 w-4 text-secondary" />
+                  Address
+                </Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary" />
                   <Input
-                    id="address"
+                    id="location-input"
                     type="text"
-                    className="bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl h-12 text-base backdrop-blur-sm transition-all duration-200"
-                    value={addressFields.address}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddressFields(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="123 Main St"
+                    className="pl-10 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl h-12 text-base backdrop-blur-sm transition-all duration-200"
+                    value={locationInput}
+                    onChange={handleLocationInputChange}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 180)}
+                    placeholder="Search your address..."
+                    autoComplete="off"
                   />
+                  {/* Autocomplete dropdown */}
+                  {showSuggestions && (locationSuggestions.length > 0 || suggestionsLoading) && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border border-black/10 dark:border-white/20 rounded-xl shadow-xl overflow-hidden">
+                      {suggestionsLoading && (
+                        <div className="px-4 py-3 text-foreground/60 text-sm flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-secondary" />
+                          Searching...
+                        </div>
+                      )}
+                      {/* Powered by Google attribution */}
+                      {locationSuggestions.length > 0 && (
+                        <div className="px-3 py-1.5 flex items-center gap-1.5 border-b border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5">
+                          <svg className="h-3 w-3" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                          <span className="text-[10px] text-foreground/40">Powered by Google</span>
+                        </div>
+                      )}
+                      {locationSuggestions.map((s, i) => (
+                        <button
+                          key={`${s.place_id || i}-${s.display_name}`}
+                          type="button"
+                          className="w-full text-left px-4 py-2.5 text-foreground hover:bg-secondary/20 text-sm transition-colors"
+                          onMouseDown={() => handleLocationSelect(s)}
+                        >
+                          <span className="font-medium">{s.display_name || s.name || 'Unknown location'}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-3">
-                  <Label htmlFor="city" className="text-foreground font-semibold text-base flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-secondary" />
-                    City
-                  </Label>
-                  <Input
-                    id="city"
-                    type="text"
-                    className="bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl h-12 text-base backdrop-blur-sm transition-all duration-200"
-                    value={addressFields.city}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddressFields(prev => ({ ...prev, city: e.target.value }))}
-                    placeholder="New York"
-                  />
-                </div>
+                <p className="text-xs text-foreground/50 mt-2">
+                  Start typing to search your address using Google Places
+                </p>
               </div>
             </div>
 
