@@ -18,9 +18,11 @@ export function EnhancedCalendarEventsPanel({
   formatTime,
 }: EnhancedCalendarEventsPanelProps) {
   return (
-    <div className="events-panel">
-      <h3 className="text-white font-bold text-lg mb-4 flex items-center">
-        <CalendarIcon className="w-5 h-5 mr-2 text-secondary" />
+    <div className="events-panel group">
+      <h3 className="text-foreground font-bebas text-3xl mb-6 flex items-center tracking-wide group-hover:text-secondary transition-colors duration-500">
+        <div className="p-2 bg-secondary/15 rounded-xl mr-3 border border-secondary/20 shadow-lg shadow-secondary/5">
+          <CalendarIcon className="w-6 h-6 text-secondary" />
+        </div>
         {format(selectedDate, 'EEEE, MMMM d, yyyy')}
       </h3>
 
@@ -53,10 +55,10 @@ export function EnhancedCalendarEventsPanel({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <h4 className="text-white font-semibold text-sm mb-1">
+                    <h4 className="text-foreground font-bold text-base mb-1 tracking-tight group-hover/item:text-secondary transition-colors duration-300">
                       {event.extendedProps.serviceName}
                     </h4>
-                    <p className="text-white/80 text-xs mb-2">
+                    <p className="text-foreground/50 text-xs mb-3 font-medium italic">
                       {event.extendedProps.clientName}
                     </p>
                     <div
@@ -104,9 +106,11 @@ export function EnhancedCalendarEventsPanel({
             )
           })
         ) : (
-          <div className="text-center py-8">
-            <CalendarIcon className="w-12 h-12 mx-auto text-white/30 mb-3" />
-            <p className="text-white/60 text-sm">
+          <div className="text-center py-10 opacity-40">
+            <div className="bg-foreground/5 p-4 rounded-full w-fit mx-auto mb-4">
+              <CalendarIcon className="w-12 h-12 text-foreground" />
+            </div>
+            <p className="text-foreground font-medium italic text-sm">
               No events scheduled for this date
             </p>
           </div>

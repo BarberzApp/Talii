@@ -621,7 +621,6 @@ function BookPageContent() {
         </div>
       </div>
 
-      {/* Cover Photo */}
       <div className="relative h-48 md:h-64 overflow-hidden">
         {barber.coverphoto ? (
           <img
@@ -631,6 +630,11 @@ function BookPageContent() {
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-secondary/20 via-purple-500/20 to-secondary/20 relative">
+            <div className="absolute inset-0 opacity-20">
+              <div className="absolute top-8 left-8 w-32 h-32 border border-white/20 rounded-full"></div>
+              <div className="absolute bottom-12 right-12 w-24 h-24 border border-white/20 rounded-full"></div>
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 border border-white/20 rounded-full"></div>
+            </div>
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />

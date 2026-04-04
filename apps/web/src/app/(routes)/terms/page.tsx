@@ -1,23 +1,140 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
-
-const terms = `BOCM TERMS OF SERVICE\n\nEffective Date: July 7, 2025\n\nWelcome to BOCM. These Terms of Service ("Terms") govern your access to and use of the BOCM website, mobile application, and all associated services (collectively, the "Services"). The Services are provided by BOCM ("BOCM," "we," "us," or "our").\n\nBy using our Services, you agree to be bound by these Terms, our Privacy Policy, and all applicable laws and regulations. If you do not agree, do not use the Services.\n\nOVERVIEW OF SERVICES\nBOCM is a digital marketplace that connects clients seeking beauty and barbering services ("Clients") with independent cosmetologists and barbers ("Professionals"). BOCM provides the digital infrastructure for booking, service management, payment processing, and content discovery but does not directly offer any hair or beauty services.\n\nCLIENT AND PROFESSIONAL REGISTRATION\nSecure login system with session persistence\nProfile creation and avatar uploads\nSocial media integration (Instagram, Twitter, TikTok, Facebook)\nSuper admin panel for managing developer and staff accounts\n\nDISCOVERY & BOOKING\nLocation-based barber search with specialty filtering (fade cuts, beard trims, styling, etc.)\nReal-time availability checking and instant booking confirmations\nBooking history, management, cancellation, and rescheduling\nQR code-enabled booking links for marketing and sharing\n\nPAYMENT PROCESSING\nSeamless Stripe integration for secure payments\nInstant payment processing with receipt generation\nFull payment history tracking for clients and barbers\nDeveloper mode for testing without fees\n\nSERVICE MANAGEMENT\nCustom service creation with pricing, duration, and descriptions\nTagging of over 100 barber specialties\nImage/video portfolio uploads\nBulk service management and reusable service templates\n\nSCHEDULING & CALENDAR\nAdvanced calendar interface with multiple views\nConflict detection, 5-minute time increments, and buffer time management\nDaily booking limits and advance scheduling controls\nReal-time updates to reflect schedule changes\n\nVIDEO REELS PLATFORM\nTikTok-style content platform for barber videos\nUpload, categorize, and manage video content\nLocation-based video discovery and social engagement (likes, shares)\nAnalytics for video views, engagement, and performance tracking\n\nSEARCH & DISCOVERY\nComprehensive search with smart filters and suggestions\nLocation, specialty, availability, and price filtering\nDistance-based ranking and trending services\nQuick filters for top categories and specialties\n\nSETTINGS & PROFILE MANAGEMENT\nCustomizable profiles with business info, social links, and public/private toggles\nFull control over services: add, edit, delete\nPortfolio and content upload tools\nBooking restriction settings\n\nMOBILE & PWA FEATURES\nProgressive Web App (PWA) with offline support\nResponsive design for seamless mobile experience\nPush notifications for updates and bookings\nTouch-friendly UI with swipe support and app shortcuts\n\nANALYTICS & INSIGHTS\nBooking volume and earnings reports\nClient history and service performance metrics\nReal-time revenue tracking\nVideo analytics (views, likes, shares, engagements)\n\nFUTURE FEATURES (PLANNED) PHASE 1: ADVANCED BOOKING & SCHEDULING\nOn-demand mobile barbers (Uber-style)\nReal-time GPS matching and route tracking\nSurge pricing and request management\nMobile dashboard for traveling barbers\nAdvanced scheduling features:\nWeekly templates, break time blocks, holiday scheduling\nAI-powered scheduling suggestions\nCapacity management for multi-client time slots\n\nBUSINESS MANAGEMENT TOOLS\nIntegrated financial tools and accounting support\nInventory tracking and reorder automation\nStaff scheduling and CRM tools\nDetailed reporting for services, clients, and revenues\n\nLIMITATION OF LIABILITY\nBOCM is not liable for any damages, losses, injuries, or claims arising out of:\nthe actions or omissions of any Professional or Client;\nthe quality, legality, or safety of services rendered;\nservices performed in private or remote locations;\nmisconduct, including but not limited to assault, theft, or negligence.\n\nBOCM does not verify the licensing status of Professionals. Clients are solely responsible for ensuring that their selected Professional holds any licenses required by law in their jurisdiction, including in the State of New Jersey.\n\nBy using BOCM, you acknowledge and accept that:\nYou are solely responsible for your safety and actions.\nPrivate appointments carry inherent risks.\nBOCM is not liable in any way for interactions between Clients and Professionals.\n\nINDEMNIFICATION\nYou agree to indemnify, defend, and hold harmless BOCM, its officers, employees, and affiliates from any claims, damages, or legal actions arising from:\nYour use or misuse of the Services;\nAny violation of these Terms;\nAny harm caused to or by a third party while using BOCM.\n\nACCOUNT REGISTRATION AND CONDUCT\nYou are responsible for:\nMaintaining accurate registration information;\nSecuring your account credentials;\nNot misrepresenting your identity or licensing status.\n\nBOCM reserves the right to suspend or terminate accounts for any violations.\n\nSAFETY WARNINGS AND ASSUMPTION OF RISK\nClients acknowledge that beauty services provided in homes, hotels, or non-commercial settings involve risks. By using BOCM, you agree to assume all such risks and release BOCM from any liability.\n\nTHIRD-PARTY SERVICES\nBOCM may link to third-party services (e.g., Stripe). You agree to be bound by the terms and conditions of those services when applicable.\n\nSTATE-SPECIFIC RIGHTS\nSome states do not allow certain disclaimers of warranties, limitations of liability, or the exclusion of certain damages. Accordingly, some of the disclaimers and limitations in these Terms may not apply to you. You may have additional rights and remedies under your local laws.\n\nNew Jersey Residents: Notwithstanding any other provision of these Terms, if you are a resident of New Jersey, the following shall not apply to you: (a) any provision that limits BOCM's liability for personal injury or property damage caused by our negligence; (b) any provision that limits your right to seek punitive damages, statutory damages, or attorneys' fees where applicable under New Jersey law; (c) any provision that limits the time within which you may bring a legal claim.\n\nCalifornia Residents: Under California Civil Code Section 1789.3, users are entitled to the following consumer rights notice: If you have a complaint, you may contact the Complaint Assistance Unit of the Division of Consumer Services of the California Department of Consumer Affairs.\n\nMODIFICATIONS TO TERMS\nBOCM may update these Terms at any time. Continued use of the Services after changes are posted constitutes acceptance.\n\nTERMINATION\nWe may suspend or terminate your access to the Services at any time, with or without cause. Your obligations under these Terms will survive termination.\n\nGOVERNING LAW AND DISPUTES\nThese Terms are governed by the laws of the State of New Jersey, without regard to its conflict of law rules. Any disputes must be resolved in the courts of New Jersey or through binding arbitration if mutually agreed.\n\nCONTACT US\nFor questions or concerns regarding these Terms, contact primbocm@gmail.com.\n`;
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { ChevronLeft, Shield, Scale, Info, AlertTriangle } from 'lucide-react';
+import { Button } from '@/shared/components/ui/button';
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-primary flex flex-col items-center justify-center py-12 px-4">
-      <div className="w-full max-w-2xl bg-darkpurple/90 rounded-3xl shadow-2xl border border-white/10 p-8">
-        <h1 className="text-3xl font-bebas text-white text-center mb-6">Terms & Conditions</h1>
-        <pre className="whitespace-pre-wrap text-white text-base" style={{ fontFamily: 'inherit' }}>{terms}</pre>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background Gradients - Matching Landing/Support Page */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-[28rem] h-[28rem] rounded-full blur-3xl bg-primary/10 dark:bg-primary/8" />
+        <div className="absolute bottom-1/4 right-0 w-80 h-80 rounded-full blur-3xl bg-secondary/8 dark:bg-secondary/5" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl bg-primary/5 dark:bg-primary/3" />
+      </div>
 
-        <div className="mt-6 pt-6 border-t border-white/10 text-center text-sm text-white/70">
-          View our{' '}
-          <Link href="/privacy" className="text-saffron hover:underline">
-            Privacy Policy
+      <div className="max-w-4xl mx-auto px-4 py-12 sm:py-20 relative z-10">
+        <div className="mb-8">
+          <Link href="/">
+            <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
+              <ChevronLeft className="w-4 h-4" />
+              Back to Home
+            </Button>
           </Link>
-          .
         </div>
+
+        <Card className="bg-card/50 backdrop-blur-xl border-border shadow-2xl rounded-3xl overflow-hidden">
+          <CardHeader className="text-center pb-8 border-b border-border/50">
+            <CardTitle className="text-4xl sm:text-5xl font-bebas text-foreground mb-2 tracking-wide">
+              Terms of Service
+            </CardTitle>
+            <CardDescription className="text-base text-muted-foreground">
+              Effective Date: July 7, 2025 • Last Updated: April 1, 2026
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-8 sm:p-12 space-y-12 text-foreground/90 leading-relaxed">
+            
+            <section className="space-y-4">
+              <div className="flex items-center gap-3 text-secondary mb-4">
+                <Info className="w-6 h-6" />
+                <h2 className="text-2xl font-bold font-bebas tracking-tight">Overview</h2>
+              </div>
+              <p>
+                Welcome to <span className="font-bold text-foreground">Talii</span>. These Terms of Service ("Terms") govern your access to and use of the Talii website, mobile application, and all associated services (collectively, the "Services").
+              </p>
+              <p>
+                By using our Services, you agree to be bound by these Terms, our Privacy Policy, and all applicable laws and regulations. If you do not agree, do not use the Services.
+              </p>
+            </section>
+
+            <section className="space-y-6">
+              <div className="flex items-center gap-3 text-secondary mb-4">
+                <Shield className="w-6 h-6" />
+                <h2 className="text-2xl font-bold font-bebas tracking-tight">Our Services</h2>
+              </div>
+              <p>
+                Talii is a digital marketplace that connects clients seeking beauty and barbering services ("Clients") with independent cosmetologists and barbers ("Professionals"). Talii provides the digital infrastructure for booking, service management, payment processing, and content discovery but does not directly offer any hair or beauty services.
+              </p>
+              
+              <div className="grid sm:grid-cols-2 gap-6 mt-6">
+                <div className="bg-muted/50 p-6 rounded-2xl border border-border">
+                  <h3 className="font-bold text-foreground mb-2 text-lg uppercase tracking-tight font-bebas">For Clients</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                    <li>Discover top-rated barbers via location-based search.</li>
+                    <li>Book services instantly with real-time availability.</li>
+                    <li>Securely pay for services via Stripe integration.</li>
+                    <li>Manage booking history and leave reviews.</li>
+                  </ul>
+                </div>
+                <div className="bg-muted/50 p-6 rounded-2xl border border-border">
+                  <h3 className="font-bold text-foreground mb-2 text-lg uppercase tracking-tight font-bebas">For Professionals</h3>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
+                    <li>Create professional portfolios with images and videos.</li>
+                    <li>Custom scheduling with conflict detection.</li>
+                    <li>Detailed revenue tracking and business insights.</li>
+                    <li>Access to over 100 specialty tags for discovery.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <div className="flex items-center gap-3 text-secondary mb-4">
+                <AlertTriangle className="w-6 h-6" />
+                <h2 className="text-2xl font-bold font-bebas tracking-tight">Safety & Liability</h2>
+              </div>
+              <div className="space-y-4 bg-orange-500/5 border border-orange-500/20 p-6 rounded-2xl">
+                <p className="text-sm font-medium text-foreground uppercase tracking-widest text-center opacity-80 mb-2">Important Notice</p>
+                <p>
+                  Talii is not liable for any damages, losses, injuries, or claims arising out of the actions or omissions of any Professional or Client. We do not verify the licensing status of Professionals. Clients are solely responsible for ensuring that their selected Professional holds any licenses required by law.
+                </p>
+                <p>
+                  By using Talii, you acknowledge that private appointments carry inherent risks and you are solely responsible for your safety and actions.
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <div className="flex items-center gap-3 text-secondary mb-4">
+                <Scale className="w-6 h-6" />
+                <h2 className="text-2xl font-bold font-bebas tracking-tight">Governing Law</h2>
+              </div>
+              <p>
+                These Terms are governed by the laws of the <span className="font-semibold">State of New Jersey</span>, without regard to its conflict of law rules. Any disputes must be resolved in the courts of New Jersey or through binding arbitration if mutually agreed.
+              </p>
+            </section>
+
+            <section className="space-y-6 border-t border-border pt-10">
+              <h2 className="text-2xl font-bold text-foreground">CONTACT US</h2>
+              <p>
+                For questions or concerns regarding these Terms, please contact us at:
+              </p>
+              <div className="bg-primary/5 p-6 rounded-2xl border border-primary/20 inline-block">
+                <p className="font-bold text-lg text-primary">Email: support@talii.com</p>
+              </div>
+            </section>
+          </CardContent>
+          
+          <div className="bg-muted/30 p-8 text-center border-t border-border/50">
+            <div className="flex justify-center gap-4 text-sm font-semibold">
+              <Link href="/privacy" className="text-secondary hover:underline">
+                Privacy Policy
+              </Link>
+              <span className="text-border">|</span>
+              <Link href="/support" className="text-secondary hover:underline">
+                Support Center
+              </Link>
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              © 2026 Talii. All rights reserved.
+            </p>
+          </div>
+        </Card>
       </div>
     </div>
   );
-} 
+}
+ 

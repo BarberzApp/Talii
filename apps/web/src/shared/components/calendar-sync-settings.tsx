@@ -93,22 +93,22 @@ export function CalendarSyncSettings() {
   }
 
   return (
-    <Card className="bg-gradient-to-br from-white/5 to-white/3 border border-white/10 shadow-2xl backdrop-blur-xl rounded-3xl overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-secondary/10 to-transparent border-b border-white/10 p-6">
+    <Card className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-2xl backdrop-blur-3xl rounded-[2.5rem] overflow-hidden ring-1 ring-white/5">
+      <CardHeader className="bg-secondary/5 border-b border-foreground/5 p-8">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-secondary/20 rounded-xl">
-              <Calendar className="h-6 w-6 text-secondary" />
+          <div className="flex items-center gap-5">
+            <div className="p-4 bg-secondary/15 rounded-2xl border border-secondary/20 shadow-lg shadow-secondary/5">
+              <Calendar className="h-8 w-8 text-secondary" />
             </div>
             <div>
-              <CardTitle className="text-2xl text-white flex items-center gap-3">
+              <CardTitle className="text-4xl text-foreground font-bebas tracking-wider flex items-center gap-4">
                 Google Calendar Sync
-                <Badge variant="glassy-saffron" className="text-xs px-2 py-1 bg-yellow-500/20 border-yellow-500/30 text-yellow-400">
+                <Badge variant="secondary" className="text-[10px] font-black tracking-widest px-3 py-1 bg-secondary/20 border-secondary/30 text-secondary rounded-full">
                   ALPHA
                 </Badge>
               </CardTitle>
-              <CardDescription className="text-white/70 text-base">
-                Connect your Google Calendar to automatically sync your appointments
+              <CardDescription className="text-foreground/50 text-lg font-medium italic mt-1">
+                Automate your professional schedule across platforms
               </CardDescription>
             </div>
           </div>
@@ -131,17 +131,17 @@ export function CalendarSyncSettings() {
       </CardHeader>
       <CardContent className="p-8 space-y-8">
         {/* Enhanced Connection Status */}
-        <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-secondary/20 rounded-xl">
+        <div className="flex items-center justify-between p-6 bg-foreground/[0.03] rounded-[2rem] border border-foreground/5 group transition-all hover:bg-foreground/[0.05]">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-secondary/15 rounded-xl border border-secondary/20 group-hover:scale-110 transition-transform">
               {getSyncStatusIcon()}
             </div>
             <div>
-              <span className="font-semibold text-white text-lg">{getSyncStatusText()}</span>
+              <span className="font-bebas text-3xl text-foreground tracking-wide leading-none">{getSyncStatusText()}</span>
               {connected && (
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="glassy-saffron" className="text-xs">
-                    {stats.syncedEventsCount} events synced
+                  <Badge variant="secondary" className="text-[10px] font-black uppercase tracking-widest bg-secondary/10 text-secondary border-none">
+                    {stats.syncedEventsCount} events synchronized
                   </Badge>
                 </div>
               )}
@@ -151,9 +151,9 @@ export function CalendarSyncSettings() {
             <Button
               onClick={() => handleSync()}
               disabled={syncing}
-              className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl px-6 py-3"
+              className="bg-secondary text-primary-foreground hover:bg-secondary/90 font-bold shadow-xl shadow-secondary/20 rounded-2xl px-8 h-14 transition-all active:scale-95"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-5 w-5 mr-3 ${syncing ? 'animate-spin' : ''}`} />
               {syncing ? 'Syncing...' : 'Sync Now'}
             </Button>
           )}
@@ -161,86 +161,73 @@ export function CalendarSyncSettings() {
 
         {/* Enhanced Connection Actions */}
         {!connected ? (
-          <div className="space-y-6 p-6 bg-gradient-to-br from-secondary/10 to-transparent rounded-2xl border border-secondary/20">
-            <div className="text-center space-y-3">
-              <div className="p-3 bg-secondary/20 rounded-2xl w-fit mx-auto">
-                <ExternalLink className="h-6 w-6 text-secondary" />
-              </div>
-              <h3 className="text-xl font-bebas text-white tracking-wide">Connect Your Calendar</h3>
-              <p className="text-white/70 text-base">
-                Connect your Google Calendar to automatically sync your appointments and keep your schedule up to date.
-              </p>
+          <div className="space-y-6 p-10 bg-secondary/5 rounded-[2.5rem] border border-secondary/20 text-center">
+            <div className="p-5 bg-secondary/15 rounded-3xl w-fit mx-auto shadow-2xl shadow-secondary/10 mb-4 animate-bounce">
+              <ExternalLink className="h-10 w-10 text-secondary" />
             </div>
+            <h3 className="text-5xl font-bebas text-foreground tracking-widest">Connect Your Calendar</h3>
+            <p className="text-foreground/60 text-lg font-medium italic mb-8 max-w-md mx-auto">
+              Sync your professional schedule and never miss a premium booking session.
+            </p>
             <Button 
               onClick={connect} 
-              className="w-full bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl py-4 text-lg"
+              className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90 font-bold shadow-2xl shadow-secondary/20 rounded-2xl py-8 text-xl transition-all active:scale-95"
             >
-              <ExternalLink className="h-5 w-5 mr-3" />
-              Connect Google Calendar
+              <ExternalLink className="h-6 w-6 mr-3" />
+              Connect Google Account
             </Button>
           </div>
         ) : (
           <div className="space-y-6">
             {/* Enhanced Sync Settings */}
-            <div className="space-y-6 p-6 bg-white/5 rounded-2xl border border-white/10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-secondary/20 rounded-xl">
-                    <Settings className="h-5 w-5 text-secondary" />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bebas text-white tracking-wide">Sync Settings</h4>
-                    <p className="text-white/70 text-sm">
-                      Configure how your calendar syncs
-                    </p>
-                  </div>
+            <div className="space-y-8 p-8 bg-foreground/[0.03] rounded-[2.5rem] border border-foreground/5 backdrop-blur-xl">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-secondary/15 rounded-xl border border-secondary/20">
+                  <Settings className="h-6 w-6 text-secondary" />
+                </div>
+                <div>
+                  <h4 className="text-3xl font-bebas text-foreground tracking-wider leading-none">Sync Intelligence</h4>
+                  <p className="text-foreground/40 text-sm font-medium italic mt-1 uppercase tracking-widest">
+                    Configure your autonomous schedule
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-6">
-                {/* Enhanced Enable/Disable Sync */}
-                <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
+                <div className="flex items-center justify-between p-6 bg-foreground/[0.02] rounded-2xl border border-foreground/5 hover:bg-foreground/[0.04] transition-all">
                   <div>
-                    <p className="font-semibold text-white text-lg">Enable Sync</p>
-                    <p className="text-white/70 text-sm">
-                      Automatically sync appointments
-                    </p>
+                    <p className="font-bold text-foreground text-xl tracking-tight">Real-time Synchronization</p>
+                    <p className="text-foreground/50 text-sm font-medium italic">Automatically manage all appointment changes</p>
                   </div>
                   <Switch
                     checked={localSyncEnabled}
                     onCheckedChange={handleSyncEnabledChange}
+                    className="data-[state=checked]:bg-secondary"
                   />
                 </div>
 
-                {/* Enhanced Sync Direction */}
-                <div className="space-y-3">
-                  <p className="font-semibold text-white text-lg">Sync Direction</p>
+                <div className="space-y-4">
+                  <p className="font-bold text-foreground/40 text-[10px] uppercase tracking-[0.2em] ml-2">Sync Direction</p>
                   <Select
                     value={localSyncDirection}
                     onValueChange={(value: 'inbound' | 'outbound' | 'bidirectional') => 
                       handleSyncDirectionChange(value)
                     }
                   >
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-secondary rounded-xl h-12 text-lg">
+                    <SelectTrigger className="bg-foreground/[0.04] border-foreground/5 text-foreground focus:ring-secondary/20 rounded-2xl h-14 text-lg font-semibold px-6 transition-all">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bidirectional">
-                        Bidirectional (Recommended)
-                      </SelectItem>
-                      <SelectItem value="outbound">
-                        Outbound Only (App → Google)
-                      </SelectItem>
-                      <SelectItem value="inbound">
-                        Inbound Only (Google → App)
-                      </SelectItem>
+                    <SelectContent className="bg-black/90 backdrop-blur-3xl border-foreground/10 rounded-2xl">
+                      <SelectItem value="bidirectional" className="py-3 font-medium">Bidirectional (Recommended)</SelectItem>
+                      <SelectItem value="outbound" className="py-3 font-medium">Outbound Only (App → Google)</SelectItem>
+                      <SelectItem value="inbound" className="py-3 font-medium">Inbound Only (Google → App)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-sm text-white/60 bg-white/5 p-3 rounded-lg border border-white/10">
-                    {localSyncDirection === 'bidirectional' && 'Sync appointments both ways'}
-                    {localSyncDirection === 'outbound' && 'Only sync your appointments to Google Calendar'}
-                    {localSyncDirection === 'inbound' && 'Only sync Google Calendar events to your app'}
-                  </p>
+                  <div className="text-[11px] text-foreground/30 font-bold uppercase tracking-widest bg-foreground/[0.02] p-4 rounded-xl border border-foreground/5 italic">
+                    {localSyncDirection === 'bidirectional' && 'Full autonomous synchronization (Bidirectional)'}
+                    {localSyncDirection === 'outbound' && 'Unidirectional Export: Talii → Google Calendar'}
+                    {localSyncDirection === 'inbound' && 'Unidirectional Import: Google Calendar → Talii'}
+                  </div>
                 </div>
               </div>
             </div>

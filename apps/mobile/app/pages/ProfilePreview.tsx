@@ -705,31 +705,32 @@ export default function ProfilePreview() {
           
           {/* Action Buttons */}
           <View style={tw`flex-row items-center gap-3`}>
-          <TouchableOpacity
-            style={[
-              tw`px-6 py-2 rounded-full`,
-              {
-                backgroundColor: colors.primary,
-                shadowColor: colors.primary,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 6,
-                elevation: 3,
-              }
-            ]}
-            onPress={() => {
-              if (!profile) return;
-              navigation.navigate('BookingCalendar', {
-                barberId: route.params.barberId,
-                barberName: profile.name,
-                guestMode: isGuest,
-              });
-            }}
-          >
-            <Text style={[tw`font-semibold text-sm`, { color: colors.primaryForeground }]}>
-              Book Appointment
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                tw`px-6 py-2 rounded-full`,
+                {
+                  backgroundColor: colors.primary,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 6,
+                  elevation: 3,
+                }
+              ]}
+              onPress={() => {
+                if (!profile) return;
+                navigation.navigate('BookingCalendar', {
+                  barberId: route.params.barberId,
+                  barberName: profile.name,
+                  guestMode: isGuest,
+                });
+              }}
+            >
+              <Text style={[tw`font-semibold text-sm`, { color: colors.primaryForeground }]}>
+                Book Appointment
+              </Text>
+            </TouchableOpacity>
+
             
             {/* Report/Block Menu - Only show if not own profile */}
             {!isOwnProfile && (

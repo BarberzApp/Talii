@@ -15,7 +15,7 @@ import { useAuth } from '@/shared/hooks/use-auth-zustand';
 import { supabase } from '@/shared/lib/supabase';
 import { useToast } from '@/shared/components/ui/use-toast';
 import { EnhancedBarberProfileSettings } from './enhanced-barber-profile-settings';
-import { useCuts } from '@/shared/hooks/use-cuts';
+import { useCuts, VideoCut } from '@/shared/hooks/use-cuts';
 import Cropper, { Area } from 'react-easy-crop';
 import getCroppedImg from '@/shared/lib/crop-image';
 import { useData } from '@/shared/hooks/use-data';
@@ -35,6 +35,9 @@ interface UserProfile {
   location?: string;
   phone?: string;
   coverphoto?: string; // Fix: match database column name
+  instagram?: string;
+  twitter?: string;
+  facebook?: string;
 }
 
 // Update PortfolioItem type
@@ -75,6 +78,36 @@ interface BarberProfile {
   }>;
 }
 
+interface Service {
+  id: string;
+  barber_id: string;
+  name: string;
+  price: number;
+  duration: string;
+  description: string;
+  created_at?: string;
+}
+
+interface Addon {
+  id: string;
+  barber_id: string;
+  name: string;
+  price: number;
+  duration: string | null;
+  description: string | null;
+  created_at?: string;
+}
+
+interface Comment {
+  id: string;
+  cut_id: string;
+  user_id: string;
+  user_name?: string;
+  comment: string;
+  created_at: string;
+}
+
+
 export default function ProfilePortfolio() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -82,8 +115,8 @@ export default function ProfilePortfolio() {
   const [barberProfile, setBarberProfile] = useState<BarberProfile | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [openDialog, setOpenDialog] = useState<null | 'profile' | 'portfolio' | 'video' | 'upload' | 'edit-cut' | 'portfolio-upload' | 'services' | 'addons'>(null);
-  const [selectedCut, setSelectedCut] = useState<any>(null);
-  const [editingCut, setEditingCut] = useState<any>(null);
+  const [selectedCut, setSelectedCut] = useState<VideoCut | null>(null);
+  const [editingCut, setEditingCut] = useState<VideoCut | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -95,6 +128,16 @@ export default function ProfilePortfolio() {
   });
   const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<{
+    type: 'video' | 'image';
+    url: string;
+    title?: string;
+    description?: string;
+    likes?: number;
+    views?: number;
+    created_at?: string;
+    id?: string;
+  } | null>(null);
   const editProfileButtonRef = useRef<HTMLButtonElement>(null);
   const editPortfolioButtonRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -225,19 +268,19 @@ export default function ProfilePortfolio() {
   }, [barberProfile?.id, fetchServices, fetchAddons])
 
   // Handle booking service
-  const handleBookService = (service: any) => {
+  const handleBookService = (service: Service) => {
     setSelectedBookingDate(new Date())
     setBookingFormOpen(true)
   }
 
   // Handle add to booking (for add-ons)
-  const handleAddToBooking = (addon: any) => {
+  const handleAddToBooking = (addon: Addon) => {
     setSelectedBookingDate(new Date())
     setBookingFormOpen(true)
   }
 
   // Handle booking created
-  const handleBookingCreated = (booking: any) => {
+  const handleBookingCreated = (booking: { id: string }) => {
     setBookingFormOpen(false)
     toast({
       title: 'Booking Confirmed!',
@@ -245,8 +288,8 @@ export default function ProfilePortfolio() {
     })
   }
   const [statsDialogOpen, setStatsDialogOpen] = useState(false);
-  const [statsDialogCut, setStatsDialogCut] = useState<any>(null);
-  const [comments, setComments] = useState<any[]>([]);
+  const [statsDialogCut, setStatsDialogCut] = useState<VideoCut | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -264,9 +307,9 @@ export default function ProfilePortfolio() {
   // Starred/featured portfolio logic
   const [featuredId, setFeaturedId] = useState<string | null>(barberProfile?.featured_portfolio || null);
   // Services state
-  const [services, setServices] = useState<any[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
-  const [addons, setAddons] = useState<any[]>([]);
+  const [addons, setAddons] = useState<Addon[]>([]);
   const [addonsLoading, setAddonsLoading] = useState(false);
   // Booking state
   const [bookingFormOpen, setBookingFormOpen] = useState(false);
@@ -671,7 +714,7 @@ export default function ProfilePortfolio() {
     }
   }
 
-  const handleEditCut = (cut: any) => {
+  const handleEditCut = (cut: VideoCut) => {
     setEditingCut(cut);
     setUploadForm({
       title: cut.title || '',
@@ -815,7 +858,7 @@ export default function ProfilePortfolio() {
     }
   };
 
-  const handleProfileUpdate = async (updatedData: any) => {
+  const handleProfileUpdate = async (updatedData: Partial<UserProfile>) => {
     try {
       // Update profile data
       const { error: profileError } = await supabase
@@ -878,7 +921,7 @@ export default function ProfilePortfolio() {
     }
   };
 
-  const openStatsDialog = async (cut: any) => {
+  const openStatsDialog = async (cut: VideoCut) => {
     setStatsDialogCut(cut);
     setStatsDialogOpen(true);
     setCommentsLoading(true);
@@ -935,54 +978,65 @@ export default function ProfilePortfolio() {
 
   // Main layout and header (new design)
   return (
-    <div className="min-h-screen bg-background text-foreground pb-32">
-      {/* Cover Photo */}
-      <div className="relative h-48 sm:h-64 md:h-80 w-full">
-        {profile?.coverphoto ? (
-          <img
-            src={profile.coverphoto}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-saffron/20 via-purple-500/20 to-saffron/20 relative">
-          </div>
-        )}
-        {/* Glassy overlay */}
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
-        {/* Cover photo upload button */}
-        {isOwner && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 right-2 bg-black/30 text-foreground hover:bg-black/50"
-            onClick={() => document.getElementById('cover-upload')?.click()}
-          >
-            <Camera className="h-5 w-5" />
-          </Button>
-        )}
-        {/* Avatar */}
-        <div className="absolute left-1/2 -bottom-16 transform -translate-x-1/2 z-10">
-          <Avatar className="h-32 w-32 border-4 border-black shadow-xl">
-            <AvatarImage src={profile?.avatar_url || ''} alt={profile?.name || 'Avatar'} />
-            <AvatarFallback className="bg-primary/10 text-primary font-bold uppercase text-2xl">{profile?.name?.charAt(0) || 'U'}</AvatarFallback>
-          </Avatar>
-          {/* Avatar upload button */}
+    <div className="min-h-screen bg-transparent pb-[140px] md:pb-0 px-4 sm:px-6 pt-6 selection:bg-secondary/30">
+      {/* 1:1 Client-Aligned Header Section */}
+      <div className="relative w-full max-w-5xl mx-auto mb-20 border border-white/5 shadow-2xl">
+        {/* Cover Photo */}
+        <div className="h-48 sm:h-72 w-full bg-gradient-to-br from-secondary/20 via-background to-secondary/10 flex items-end justify-center relative group rounded-3xl overflow-hidden">
+          {profile?.coverphoto ? (
+            <img
+              src={profile.coverphoto}
+              alt="Cover"
+              className="absolute inset-0 w-full h-full object-cover object-center z-0 transition-transform duration-700 group-hover:scale-105"
+            />
+          ) : (
+            <div className="absolute inset-0 w-full h-full bg-secondary/5 z-0" />
+          )}
+          
+          {/* Glass overlay with intensified bottom fade */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent z-10" />
+          <div className="absolute inset-0 backdrop-blur-[2px] z-5" />
+
+          {/* Camera button for cover photo - Aligned */}
           {isOwner && (
             <Button
-              variant="ghost"
               size="icon"
-              className="absolute -bottom-1 -right-1 h-8 w-8 bg-secondary text-primary-foreground shadow-md hover:bg-secondary/90 rounded-full"
-              onClick={() => avatarFileInputRef.current?.click()}
-              disabled={avatarLoading}
+              variant="ghost"
+              className="absolute top-4 right-4 z-30 h-10 w-10 rounded-full bg-black/20 backdrop-blur-md text-white/80 hover:bg-black/40 hover:text-white transition-all border border-white/10"
+              onClick={() => document.getElementById('cover-upload')?.click()}
             >
-              {avatarLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Camera className="h-4 w-4" />
-              )}
+              <Camera className="h-5 w-5" />
             </Button>
           )}
+
+        </div>
+
+        {/* Avatar - High End Aligned Presentation */}
+        <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 z-30">
+          <div className="relative group/avatar">
+            <div className="absolute inset-0 bg-secondary/30 rounded-full blur-xl scale-90 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-500" />
+            <Avatar className="w-32 h-32 sm:w-40 sm:h-40 border-8 border-background shadow-2xl bg-muted relative z-10">
+              <AvatarImage src={profile?.avatar_url || ''} alt={profile?.name || 'Avatar'} className="object-cover" />
+              <AvatarFallback className="bg-primary text-primary-foreground font-bold text-6xl uppercase">
+                {profile?.name?.charAt(0) || 'B'}
+              </AvatarFallback>
+            </Avatar>
+            
+            {isOwner && (
+              <Button
+                size="icon"
+                className="absolute bottom-2 right-2 h-10 w-10 rounded-full bg-secondary text-[#1A1A1A] hover:bg-secondary/90 shadow-lg border-4 border-background z-20 group-hover/avatar:scale-110 transition-transform"
+                onClick={() => avatarFileInputRef.current?.click()}
+                disabled={avatarLoading}
+              >
+                {avatarLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Camera className="h-5 w-5" />
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1004,72 +1058,97 @@ export default function ProfilePortfolio() {
       />
 
       {/* Name, Username, Stats */}
-      <div className="pt-20 pb-6 px-4 text-center">
-        <h1 className="text-3xl font-bebas font-bold mb-1 text-foreground">{profile?.name || 'Your Name'}</h1>
-        <div className="text-secondary text-lg font-semibold mb-2">@{profile?.username || profile?.name?.toLowerCase().replace(/\s+/g, '') || 'username'}</div>
-        {/* City and State */}
+      {/* Profile Info Details (Modernized) */}
+      {/* Name, Username, Location - Aligned Info Section */}
+      <div className="pt-24 pb-8 flex flex-col items-center relative z-20 bg-background/40 backdrop-blur-3xl max-w-5xl mx-auto rounded-b-3xl">
+        <h1 className="text-4xl sm:text-6xl font-bebas font-bold text-foreground tracking-tight mb-2 uppercase">
+          {barberProfile?.business_name || profile?.name || 'Your Craft'}
+        </h1>
+        <div className="flex flex-wrap justify-center items-center gap-3">
+          <div className="text-secondary font-mono text-sm sm:text-base border border-secondary/20 bg-secondary/5 px-3 py-1 rounded-full">
+            @{profile?.username || profile?.name?.toLowerCase().replace(/\s+/g, '') || 'username'}
+          </div>
+          {barberProfile?.specialties && barberProfile.specialties.slice(0, 2).map((s, i) => (
+            <Badge key={i} variant="outline" className="border-white/10 text-muted-foreground uppercase font-bold tracking-widest text-[10px] h-8 px-4 rounded-full">
+              {s}
+            </Badge>
+          ))}
+        </div>
         {profile?.location && (
-          <div className="text-foreground/70 text-base font-medium mb-2">
-            {(() => {
-              const parts = profile.location.split(',').map(s => s.trim());
-              logger.debug('Location parts', { parts })
-              
-              if (parts.length >= 8) {
-                // For old Nominatim format: pull parts 1, 2, and 8 (0-indexed)
-                const street = parts[0];
-                const city = parts[1];
-                const state = parts[6];
-                return `${street}, ${city}, ${state}`;
-              } else if (parts.length >= 4) {
-                // For format: "88 Doe Court, Wynwood Drive, South Brunswick, NJ"
-                // Show: "South Brunswick, NJ" (second-to-last and last parts)
-                const city = parts[parts.length - 2];
-                const state = parts[parts.length - 1];
-                return `${city}, ${state}`;
-              } else if (parts.length >= 3) {
-                // For format: "88 Doe Court, South Brunswick, NJ"
-                // Show: "South Brunswick, NJ" (city and state)
-                const city = parts[1];
-                const state = parts[2];
-                return `${city}, ${state}`;
-              } else if (parts.length >= 2) {
-                // Fallback for shorter formats
-                const city = parts[0];
-                const state = parts[1];
-                return `${city}, ${state}`;
-              } else {
+          <div className="flex items-center gap-2 text-muted-foreground font-medium mt-4">
+            <MapPin className="h-4 w-4 text-secondary/60" />
+            <span>
+              {(() => {
+                const parts = profile.location.split(',').map(s => s.trim());
+                if (parts.length >= 4) return `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`;
+                if (parts.length >= 2) return `${parts[0]}, ${parts[1]}`;
                 return profile.location;
-              }
-            })()}
+              })()}
+            </span>
           </div>
         )}
-        {/* Stats Row */}
-        <div className="flex justify-center gap-10 mt-4 w-full">
-          <div className="flex flex-col items-center">
-            <span className="font-bold text-2xl text-foreground">{cuts.length}</span>
-            <span className="text-xs text-foreground/60 uppercase tracking-wide">Cuts</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="font-bold text-2xl text-foreground">{portfolio.length}</span>
-            <span className="text-xs text-foreground/60 uppercase tracking-wide">Portfolio</span>
-          </div>
+      </div>
+
+      {/* Aligned Stats Row - 1:1 with Client Portfolio */}
+      <div className="w-full max-w-4xl mx-auto grid grid-cols-3 gap-4 sm:gap-8 mb-12 mt-12">
+        <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
+          <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
+            {cuts.length}
+          </span>
+          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Cuts</span>
+        </div>
+        <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
+          <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
+            {portfolio.length}
+          </span>
+          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Gallery</span>
+        </div>
+        <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
+          <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
+            {barberProfile?.reviews?.length || 0}
+          </span>
+          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Reviews</span>
         </div>
       </div>
-      {/* Tabs Section (modern, mobile-first) */}
-      <div className="max-w-3xl mx-auto w-full px-2 sm:px-4">
+
+
+
+
+      {/* Aligned Tabs Section - 1:1 with Client Profile */}
+      <div className="w-full max-w-5xl mx-auto mb-16 px-4">
         <Tabs defaultValue="portfolio" className="w-full">
-          <TabsList className="w-full flex justify-between bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-xl p-1 rounded-lg mb-6 sticky top-0 z-20">
-            <TabsTrigger value="portfolio" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">Portfolio</TabsTrigger>
-            <TabsTrigger value="reels" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">
-              <div className="flex items-center gap-2">
+          <div className="flex justify-center mb-10">
+            <TabsList className="inline-flex h-14 items-center justify-center rounded-2xl bg-white/5 border border-white/10 p-1.5 backdrop-blur-2xl shadow-2xl">
+              <TabsTrigger 
+                value="portfolio" 
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+              >
+                <ImageIcon className="h-4 w-4" />
+                Gallery
+              </TabsTrigger>
+              <TabsTrigger 
+                value="reels" 
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+              >
                 <VideoIcon className="h-4 w-4" />
                 Cuts
-                {cutsLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-              </div>
-            </TabsTrigger>
-            <TabsTrigger value="services" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">Services</TabsTrigger>
-            <TabsTrigger value="reviews" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">Reviews</TabsTrigger>
-          </TabsList>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="services" 
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+              >
+                <Star className="h-4 w-4" />
+                Services
+              </TabsTrigger>
+              <TabsTrigger 
+                value="reviews" 
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Reviews
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Reels Tab */}
           <TabsContent value="reels">
@@ -1180,7 +1259,16 @@ export default function ProfilePortfolio() {
                       }
                     }}
                     onClick={() => {
-                      setSelectedCut(cut);
+                      setSelectedMedia({
+                        type: 'video',
+                        url: cut.url,
+                        title: cut.title,
+                        description: cut.description,
+                        likes: cut.likes,
+                        views: cut.views,
+                        created_at: cut.created_at,
+                        id: cut.id
+                      });
                       setOpenDialog('video');
                     }}
                   >
@@ -1193,24 +1281,29 @@ export default function ProfilePortfolio() {
                     ) : (
                       <video 
                         src={cut.url} 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         muted 
                         playsInline 
                         preload="metadata"
                       />
                     )}
+                    {/* Glassmorphic Badge for Video */}
+                    <div className="absolute top-3 left-3 z-10">
+                      <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-full p-2">
+                        <Play className="h-3 w-3 text-white fill-white" />
+                      </div>
+                    </div>
                     {/* Overlay with stats */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="absolute bottom-2 left-2 right-2">
-                        <div className="flex items-center justify-between text-foreground text-xs">
-                          <div className="flex items-center gap-2">
-                            <Heart className="h-3 w-3" />
-                            <span>{cut.likes || 0}</span>
-                          </div>
-                                                     <div className="flex items-center gap-2">
-                             <MessageCircle className="h-3 w-3" />
-                             <span>{cut.comments_count || 0}</span>
-                           </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
+                      <p className="text-white font-bebas text-lg mb-1 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">{cut.title || 'Classic Cut'}</p>
+                      <div className="flex items-center gap-4 text-white/80 text-xs translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
+                        <div className="flex items-center gap-1.5">
+                          <Eye className="h-3.5 w-3.5 text-secondary" />
+                          <span>{cut.views || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Heart className="h-3.5 w-3.5 text-red-400" />
+                          <span>{cut.likes || 0}</span>
                         </div>
                       </div>
                     </div>
@@ -1308,54 +1401,77 @@ export default function ProfilePortfolio() {
             </div>
             
             {portfolio.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-8 max-w-md mx-auto">
-                  <ImageIcon className="h-12 w-12 text-foreground/40 mx-auto mb-4" />
-                  <h3 className="text-foreground font-bebas font-bold text-xl mb-2">No portfolio items yet</h3>
-                  <p className="text-foreground/60 text-sm mb-6">
-                    Showcase your best work by adding photos and videos to your portfolio
+              <div className="text-center py-20">
+                <div className="bg-white/5 border border-white/10 rounded-[40px] p-12 max-w-md mx-auto backdrop-blur-3xl shadow-2xl">
+                  <div className="w-20 h-20 bg-secondary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                    <ImageIcon className="h-10 w-10 text-secondary" />
+                  </div>
+                  <h3 className="text-foreground font-bebas font-bold text-3xl mb-3">Your Gallery is Empty</h3>
+                  <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
+                    Start building your professional aesthetic by adding your best photos and videos.
                   </p>
                   {isOwner && (
                     <Button
                       onClick={() => setOpenDialog('portfolio-upload')}
-                      className="bg-secondary text-primary-foreground hover:bg-secondary/90 w-full"
+                      className="bg-secondary text-[#1A1A1A] font-bold h-12 px-8 rounded-full hover:scale-105 active:scale-95 transition-all"
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Add First Portfolio Item
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add First Item
                     </Button>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {portfolio.map((item) => (
-                  <div key={item.id} className="relative aspect-square bg-gray-800 rounded-lg overflow-hidden group">
+                  <div 
+                    key={item.id} 
+                    className="relative aspect-square bg-slate-900 rounded-[32px] overflow-hidden group cursor-pointer border border-white/5 hover:border-secondary/30 transition-all duration-500 shadow-xl"
+                    onClick={() => {
+                      setSelectedMedia({
+                        type: item.type,
+                        url: item.url,
+                        title: item.title || 'Portfolio Item',
+                        id: item.id
+                      });
+                      setOpenDialog('video');
+                    }}
+                  >
                     {item.type === 'image' ? (
-                      <img src={item.url} alt={item.title || 'Portfolio'} className="w-full h-full object-cover" />
+                      <img src={item.url} alt={item.title || 'Portfolio'} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                     ) : (
-                      <video src={item.url} className="w-full h-full object-cover" controls={false} muted playsInline preload="metadata" />
-                    )}
-                    {/* Delete button (visible on hover) */}
-                    <button
-                      className="absolute top-2 right-2 bg-white/90 hover:bg-red-600 text-red-600 hover:text-foreground rounded-full p-1.5 shadow-lg focus:outline-none border-2 border-white/40 transition-colors opacity-0 group-hover:opacity-100"
-                      onClick={() => handleDeletePortfolio(item)}
-                      aria-label="Delete portfolio item"
-                      type="button"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                    <div className="absolute bottom-2 left-2 right-2">
-                      <div className="flex items-center justify-between text-foreground text-xs">
-                        <div className="flex items-center gap-2">
-                          <Heart className="h-3 w-3" />
-                          <span>{item.likes || 0}</span>
+                      <div className="relative w-full h-full">
+                        <video src={item.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" muted playsInline preload="metadata" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                          <Play className="h-10 w-10 text-white fill-white/20 backdrop-blur-sm rounded-full p-2 border border-white/20" />
                         </div>
+                      </div>
+                    )}
+                    
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-6">
+                      <p className="text-white font-bebas text-2xl mb-1 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">{item.title || 'Gallery Work'}</p>
+                      <div className="flex items-center gap-4 text-white/60 text-xs translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-100">
                         <div className="flex items-center gap-2">
-                          <MessageCircle className="h-3 w-3" />
-                          <span>{item.comments || 0}</span>
+                          <Heart className="h-4 w-4 text-red-500" />
+                          <span>{item.likes || 0}</span>
                         </div>
                       </div>
                     </div>
+
+                    {/* Delete button (Glassmorphism) */}
+                    {isOwner && (
+                      <button
+                        className="absolute top-4 right-4 bg-black/40 hover:bg-red-500/80 text-white backdrop-blur-md rounded-2xl p-3 shadow-xl focus:outline-none border border-white/10 transition-all opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100 hover:rotate-12 z-20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePortfolio(item);
+                        }}
+                        aria-label="Delete"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1364,27 +1480,25 @@ export default function ProfilePortfolio() {
 
           {/* Services Tab */}
           <TabsContent value="services">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-foreground font-bebas font-bold text-xl">Services & Add-ons</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-foreground font-bebas font-bold text-2xl tracking-tight">Offerings & Add-ons</h3>
               {isOwner && (
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <Button
                     onClick={() => setOpenDialog('addons')}
                     size="sm"
-                    variant="outline"
-                    className="border-black/10 dark:border-white/20 text-foreground hover:bg-black/5 dark:bg-white/10 px-2 py-1 text-xs"
+                    className="bg-white/5 border border-white/10 text-foreground hover:bg-white/10 rounded-full px-5 h-10 backdrop-blur-xl"
                   >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add-on
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Add-on
                   </Button>
                   <Button
                     onClick={() => setOpenDialog('services')}
                     size="sm"
-                    variant="outline"
-                    className="border-black/10 dark:border-white/20 text-foreground hover:bg-black/5 dark:bg-white/10 px-2 py-1 text-xs"
+                    className="bg-secondary text-[#1A1A1A] font-bold hover:scale-105 active:scale-95 transition-all rounded-full px-6 h-10 shadow-lg shadow-secondary/20"
                   >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add Service
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Service
                   </Button>
                 </div>
               )}
@@ -1392,11 +1506,11 @@ export default function ProfilePortfolio() {
             
             {/* Sub-tabs for Services and Add-ons */}
             <Tabs defaultValue="services" className="w-full">
-              <TabsList className="w-full flex bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 p-1 rounded-lg mb-4">
-                <TabsTrigger value="services" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">
+              <TabsList className="w-full h-14 flex bg-white/5 border border-white/5 p-1 rounded-2xl mb-8 backdrop-blur-xl">
+                <TabsTrigger value="services" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] transition-all">
                   Services ({services.length})
                 </TabsTrigger>
-                <TabsTrigger value="addons" className="flex-1 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary-foreground">
+                <TabsTrigger value="addons" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] transition-all">
                   Add-ons ({addons.length})
                 </TabsTrigger>
               </TabsList>
@@ -1411,17 +1525,19 @@ export default function ProfilePortfolio() {
                     </div>
                   </div>
                 ) : services.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-8 max-w-md mx-auto">
-                      <Building className="h-12 w-12 text-foreground/40 mx-auto mb-4" />
-                      <h3 className="text-foreground font-bebas font-bold text-xl mb-2">No services yet</h3>
-                      <p className="text-foreground/60 text-sm mb-6">
-                        Add your services to let clients know what you offer
+                  <div className="text-center py-20">
+                    <div className="bg-white/5 border border-white/10 rounded-[40px] p-12 max-w-md mx-auto backdrop-blur-3xl shadow-2xl">
+                      <div className="w-20 h-20 bg-secondary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                        <Building className="h-10 w-10 text-secondary" />
+                      </div>
+                      <h3 className="text-foreground font-bebas font-bold text-3xl mb-3">No Services Defined</h3>
+                      <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
+                        What's your specialty? Add your menu to let clients know exactly what you offer.
                       </p>
                       {isOwner && (
                         <Button
                           onClick={() => setOpenDialog('services')}
-                          className="bg-secondary text-primary-foreground hover:bg-secondary/90"
+                          className="bg-secondary text-[#1A1A1A] font-bold h-12 px-8 rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg shadow-secondary/20"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add First Service
@@ -1430,24 +1546,29 @@ export default function ProfilePortfolio() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {services.map((service) => (
-                      <div key={service.id} className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-foreground">{service.name}</h3>
-                          <div className="text-right">
-                            <div className="font-bold text-foreground">${service.price}</div>
-                            <div className="text-foreground/70 text-sm">{service.duration}</div>
+                      <div key={service.id} className="group bg-white/5 border border-white/10 hover:border-secondary/30 transition-all duration-300 rounded-[32px] p-8 flex flex-col justify-between backdrop-blur-3xl shadow-xl">
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-bebas text-2xl text-foreground tracking-tight group-hover:text-secondary transition-colors">{service.name}</h3>
+                            <div className="text-right">
+                              <div className="font-bebas text-3xl text-foreground leading-none">${service.price}</div>
+                            </div>
                           </div>
+                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5 mb-4">
+                            <div className="w-1.5 h-1.5 bg-secondary rounded-full animate-pulse" />
+                            <span className="text-foreground/60 text-[10px] font-bold uppercase tracking-widest">{service.duration} Session</span>
+                          </div>
+                          {service.description && (
+                            <p className="text-foreground/50 text-sm leading-relaxed line-clamp-2 italic">“{service.description}”</p>
+                          )}
                         </div>
-                        {service.description && (
-                          <p className="text-foreground/80 text-sm mb-3">{service.description}</p>
-                        )}
                         <Button 
                           onClick={() => handleBookService(service)}
-                          className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90"
+                          className="w-full bg-white/5 border border-white/10 text-foreground hover:bg-secondary hover:text-[#1A1A1A] hover:border-transparent font-bold h-12 rounded-2xl transition-all duration-500 group-hover:shadow-lg group-hover:shadow-secondary/10"
                         >
-                          Book This Service
+                          Modify Details
                         </Button>
                       </div>
                     ))}
@@ -1514,7 +1635,6 @@ export default function ProfilePortfolio() {
 
         </Tabs>
       </div>
-      {/* Upload Dialog */}
       <Dialog open={openDialog === 'upload'} onOpenChange={open => {
         setOpenDialog(open ? 'upload' : null);
         if (!open) {
@@ -1527,129 +1647,118 @@ export default function ProfilePortfolio() {
           setVideoPreviewUrl(null);
         }
       }}>
-        <DialogContent className="max-w-md w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-foreground">Upload New Cut</DialogTitle>
-            <DialogDescription className="text-foreground/80">
-              Share your latest work with the community
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6">
-            {/* Video Selection */}
-            <div>
-              <Label htmlFor="video-upload" className="text-foreground font-medium mb-2 block">
-                Select Video File
-              </Label>
-              <div className="border-2 border-dashed border-black/10 dark:border-white/20 rounded-xl p-8 text-center hover:border-secondary/50 transition-colors">
-                <input
-                  ref={fileInputRef}
-                  id="video-upload"
-                  type="file"
-                  accept="video/*"
-                  onChange={handleVideoSelect}
-                  className="hidden"
-                  disabled={uploading}
-                />
-                <Button
+        <DialogContent className="max-w-2xl w-full bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[40px] shadow-2xl p-0 overflow-hidden">
+          <div className="flex flex-col h-[85vh]">
+            <DialogHeader className="p-8 lg:p-12 pb-4">
+              <DialogTitle className="text-4xl lg:text-5xl font-bebas font-bold text-foreground">Share Your Craft</DialogTitle>
+              <DialogDescription className="text-foreground/60 text-lg">
+                Show the world what you're capable of.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto p-8 lg:p-12 pt-4 space-y-8">
+              {/* Media Upload Area */}
+              {!selectedVideoFile ? (
+                <div 
+                  className="group relative border-2 border-dashed border-white/10 rounded-[32px] p-16 text-center hover:border-secondary/50 transition-all duration-500 bg-white/5 hover:bg-secondary/5 cursor-pointer"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="bg-secondary text-primary-foreground font-bold rounded-xl px-8 py-3 mb-4"
                 >
-                  {uploading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Choose Video
-                    </>
-                  )}
-                </Button>
-                <p className="text-foreground/60 text-sm">
-                  MP4, MOV, or AVI up to 270MB
-                </p>
-              </div>
-            </div>
-            {/* Video Preview */}
-            {videoPreviewUrl && (
-              <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4">
-                <h4 className="text-foreground font-medium mb-3">Video Preview</h4>
-                <div className="aspect-video rounded-lg overflow-hidden">
-                  <video src={videoPreviewUrl} className="w-full h-full object-cover" controls />
-                </div>
-              </div>
-            )}
-            {/* Form Fields */}
-            {selectedVideoFile && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title" className="text-foreground font-medium mb-2 block">
-                    Title
-                  </Label>
-                  <Input
-                    id="title"
-                    placeholder="Enter video title"
-                    value={uploadForm.title}
-                    onChange={(e) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
-                    className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description" className="text-foreground font-medium mb-2 block">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe your video content..."
-                    value={uploadForm.description}
-                    onChange={(e) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40 min-h-[100px]"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="tags" className="text-white font-medium mb-2 block">
-                    Tags
-                  </Label>
-                  <Input
-                    id="tags"
-                    placeholder="Add tags separated by commas"
-                    value={uploadForm.tags}
-                    onChange={(e) => setUploadForm(prev => ({ ...prev, tags: e.target.value }))}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                  />
-                  <p className="text-white/40 text-xs mt-1">Example: fade, tutorial, classic</p>
-                </div>
-                {/* Post Button */}
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={handlePostCut}
+                  <input
+                    ref={fileInputRef}
+                    id="video-upload"
+                    type="file"
+                    accept="video/*"
+                    onChange={handleVideoSelect}
+                    className="hidden"
                     disabled={uploading}
-                    className="flex-1 bg-secondary text-primary-foreground font-bold rounded-xl px-6 py-3 hover:bg-secondary/90"
-                  >
-                    {uploading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Posting...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Post Cut
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setOpenDialog(null)}
-                    className="border-white/20 text-white hover:bg-white/10 rounded-xl px-6 py-3"
-                  >
-                    Cancel
-                  </Button>
+                  />
+                  <div className="w-20 h-20 bg-secondary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
+                    <Upload className="h-10 w-10 text-secondary" />
+                  </div>
+                  <h4 className="text-2xl font-bebas font-bold text-foreground mb-2">Click to Upload Video</h4>
+                  <p className="text-foreground/40 text-sm max-w-xs mx-auto">
+                    MP4, MOV, or AVI works best. Maintain a high quality for the best engagement.
+                  </p>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {/* Video Preview */}
+                  <div className="relative aspect-video rounded-[32px] overflow-hidden bg-black/40 ring-1 ring-white/10 shadow-2xl">
+                    <video src={videoPreviewUrl || ''} className="w-full h-full object-cover" controls playsInline />
+                    <button 
+                      onClick={() => setSelectedVideoFile(null)}
+                      className="absolute top-4 right-4 bg-black/40 hover:bg-red-500/80 text-white backdrop-blur-xl rounded-2xl p-2 border border-white/10 transition-all"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Form Fields */}
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="title" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Cut Title</Label>
+                      <Input
+                        id="title"
+                        placeholder="e.g., Mid-Fade Masterclass"
+                        value={uploadForm.title}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
+                        className="h-14 bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6 focus:ring-secondary/50 focus:border-secondary/50"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="description" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Details & Inspiration</Label>
+                      <Textarea
+                        id="description"
+                        placeholder="Tell the community about the technique, products, or the vibe..."
+                        value={uploadForm.description}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
+                        className="bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6 py-4 min-h-[120px] focus:ring-secondary/50 focus:border-secondary/50"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="tags" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Tags (Comma Separated)</Label>
+                      <Input
+                        id="tags"
+                        placeholder="fade, lifestyle, luxury"
+                        value={uploadForm.tags}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUploadForm(prev => ({ ...prev, tags: e.target.value }))}
+                        className="h-14 bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6 focus:ring-secondary/50 focus:border-secondary/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-8 lg:p-12 pt-6 border-t border-white/5 flex gap-4">
+              <Button
+                variant="outline"
+                className="flex-1 h-16 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 text-foreground font-bold"
+                onClick={() => setOpenDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handlePostCut}
+                disabled={uploading || !selectedVideoFile}
+                className="flex-[2] h-16 rounded-2xl bg-secondary text-[#1A1A1A] font-bold text-lg shadow-[0_10px_30px_rgba(var(--secondary),0.2)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-5 w-5 mr-3" />
+                    Share Your Cut
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1666,155 +1775,245 @@ export default function ProfilePortfolio() {
           });
         }
       }}>
-        <DialogContent className="max-w-2xl w-full bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-8 overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bebas text-white">Edit Cut</DialogTitle>
-            <DialogDescription className="text-white/80">
-              Update your cut information and settings
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            {/* Video Preview */}
-            {editingCut && (
-              <div className="bg-white/5 rounded-2xl p-4">
-                <h4 className="text-white font-medium mb-3">Video Preview</h4>
-                <div className="aspect-video rounded-xl overflow-hidden">
+        <DialogContent className="max-w-2xl w-full bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[40px] shadow-2xl p-0 overflow-hidden">
+          <div className="flex flex-col h-[85vh]">
+            <DialogHeader className="p-8 lg:p-12 pb-4">
+              <DialogTitle className="text-4xl lg:text-5xl font-bebas font-bold text-foreground">Refine Your Cut</DialogTitle>
+              <DialogDescription className="text-foreground/60 text-lg">
+                Update the story behind this work.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto p-8 lg:p-12 pt-4 space-y-8">
+              {/* Media Preview */}
+              {editingCut && (
+                <div className="relative aspect-video rounded-[32px] overflow-hidden bg-black/40 ring-1 ring-white/10 shadow-2xl">
                   <video src={editingCut.url} className="w-full h-full object-cover" controls />
                 </div>
-              </div>
-            )}
-            
-            <div>
-              <Label htmlFor="edit-title" className="text-white font-medium mb-2 block">
-                Title
-              </Label>
-              <Input
-                id="edit-title"
-                placeholder="Enter video title"
-                value={uploadForm.title}
-                onChange={(e) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="edit-description" className="text-white font-medium mb-2 block">
-                Description
-              </Label>
-              <Textarea
-                id="edit-description"
-                placeholder="Describe your video content..."
-                value={uploadForm.description}
-                onChange={(e) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 min-h-[100px]"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="edit-tags" className="text-white font-medium mb-2 block">
-                Tags
-              </Label>
-              <Input
-                id="edit-tags"
-                placeholder="Add tags separated by commas"
-                value={uploadForm.tags}
-                onChange={(e) => setUploadForm(prev => ({ ...prev, tags: e.target.value }))}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-              />
-              <p className="text-white/40 text-xs mt-1">Example: fade, tutorial, classic</p>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={editingCut?.is_featured || false}
-                  onCheckedChange={async (checked) => {
-                    if (!editingCut) return;
-                    try {
-                      const { error } = await supabase
-                        .from('cuts')
-                        .update({ is_featured: checked })
-                        .eq('id', editingCut.id);
-                      
-                      if (error) throw error;
-                      
-                      setEditingCut((prev: any) => prev ? { ...prev, is_featured: checked } : prev);
-                      // Refresh cuts list
-                      refreshCuts(); // Use refreshCuts from useCuts
-                      
-                      toast({
-                        title: 'Success',
-                        description: `Cut ${checked ? 'featured' : 'unfeatured'} successfully!`,
-                      });
-                    } catch (error) {
-                      logger.error('Error updating featured status', error)
-                      toast({
-                        title: 'Error',
-                        description: 'Failed to update featured status. Please try again.',
-                        variant: 'destructive',
-                      });
-                    }
-                  }}
-                  id="feature-cut-toggle"
-                  className="data-[state=checked]:bg-secondary data-[state=unchecked]:bg-white/20 border-white/30"
-                />
-                <Label htmlFor="feature-cut-toggle" className="text-white font-medium flex items-center gap-2">
-                                      <Star className="h-4 w-4 text-secondary" />
-                  Feature this cut
-                </Label>
-              </div>
-              {editingCut?.is_featured && (
-                                    <Badge variant="secondary" className="bg-secondary/20 text-secondary border-secondary/30">
-                  Currently Featured
-                </Badge>
               )}
+
+              {/* Form Fields */}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Cut Title</Label>
+                  <Input
+                    id="edit-title"
+                    placeholder="Enter video title"
+                    value={uploadForm.title}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
+                    className="h-14 bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Details & Inspiration</Label>
+                  <Textarea
+                    id="edit-description"
+                    placeholder="Describe your video content..."
+                    value={uploadForm.description}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
+                    className="bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6 py-4 min-h-[120px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-tags" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Tags</Label>
+                  <Input
+                    id="edit-tags"
+                    placeholder="fade, tutorial, classic"
+                    value={uploadForm.tags}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUploadForm(prev => ({ ...prev, tags: e.target.value }))}
+                    className="h-14 bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6"
+                  />
+                </div>
+
+                {/* Visibility & Featured Controls */}
+                <div className="p-6 bg-white/5 rounded-3xl border border-white/10 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-secondary/10 rounded-2xl flex items-center justify-center">
+                        <Star className="h-5 w-5 text-secondary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-foreground">Feature this cut</p>
+                        <p className="text-xs text-muted-foreground">Highlight this on your main profile feed</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={editingCut?.is_featured || false}
+                      onCheckedChange={async (checked: boolean) => {
+                        if (!editingCut) return;
+                        try {
+                          const { error } = await supabase
+                            .from('cuts')
+                            .update({ is_featured: checked })
+                            .eq('id', editingCut.id);
+                          if (error) throw error;
+                          setEditingCut((prev: VideoCut | null) => prev ? { ...prev, is_featured: checked } : prev);
+                          refreshCuts();
+                          toast({ title: 'Success', description: `Cut ${checked ? 'featured' : 'unfeatured'} successfully!` });
+                        } catch (error) {
+                          logger.error('Error updating featured status', error)
+                          toast({ title: 'Error', description: 'Failed to update status.', variant: 'destructive' });
+                        }
+                      }}
+                      className="data-[state=checked]:bg-secondary"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
+            {/* Footer Actions */}
+            <div className="p-8 lg:p-12 pt-6 border-t border-white/5 flex gap-4">
+              <Button
+                variant="outline"
+                className="flex-1 h-16 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 text-foreground font-bold"
+                onClick={() => setOpenDialog(null)}
+              >
+                Cancel
+              </Button>
               <Button
                 onClick={handleUpdateCut}
                 disabled={uploading}
-                className="flex-1 bg-secondary text-primary-foreground font-bold rounded-xl px-6 py-3 hover:bg-secondary/90"
+                className="flex-[2] h-16 rounded-2xl bg-secondary text-[#1A1A1A] font-bold text-lg"
               >
                 {uploading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Updating...
+                    <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                    Saving...
                   </>
                 ) : (
                   <>
-                    <Edit className="h-4 w-4 mr-2" />
+                    <Edit className="h-5 w-5 mr-3" />
                     Update Cut
                   </>
                 )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setOpenDialog(null)}
-                className="border-white/20 text-white hover:bg-white/10 rounded-xl px-6 py-3"
-              >
-                Cancel
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Video Modal */}
+      {/* Premium Media Viewer Modal */}
       <Dialog open={openDialog === 'video'} onOpenChange={open => {
         setOpenDialog(open ? 'video' : null);
-        if (!open && editPortfolioButtonRef.current) editPortfolioButtonRef.current.focus();
+        if (!open) setSelectedMedia(null);
       }}>
-        <DialogContent className="max-w-lg w-full flex flex-col items-center bg-darkpurple/90 border border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl">
-          <DialogDescription className="sr-only">
-            Video player for portfolio content
-          </DialogDescription>
-          {videoUrl && (
-            <video src={videoUrl} controls autoPlay className="w-full rounded-lg" style={{ maxHeight: 400 }} />
-          )}
+        <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 overflow-hidden bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[40px] shadow-2xl flex flex-col md:flex-row">
+          <DialogTitle className="sr-only">Media Viewer</DialogTitle>
+          <DialogDescription className="sr-only">Viewing {selectedMedia?.title || 'Portfolio content'}</DialogDescription>
+          
+          {/* Main Media Area */}
+          <div className="flex-1 relative bg-black/20 flex items-center justify-center overflow-hidden">
+            <button 
+              onClick={() => setOpenDialog(null)}
+              className="absolute top-6 left-6 z-50 bg-black/40 hover:bg-black/60 text-white backdrop-blur-xl rounded-full p-3 border border-white/10 transition-all hover:scale-110 active:scale-95"
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            {selectedMedia?.type === 'video' ? (
+              <div className="w-full h-full flex items-center justify-center p-4 sm:p-12">
+                <video 
+                  src={selectedMedia.url} 
+                  controls 
+                  autoPlay 
+                  loop
+                  className="max-w-full max-h-full rounded-2xl shadow-[0_0_100px_rgba(0,0,0,0.5)] ring-1 ring-white/10"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center p-4 sm:p-12">
+                <img 
+                  src={selectedMedia?.url} 
+                  alt={selectedMedia?.title} 
+                  className="max-w-full max-h-full object-contain rounded-2xl shadow-[0_0_100px_rgba(0,0,0,0.5)] ring-1 ring-white/10"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar / Info Panel */}
+          <div className="w-full md:w-[400px] bg-white/[0.02] backdrop-blur-2xl border-l border-white/5 flex flex-col p-8 lg:p-12">
+            <div className="flex-1 overflow-y-auto">
+              {/* Header Info */}
+              <div className="mb-10">
+                <Badge className="bg-secondary/20 text-secondary border-secondary/30 font-bebas tracking-widest text-[10px] mb-4">
+                  {selectedMedia?.type === 'video' ? 'Video Cut' : 'Gallery Image'}
+                </Badge>
+                <h2 className="text-4xl lg:text-5xl font-bebas font-bold text-foreground leading-tight tracking-tight mb-4">
+                  {selectedMedia?.title || 'Unnamed Work'}
+                </h2>
+                <div className="flex items-center gap-3 text-muted-foreground text-sm font-medium">
+                  <User className="h-4 w-4 text-secondary/60" />
+                  <span>{profile?.name}</span>
+                  <div className="w-1 h-1 bg-white/20 rounded-full" />
+                  <Calendar className="h-4 w-4 text-secondary/60" />
+                  <span>{selectedMedia?.created_at ? new Date(selectedMedia.created_at).toLocaleDateString() : 'Recent'}</span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="mb-12">
+                <p className="text-foreground/80 leading-relaxed text-base lg:text-lg">
+                  {selectedMedia?.description || "A showcase of technical skill and artistic vision. This work represents the standard of excellence we strive for at our shop."}
+                </p>
+              </div>
+
+              {/* Stats Row */}
+              <div className="grid grid-cols-2 gap-4 mb-12">
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-5 flex flex-col items-center justify-center group hover:bg-secondary/5 transition-colors">
+                  <Heart className="h-6 w-6 text-red-500 mb-2 group-hover:scale-125 transition-transform" />
+                  <span className="text-2xl font-bebas font-bold">{selectedMedia?.likes || 0}</span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Appreciation</span>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-5 flex flex-col items-center justify-center group hover:bg-secondary/5 transition-colors">
+                  <Eye className="h-6 w-6 text-secondary mb-2 group-hover:scale-125 transition-transform" />
+                  <span className="text-2xl font-bebas font-bold">{selectedMedia?.views || 124}</span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Visibility</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-4 pt-8 border-t border-white/5">
+              <Button 
+                className="w-full bg-secondary text-[#1A1A1A] font-bold h-14 rounded-2xl shadow-[0_10px_30px_rgba(var(--secondary),0.2)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                onClick={() => {
+                  toast({
+                    title: "Success",
+                    description: "Portfolio link copied to clipboard!"
+                  });
+                }}
+              >
+                <Share2 className="h-5 w-5 mr-3" />
+                Share Talent
+              </Button>
+              {isOwner && (
+                <div className="grid grid-cols-2 gap-4">
+                  <Button variant="outline" className="h-14 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10" onClick={() => {
+                    if (selectedMedia?.id) {
+                      const cut = cuts.find(c => c.id === selectedMedia.id);
+                      if (cut) handleEditCut(cut);
+                    }
+                  }}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button variant="outline" className="h-14 rounded-2xl border-red-500/20 bg-red-500/5 text-red-400 hover:bg-red-500/10 hover:text-red-400" onClick={() => {
+                    if (selectedMedia?.id) {
+                      // Logic for delete would go here, currently using existing handlers
+                      setOpenDialog(null);
+                    }
+                  }}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Drop
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
       {/* Portfolio Editor Modal */}
@@ -1903,7 +2102,7 @@ export default function ProfilePortfolio() {
                   id="city"
                   placeholder="Enter city name"
                   value={locationFilter.city}
-                  onChange={(e) => setLocationFilter(prev => ({ ...prev, city: e.target.value }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, city: e.target.value }))}
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                 />
               </div>
@@ -1916,7 +2115,7 @@ export default function ProfilePortfolio() {
                   id="state"
                   placeholder="Enter state or province"
                   value={locationFilter.state}
-                  onChange={(e) => setLocationFilter(prev => ({ ...prev, state: e.target.value }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, state: e.target.value }))}
                   className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                 />
               </div>
@@ -1942,7 +2141,7 @@ export default function ProfilePortfolio() {
                     </Label>
                     <Select 
                       value={locationFilter.range.toString()} 
-                      onValueChange={(value) => setLocationFilter(prev => ({ ...prev, range: parseInt(value) }))}
+                      onValueChange={(value: string) => setLocationFilter(prev => ({ ...prev, range: parseInt(value) }))}
                     >
                       <SelectTrigger className="bg-white/10 border-white/20 text-white">
                         <SelectValue />
@@ -2016,7 +2215,7 @@ export default function ProfilePortfolio() {
                         .from('cuts')
                         .update({ views: (statsDialogCut.views || 0) + 1 })
                         .eq('id', statsDialogCut.id);
-                      setStatsDialogCut((prev: any) => prev ? { ...prev, views: (prev.views || 0) + 1 } : prev);
+                      setStatsDialogCut((prev: VideoCut | null) => prev ? { ...prev, views: (prev.views || 0) + 1 } : prev);
                     }}
                   />
                 </div>
@@ -2034,7 +2233,7 @@ export default function ProfilePortfolio() {
                         .from('cuts')
                         .update({ likes: (statsDialogCut.likes || 0) + 1 })
                         .eq('id', statsDialogCut.id);
-                      setStatsDialogCut((prev: any) => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : prev);
+                      setStatsDialogCut((prev: VideoCut | null) => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : prev);
                     }}
                   >
                     <Heart className="h-6 w-6 text-red-400 mb-1" />

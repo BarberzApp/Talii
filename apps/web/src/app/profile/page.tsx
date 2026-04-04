@@ -26,18 +26,17 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         {/* Background Elements */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute inset-0 h-[85vh] bg-gradient-to-b from-primary/[0.12] via-primary/[0.05] to-transparent dark:from-primary/[0.08] dark:via-primary/[0.03] dark:to-transparent" />
-          <div className="absolute top-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl bg-primary/15 dark:bg-primary/12" />
-          <div className="absolute bottom-1/4 left-0 w-80 h-80 rounded-full blur-3xl bg-primary/12 dark:bg-primary/10" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl bg-primary/8 dark:bg-primary/5" />
+          <div className="absolute inset-0 h-[85vh] bg-gradient-to-b from-secondary/[0.08] via-secondary/[0.02] to-transparent" />
+          <div className="absolute top-0 right-0 w-[32rem] h-[32rem] rounded-full blur-[120px] bg-secondary/10" />
+          <div className="absolute bottom-1/4 left-0 w-[24rem] h-[24rem] rounded-full blur-[120px] bg-secondary/8" />
         </div>
         
-        <div className="text-center space-y-4 relative z-10">
+        <div className="text-center space-y-6 relative z-10">
           <div className="relative">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto text-secondary" />
-            <div className="absolute inset-0 rounded-full bg-secondary/20 animate-ping" />
+            <Loader2 className="h-16 w-16 animate-spin mx-auto text-secondary opacity-80" />
+            <div className="absolute inset-0 rounded-full bg-secondary/15 animate-ping duration-[2000ms]" />
           </div>
-          <p className="text-muted-foreground font-medium">Loading your profile...</p>
+          <p className="text-foreground font-bebas text-2xl tracking-[0.2em] opacity-40 animate-pulse">Initializing Profile...</p>
         </div>
       </div>
     )
@@ -51,10 +50,9 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background">
       {/* Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 h-[85vh] bg-gradient-to-b from-primary/[0.12] via-primary/[0.05] to-transparent dark:from-primary/[0.08] dark:via-primary/[0.03] dark:to-transparent" />
-        <div className="absolute top-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl bg-primary/15 dark:bg-primary/12" />
-        <div className="absolute bottom-1/4 left-0 w-80 h-80 rounded-full blur-3xl bg-primary/12 dark:bg-primary/10" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl bg-primary/8 dark:bg-primary/5" />
+        <div className="absolute inset-0 h-[85vh] bg-gradient-to-b from-secondary/[0.08] via-secondary/[0.02] to-transparent" />
+        <div className="absolute top-0 right-0 w-[42rem] h-[42rem] rounded-full blur-[140px] bg-secondary/8 animate-pulse duration-[8000ms]" />
+        <div className="absolute bottom-0 left-0 w-[36rem] h-[36rem] rounded-full blur-[140px] bg-secondary/5" />
       </div>
 
       {/* Main Content */}

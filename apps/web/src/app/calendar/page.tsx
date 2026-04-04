@@ -13,7 +13,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/shared/lib/supabase';
 import { useAuth } from '@/shared/hooks/use-auth-zustand';
 import { logger } from '@/shared/lib/logger';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/shared/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog';
+import { Badge } from '@/shared/components/ui/badge';
 import { EnhancedCalendar } from '@/shared/components/calendar/enhanced-calendar';
 import { CalendarSyncSettings } from '@/shared/components/calendar-sync-settings';
 
@@ -394,176 +395,86 @@ export default function BarberCalendar() {
       background: rgba(255, 255, 255, 0.1) !important;
     }
     .barber-calendar .fc-timegrid-slot-label {
-      color: rgba(255, 255, 255, 0.8) !important;
-      font-size: 0.875rem;
-      font-weight: 500;
+      color: hsl(var(--foreground) / 0.6) !important;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     .barber-calendar .fc-timegrid-slot {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-      height: 60px;
+      border-bottom: 1px solid hsl(var(--foreground) / 0.05) !important;
+      height: 70px;
     }
     .barber-calendar .fc-timegrid-slot-lane {
-      border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-right: 1px solid hsl(var(--foreground) / 0.05) !important;
     }
     .barber-calendar .fc-daygrid-day {
-      border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-      background: rgba(255, 255, 255, 0.05);
+      border-right: 1px solid hsl(var(--foreground) / 0.05) !important;
+      border-bottom: 1px solid hsl(var(--foreground) / 0.05) !important;
+      background: hsla(var(--foreground-rgb), 0.01);
+      transition: background 0.3s ease;
+    }
+    .barber-calendar .fc-daygrid-day:hover {
+      background: hsla(var(--foreground-rgb), 0.03);
     }
     .barber-calendar .fc-day-today {
-      background: rgba(var(--secondary-rgb), 0.2) !important;
-      border: 2px solid rgba(var(--secondary-rgb), 0.5) !important;
+      background: hsla(var(--secondary-rgb), 0.08) !important;
+      position: relative;
     }
-    .barber-calendar .fc-timegrid-now-indicator-line {
-      border-color: hsl(var(--secondary)) !important;
-      border-width: 3px !important;
-      box-shadow: 0 0 10px rgba(var(--secondary-rgb), 0.5);
-    }
-    .barber-calendar .fc-timegrid-now-indicator-arrow {
-      border-color: hsl(var(--secondary)) !important;
-      box-shadow: 0 0 10px rgba(var(--secondary-rgb), 0.5);
+    .barber-calendar .fc-day-today::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border: 2px solid hsl(var(--secondary) / 0.3);
+      pointer-events: none;
     }
     .barber-calendar .fc-event {
       border-radius: 12px !important;
-      border: 2px solid rgba(var(--secondary-rgb), 0.5) !important;
+      border: none !important;
       background: hsl(var(--secondary)) !important;
-      color: white !important;
-      font-weight: 600;
+      color: hsl(var(--primary-foreground)) !important;
+      font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(var(--secondary-rgb), 0.3);
-      transition: all 0.3s ease;
-      backdrop-filter: blur(10px);
-    }
-    .barber-calendar .fc-event *,
-    .barber-calendar .fc-event-main {
-      color: white !important;
+      box-shadow: 0 4px 12px hsla(var(--secondary-rgb), 0.2);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      backdrop-filter: blur(8px);
+      padding: 2px 4px !important;
     }
     .barber-calendar .fc-event:hover {
-      transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 12px 35px rgba(var(--secondary-rgb), 0.4);
-      border-color: rgba(var(--secondary-rgb), 0.8) !important;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 12px 24px hsla(var(--secondary-rgb), 0.3);
       background: hsl(var(--secondary)) !important;
-    }
-    .barber-calendar .fc-scrollgrid {
-      border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }
-    .barber-calendar .fc-scrollgrid-section > * {
-      border-color: rgba(255, 255, 255, 0.1) !important;
-    }
-    .barber-calendar .fc-timegrid-event .fc-event-title,
-    .barber-calendar .fc-timegrid-event .fc-event-main {
-      white-space: nowrap !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-      max-width: 100% !important;
-      display: block !important;
     }
     .barber-calendar .fc-daygrid-day-number {
-      color: white !important;
-      font-weight: 600;
+      color: hsl(var(--foreground)) !important;
+      font-weight: 700;
+      font-family: var(--font-bebas);
+      font-size: 1.25rem;
+      padding: 8px !important;
     }
-    .barber-calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
-      color: hsl(var(--secondary)) !important;
-      font-weight: bold;
+    .barber-calendar .fc-col-header-cell-cushion {
+      color: hsl(var(--foreground) / 0.4) !important;
+      font-family: var(--font-bebas);
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 12px !important;
     }
-    .barber-calendar .fc-daygrid-day.fc-day-other .fc-daygrid-day-number {
-      color: rgba(255, 255, 255, 0.5) !important;
+    .barber-calendar .fc-popover {
+      background: hsla(var(--background-rgb), 0.8) !important;
+      backdrop-filter: blur(20px) !important;
+      border: 1px solid hsl(var(--foreground) / 0.1) !important;
+      border-radius: 1.5rem !important;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3) !important;
     }
-    /* Enhanced more link */
     .barber-calendar .fc-more-link {
-      background: hsl(var(--secondary));
-      color: white !important;
-      font-weight: bold;
-      border-radius: 9999px;
-      padding: 0.25em 1em;
-      box-shadow: 0 2px 8px rgba(var(--secondary-rgb), 0.25);
-      border: none;
-      font-size: 1.1em;
-      letter-spacing: 0.5px;
-      transition: box-shadow 0.2s, background 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 0.25em;
-      margin-bottom: 0.25em;
-      cursor: pointer;
-      text-align: center;
-      min-width: 2.2em;
-    }
-    .barber-calendar .fc-more-link::after {
-      content: "" !important;
-      display: none !important;
-    }
-    .barber-calendar .fc-more-link:hover {
-      background: hsl(var(--secondary));
-      box-shadow: 0 4px 16px rgba(var(--secondary-rgb), 0.35);
-      color: white !important;
-      text-decoration: none;
-      outline: none;
-    }
-    .barber-calendar .fc-popover, .barber-calendar .fc-more-popover {
-      background: rgba(255,255,255,0.05) !important;
-      border: 1.5px solid hsl(var(--secondary)) !important;
-      border-radius: 1rem !important;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.25) !important;
-      backdrop-filter: blur(12px) !important;
-      color: white !important;
-      padding: 0.5rem 0.75rem !important;
-    }
-    .barber-calendar .fc-popover .fc-popover-header, .barber-calendar .fc-more-popover .fc-popover-header {
-      background: transparent !important;
-      border-bottom: 1px solid hsl(var(--secondary)) !important;
+      background: hsl(var(--secondary) / 0.15);
       color: hsl(var(--secondary)) !important;
-      font-weight: 600;
-      font-size: 1rem;
-      border-radius: 1rem 1rem 0 0 !important;
-    }
-    .barber-calendar .fc-popover .fc-popover-close, .barber-calendar .fc-more-popover .fc-popover-close {
-      color: hsl(var(--secondary)) !important;
-      opacity: 0.8;
-      font-size: 1.2rem;
-      transition: opacity 0.2s;
-    }
-    .barber-calendar .fc-popover .fc-popover-close:hover, .barber-calendar .fc-more-popover .fc-popover-close:hover {
-      opacity: 1;
-    }
-    .barber-calendar .fc-popover .fc-daygrid-event-harness .fc-event, .barber-calendar .fc-more-popover .fc-daygrid-event-harness .fc-event {
-      background: hsl(var(--secondary)) !important;
-      color: white !important;
-      border-radius: 0.75rem !important;
-      border: none !important;
-      box-shadow: 0 2px 8px rgba(38,43,46,0.15);
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      padding: 0.5rem 1rem;
-      transition: box-shadow 0.2s, background 0.2s;
-    }
-    .barber-calendar .fc-popover .fc-daygrid-event-harness .fc-event:hover, .barber-calendar .fc-more-popover .fc-daygrid-event-harness .fc-event:hover {
-      box-shadow: 0 4px 16px rgba(var(--secondary-rgb), 0.25);
-      background: hsl(var(--secondary)) !important;
-    }
-    .barber-calendar .fc-popover .fc-daygrid-event-harness .fc-event .text-secondary, .barber-calendar .fc-more-popover .fc-daygrid-event-harness .fc-event .text-secondary {
-      color: hsl(var(--secondary)) !important;
-    }
-    /* Today button and view toggles */
-    .barber-calendar .calendar-today-btn,
-    .barber-calendar .calendar-view-toggle-active {
-      background: hsl(var(--secondary)) !important;
-      color: white !important;
-      border: none !important;
-      font-weight: bold;
-      box-shadow: 0 2px 8px rgba(var(--secondary-rgb), 0.25);
-    }
-    .barber-calendar .calendar-today-btn:hover,
-    .barber-calendar .calendar-view-toggle-active:hover {
-      background: hsl(var(--secondary)) !important;
-    }
-    /* Icon backgrounds */
-    .barber-calendar .calendar-header-icon {
-      background: hsl(var(--secondary)) !important;
-      color: white !important;
-      border-radius: 1rem;
-      box-shadow: 0 2px 8px rgba(var(--secondary-rgb), 0.15);
+      font-weight: 800;
+      font-size: 0.7rem;
+      border-radius: 6px;
+      padding: 2px 6px;
+      text-transform: uppercase;
     }
   `;
 
@@ -588,8 +499,8 @@ export default function BarberCalendar() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-secondary mx-auto"></div>
-          <p className="text-white mt-4 text-lg">Loading Calendar...</p>
+          <div className="animate-spin rounded-[2rem] h-20 w-20 border-b-2 border-secondary mx-auto shadow-2xl shadow-secondary/20"></div>
+          <p className="text-foreground font-bebas text-2xl mt-8 tracking-widest animate-pulse opacity-50">Initializing Schedule...</p>
         </div>
       </div>
     );
@@ -600,19 +511,19 @@ export default function BarberCalendar() {
 
       <div className="relative z-10 container mx-auto px-4 py-8 pb-32 flex flex-col items-center">
         {/* Header */}
-        <div className="mb-6 sm:mb-8 w-full">
-          <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
-            <div className="p-2 sm:p-3 bg-secondary/20 rounded-xl">
-              <CalendarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-secondary" />
+        <div className="mb-8 w-full">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-secondary/15 rounded-2xl border border-secondary/20 shadow-lg shadow-secondary/5">
+              <CalendarIcon className="h-7 w-7 sm:h-9 sm:w-9 text-secondary" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-4xl font-bebas text-white tracking-wide">
+              <h1 className="text-3xl sm:text-5xl font-bebas text-foreground tracking-wider leading-none">
                 {userRole === 'barber' ? 'Appointment Calendar' : 'My Appointments'}
               </h1>
-              <p className="text-white/70 text-sm sm:text-lg">
+              <p className="text-foreground/60 text-sm sm:text-lg mt-1 font-medium italic">
                 {userRole === 'barber' 
-                  ? 'View your bookings and schedule' 
-                  : 'View your upcoming appointments'
+                  ? 'Manage your bookings and professional schedule' 
+                  : 'Track your upcoming premium appointments'
                 }
               </p>
             </div>
@@ -628,15 +539,17 @@ export default function BarberCalendar() {
         <div className="w-full flex justify-center">
           <div className="max-w-2xl w-full mx-auto p-0 overflow-visible" style={{ maxWidth: '700px' }}>
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary mx-auto mb-4"></div>
-                <p className="text-white/60">Loading appointments...</p>
+              <div className="text-center py-24">
+                <div className="animate-spin rounded-[1.5rem] h-14 w-14 border-b-2 border-secondary mx-auto mb-6 shadow-xl shadow-secondary/10"></div>
+                <p className="text-foreground/40 font-bebas text-xl tracking-widest italic animate-pulse">Syncing Appointments...</p>
               </div>
             ) : events.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="bg-white/5 border border-white/10 rounded-xl p-8 max-w-md mx-auto">
-                  <CalendarIcon className="h-12 w-12 text-white/40 mx-auto mb-4" />
-                  <h3 className="text-white font-bebas font-bold text-xl mb-2">
+               <div className="text-center py-16">
+                <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-2xl rounded-3xl p-10 max-w-lg mx-auto shadow-2xl ring-1 ring-white/5">
+                  <div className="bg-foreground/5 p-4 rounded-full w-fit mx-auto mb-6">
+                    <CalendarIcon className="h-14 w-14 text-foreground/30" />
+                  </div>
+                  <h3 className="text-foreground font-bebas font-bold text-3xl mb-3 tracking-wide">
                     {userRole === 'barber' ? 'No appointments yet' : 'No upcoming appointments'}
                   </h3>
                   <p className="text-white/60 text-sm mb-6">
@@ -645,9 +558,9 @@ export default function BarberCalendar() {
                       : 'Book your first appointment to see it here.'
                     }
                   </p>
-                  <Button
+                   <Button
                     onClick={() => window.location.href = userRole === 'barber' ? '/profile' : '/browse'}
-                    className="bg-secondary text-primary hover:bg-secondary/90"
+                    className="bg-secondary text-primary-foreground hover:bg-secondary/90 rounded-2xl px-10 h-14 text-lg font-bold shadow-xl shadow-secondary/20 transition-all active:scale-95"
                   >
                     {userRole === 'barber' ? 'View Profile' : 'Browse Barbers'}
                   </Button>
@@ -661,67 +574,74 @@ export default function BarberCalendar() {
       </div>
 
       {showEventDialog && selectedEvent && (
-        <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
-          <DialogContent className="max-w-md w-full max-h-[80vh] bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-6 overflow-hidden">
-            <DialogHeader className="flex-shrink-0">
-              <DialogTitle className="text-2xl font-bold text-white">
-                {selectedEvent.extendedProps.isBarberView ? 'Booking Details' : 'Appointment Details'}
+         <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
+          <DialogContent className="max-w-md w-full max-h-[85vh] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl p-10 overflow-hidden ring-1 ring-white/10">
+            <DialogHeader className="flex-shrink-0 space-y-2 mb-8">
+              <DialogTitle className="text-5xl font-bebas text-foreground tracking-wider leading-none">
+                {selectedEvent.extendedProps.isBarberView ? 'Client Session' : 'Premium Booking'}
               </DialogTitle>
-              <DialogDescription className="text-white/80">
+              <DialogDescription className="text-foreground/40 text-sm font-medium italic uppercase tracking-widest pl-1">
                 {selectedEvent.title}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 mt-4 overflow-y-auto flex-1 max-h-[60vh] pr-2">
-              <div className="flex items-center justify-between">
-                <span className="text-white/70">Service</span>
-                <span className="text-white font-semibold">{selectedEvent.extendedProps.serviceName}</span>
-              </div>
-              {selectedEvent.extendedProps.isBarberView ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-white/70">Client</span>
-                  <span className="text-white font-semibold">{selectedEvent.extendedProps.clientName}</span>
+            
+            <div className="space-y-6 overflow-y-auto flex-1 max-h-[55vh] pr-2 custom-scrollbar">
+              <div className="rounded-[2rem] p-6 bg-foreground/[0.03] border border-foreground/5 space-y-4">
+                <div className="flex items-center justify-between py-2 border-b border-foreground/5">
+                  <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Service</span>
+                  <span className="text-foreground font-bold tracking-tight">{selectedEvent.extendedProps.serviceName}</span>
                 </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-white/70">Barber</span>
-                  <span className="text-white font-semibold">{selectedEvent.extendedProps.barberName}</span>
+                
+                {selectedEvent.extendedProps.isBarberView ? (
+                  <div className="flex items-center justify-between py-2 border-b border-foreground/5">
+                    <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Client</span>
+                    <span className="text-foreground font-bold tracking-tight">{selectedEvent.extendedProps.clientName}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between py-2 border-b border-foreground/5">
+                    <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Artisan</span>
+                    <span className="text-foreground font-bold tracking-tight">{selectedEvent.extendedProps.barberName}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between py-2 border-b border-foreground/5">
+                  <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Status</span>
+                  <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none uppercase text-[8px] font-black px-2">{selectedEvent.extendedProps.status}</Badge>
                 </div>
-              )}
-              <div className="flex items-center justify-between">
-                <span className="text-white/70">Status</span>
-                <span className="text-white font-semibold capitalize">{selectedEvent.extendedProps.status}</span>
+
+                <div className="flex items-center justify-between py-2 border-b border-foreground/5">
+                  <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Timing</span>
+                  <span className="text-foreground font-bold tracking-tight">{formatTime(new Date(selectedEvent.start))} - {formatTime(new Date(selectedEvent.end))}</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-white/70">Date</span>
-                <span className="text-white font-semibold">{formatDate(new Date(selectedEvent.start))}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-white/70">Time</span>
-                <span className="text-white font-semibold">{formatTime(new Date(selectedEvent.start))} - {formatTime(new Date(selectedEvent.end))}</span>
-              </div>
-              <div className="border-t border-white/10 my-2" />
-              <div className="flex items-center justify-between">
-                <span className="text-white/70">Base Price</span>
-                <span className="text-white font-semibold">${selectedEvent.extendedProps.basePrice?.toFixed(2)}</span>
-              </div>
-              {selectedEvent.extendedProps.addons && selectedEvent.extendedProps.addons.length > 0 && (
-                <div>
-                  <div className="text-white/70 mb-1">Add-ons</div>
-                  <ul className="space-y-1">
+
+              <div className="rounded-[2rem] p-6 bg-secondary/5 border border-secondary/10">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-foreground font-bebas text-2xl tracking-wide opacity-80 uppercase">Total Worth</span>
+                  <span className="text-secondary font-bold text-4xl tracking-tighter">${selectedEvent.extendedProps.price?.toFixed(2)}</span>
+                </div>
+                {selectedEvent.extendedProps.addons && selectedEvent.extendedProps.addons.length > 0 && (
+                  <div className="space-y-2 mt-4 pt-4 border-t border-secondary/10">
+                    <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-2">Enabled Enhancements</p>
                     {selectedEvent.extendedProps.addons.map((addon, idx) => (
-                      <li key={idx} className="flex items-center justify-between">
-                        <span className="text-white/80">{addon.name}</span>
-                        <span className="text-secondary font-semibold">+${addon.price?.toFixed(2)}</span>
-                      </li>
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-foreground/60 font-medium italic">{addon.name}</span>
+                        <span className="text-secondary font-bold">+${addon.price?.toFixed(2)}</span>
+                      </div>
                     ))}
-                  </ul>
-                </div>
-              )}
-              <div className="flex items-center justify-between border-t border-white/10 pt-2 mt-2">
-                <span className="text-white font-bold text-lg">Total</span>
-                <span className="text-secondary font-bold text-lg">${selectedEvent.extendedProps.price?.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             </div>
+
+            <DialogFooter className="mt-8">
+              <Button
+                onClick={() => setShowEventDialog(false)}
+                className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90 font-bold py-8 rounded-2xl text-xl transition-all active:scale-95 shadow-xl shadow-secondary/20"
+              >
+                Close Details
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}

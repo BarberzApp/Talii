@@ -88,45 +88,42 @@ export function EnhancedCalendarEventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-black/95 backdrop-blur-3xl border border-white/20 max-w-lg mx-4 max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-md w-full max-h-[90vh] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl p-8 overflow-hidden ring-1 ring-white/10">
         <DialogHeader className="pb-6 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div
                 className={cn(
-                  'p-3 rounded-xl',
+                  'p-3 rounded-xl border transition-all duration-500',
                   selectedEvent?.extendedProps.isBarberView
-                    ? 'bg-blue-500/20'
-                    : 'bg-secondary/20',
+                    ? 'bg-secondary/15 border-secondary/20 shadow-lg shadow-secondary/5'
+                    : 'bg-secondary/20 border-secondary/30 shadow-lg shadow-secondary/10',
                 )}
               >
                 {selectedEvent?.extendedProps.isBarberView ? (
-                  <User className="w-6 h-6 text-blue-400" />
+                  <User className="w-6 h-6 text-secondary" />
                 ) : (
                   <Scissors className="w-6 h-6 text-secondary" />
                 )}
               </div>
               <div>
-                <DialogTitle className="text-white text-2xl font-bold">
+                <DialogTitle className="text-foreground text-4xl font-bebas tracking-wider leading-none">
                   {selectedEvent?.extendedProps.isBarberView
                     ? 'Client Booking'
                     : 'My Appointment'}
                 </DialogTitle>
-                <DialogDescription className="text-white/70 text-sm">
+                <DialogDescription className="text-foreground/50 text-base font-medium italic mt-1">
                   {selectedEvent && formatDate(new Date(selectedEvent.start))}
                 </DialogDescription>
               </div>
             </div>
             <Badge
-              variant={
-                selectedEvent?.extendedProps.status === 'confirmed'
-                  ? 'default'
-                  : 'secondary'
-              }
+              variant="secondary"
               className={cn(
-                'text-xs font-semibold px-3 py-1',
-                selectedEvent?.extendedProps.status === 'cancelled' &&
-                  'bg-red-500/20 text-red-400 border-red-500/30',
+                'text-[10px] font-black uppercase tracking-widest px-3 py-1 border rounded-full',
+                selectedEvent?.extendedProps.status === 'cancelled'
+                  ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                  : 'bg-green-500/10 text-green-500 border-green-500/20',
               )}
             >
               {selectedEvent?.extendedProps.status}
@@ -135,215 +132,136 @@ export function EnhancedCalendarEventDialog({
         </DialogHeader>
 
         {selectedEvent && (
-          <div className="space-y-6 overflow-y-auto flex-1 max-h-[65vh] pr-2">
-            <div
-              className={cn(
-                'rounded-2xl p-6 transition-all duration-300 border',
-                selectedEvent.extendedProps.status === 'cancelled'
-                  ? 'bg-red-500/10 border-red-500/30 shadow-lg shadow-red-500/20'
-                  : selectedEvent.extendedProps.isBarberView
-                    ? 'bg-blue-500/10 border-blue-500/30 shadow-lg shadow-blue-500/20'
-                    : 'bg-secondary/10 border-secondary/30 shadow-lg shadow-secondary/20',
-              )}
-            >
-              <div className="flex items-center justify-between mb-6">
+          <div className="space-y-6 overflow-y-auto flex-1 max-h-[65vh] pr-2 custom-scrollbar">
+            {/* Main Info Card */}
+            <div className="rounded-[2rem] p-6 bg-foreground/[0.03] border border-foreground/5 backdrop-blur-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-secondary/10 transition-colors duration-700" />
+              
+              <div className="flex items-center justify-between mb-8 relative z-10">
                 <div>
-                  <h3 className="text-white font-bold text-xl mb-1">
+                  <h3 className="text-foreground font-bebas text-4xl mb-1 tracking-wide leading-none">
                     {selectedEvent.extendedProps.serviceName}
                   </h3>
-                  <p className="text-white/60 text-sm">
+                  <p className="text-foreground/40 text-[10px] font-black uppercase tracking-[0.2em] pl-0.5">
                     {selectedEvent.extendedProps.isBarberView
-                      ? 'Client Request'
-                      : 'Your Service'}
+                      ? 'Inbound Request'
+                      : 'Premium Session'}
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-white">
+                  <div className="text-4xl font-bold text-secondary tracking-tighter drop-shadow-sm">
                     ${selectedEvent.extendedProps.price}
                   </div>
-                  <div className="text-white/60 text-xs">Total Amount</div>
+                  <div className="text-foreground/40 text-[9px] font-bold uppercase tracking-widest leading-none">Total Value</div>
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {selectedEvent.extendedProps.isBarberView ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
-                      <div className="p-2 bg-blue-500/20 rounded-lg">
-                        <User className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-white/60 text-xs uppercase tracking-wide mb-1">
-                          Client
-                        </p>
-                        <p className="text-white font-semibold text-lg">
-                          {selectedEvent.extendedProps.clientName}
-                        </p>
-                        {selectedEvent.extendedProps.isGuest && (
-                          <p className="text-blue-400 text-xs mt-1">
-                            Guest Booking
-                          </p>
-                        )}
-                      </div>
+                  <div className="flex items-center gap-4 p-4 bg-foreground/[0.02] rounded-2xl border border-foreground/5 group/info hover:bg-foreground/[0.04] transition-all">
+                    <div className="p-3 bg-secondary/15 rounded-xl border border-secondary/20 group-hover/info:scale-110 transition-transform">
+                      <User className="w-5 h-5 text-secondary" />
                     </div>
-
-                    {selectedEvent.extendedProps.isGuest && (
-                      <div className="space-y-3 p-4 bg-blue-500/5 rounded-xl border border-blue-500/20">
-                        <h4 className="text-blue-400 font-semibold text-sm mb-3">
-                          Contact Information
-                        </h4>
-                        <div className="flex items-center gap-3">
-                          <Mail className="w-4 h-4 text-blue-400" />
-                          <span className="text-white/80 text-sm">
-                            {selectedEvent.extendedProps.guestEmail}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Phone className="w-4 h-4 text-blue-400" />
-                          <span className="text-white/80 text-sm">
-                            {selectedEvent.extendedProps.guestPhone}
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                    <div className="flex-1">
+                      <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-0.5">Customer</p>
+                      <p className="text-foreground font-bold text-lg tracking-tight leading-tight">
+                        {selectedEvent.extendedProps.clientName}
+                      </p>
+                      {selectedEvent.extendedProps.isGuest && (
+                        <Badge variant="outline" className="mt-1 bg-secondary/5 text-secondary border-secondary/20 text-[9px] font-black uppercase tracking-tighter">Guest</Badge>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
-                    <div className="p-2 bg-secondary/20 rounded-lg">
+                  <div className="flex items-center gap-4 p-4 bg-foreground/[0.02] rounded-2xl border border-foreground/5 group/info hover:bg-foreground/[0.04] transition-all">
+                    <div className="p-3 bg-secondary/15 rounded-xl border border-secondary/20 group-hover/info:scale-110 transition-transform">
                       <Scissors className="w-5 h-5 text-secondary" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-white/60 text-xs uppercase tracking-wide mb-1">
-                        Barber
-                      </p>
-                      <p className="text-white font-semibold text-lg">
+                      <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-0.5">Artisan</p>
+                      <p className="text-foreground font-bold text-lg tracking-tight leading-tight">
                         {selectedEvent.extendedProps.barberName}
                       </p>
                     </div>
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
-                  <div className="p-2 bg-green-500/20 rounded-lg">
-                    <Clock className="w-5 h-5 text-green-400" />
+                <div className="flex items-center gap-4 p-4 bg-foreground/[0.02] rounded-2xl border border-foreground/5 group/info hover:bg-foreground/[0.04] transition-all">
+                  <div className="p-3 bg-green-500/10 rounded-xl border border-green-500/20 group-hover/info:scale-110 transition-transform">
+                    <Clock className="w-5 h-5 text-green-500" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-white/60 text-xs uppercase tracking-wide mb-1">
-                      Appointment Time
-                    </p>
-                    <p className="text-white font-semibold text-lg">
-                      {formatTime(new Date(selectedEvent.start))} -{' '}
-                      {formatTime(new Date(selectedEvent.end))}
-                    </p>
-                    <p className="text-white/60 text-sm mt-1">
-                      {formatDate(new Date(selectedEvent.start))}
+                    <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-0.5">Time Slot</p>
+                    <p className="text-foreground font-bold text-lg tracking-tight leading-tight">
+                      {formatTime(new Date(selectedEvent.start))} - {formatTime(new Date(selectedEvent.end))}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Price Breakdown */}
             {selectedEvent.extendedProps.addonTotal > 0 && (
-              <div className="rounded-2xl p-6 bg-white/5 border border-white/10">
-                <h4 className="text-white font-semibold text-lg mb-4 flex items-center gap-2">
+              <div className="rounded-[2rem] p-6 bg-foreground/[0.02] border border-foreground/5">
+                <h4 className="text-foreground font-bebas text-2xl mb-5 flex items-center gap-3">
                   <DollarSign className="w-5 h-5 text-secondary" />
-                  Price Breakdown
+                  Breakdown
                 </h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/80">Base Service</span>
-                    <span className="text-white font-semibold">
-                      ${selectedEvent.extendedProps.basePrice}
-                    </span>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-foreground/40 font-medium italic">Base Service</span>
+                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.basePrice}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 border-b border-white/10">
-                    <span className="text-white/80">Add-ons</span>
-                    <span className="text-white font-semibold">
-                      ${selectedEvent.extendedProps.addonTotal}
-                    </span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-foreground/40 font-medium italic">Enhancements</span>
+                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.addonTotal}</span>
                   </div>
-                  <div className="flex justify-between items-center py-2 pt-3">
-                    <span className="text-white font-bold text-lg">Total</span>
-                    <span className="text-secondary font-bold text-xl">
-                      ${selectedEvent.extendedProps.price}
-                    </span>
+                  <div className="pt-4 border-t border-foreground/5 flex justify-between items-center">
+                    <span className="text-foreground font-bebas text-3xl tracking-wide uppercase opacity-70">Total</span>
+                    <span className="text-secondary font-bold text-4xl tracking-tighter">${selectedEvent.extendedProps.price}</span>
                   </div>
                 </div>
-
-                {selectedEvent.extendedProps.addonNames.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-white/10">
-                    <h5 className="text-white/60 text-sm mb-3">
-                      Selected Add-ons:
-                    </h5>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedEvent.extendedProps.addonNames.map(
-                        (addonName, index) => (
-                          <Badge
-                            key={index}
-                            variant="secondary"
-                            className="text-xs bg-secondary/20 text-secondary border-secondary/30"
-                          >
-                            {addonName}
-                          </Badge>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                )}
+                
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {selectedEvent.extendedProps.addonNames.map((addon, i) => (
+                    <Badge key={i} variant="outline" className="bg-foreground/5 text-foreground/60 border-foreground/10 text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-lg">
+                      {addon}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
 
+            {/* Actions */}
             <div className="space-y-4">
-              {selectedEvent.extendedProps.isBarberView &&
-                selectedEvent.extendedProps.status !== 'cancelled' && (
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={onMarkAsMissed}
-                      disabled={isMarkingMissed}
-                      variant="destructive"
-                      className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                    >
-                      {isMarkingMissed ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Marking as Missed...
-                        </>
-                      ) : (
-                        <>
-                          <X className="w-4 h-4 mr-2" />
-                          Mark as Missed
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
+              {selectedEvent.extendedProps.isBarberView && selectedEvent.extendedProps.status !== 'cancelled' && (
+                <Button
+                  onClick={onMarkAsMissed}
+                  disabled={isMarkingMissed}
+                  variant="destructive"
+                  className="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-bold py-7 rounded-2xl border border-red-500/20 transition-all active:scale-[0.98]"
+                >
+                  {isMarkingMissed ? <Loader2 className="animate-spin" /> : 'Mark as Missed'}
+                </Button>
+              )}
 
-              <div className="rounded-2xl p-4 bg-white/5 border border-white/10">
-                <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-                  <CalendarIcon className="w-4 h-4 text-secondary" />
-                  Add to Calendar
-                </h4>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleAddToGoogleCalendar}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Google Calendar
-                  </Button>
-
-                  <Button
-                    onClick={handleDownloadICal}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
-                  >
-                    <DownloadIcon className="w-4 h-4 mr-2" />
-                    Download iCal
-                  </Button>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={handleAddToGoogleCalendar}
+                  variant="outline"
+                  className="bg-foreground/[0.02] border-foreground/5 text-foreground/70 hover:bg-foreground/5 font-bold py-6 rounded-2xl transition-all"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2 opacity-40" />
+                  Google
+                </Button>
+                <Button
+                  onClick={handleDownloadICal}
+                  variant="outline"
+                  className="bg-foreground/[0.02] border-foreground/5 text-foreground/70 hover:bg-foreground/5 font-bold py-6 rounded-2xl transition-all"
+                >
+                  <DownloadIcon className="w-4 h-4 mr-2 opacity-40" />
+                  Offline
+                </Button>
               </div>
             </div>
           </div>
@@ -352,7 +270,7 @@ export function EnhancedCalendarEventDialog({
         <DialogFooter className="pt-6 flex-shrink-0">
           <Button
             onClick={() => onOpenChange(false)}
-            className="w-full bg-secondary text-primary hover:bg-secondary/90 font-semibold py-3"
+            className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90 font-bold py-7 rounded-2xl text-lg shadow-xl shadow-secondary/20 transition-all active:scale-95"
           >
             Close
           </Button>
@@ -361,4 +279,3 @@ export function EnhancedCalendarEventDialog({
     </Dialog>
   )
 }
-

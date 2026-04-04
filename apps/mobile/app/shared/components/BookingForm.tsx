@@ -18,7 +18,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import { RootStackParamList } from '../types';
 import { bookingService, Service, TimeSlot } from '../lib/bookingService';
 import * as WebBrowser from 'expo-web-browser';
-import { initStripe, confirmPayment, presentPaymentSheet, CardField } from '@stripe/stripe-react-native';
+import { confirmPayment, presentPaymentSheet, CardField } from '@stripe/stripe-react-native';
 
 // Add-on types
 interface ServiceAddon {
@@ -359,10 +359,6 @@ export default function BookingForm({
 
       // Regular barber: confirm payment with Stripe, booking created by webhook
       if (result?.clientSecret) {
-        await initStripe({
-          publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-        });
-
         const { error: paymentError } = await confirmPayment(result.clientSecret, {
           paymentMethodType: 'Card',
         });

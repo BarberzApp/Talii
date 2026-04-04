@@ -193,149 +193,148 @@ export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md w-full bg-background border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl">
-        <DialogHeader className="pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-secondary/20 rounded-lg">
-              <MessageSquare className="w-6 h-6 text-secondary" />
+      <DialogContent className="max-w-xl w-full bg-background/80 border border-white/10 backdrop-blur-[40px] rounded-[2.5rem] shadow-2xl p-0 overflow-hidden outline-none">
+        <div className="p-8 sm:p-12">
+          <DialogHeader className="mb-10 p-0 text-left">
+            <div className="flex items-center gap-6">
+              <div className="p-4 bg-secondary/10 rounded-2xl flex-shrink-0">
+                <MessageSquare className="w-8 h-8 text-secondary" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-4xl sm:text-5xl font-bebas font-bold text-foreground tracking-tight mb-2 leading-none">
+                  Share Your <span className="text-secondary">Experience</span>
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground text-base font-medium">
+                  Your feedback helps the Talii community find the best talent.
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-white text-xl font-bold">
-                Write a Review
-              </DialogTitle>
-              <DialogDescription className="text-white/70 text-sm">
-                Share your experience with {barber.name}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* Barber Info */}
-          <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={barber.image} alt={barber.name} />
-              <AvatarFallback className="bg-secondary text-primary-foreground font-bold">
-                {barber.name.split(" ").map(n => n[0]).join("")}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="font-semibold text-white">{barber.name}</h3>
-              <p className="text-white/60 text-sm">Previous stylist</p>
-            </div>
-          </div>
+          </DialogHeader>
           
-          {/* Rating */}
-          <div className="space-y-3">
-            <label className="text-white/80 text-sm font-medium">Rating</label>
-            <div className="flex items-center gap-2">
-              <StarRating 
-                rating={rating} 
-                size={32} 
-                interactive={true} 
-                onRatingChange={setRating}
-              />
+          <div className="space-y-8">
+            {/* Barber Info Card */}
+            <div className="flex items-center gap-5 p-6 bg-white/5 rounded-3xl border border-white/5 group hover:border-secondary/20 transition-all duration-300">
+              <div className="relative">
+                <div className="absolute inset-0 bg-secondary/20 rounded-full blur-xl scale-90 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <Avatar className="h-16 w-16 border-2 border-background ring-2 ring-white/5 relative z-10 transition-transform group-hover:scale-105">
+                  <AvatarImage src={barber.image} alt={barber.name} className="object-cover" />
+                  <AvatarFallback className="bg-secondary text-primary-foreground font-bebas text-2xl">
+                    {barber.name.split(" ").map(n => n[0]).join("")}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bebas text-2xl font-bold text-foreground mb-0.5 tracking-wide group-hover:text-secondary transition-colors">
+                  {barber.name}
+                </h3>
+                <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-secondary rounded-full animate-pulse" />
+                  Recent Stylist
+                </p>
+              </div>
             </div>
-          </div>
-          
-          {/* Review Text */}
-          <div className="space-y-3">
-            <label className="text-white/80 text-sm font-medium">Review</label>
-            <div className="relative">
-              <textarea
-                placeholder="Share your experience with this stylist..."
-                className={`w-full h-24 px-3 py-2 bg-white/5 border rounded-lg text-white placeholder-white/40 focus:outline-none resize-none transition-colors ${
-                  isContentValid && reviewText.length > 0
-                    ? 'border-green-500/50 focus:border-green-500/70'
-                    : validationIssues.length > 0
-                    ? 'border-red-500/50 focus:border-red-500/70'
-                    : 'border-white/10 focus:border-secondary/50'
-                }`}
-                value={reviewText}
-                onChange={handleReviewTextChange}
-                maxLength={500}
-              />
-              
-              {/* Content Validation Status */}
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center gap-2">
-                  {reviewText.length > 0 && (
-                    <>
-                      {isContentValid && moderationStatus === 'clean' && (
-                        <div className="flex items-center gap-1 text-green-400 text-xs">
-                          <CheckCircle className="w-3 h-3" />
-                          Content looks good
-                        </div>
-                      )}
-                      {!isContentValid && validationIssues.length > 0 && (
-                        <div className="flex items-center gap-1 text-red-400 text-xs">
-                          <XCircle className="w-3 h-3" />
-                          {validationIssues[0]}
-                        </div>
-                      )}
-                      {moderationStatus === 'flagged' && (
-                        <div className="flex items-center gap-1 text-yellow-400 text-xs">
-                          <AlertTriangle className="w-3 h-3" />
-                          Content flagged
-                        </div>
-                      )}
-                      {moderationStatus === 'checking' && (
-                        <div className="flex items-center gap-1 text-secondary text-xs">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Checking content...
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-                <span className={`text-xs ${
-                  reviewText.length > 450 ? 'text-red-400' : 'text-white/40'
+            
+            {/* Rating Section */}
+            <div className="space-y-4">
+              <label className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-1">Overall Rating</label>
+              <div className="flex items-center gap-4 bg-black/20 backdrop-blur-md p-6 rounded-3xl border border-white/5 w-fit">
+                <StarRating 
+                  rating={rating} 
+                  size={36} 
+                  interactive={true} 
+                  onRatingChange={setRating}
+                />
+                <span className="text-2xl font-bebas text-secondary font-bold ml-2">
+                  {rating > 0 ? `${rating}.0` : '--'}
+                </span>
+              </div>
+            </div>
+            
+            {/* Review Content */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between ml-1">
+                <label className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Your Thoughts</label>
+                <span className={`text-[10px] font-bold tracking-widest uppercase transition-colors ${
+                  reviewText.length > 450 ? 'text-red-500' : 'text-muted-foreground/40'
                 }`}>
-                  {reviewText.length}/500
+                  {reviewText.length} / 500
                 </span>
               </div>
               
-              {/* Validation Issues List */}
-              {validationIssues.length > 0 && (
-                <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <div className="text-red-400 text-xs font-medium mb-1">Content Issues:</div>
-                  <ul className="text-red-300 text-xs space-y-1">
-                    {validationIssues.map((issue, index) => (
-                      <li key={index} className="flex items-center gap-1">
-                        <XCircle className="w-2 h-2 flex-shrink-0" />
-                        {issue}
-                      </li>
-                    ))}
-                  </ul>
+              <div className="relative">
+                <textarea
+                  placeholder="Tell us about the service, the vibe, and the final look..."
+                  className={`w-full h-40 px-6 py-5 bg-white/5 border rounded-[1.5rem] text-foreground placeholder:text-muted-foreground/30 focus:outline-none resize-none transition-all duration-300 leading-relaxed ${
+                    isContentValid && reviewText.length > 0
+                      ? 'border-green-500/30 focus:border-green-500/50'
+                      : validationIssues.length > 0
+                      ? 'border-red-500/30 focus:border-red-500/50'
+                      : 'border-white/10 focus:border-secondary/50 focus:ring-4 focus:ring-secondary/5 ring-0'
+                  }`}
+                  value={reviewText}
+                  onChange={handleReviewTextChange}
+                  maxLength={500}
+                />
+                
+                {/* Moderation Badges */}
+                <div className="mt-3 min-h-[24px]">
+                  {reviewText.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {isContentValid && moderationStatus === 'clean' && (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-[10px] font-bold uppercase tracking-wider border border-green-500/20">
+                          <CheckCircle className="w-3 h-3" />
+                          Content Approved
+                        </div>
+                      )}
+                      {!isContentValid && validationIssues.length > 0 && (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-400 rounded-full text-[10px] font-bold uppercase tracking-wider border border-red-500/20">
+                          <XCircle className="w-3 h-3" />
+                          Invalid Content
+                        </div>
+                      )}
+                      {moderationStatus === 'flagged' && (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/10 text-yellow-400 rounded-full text-[10px] font-bold uppercase tracking-wider border border-yellow-500/20">
+                          <AlertTriangle className="w-3 h-3" />
+                          Safety Flag
+                        </div>
+                      )}
+                      {moderationStatus === 'checking' && (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary/10 text-secondary rounded-full text-[10px] font-bold uppercase tracking-wider border border-secondary/20">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Analyzing...
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div className="flex gap-3 pt-4">
-          <Button
-            variant="outline"
-            className="flex-1 border-white/20 text-white hover:bg-white/10"
-            onClick={handleCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="flex-1 bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold"
-            onClick={handleSubmit}
-            disabled={!rating || !reviewText.trim() || isSubmitting || moderationStatus === 'flagged' || !isContentValid}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              'Submit Review'
-            )}
-          </Button>
+          
+          <div className="flex flex-col sm:flex-row gap-4 mt-12 pt-8 border-t border-white/5">
+            <Button
+              className="flex-[2] bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold h-16 rounded-2xl shadow-xl shadow-secondary/10 transition-all active:scale-95 disabled:opacity-30"
+              onClick={handleSubmit}
+              disabled={!rating || !reviewText.trim() || isSubmitting || moderationStatus === 'flagged' || !isContentValid}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Submitting Review...</span>
+                </div>
+              ) : (
+                'Publish Review'
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground h-16 rounded-2xl transition-all"
+              onClick={handleCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

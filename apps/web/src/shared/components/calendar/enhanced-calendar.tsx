@@ -38,380 +38,238 @@ export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 const CALENDAR_STYLES = `
           .calendar-container {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 24px;
-            backdrop-filter: blur(3xl);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 2.5rem;
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 2.5rem;
+            transition: all 0.5s ease;
+          }
+          
+          :global(.dark) .calendar-container {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
           }
           
           .calendar-day {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 16px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 1.25rem;
             position: relative;
             overflow: hidden;
-            min-height: 64px;
+            min-height: 72px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            background: rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            font-weight: 600;
+          }
+          
+          :global(.dark) .calendar-day {
             background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.04);
           }
           
           .calendar-day:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 12px 35px rgba(255, 193, 7, 0.25);
-            background: rgba(255, 193, 7, 0.1);
-            border-color: rgba(255, 193, 7, 0.3);
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 30px rgba(var(--secondary-rgb), 0.2);
+            background: rgba(var(--secondary-rgb), 0.1);
+            border-color: rgba(var(--secondary-rgb), 0.2);
           }
           
           .calendar-day:active {
-            transform: scale(0.96);
+            transform: scale(0.94);
           }
           
           .calendar-day.has-upcoming-events {
-            background: linear-gradient(135deg, hsl(var(--secondary) / 0.2) 0%, hsl(var(--secondary) / 0.2) 100%);
-            border: 2px solid hsl(var(--secondary) / 0.4);
-            box-shadow: 0 0 20px hsl(var(--secondary) / 0.3);
-            animation: pulse-orange 2s infinite;
-          }
-          
-          .calendar-day.has-upcoming-events:hover {
-            background: linear-gradient(135deg, hsl(var(--secondary) / 0.3) 0%, hsl(var(--secondary) / 0.3) 100%);
-            box-shadow: 0 0 25px hsl(var(--secondary) / 0.4);
+            background: linear-gradient(135deg, rgba(var(--secondary-rgb), 0.1) 0%, rgba(var(--secondary-rgb), 0.05) 100%);
+            border: 2px solid rgba(var(--secondary-rgb), 0.2);
           }
           
           .calendar-day.has-past-events {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(22, 163, 74, 0.2) 100%);
-            border: 2px solid rgba(34, 197, 94, 0.4);
-            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-            animation: pulse-green 2s infinite;
-          }
-          
-          .calendar-day.has-past-events:hover {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(22, 163, 74, 0.3) 100%);
-            box-shadow: 0 0 25px rgba(34, 197, 94, 0.4);
-          }
-          
-          @keyframes pulse-orange {
-            0%, 100% { 
-              opacity: 1; 
-              box-shadow: 0 0 20px hsl(var(--secondary) / 0.3);
-            }
-            50% { 
-              opacity: 0.8; 
-              box-shadow: 0 0 30px hsl(var(--secondary) / 0.5);
-            }
-          }
-          
-          @keyframes pulse-green {
-            0%, 100% { 
-              opacity: 1; 
-              box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-            }
-            50% { 
-              opacity: 0.8; 
-              box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
-            }
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+            border: 2px solid rgba(34, 197, 94, 0.2);
           }
           
           .calendar-day.selected {
-            background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--secondary) / 0.8) 100%);
-            color: white;
-            transform: scale(1.08);
-            box-shadow: 0 16px 40px hsl(var(--secondary) / 0.4);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            font-weight: bold;
+            background: linear-gradient(135deg, hsl(var(--secondary)) 0%, #ff8c00 100%);
+            color: white !important;
+            transform: translateY(-8px) scale(1.12);
+            box-shadow: 0 20px 40px rgba(var(--secondary-rgb), 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            z-index: 10;
           }
           
           .calendar-day.today {
-            background: hsl(var(--secondary) / 0.15);
+            background: rgba(var(--secondary-rgb), 0.15);
             border: 2px solid hsl(var(--secondary));
-            color: hsl(var(--secondary));
-            font-weight: bold;
-            box-shadow: 0 8px 25px hsl(var(--secondary) / 0.3);
-          }
-          
-          .calendar-day.today:hover {
-            background: hsl(var(--secondary) / 0.25);
-            box-shadow: 0 12px 35px hsl(var(--secondary) / 0.4);
+            color: hsl(var(--secondary)) !important;
+            box-shadow: 0 0 20px rgba(var(--secondary-rgb), 0.2);
           }
           
           .event-item {
-            border-radius: 16px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 1.5rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             cursor: pointer;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
+            padding: 1.25rem;
+            border: 1px solid transparent;
+          }
+          
+          .event-item:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
           }
           
           .event-item.upcoming {
-            background: linear-gradient(135deg, hsl(var(--secondary) / 0.08) 0%, hsl(var(--secondary) / 0.08) 100%);
-            border: 1px solid hsl(var(--secondary) / 0.2);
-          }
-          
-          .event-item.upcoming:hover {
-            background: linear-gradient(135deg, hsl(var(--secondary) / 0.15) 0%, hsl(var(--secondary) / 0.15) 100%);
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 12px 35px hsl(var(--secondary) / 0.25);
-            border-color: hsl(var(--secondary) / 0.4);
+            background: linear-gradient(145deg, rgba(var(--secondary-rgb), 0.15), rgba(var(--secondary-rgb), 0.05));
+            border-color: rgba(var(--secondary-rgb), 0.2);
           }
           
           .event-item.past {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(22, 163, 74, 0.08) 100%);
-            border: 1px solid rgba(34, 197, 94, 0.2);
-          }
-          
-          .event-item.past:hover {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.15) 100%);
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 12px 35px rgba(34, 197, 94, 0.25);
-            border-color: rgba(34, 197, 94, 0.4);
+            background: linear-gradient(145deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+            border-color: rgba(34, 197, 94, 0.2);
           }
           
           .event-item.missed {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.08) 100%);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-          }
-          
-          .event-item.missed:hover {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.15) 100%);
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 12px 35px rgba(239, 68, 68, 0.25);
-            border-color: rgba(239, 68, 68, 0.4);
-          }
-          
-          .event-item:active {
-            transform: scale(0.98);
+            background: linear-gradient(145deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+            border-color: rgba(239, 68, 68, 0.2);
           }
           
           .calendar-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 1.5rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
-            margin-bottom: 1.5rem;
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 1.75rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+          }
+          
+          :global(.dark) .calendar-header {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
           }
           
           .calendar-nav-button {
-            background: hsl(var(--secondary) / 0.15);
-            border: 1px solid hsl(var(--secondary) / 0.3);
+            background: rgba(var(--secondary-rgb), 0.15);
+            border: 1px solid rgba(var(--secondary-rgb), 0.2);
             color: hsl(var(--secondary));
-            border-radius: 16px;
-            padding: 0.875rem;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            min-width: 52px;
-            min-height: 52px;
+            border-radius: 1.25rem;
+            width: 3.5rem;
+            height: 3.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: all 0.3s ease;
           }
           
           .calendar-nav-button:hover {
-            background: hsl(var(--secondary) / 0.25);
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 12px 35px hsl(var(--secondary) / 0.3);
-            border-color: hsl(var(--secondary) / 0.5);
-          }
-          
-          .calendar-nav-button:active {
-            transform: scale(0.95);
+            background: hsl(var(--secondary));
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 10px 25px rgba(var(--secondary-rgb), 0.3);
           }
           
           .calendar-title {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: white;
+            font-family: var(--font-bebas);
+            font-size: 2.5rem;
+            font-weight: 400;
+            color: var(--foreground);
             text-align: center;
             flex: 1;
-            margin: 0 1.5rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            letter-spacing: -0.025em;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin: 0;
+            line-height: 1;
           }
           
           .weekdays-header {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 0.75rem;
-            margin-bottom: 0.75rem;
-            padding: 0 0.75rem;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 0 0.5rem;
           }
           
           .weekday {
             text-align: center;
             font-weight: 700;
             color: hsl(var(--secondary));
-            font-size: 0.875rem;
-            padding: 0.75rem 0;
+            font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 0.75px;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            letter-spacing: 0.1em;
+            opacity: 0.8;
           }
           
           .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 0.75rem;
-            padding: 0 0.75rem;
+            gap: 1rem;
+            padding: 0 0.5rem;
           }
           
           .calendar-day.other-month {
-            color: rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.01);
-            border-color: rgba(255, 255, 255, 0.02);
+            opacity: 0.2;
+            pointer-events: none;
           }
           
           .today-button {
-            background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--secondary) / 0.8) 100%);
+            background: linear-gradient(135deg, hsl(var(--secondary)) 0%, #ff8c00 100%);
             color: white;
             border: none;
-            border-radius: 16px;
-            padding: 1rem 2rem;
-            font-weight: 700;
+            border-radius: 1.5rem;
+            padding: 1.25rem;
+            font-family: var(--font-bebas);
+            font-size: 1.5rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-top: 1.5rem;
+            transition: all 0.4s ease;
+            margin-top: 2rem;
             width: 100%;
-            min-height: 56px;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            box-shadow: 0 8px 25px hsl(var(--secondary) / 0.3);
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-            font-size: 1.1rem;
-            letter-spacing: 0.025em;
+            box-shadow: 0 10px 30px rgba(var(--secondary-rgb), 0.3);
           }
           
           .today-button:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 16px 40px hsl(var(--secondary) / 0.4);
-          }
-          
-          .today-button:active {
-            transform: scale(0.98);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(var(--secondary-rgb), 0.4);
           }
           
           .events-panel {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 2rem;
+            padding: 2rem;
+            margin-top: 2rem;
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1);
           }
           
-          .event-list {
-            max-height: 350px;
-            overflow-y: auto;
-            padding-right: 0.75rem;
-          }
-          
-          .event-list::-webkit-scrollbar {
-            width: 6px;
-          }
-          
-          .event-list::-webkit-scrollbar-track {
+          :global(.dark) .events-panel {
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 3px;
+            border-color: rgba(255, 255, 255, 0.1);
           }
           
           .event-list::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, hsl(var(--secondary) / 0.6) 0%, hsl(var(--secondary) / 0.6) 100%);
-            border-radius: 3px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-          }
-          
-          .event-list::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, hsl(var(--secondary) / 0.8) 0%, hsl(var(--secondary) / 0.8) 100%);
+            background: hsl(var(--secondary) / 0.5);
+            border-radius: 10px;
           }
           
           @media (max-width: 768px) {
-            .calendar-day {
-              min-height: 56px;
-              font-size: 0.9rem;
-              border-radius: 14px;
-            }
-            
-            .calendar-title {
-              font-size: 1.5rem;
-            }
-            
-            .calendar-nav-button {
-              min-width: 48px;
-              min-height: 48px;
-              padding: 0.75rem;
-              border-radius: 14px;
-            }
-            
-            .weekday {
-              font-size: 0.8rem;
-              padding: 0.5rem 0;
-            }
-            
-            .calendar-grid {
-              gap: 0.5rem;
-            }
-            
-            .event-item {
-              padding: 1rem;
-              border-radius: 14px;
-            }
-            
-            .calendar-header {
-              padding: 1.25rem;
-              border-radius: 18px;
-            }
-            
-            .events-panel {
-              padding: 1.25rem;
-              border-radius: 18px;
-            }
-          }
-          
-          @media (max-width: 480px) {
-            .calendar-day {
-              min-height: 52px;
-              font-size: 0.85rem;
-              border-radius: 12px;
-            }
-            
-            .calendar-title {
-              font-size: 1.375rem;
-            }
-            
-            .calendar-nav-button {
-              min-width: 44px;
-              min-height: 44px;
-              padding: 0.625rem;
-              border-radius: 12px;
-            }
-            
-            .weekday {
-              font-size: 0.75rem;
-              padding: 0.375rem 0;
-            }
-            
-            .calendar-grid {
-              gap: 0.375rem;
-            }
-            
-            .event-item {
-              padding: 0.875rem;
-              border-radius: 12px;
-            }
+            .calendar-container { padding: 1.5rem; border-radius: 2rem; }
+            .calendar-title { font-size: 2rem; }
+            .calendar-nav-button { width: 3rem; height: 3rem; }
+            .calendar-grid, .weekdays-header { gap: 0.5rem; }
+            .calendar-day { min-height: 60px; border-radius: 1rem; }
           }
         `
 

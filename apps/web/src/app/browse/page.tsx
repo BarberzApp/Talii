@@ -627,8 +627,8 @@ export default function BrowsePage() {
                     <Sheet open={showFilters} onOpenChange={setShowFilters}>
                       <SheetTrigger asChild>
                         <Button variant="outline" size="sm" className="flex items-center gap-2 bg-muted border-border text-foreground hover:bg-muted/80 rounded-xl flex-1 sm:flex-none">
-                          <Filter className="h-4 w-4" />
-                          Filters
+                          <MapPin className="h-4 w-4" />
+                          Search Location
                           {activeFiltersCount > 0 && (
                             <Badge variant="secondary" className="ml-1 bg-primary/20 text-primary border-primary/30">
                               {activeFiltersCount}
@@ -636,24 +636,122 @@ export default function BrowsePage() {
                           )}
                         </Button>
                       </SheetTrigger>
-                      <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-background border-r border-border">
-                        <SheetHeader className="border-b border-border pb-4">
-                          <SheetTitle className="text-foreground text-xl font-bebas font-bold">Filters</SheetTitle>
+                      <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-background border-r border-border p-0">
+                        <SheetHeader className="border-b border-border p-6">
+                          <SheetTitle className="text-foreground text-2xl font-bebas font-bold flex items-center gap-2">
+                            <MapPin className="h-5 w-5 text-primary" />
+                            Search & Filters
+                          </SheetTitle>
                         </SheetHeader>
-                        <div className="space-y-6 mt-6 overflow-y-auto max-h-[calc(100vh-200px)]">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                          {/* Location Filter Section */}
+                          <div className="space-y-6">
+                            <Label className="text-lg font-bebas text-foreground tracking-wide">Location</Label>
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="sidebar-city" className="text-sm font-medium text-muted-foreground">City</Label>
+                                <div className="relative">
+                                  <Input
+                                    id="sidebar-city"
+                                    ref={cityInputRef}
+                                    placeholder="Enter city name"
+                                    value={locationFilter.city}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                      setLocationFilter(prev => ({ ...prev, city: e.target.value }));
+                                      setShowLocationSuggestions(true);
+                                    }}
+                                    onFocus={() => setShowLocationSuggestions(true)}
+                                    onBlur={() => {
+                                      setTimeout(() => setShowLocationSuggestions(false), 200);
+                                    }}
+                                    className="bg-muted border-border text-foreground rounded-xl"
+                                  />
+                                  {showLocationSuggestions && (locationSuggestions.length > 0 || locationSuggestionsLoading) && (
+                                    <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border border-border rounded-xl shadow-xl max-h-48 overflow-y-auto backdrop-blur-xl">
+                                      {locationSuggestionsLoading && (
+                                        <div className="px-4 py-2 text-muted-foreground text-sm flex items-center gap-2">
+                                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                          Searching...
+                                        </div>
+                                      )}
+                                      {!locationSuggestionsLoading && locationSuggestions.map((s, i) => (
+                                        <button
+                                          key={`${s.place_id || i}`}
+                                          type="button"
+                                          className="w-full text-left px-4 py-2 text-foreground hover:bg-primary/10 transition-colors"
+                                          onMouseDown={() => handleLocationSuggestionSelect(s)}
+                                        >
+                                          {s.display_name || s.name}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="sidebar-state" className="text-sm font-medium text-muted-foreground">State/Province</Label>
+                                <Input
+                                  id="sidebar-state"
+                                  placeholder="Enter state"
+                                  value={locationFilter.state}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, state: e.target.value }))}
+                                  className="bg-muted border-border text-foreground rounded-xl"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-3 pt-2">
+                                <Checkbox
+                                  id="sidebar-current-location"
+                                  checked={locationFilter.useCurrentLocation}
+                                  onCheckedChange={(checked: boolean) => setLocationFilter(prev => ({ ...prev, useCurrentLocation: checked }))}
+                                  className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                />
+                                <Label htmlFor="sidebar-current-location" className="text-sm font-medium text-foreground">
+                                  Use current location
+                                </Label>
+                              </div>
+
+                              {locationFilter.useCurrentLocation && (
+                                <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-1">
+                                  <Label className="text-sm font-medium text-muted-foreground">Range (miles)</Label>
+                                  <Select 
+                                    value={locationFilter.range.toString()} 
+                                    onValueChange={(value: string) => setLocationFilter(prev => ({ ...prev, range: parseInt(value) }))}
+                                  >
+                                    <SelectTrigger className="bg-muted border-border text-foreground rounded-xl">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-popover border-border backdrop-blur-xl">
+                                      <SelectItem value="10">10 miles</SelectItem>
+                                      <SelectItem value="25">25 miles</SelectItem>
+                                      <SelectItem value="50">50 miles</SelectItem>
+                                      <SelectItem value="100">100 miles</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <Separator className="bg-border" />
+
                           {/* Specialties Filter */}
-                          <div className="space-y-3">
-                            <Label className="text-sm font-medium text-foreground">Specialties</Label>
-                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                          <div className="space-y-4">
+                            <Label className="text-lg font-bebas text-foreground tracking-wide">Specialties</Label>
+                            <div className="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                               {allSpecialties.map((specialty) => (
-                                <div key={specialty} className="flex items-center space-x-2">
+                                <div key={specialty} className="flex items-center space-x-3 group">
                                   <Checkbox
-                                    id={specialty}
+                                    id={`sidebar-${specialty}`}
                                     checked={selectedSpecialties.includes(specialty)}
                                     onCheckedChange={() => toggleSpecialty(specialty)}
                                     className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                   />
-                                  <Label htmlFor={specialty} className="text-sm text-muted-foreground">
+                                  <Label 
+                                    htmlFor={`sidebar-${specialty}`} 
+                                    className="text-sm text-muted-foreground group-hover:text-foreground transition-colors cursor-pointer"
+                                  >
                                     {specialty}
                                   </Label>
                                 </div>
@@ -661,34 +759,39 @@ export default function BrowsePage() {
                             </div>
                           </div>
 
-                          <Separator className="bg-background dark:bg-white/10" />
+                          <Separator className="bg-border" />
 
                           {/* Price Range Filter */}
-                          <div className="space-y-3">
-                            <Label className="text-sm font-medium text-foreground">Price Range</Label>
+                          <div className="space-y-4">
+                            <Label className="text-lg font-bebas text-foreground tracking-wide">Price Range</Label>
                             <Select value={priceRange} onValueChange={setPriceRange}>
-                              <SelectTrigger className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground focus:border-saffron rounded-xl">
+                              <SelectTrigger className="bg-muted border-border text-foreground rounded-xl">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="bg-black/90 border border-white/10 backdrop-blur-xl">
-                                <SelectItem value="all" className="text-foreground hover:bg-background dark:bg-white/10">All Prices</SelectItem>
-                                <SelectItem value="Budget" className="text-foreground hover:bg-background dark:bg-white/10">Budget</SelectItem>
-                                <SelectItem value="Mid-range" className="text-foreground hover:bg-background dark:bg-white/10">Mid-range</SelectItem>
-                                <SelectItem value="Premium" className="text-foreground hover:bg-background dark:bg-white/10">Premium</SelectItem>
+                              <SelectContent className="bg-popover border-border backdrop-blur-xl">
+                                <SelectItem value="all">All Prices</SelectItem>
+                                <SelectItem value="Budget">Budget</SelectItem>
+                                <SelectItem value="Mid-range">Mid-range</SelectItem>
+                                <SelectItem value="Premium">Premium</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
 
-                          <Separator className="bg-background dark:bg-white/10" />
-
-                          {/* Clear Filters */}
-                          <Button 
-                            variant="outline" 
-                            onClick={clearAllFilters}
-                            className="w-full border-input dark:border-white/20 text-foreground hover:bg-background dark:bg-white/10 rounded-xl"
-                          >
-                            Clear All Filters
-                          </Button>
+                          <div className="pt-6 space-y-3">
+                            <Button 
+                              onClick={() => setShowFilters(false)}
+                              className="w-full bg-secondary text-primary-foreground font-bebas font-bold text-lg rounded-xl h-12 shadow-lg shadow-secondary/20"
+                            >
+                              Apply Filters
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              onClick={clearAllFilters}
+                              className="w-full border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl h-12"
+                            >
+                              Clear All
+                            </Button>
+                          </div>
                         </div>
                       </SheetContent>
                     </Sheet>
@@ -833,139 +936,6 @@ export default function BrowsePage() {
         </div>
       </div>
 
-      {/* Location Filter Dialog */}
-      <Dialog open={showLocationFilter} onOpenChange={setShowLocationFilter}>
-        <DialogContent className="max-w-md w-full bg-black/95 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-8 max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-foreground">Filter by Location</DialogTitle>
-            <DialogDescription className="text-muted-foreground text-base">
-              Find barbers in specific areas or near your current location
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-200px)] pr-2">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="city" className="text-foreground font-medium mb-2 block text-base">
-                  City
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="city"
-                    ref={cityInputRef}
-                    placeholder="Enter city name"
-                    value={locationFilter.city}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      setLocationFilter(prev => ({ ...prev, city: e.target.value }));
-                      setShowLocationSuggestions(true);
-                    }}
-                    onFocus={() => setShowLocationSuggestions(true)}
-                    onBlur={() => {
-                      // Add a small delay to allow clicking on suggestions
-                      setTimeout(() => {
-                        setShowLocationSuggestions(false);
-                      }, 200);
-                    }}
-                    className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground placeholder:text-foreground/40 rounded-xl"
-                  />
-                  {/* Location suggestions dropdown */}
-                  {showLocationSuggestions && (locationSuggestions.length > 0 || locationSuggestionsLoading) && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 bg-black border border-input dark:border-white/20 rounded-xl shadow-xl max-h-48 overflow-y-auto">
-                      {locationSuggestionsLoading && (
-                        <div className="px-4 py-2 text-muted-foreground text-sm">
-                          <div className="flex items-center gap-2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-saffron"></div>
-                            Searching...
-                          </div>
-                        </div>
-                      )}
-                      {!locationSuggestionsLoading && locationSuggestions.length === 0 && (
-                        <div className="px-4 py-2 text-muted-foreground text-sm">No results found</div>
-                      )}
-                      {locationSuggestions.map((s, i) => (
-                        <button
-                          key={`${s.place_id || i}-${s.display_name}`}
-                          type="button"
-                          className="w-full text-left px-4 py-2 text-foreground hover:bg-saffron/20"
-                          onMouseDown={() => handleLocationSuggestionSelect(s)}
-                        >
-                          {s.display_name || s.name || 'Unknown location'}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-               
-              <div>
-                <Label htmlFor="state" className="text-foreground font-medium mb-2 block text-base">
-                  State/Province
-                </Label>
-                <Input
-                  id="state"
-                  placeholder="Enter state or province"
-                  value={locationFilter.state}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, state: e.target.value }))}
-                  className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground placeholder:text-foreground/40 rounded-xl"
-                />
-              </div>
-               
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="useCurrentLocation"
-                    checked={locationFilter.useCurrentLocation}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, useCurrentLocation: e.target.checked }))}
-                    className="rounded border-input dark:border-white/20 bg-background dark:bg-white/10 text-saffron focus:ring-saffron"
-                  />
-                  <Label htmlFor="useCurrentLocation" className="text-foreground font-medium text-base">
-                    Use my current location
-                  </Label>
-                </div>
-                
-                {locationFilter.useCurrentLocation && (
-                  <div>
-                    <Label htmlFor="range" className="text-foreground font-medium mb-2 block text-base">
-                      Range (miles)
-                    </Label>
-                    <Select 
-                      value={locationFilter.range.toString()} 
-                      onValueChange={(value: string) => setLocationFilter(prev => ({ ...prev, range: parseInt(value) }))}
-                    >
-                      <SelectTrigger className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground rounded-xl">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-black border-input dark:border-white/20">
-                        <SelectItem value="10" className="text-foreground">10 miles</SelectItem>
-                        <SelectItem value="25" className="text-foreground">25 miles</SelectItem>
-                        <SelectItem value="50" className="text-foreground">50 miles</SelectItem>
-                        <SelectItem value="100" className="text-foreground">100 miles</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex gap-3 pt-4">
-              <Button
-                onClick={handleLocationFilter}
-                className="flex-1 bg-secondary text-black font-bebas font-bold hover:bg-secondary/90 rounded-xl shadow-lg shadow-secondary/25 px-8 py-4 transition-all text-lg"
-              >
-                Apply Filter
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowLocationFilter(false)}
-                className="border-input dark:border-white/20 text-foreground hover:bg-background dark:bg-white/10 rounded-xl"
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 } 

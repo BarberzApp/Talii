@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, memo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableWithoutFeedback, Dimensions, Animated, TouchableOpacity, Alert, Linking } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatusSuccess } from 'expo-av';
+import { Image } from 'expo-image';
 import { User, Calendar, Flag } from 'lucide-react-native';
 import type { FeedItem, VideoState } from '../types/feed.types';
 import { useNavigation } from '@react-navigation/native';
@@ -221,9 +222,12 @@ function OptimizedVideoCardImpl({ item, isActive, navBottomInset, onVideoStateCh
           <View style={styles.profileSection}>
             <TouchableOpacity onPress={handleProfilePress} style={styles.profileImageContainer}>
               {item.barber_avatar ? (
-                <Animated.Image 
+                <Image 
                   source={{ uri: item.barber_avatar }} 
-                  style={[styles.profileImage, { opacity: fadeAnim }]}
+                  style={styles.profileImage}
+                  contentFit="cover"
+                  transition={300}
+                  cachePolicy="disk"
                 />
               ) : (
                 <View style={styles.profileImagePlaceholder}>
@@ -268,9 +272,12 @@ function OptimizedVideoCardImpl({ item, isActive, navBottomInset, onVideoStateCh
           <View style={styles.profileCard}>
             <View style={styles.profileCardHeader}>
               {item.barber_avatar ? (
-                <Animated.Image 
+                <Image 
                   source={{ uri: item.barber_avatar }} 
-                  style={[styles.profileCardImage, { opacity: fadeAnim }]}
+                  style={styles.profileCardImage}
+                  contentFit="cover"
+                  transition={200}
+                  cachePolicy="disk"
                 />
               ) : (
                 <View style={styles.profileCardImagePlaceholder}>

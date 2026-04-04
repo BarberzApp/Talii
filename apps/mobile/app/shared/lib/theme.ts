@@ -30,7 +30,7 @@ export const theme = {
     accentForeground: '#EE6D23',
 
     // Utility
-    destructive: '#EF4444',
+    destructive: '#FF4D4F',
     destructiveForeground: '#FFFFFF',
     border: '#E7E5E4',
     input: '#F3F4F6',
@@ -57,18 +57,18 @@ export const theme = {
     socialFacebook: '#1877f3',
 
     // Status colors
-    success: '#10B981',
+    success: '#22C55E',
     successForeground: '#FFFFFF',
     successSubtle: '#DCFCE7',
-    warning: '#FB923C',
+    warning: '#F59E0B',
     warningForeground: '#FFFFFF',
     premium: '#F59E0B',
     premiumSubtle: 'rgba(245, 158, 11, 0.15)',
-    info: '#3B82F6',
+    info: '#0EA5E9',
     infoForeground: '#FFFFFF',
-    infoSubtle: 'rgba(59, 130, 246, 0.1)',
-    infoBorder: 'rgba(59, 130, 246, 0.3)',
-    destructiveSubtle: '#FEE2E2',
+    infoSubtle: 'rgba(14, 165, 233, 0.1)',
+    infoBorder: 'rgba(14, 165, 233, 0.3)',
+    destructiveSubtle: '#FFF1F0',
 
     // Glass / overlay tokens (tuned per mode)
     glass: 'rgba(39, 42, 47, 0.06)',
@@ -98,10 +98,10 @@ export const theme = {
       primaryTint: '#52311E',
       accent: '#3A2418',
       accentForeground: '#EE6D23',
-      info: '#60A5FA',
+      info: '#38BDF8',
       successSubtle: 'rgba(34, 197, 94, 0.2)',
-      destructiveSubtle: 'rgba(239, 68, 68, 0.2)',
-      infoSubtle: 'rgba(59, 130, 246, 0.15)',
+      destructiveSubtle: 'rgba(255, 77, 79, 0.2)',
+      infoSubtle: 'rgba(14, 165, 233, 0.15)',
       infoBorder: 'rgba(59, 130, 246, 0.4)',
       premiumSubtle: 'rgba(245, 158, 11, 0.2)',
     },

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Bell } from "lucide-react"
+import { Bell, TrendingUp } from "lucide-react"
 import { Button } from "@/shared/components/ui/button"
 import {
   DropdownMenu,
@@ -23,16 +23,59 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
+  const [weeklyStats, setWeeklyStats] = useState<{ count: number; total: number } | null>(null)
   const { user } = useAuth()
 
   useEffect(() => {
     if (user) {
       loadNotifications()
+      loadWeeklyStats()
       // Poll for new notifications every minute
-      const interval = setInterval(loadNotifications, 60000)
+      const interval = setInterval(() => {
+        loadNotifications()
+        loadWeeklyStats()
+      }, 60000)
       return () => clearInterval(interval)
     }
   }, [user])
+
+  const loadWeeklyStats = async () => {
+    if (!user || user.role !== 'barber') return
+    
+    try {
+      // Get the start of the current week (Sunday)
+      const now = new Date()
+      const startOfWeek = new Date(now)
+      startOfWeek.setDate(now.getDate() - now.getDay())
+      startOfWeek.setHours(0, 0, 0, 0)
+
+      // Fetch barber id first
+      const { data: barberData } = await supabase
+        .from('barbers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!barberData) return
+
+      const { data: bookingsData, error } = await supabase
+        .from('bookings')
+        .select('barber_payout')
+        .eq('barber_id', barberData.id)
+        .gte('date', startOfWeek.toISOString())
+        .neq('status', 'cancelled')
+
+      if (error) throw error
+
+      if (bookingsData) {
+        const count = bookingsData.length
+        const total = bookingsData.reduce((acc, curr) => acc + parseFloat(curr.barber_payout || '0'), 0)
+        setWeeklyStats({ count, total })
+      }
+    } catch (error) {
+      logger.error("Error loading weekly stats", error)
+    }
+  }
 
   const loadNotifications = async () => {
     if (!user) return
@@ -100,6 +143,22 @@ export function NotificationBell() {
             </Button>
           )}
         </div>
+        
+        {user?.role === 'barber' && weeklyStats && (
+          <div className="p-4 mx-2 mt-2 bg-gradient-to-br from-saffron/20 to-orange-500/10 border border-saffron/30 rounded-xl shadow-lg shadow-saffron/5">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-saffron/20 flex items-center justify-center border border-saffron/30">
+                <TrendingUp className="h-5 w-5 text-saffron" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-medium text-saffron uppercase tracking-wider mb-0.5">Weekly Performance</p>
+                <div className="text-sm text-white leading-tight">
+                  You have <span className="font-bold text-saffron">{weeklyStats.count}</span> {weeklyStats.count === 1 ? 'booking' : 'bookings'} this week and you are making <span className="font-bold text-saffron">${weeklyStats.total.toFixed(2)}</span> this week in Talii tips!
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <ScrollArea className="max-h-[300px]">
           {notifications.length === 0 ? (
             <div className="p-6 text-center text-white/60">

@@ -12,7 +12,7 @@ import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
 import { Badge } from "@/shared/components/ui/badge"
-import { Calendar, MapPin, Scissors, Heart, Upload, Camera } from "lucide-react"
+import { Calendar, MapPin, Scissors, Heart, Upload, Camera, Loader2 } from "lucide-react"
 import { useToast } from "@/shared/components/ui/use-toast"
 import Link from "next/link"
 import type { User } from "@/features/auth/hooks/use-auth"
@@ -82,151 +82,192 @@ export function ClientProfile({ user }: ClientProfileProps) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-12">
       {/* Indeterminate Progress Bar for Avatar Upload */}
       {avatarLoading && (
-        <div className="w-full mb-4">
-          <Progress value={100} className="h-2 animate-pulse bg-white/10" />
-          <div className="text-xs text-white/60 text-center mt-1">Uploading avatar...</div>
+        <div className="fixed top-0 left-0 right-0 z-[100]">
+          <Progress value={100} className="h-1 animate-pulse bg-secondary/20" />
         </div>
       )}
+
       {/* Hero Section */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl lg:text-6xl font-bebas font-bold text-white mb-4">
-          Your <span className="text-saffron">Client Profile</span>
+      <div className="text-center mb-16">
+        <h1 className="text-5xl lg:text-7xl font-bebas font-bold text-foreground mb-4 tracking-tight">
+          Account <span className="text-secondary">Settings</span>
         </h1>
-        <p className="text-xl text-white/80 max-w-2xl mx-auto">
-          Manage your bookings, update your info, and track your activity.
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-medium">
+          Personalize your Talii experience and manage your profile details.
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-2">
-          <div className="space-y-6">
-            <Card className="bg-darkpurple/90 backdrop-blur-sm border border-white/10 shadow-2xl">
-              <CardHeader>
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <Avatar className="h-24 w-24 border-4 border-saffron/20">
-                      {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name || 'Avatar'} />}
-                      <AvatarFallback className="bg-saffron text-primary-foreground font-bold text-xl">{user.name?.charAt(0) || "U"}</AvatarFallback>
-                    </Avatar>
-                    <button
-                      type="button"
-                      className="absolute right-[-18px] bottom-[-8px] bg-yellow-400 border-4 border-red-500 rounded-full p-3 shadow-xl focus:outline-none focus:ring-2 focus:ring-saffron z-50 transition-transform hover:scale-110"
-                      onClick={() => fileInputRef.current?.click()}
-                      aria-label="Upload profile picture"
-                      disabled={avatarLoading}
-                      style={{ width: 48, height: 48 }}
-                    >
-                      {avatarLoading ? (
-                        <span className="w-6 h-6 animate-spin border-2 border-white border-t-transparent rounded-full block" />
-                      ) : (
-                        <Camera className="w-6 h-6 text-white" />
-                      )}
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarUpload}
-                      disabled={avatarLoading}
-                    />
-                  </div>
-                  <div>
-                    <CardTitle className="text-2xl text-white">{user.name}</CardTitle>
-                    <p className="text-white/60">{user.email}</p>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Main Settings Form */}
+        <div className="lg:col-span-8 space-y-8">
+          <Card className="bg-white/5 border border-white/10 backdrop-blur-3xl rounded-[2rem] shadow-2xl overflow-hidden">
+            <CardHeader className="p-8 pb-0">
+              <div className="flex flex-col sm:flex-row items-center gap-8">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-secondary/20 rounded-full blur-2xl scale-90 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <Avatar className="h-32 w-32 border-4 border-background ring-4 ring-white/5 group-hover:ring-secondary/20 transition-all duration-500 relative z-10">
+                    {avatarUrl && <AvatarImage src={avatarUrl} alt={user.name || 'Avatar'} className="object-cover" />}
+                    <AvatarFallback className="bg-secondary text-primary-foreground font-bebas text-4xl">
+                      {user.name?.charAt(0) || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    type="button"
+                    className="absolute bottom-1 right-1 bg-secondary text-primary-foreground rounded-full p-3 shadow-xl focus:outline-none focus:ring-4 focus:ring-secondary/20 z-20 transition-all hover:scale-110 active:scale-95"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Upload profile picture"
+                    disabled={avatarLoading}
+                  >
+                    {avatarLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Camera className="w-5 h-5" />
+                    )}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={avatarLoading}
+                  />
+                </div>
+                <div className="text-center sm:text-left">
+                  <CardTitle className="text-3xl font-bebas tracking-wide text-foreground mb-1">{user.name}</CardTitle>
+                  <p className="text-muted-foreground font-medium mb-3">{user.email}</p>
+                  <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                    <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none px-3 py-1 font-bold uppercase tracking-widest text-[10px]">
+                      Client
+                    </Badge>
+                    <Badge variant="outline" className="border-white/10 text-muted-foreground/60 px-3 py-1 font-bold uppercase tracking-widest text-[10px]">
+                      Joined {user.joinDate || 'Recently'}
+                    </Badge>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="bio" className="text-white font-semibold">Bio</Label>
-                    <Textarea
-                      id="bio"
-                      name="bio"
-                      placeholder="Tell us about yourself..."
-                      defaultValue={user.bio || ''}
-                      className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron"
-                    />
+              </div>
+            </CardHeader>
+            <CardContent className="p-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2.5">
+                    <Label htmlFor="location" className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-1">Location</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+                      <Input
+                        id="location"
+                        name="location"
+                        placeholder="e.g. London, UK"
+                        defaultValue={user.location || ''}
+                        className="bg-white/5 border-white/10 text-foreground h-14 pl-12 rounded-2xl focus:border-secondary/50 focus:ring-secondary/20 transition-all placeholder:text-muted-foreground/30"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="location" className="text-white font-semibold">Location</Label>
-                    <Input
-                      id="location"
-                      name="location"
-                      placeholder="Your location"
-                      defaultValue={user.location || ''}
-                      className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-white font-semibold">Phone</Label>
+                  <div className="space-y-2.5">
+                    <Label htmlFor="phone" className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-1">Phone Number</Label>
                     <Input
                       id="phone"
                       name="phone"
                       type="tel"
-                      placeholder="Your phone number"
+                      placeholder="+1 (555) 000-0000"
                       defaultValue={user.phone || ''}
-                      className="bg-white/10 border-white/20 text-white placeholder-white/40 focus:border-saffron"
+                      className="bg-white/5 border-white/10 text-foreground h-14 rounded-2xl focus:border-secondary/50 focus:ring-secondary/20 transition-all placeholder:text-muted-foreground/30"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  <Label htmlFor="bio" className="text-xs uppercase tracking-widest font-bold text-muted-foreground ml-1">Personal Bio</Label>
+                  <Textarea
+                    id="bio"
+                    name="bio"
+                    placeholder="Tell the community about yourself..."
+                    defaultValue={user.bio || ''}
+                    className="bg-white/5 border-white/10 text-foreground min-h-[150px] rounded-2xl focus:border-secondary/50 focus:ring-secondary/20 transition-all placeholder:text-muted-foreground/30 leading-relaxed py-4"
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-white/5">
                   <Button 
                     type="submit" 
                     disabled={avatarLoading}
-                    className="w-full bg-saffron text-primary-foreground font-semibold hover:bg-saffron/90"
+                    className="flex-1 bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 h-14 rounded-2xl shadow-lg shadow-secondary/10 transition-all active:scale-95"
                   >
-                    Save Changes
+                    Save Profile Changes
                   </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    className="border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground h-14 px-8 rounded-2xl transition-all"
+                    onClick={() => window.location.href = '/profile'}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
-        <div>
-          <Card className="bg-darkpurple/90 backdrop-blur-sm border border-white/10 shadow-2xl">
-            <CardHeader>
-              <CardTitle className="text-white">Quick Stats</CardTitle>
+
+        {/* Sidebar Stats */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="bg-white/5 border border-white/10 backdrop-blur-3xl rounded-[2rem] shadow-2xl overflow-hidden">
+            <CardHeader className="p-8 pb-4">
+              <CardTitle className="text-2xl font-bebas tracking-wide text-foreground">Lifestyle Stats</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-saffron/20 rounded-lg flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-saffron" />
-                    </div>
-                    <div>
-                      <p className="text-white/60 text-sm">Total Bookings</p>
-                      <p className="text-2xl font-bold text-white">{userBookings.length}</p>
-                    </div>
+            <CardContent className="p-8 pt-0 space-y-4">
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6 group hover:border-secondary/30 transition-all duration-300">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Calendar className="h-6 w-6 text-secondary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-0.5">Total Appointments</p>
+                    <p className="text-3xl font-bebas text-foreground leading-none">{userBookings.length}</p>
                   </div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-saffron/20 rounded-lg flex items-center justify-center">
-                      <Heart className="h-5 w-5 text-saffron" />
-                    </div>
-                    <div>
-                      <p className="text-white/60 text-sm">Favorite Barbers</p>
-                      <p className="text-2xl font-bold text-white">{[...new Set(userBookings.map(b => b.barber.id))].length}</p>
-                    </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6 group hover:border-secondary/30 transition-all duration-300">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Heart className="h-6 w-6 text-secondary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-0.5">Favorite Stylists</p>
+                    <p className="text-3xl font-bebas text-foreground leading-none">
+                      {[...new Set(userBookings.map(b => b.barber.id))].length}
+                    </p>
                   </div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-saffron/20 rounded-lg flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-saffron" />
-                    </div>
-                    <div>
-                      <p className="text-white/60 text-sm">Member Since</p>
-                      <p className="text-2xl font-bold text-white">{user.joinDate || 'Recently'}</p>
-                    </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6 group hover:border-secondary/30 transition-all duration-300">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Scissors className="h-6 w-6 text-secondary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-0.5">Member Status</p>
+                    <p className="text-3xl font-bebas text-secondary leading-none">Elite Client</p>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Logout Section */}
+          <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-2xl text-center">
+            <Button 
+              variant="link" 
+              className="text-red-500/60 hover:text-red-500 font-bold uppercase tracking-widest text-[10px]"
+            >
+              Request Account Deletion
+            </Button>
+          </div>
         </div>
       </div>
     </div>

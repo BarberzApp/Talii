@@ -467,55 +467,45 @@ export default function ClientPortfolio() {
 
   if (profileLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center pb-[140px] md:pb-0">
-        {/* Background Elements */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-secondary/5 rounded-full blur-3xl" />
-        </div>
-        
-        <div className="text-center space-y-4 relative z-10">
+      <div className="min-h-screen bg-transparent flex items-center justify-center pb-[140px] md:pb-0">
+        <div className="text-center space-y-6 relative z-10">
           <div className="relative">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto text-secondary" />
-            <div className="absolute inset-0 rounded-full bg-secondary/20 animate-ping" />
+            <Loader2 className="h-16 w-16 animate-spin mx-auto text-secondary opacity-80" />
+            <div className="absolute inset-0 rounded-full bg-secondary/15 animate-ping duration-[2000ms]" />
           </div>
-          <p className="text-muted-foreground font-medium">Loading your profile...</p>
+          <p className="text-foreground font-bebas text-2xl tracking-[0.2em] opacity-40 animate-pulse">Loading Profile...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background pb-[140px] md:pb-0">
-      {/* Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-secondary/5 rounded-full blur-3xl" />
-      </div>
-
+    <div className="min-h-screen bg-transparent pb-[140px] md:pb-0 px-4 sm:px-6 pt-6">
       {/* Header Section */}
-      <div className="relative w-full rounded-2xl overflow-hidden mb-8">
+      <div className="relative w-full max-w-5xl mx-auto mb-20 border border-white/5 shadow-2xl">
         {/* Cover Photo */}
-        <div className="h-40 sm:h-56 w-full bg-gradient-to-br from-darkpurple to-secondary/30 flex items-end justify-center relative">
+        <div className="h-48 sm:h-72 w-full bg-gradient-to-br from-secondary/20 via-background to-secondary/10 flex items-end justify-center relative group rounded-3xl overflow-hidden">
           {profile?.coverphoto ? (
             <img
               src={profile.coverphoto}
               alt="Cover"
-              className="absolute inset-0 w-full h-full object-cover object-center z-0"
+              className="absolute inset-0 w-full h-full object-cover object-center z-0 transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
-            <div className="absolute inset-0 w-full h-full bg-darkpurple/80 z-0" />
+            <div className="absolute inset-0 w-full h-full bg-secondary/5 z-0" />
           )}
-          {/* Camera button for cover photo */}
+          
+          {/* Glass overlay with intensified bottom fade */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent z-10" />
+          <div className="absolute inset-0 backdrop-blur-[2px] z-5" />
+
+          {/* Camera button for cover photo - Modernized */}
           <Button
             size="icon"
             variant="ghost"
-            className="absolute top-3 right-3 z-20 h-10 w-10 rounded-full bg-black/40 text-white hover:bg-black/60"
+            className="absolute top-4 right-4 z-30 h-10 w-10 rounded-full bg-black/20 backdrop-blur-md text-white/80 hover:bg-black/40 hover:text-white transition-all border border-white/10"
             onClick={() => coverFileInputRef.current?.click()}
             disabled={coverLoading}
-            title="Change cover photo"
           >
             {coverLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -530,25 +520,29 @@ export default function ClientPortfolio() {
             onChange={handleCoverUpload}
             className="hidden"
           />
-          {/* Glass overlay */}
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-md z-10" />
-          {/* Avatar */}
-          <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 z-20">
-            <Avatar className="w-28 h-28 border-4 border-secondary/80 shadow-xl bg-white/10">
-              <AvatarImage src={profile?.avatar_url} alt={profile?.name} />
-              <AvatarFallback className="bg-secondary text-primary-foreground font-bold text-3xl">{profile?.name?.charAt(0)}</AvatarFallback>
+
+        </div>
+
+        {/* Avatar - High End Presentation */}
+        <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 z-30">
+          <div className="relative group/avatar">
+            <div className="absolute inset-0 bg-secondary/30 rounded-full blur-xl scale-90 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-500" />
+            <Avatar className="w-32 h-32 sm:w-40 sm:h-40 border-8 border-background shadow-2xl bg-muted relative z-10">
+              <AvatarImage src={profile?.avatar_url} alt={profile?.name} className="object-cover" />
+              <AvatarFallback className="bg-primary text-primary-foreground font-bold text-6xl uppercase">
+                {profile?.name?.charAt(0) || 'U'}
+              </AvatarFallback>
             </Avatar>
             <Button
-              size="sm"
-              variant="ghost"
-              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-secondary text-primary-foreground hover:bg-secondary/90"
+              size="icon"
+              className="absolute bottom-2 right-2 h-10 w-10 rounded-full bg-secondary text-primary-foreground hover:bg-secondary/90 shadow-lg border-4 border-background z-20 group-hover/avatar:scale-110 transition-transform"
               onClick={() => avatarFileInputRef.current?.click()}
               disabled={avatarLoading}
             >
               {avatarLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <Camera className="h-4 w-4" />
+                <Camera className="h-5 w-5" />
               )}
             </Button>
             <input
@@ -560,368 +554,415 @@ export default function ClientPortfolio() {
             />
           </div>
         </div>
-        {/* Name, Username, Location */}
-        <div className="pt-20 pb-4 flex flex-col items-center relative z-30">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-1">{profile?.name}</h1>
-          {profile?.username && (
-            <div className="text-secondary text-lg font-mono mb-2">@{profile.username}</div>
-          )}
-          {profile?.location && (
-            <div className="text-white/80 text-base font-medium mb-2">{profile.location}</div>
-          )}
-        </div>
       </div>
-      {/* Stats Row */}
-      <div className="flex justify-center gap-8 mb-6">
-        <div className="flex flex-col items-center">
-          <span className="text-2xl font-bold text-white">{likedVideos.length}</span>
-          <span className="text-white/60 text-xs uppercase tracking-widest mt-1">Likes</span>
+
+      {/* Name, Username, Location - Spaced & Modernized */}
+      <div className="pt-24 pb-8 flex flex-col items-center relative z-20 bg-background/40 backdrop-blur-3xl max-w-5xl mx-auto rounded-b-3xl">
+        <h1 className="text-4xl sm:text-6xl font-bebas font-bold text-foreground tracking-tight mb-2">
+          {profile?.name}
+        </h1>
+        {profile?.username && (
+          <div className="text-secondary font-mono text-sm sm:text-base border border-secondary/20 bg-secondary/5 px-3 py-1 rounded-full mb-4">
+            @{profile.username}
+          </div>
+        )}
+        {profile?.location && (
+          <div className="flex items-center gap-2 text-muted-foreground font-medium mb-2">
+            <MapPin className="h-4 w-4 text-secondary/60" />
+            <span>{profile.location}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Stats Row - Premium Visuals */}
+      <div className="w-full max-w-4xl mx-auto grid grid-cols-3 gap-4 sm:gap-8 mb-12">
+        <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
+          <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
+            {likedVideos.length}
+          </span>
+          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Likes</span>
         </div>
-        <div className="flex flex-col items-center">
-          <span className="text-2xl font-bold text-white">{pastBarbers.length}</span>
-          <span className="text-white/60 text-xs uppercase tracking-widest mt-1">Past Barbers</span>
+        <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
+          <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
+            {pastBarbers.length}
+          </span>
+          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Past Barbers</span>
         </div>
-        <div className="flex flex-col items-center">
-          <span className="text-2xl font-bold text-white">{clientBookings.length}</span>
-          <span className="text-white/60 text-xs uppercase tracking-widest mt-1">Bookings</span>
+        <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
+          <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
+            {clientBookings.length}
+          </span>
+          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Bookings</span>
         </div>
       </div>
       {/* Tabs */}
-      <div className="w-full max-w-3xl mx-auto mb-8">
+      <div className="w-full max-w-5xl mx-auto mb-16">
         <Tabs defaultValue="liked" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white/5 border border-white/10 backdrop-blur-xl h-12 p-1">
-            <TabsTrigger value="liked" className="flex items-center justify-center gap-2 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary h-full px-2">
-              <Heart className="h-4 w-4 flex-shrink-0" />
-              <span>Likes</span>
-            </TabsTrigger>
-            <TabsTrigger value="past-barbers" className="flex items-center justify-center gap-2 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary h-full px-2">
-              <Users className="h-4 w-4 flex-shrink-0" />
-              <span>Past Barbers</span>
-            </TabsTrigger>
-            <TabsTrigger value="bookings" className="flex items-center justify-center gap-2 rounded-md text-sm data-[state=active]:bg-secondary data-[state=active]:text-primary h-full px-2">
-              <Star className="h-4 w-4 flex-shrink-0" />
-              <span>Reviews</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex justify-center mb-8">
+            <TabsList className="inline-flex h-14 items-center justify-center rounded-2xl bg-white/5 border border-white/10 p-1.5 backdrop-blur-2xl shadow-2xl">
+              <TabsTrigger 
+                value="liked" 
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-primary data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+              >
+                <Heart className="h-4 w-4" />
+                <span className="uppercase">Likes</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="past-barbers" 
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-primary data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+              >
+                <Users className="h-4 w-4" />
+                <span className="uppercase">Stylists</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="bookings" 
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-primary data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+              >
+                <Star className="h-4 w-4" />
+                <span className="uppercase">Reviews</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-            <TabsContent value="liked" className="mt-6">
-              {videosLoading ? (
-                <div className="text-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-secondary mb-4" />
-                  <p className="text-white/60">Loading liked videos...</p>
+          <TabsContent value="liked" className="mt-0 outline-none">
+            {videosLoading ? (
+              <div className="text-center py-20">
+                <Loader2 className="h-10 w-10 animate-spin mx-auto text-secondary/60 mb-4" />
+                <p className="text-muted-foreground font-bebas text-lg tracking-widest">Retrieving your gallery...</p>
+              </div>
+            ) : likedVideos.length === 0 ? (
+              <div className="text-center py-20 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl max-w-2xl mx-auto shadow-2xl">
+                <div className="p-4 bg-secondary/10 rounded-full w-fit mx-auto mb-6">
+                  <Heart className="h-10 w-10 text-secondary/60" />
                 </div>
-              ) : likedVideos.length === 0 ? (
-                <div className="text-center py-8">
-                  <Heart className="h-12 w-12 text-white/40 mx-auto mb-4" />
-                  <h3 className="text-white font-bebas font-bold text-xl mb-2">No likes yet</h3>
-                  <p className="text-white/60 text-sm mb-6">
-                    Videos you like from barbers will appear here. Start exploring and liking some cuts!
-                  </p>
-                  <Button
-                    onClick={() => window.location.href = '/cuts'}
-                    className="bg-secondary text-primary-foreground hover:bg-secondary/90"
+                <h3 className="text-foreground font-bebas font-bold text-3xl mb-4 tracking-tight">Gallery Empty</h3>
+                <p className="text-muted-foreground text-base mb-8 max-w-sm mx-auto leading-relaxed">
+                  Cuts you like from top barbers will appear here. Build your inspiration gallery today.
+                </p>
+                <Button
+                  onClick={() => window.location.href = '/cuts'}
+                  className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
+                >
+                  Explore Top Cuts
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {likedVideos.map((video) => (
+                  <div 
+                    key={video.id} 
+                    className="group relative aspect-[4/5] rounded-3xl overflow-hidden cursor-pointer border border-white/5 bg-muted shadow-xl hover:shadow-secondary/20 hover:border-secondary/30 transition-all duration-500"
+                    onMouseEnter={(e) => {
+                      const videoEl = e.currentTarget.querySelector('video') as HTMLVideoElement;
+                      if (videoEl) videoEl.play().catch(() => {});
+                    }}
+                    onMouseLeave={(e) => {
+                      const videoEl = e.currentTarget.querySelector('video') as HTMLVideoElement;
+                      if (videoEl) {
+                        videoEl.pause();
+                        videoEl.currentTime = 0;
+                      }
+                    }}
+                    onClick={() => window.location.href = `/cuts?cutId=${video.id}`}
                   >
-                    Browse Cuts
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-                  {likedVideos.map((video) => (
-                    <div 
-                      key={video.id} 
-                      className="relative aspect-[4/5] bg-gray-800 rounded-lg overflow-hidden group cursor-pointer"
-                      onMouseEnter={(e) => {
-                        const videoEl = e.currentTarget.querySelector('video') as HTMLVideoElement;
-                        if (videoEl) {
-                          videoEl.play().catch(() => {
-                            // Auto-play might be blocked
-                          });
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        const videoEl = e.currentTarget.querySelector('video') as HTMLVideoElement;
-                        if (videoEl) {
-                          videoEl.pause();
-                        }
-                      }}
-                      onClick={() => {
-                        window.location.href = `/cuts?cutId=${video.id}`;
-                      }}
-                    >
-                      {video.thumbnail ? (
-                        <img 
-                          src={video.thumbnail} 
-                          alt={video.title} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <video 
-                          src={video.url} 
-                          className="w-full h-full object-cover"
-                          muted 
-                          playsInline 
-                          preload="metadata"
-                        />
-                      )}
-                      {/* Overlay with stats */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="absolute bottom-2 left-2 right-2">
-                          <div className="flex items-center justify-between text-white text-xs">
-                            <div className="flex items-center gap-2">
-                              <Heart className="h-3 w-3" />
-                              <span>{video.likes || 0}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Eye className="h-3 w-3" />
-                              <span>{video.views || 0}</span>
-                            </div>
+                    {video.thumbnail ? (
+                      <img 
+                        src={video.thumbnail} 
+                        alt={video.title} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                    ) : (
+                      <video 
+                        src={video.url} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        muted 
+                        playsInline 
+                        loop
+                        preload="metadata"
+                      />
+                    )}
+                    
+                    {/* Premium Video Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
+                    
+                    <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                      <div className="flex items-center justify-between text-white mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
+                            <Heart className="h-3.5 w-3.5 text-secondary fill-secondary" />
+                            <span className="text-xs font-bold">{video.likes || 0}</span>
                           </div>
-                          <div className="mt-1">
-                            <div className="flex items-center gap-1">
-                              <Avatar className="h-4 w-4">
-                                <AvatarImage src={video.barber.image} alt={video.barber.name} />
-                                <AvatarFallback className="text-xs bg-secondary text-primary-foreground text-[8px]">
-                                  {video.barber.name?.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-xs text-white/80 truncate">{video.barber.name}</span>
-                            </div>
+                          <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
+                            <Eye className="h-3.5 w-3.5 text-white/70" />
+                            <span className="text-xs font-bold">{video.views || 0}</span>
                           </div>
                         </div>
                       </div>
+                      
+                      <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                        <Avatar className="h-6 w-6 border border-white/20">
+                          <AvatarImage src={video.barber.image} alt={video.barber.name} />
+                          <AvatarFallback className="text-[8px] bg-secondary text-primary-foreground font-bold">
+                            {video.barber.name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-white/90 font-medium truncate drop-shadow-md">
+                          {video.barber.name}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-            <TabsContent value="past-barbers" className="mt-6">
-              {pastBarbers.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-white/40 mx-auto mb-4" />
-                  <h3 className="text-white font-bebas font-bold text-xl mb-2">No past stylists</h3>
-                  <p className="text-white/60 text-sm mb-6">Book appointments to see your stylists here</p>
-                  <Button
-                    onClick={() => window.location.href = '/browse'}
-                    className="bg-secondary text-primary-foreground hover:bg-secondary/90"
-                  >
-                    Browse Barbers
-                  </Button>
+          <TabsContent value="past-barbers" className="mt-0 outline-none">
+            {pastBarbers.length === 0 ? (
+              <div className="text-center py-20 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl max-w-2xl mx-auto shadow-2xl">
+                <div className="p-4 bg-secondary/10 rounded-full w-fit mx-auto mb-6">
+                  <Users className="h-10 w-10 text-secondary/60" />
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  {pastBarbers.map((barber) => (
-                    <PastStylistCard
-                      key={barber?.id}
-                      barber={{
-                        id: barber?.id || '',
-                        name: barber?.name || '',
-                        image: barber?.image,
-                        username: barber?.username
-                      }}
-                      rating={4}
-                      isOnline={true}
-                      onBookAgain={(barberId) => {
-                        if (barber?.username) {
-                          window.location.href = `/book/${barber.username}`;
-                        } else {
-                          window.location.href = `/browse?barber=${barberId}`;
-                        }
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
+                <h3 className="text-foreground font-bebas font-bold text-3xl mb-4 tracking-tight">No Connections</h3>
+                <p className="text-muted-foreground text-base mb-8 max-w-sm mx-auto leading-relaxed">
+                  Your past stylists will appear here. Book an appointment to start building your network.
+                </p>
+                <Button
+                  onClick={() => window.location.href = '/browse'}
+                  className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
+                >
+                  Find a Stylist
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {pastBarbers.map((barber) => (
+                  <PastStylistCard
+                    key={barber?.id}
+                    barber={{
+                      id: barber?.id || '',
+                      name: barber?.name || '',
+                      image: barber?.image,
+                      username: barber?.username
+                    }}
+                    rating={4}
+                    isOnline={true}
+                    onBookAgain={(barberId) => {
+                      if (barber?.username) {
+                        window.location.href = `/book/${barber.username}`;
+                      } else {
+                        window.location.href = `/browse?barber=${barberId}`;
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-            <TabsContent value="bookings" className="mt-6">
-              {reviewsLoading ? (
-                <div className="text-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-secondary mb-4" />
-                  <p className="text-white/60">Loading your reviews...</p>
+          <TabsContent value="bookings" className="mt-0 outline-none">
+            {reviewsLoading ? (
+              <div className="text-center py-20">
+                <Loader2 className="h-10 w-10 animate-spin mx-auto text-secondary/60 mb-4" />
+                <p className="text-muted-foreground font-bebas text-lg tracking-widest">Loading reviews...</p>
+              </div>
+            ) : userReviews.length === 0 ? (
+              <div className="text-center py-20 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl max-w-2xl mx-auto shadow-2xl">
+                <div className="p-4 bg-secondary/10 rounded-full w-fit mx-auto mb-6">
+                  <Star className="h-10 w-10 text-secondary/60" />
                 </div>
-              ) : userReviews.length === 0 ? (
-                <div className="text-center py-8">
-                  <Star className="h-12 w-12 text-white/40 mx-auto mb-4" />
-                  <h3 className="text-white font-bebas font-bold text-xl mb-2">No reviews yet</h3>
-                  <p className="text-white/60 text-sm mb-6">
-                    Reviews you leave for barbers will appear here. Start reviewing your past appointments!
-                  </p>
-                  <Button
-                    onClick={() => window.location.href = '/browse'}
-                    className="bg-secondary text-primary-foreground hover:bg-secondary/90"
-                  >
-                    Browse Barbers
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {userReviews.map((review) => (
-                    <Card key={review.id} className="bg-white/5 border border-white/10 backdrop-blur-xl">
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <Avatar className="h-10 w-10 flex-shrink-0">
-                            <AvatarImage 
-                              src={review.barber?.profiles?.avatar_url} 
-                              alt={review.barber?.profiles?.name} 
-                            />
-                            <AvatarFallback className="bg-secondary text-primary-foreground text-sm">
-                              {review.barber?.profiles?.name?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2">
+                <h3 className="text-foreground font-bebas font-bold text-3xl mb-4 tracking-tight">No Reviews</h3>
+                <p className="text-muted-foreground text-base mb-8 max-w-sm mx-auto leading-relaxed">
+                  Your feedback helps the community. Leave a review after your next appointment.
+                </p>
+                <Button
+                  onClick={() => window.location.href = '/browse'}
+                  className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
+                >
+                  Explore Stylists
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {userReviews.map((review) => (
+                  <Card key={review.id} className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl overflow-hidden hover:border-secondary/20 transition-all duration-300">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <Avatar className="h-12 w-12 border border-white/10">
+                          <AvatarImage 
+                            src={review.barber?.profiles?.avatar_url} 
+                            alt={review.barber?.profiles?.name} 
+                          />
+                          <AvatarFallback className="bg-secondary text-primary-foreground font-bebas text-xl">
+                            {review.barber?.profiles?.name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                            <div>
+                              <h4 className="font-bold text-foreground text-lg mb-0.5">
+                                {review.barber?.profiles?.name}
+                              </h4>
                               <div className="flex items-center gap-2">
-                                <h4 className="font-semibold text-white text-sm">
-                                  {review.barber?.profiles?.name}
-                                </h4>
-                                {editingReview === review.id ? (
-                                  <div className="flex items-center gap-1">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-4 w-4 cursor-pointer transition-colors ${
-                                          i < editReviewData.rating
-                                            ? 'text-yellow-400 fill-current hover:text-yellow-300'
-                                            : 'text-white/30 hover:text-yellow-200'
-                                        }`}
-                                        onClick={() => setEditReviewData(prev => ({...prev, rating: i + 1}))}
-                                      />
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-3 w-3 ${
-                                          i < review.rating
-                                            ? 'text-yellow-400 fill-current'
-                                            : 'text-white/30'
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
+                                <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary rounded text-[10px] font-bold uppercase tracking-wider">Verified Booking</span>
+                                <span className="text-xs text-muted-foreground">•</span>
+                                <span className="text-xs text-muted-foreground">{formatDate(review.created_at)}</span>
                               </div>
-                              {editingReview === review.id ? (
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleSaveReview(review.id)}
-                                    disabled={updatingReview}
-                                    className="h-7 px-2 bg-secondary hover:bg-secondary/90 text-primary"
-                                  >
-                                    {updatingReview ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <Save className="h-3 w-3" />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={handleCancelEdit}
-                                    className="h-7 px-2 border-white/20 text-white hover:bg-white/10"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleEditReview(review)}
-                                  className="h-7 px-2 text-white/60 hover:text-white hover:bg-white/10"
-                                >
-                                  <Edit3 className="h-3 w-3" />
-                                </Button>
-                              )}
                             </div>
-                            {editingReview === review.id ? (
+                            
+                            <div className="flex items-center gap-1 bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/5">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${
+                                    i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-white/10'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          {editingReview === review.id ? (
+                            <div className="mt-4 space-y-4 bg-muted/30 p-4 rounded-xl border border-white/5">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-medium text-muted-foreground mr-2">New Rating:</span>
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-5 w-5 cursor-pointer transition-all ${
+                                      i < editReviewData.rating ? 'text-yellow-400 fill-yellow-400 scale-110' : 'text-white/20 hover:text-yellow-400/50'
+                                    }`}
+                                    onClick={() => setEditReviewData(prev => ({...prev, rating: i + 1}))}
+                                  />
+                                ))}
+                              </div>
                               <Textarea
                                 value={editReviewData.comment}
                                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditReviewData(prev => ({...prev, comment: e.target.value}))}
-                                placeholder="Share your experience..."
-                                className="bg-white/5 border-white/10 text-white placeholder-white/40 text-sm mb-2 min-h-[60px]"
+                                className="bg-background/50 border-white/10 focus:border-secondary/50 min-h-[100px] rounded-xl"
+                                placeholder="Edit your review..."
                               />
-                            ) : (
-                              review.comment && (
-                                <p className="text-white/80 text-sm leading-relaxed mb-2">
-                                  {review.comment}
-                                </p>
-                              )
-                            )}
-                            <div className="flex items-center gap-4 text-xs text-white/50">
-                              <span>
-                                {review.booking?.service?.name && (
-                                  <span>Service: {review.booking.service.name}</span>
-                                )}
-                              </span>
-                              <span>
-                                {new Date(review.created_at).toLocaleDateString()}
-                              </span>
-                              {review.updated_at && review.updated_at !== review.created_at && (
-                                <span className="text-white/40">(edited)</span>
-                              )}
+                              <div className="flex gap-2 justify-end">
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={handleCancelEdit}
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-secondary text-primary-foreground hover:bg-secondary/90 shadow-lg px-6"
+                                  onClick={() => handleSaveReview(review.id)}
+                                  disabled={updatingReview}
+                                >
+                                  {updatingReview ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Changes'}
+                                </Button>
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="group relative">
+                              <p className="text-foreground/90 text-sm leading-relaxed mb-4 italic">
+                                "{review.comment || 'No comment provided.'}"
+                              </p>
+                              <div className="flex items-center justify-between">
+                                <div className="text-xs text-muted-foreground">
+                                  Appointment: <span className="text-secondary/70 font-medium">{review.booking?.service?.name || 'General Service'}</span>
+                                  {review.updated_at && review.updated_at !== review.created_at && (
+                                    <span className="ml-2 text-white/30">(edited)</span>
+                                  )}
+                                </div>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-white/5 hover:bg-secondary/10 hover:text-secondary"
+                                  onClick={() => handleEditReview(review)}
+                                >
+                                  <Edit3 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
-      {/* Portfolio Grid (tab content remains below) */}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
 
-      {/* Video Dialog */}
+      {/* Video Dialog - Modernized */}
       <Dialog open={openDialog === 'video'} onOpenChange={open => setOpenDialog(open ? 'video' : null)}>
-        <DialogContent className="max-w-4xl w-full bg-black/90 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-0 overflow-hidden">
+        <DialogContent className="max-w-4xl w-full bg-background/80 border border-white/10 backdrop-blur-[40px] rounded-3xl shadow-2xl p-0 overflow-hidden outline-none">
           {selectedVideo && (
-            <>
-              <div className="aspect-video">
+            <div className="flex flex-col">
+              <div className="relative aspect-video bg-black group/video">
                 <video 
                   src={selectedVideo.url} 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   controls
                   autoPlay
                 />
               </div>
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={selectedVideo.barber.image} alt={selectedVideo.barber.name} />
-                    <AvatarFallback className="text-xs bg-secondary text-primary-foreground">{selectedVideo.barber.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="text-white font-bebas font-bold text-xl">{selectedVideo.title}</h3>
-                    <p className="text-white/60 text-sm">{selectedVideo.barber.name}</p>
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-14 w-14 border-2 border-secondary/20">
+                      <AvatarImage src={selectedVideo.barber.image} alt={selectedVideo.barber.name} />
+                      <AvatarFallback className="text-xl bg-secondary text-primary-foreground font-bebas">
+                        {selectedVideo.barber.name?.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="text-foreground font-bebas font-bold text-3xl tracking-tight leading-none mb-1">
+                        {selectedVideo.title}
+                      </h3>
+                      <p className="text-secondary font-medium tracking-wide">
+                        {selectedVideo.barber.name}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="border-white/10 bg-white/5 hover:bg-secondary/10 hover:text-secondary h-10 px-4 rounded-xl gap-2"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Share
+                    </Button>
+                    <Button 
+                      className="bg-secondary text-primary-foreground hover:bg-secondary/90 h-10 px-6 rounded-xl font-bold"
+                    >
+                      Book This Style
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-white/60">
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-4 w-4" />
-                    {selectedVideo.views} views
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Heart className="h-4 w-4" />
-                    {selectedVideo.likes} likes
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Share2 className="h-4 w-4" />
-                    {selectedVideo.shares} shares
-                  </span>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl text-center">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground/60 mb-1">Views</p>
+                    <p className="text-xl font-bebas text-foreground">{selectedVideo.views.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl text-center">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground/60 mb-1">Likes</p>
+                    <p className="text-xl font-bebas text-secondary">{selectedVideo.likes.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl text-center">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground/60 mb-1">Shares</p>
+                    <p className="text-xl font-bebas text-foreground">{selectedVideo.shares.toLocaleString()}</p>
+                  </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
-
-
     </div>
   )
 } 

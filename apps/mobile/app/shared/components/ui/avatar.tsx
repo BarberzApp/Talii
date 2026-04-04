@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { User } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
 import tw from 'twrnc';
@@ -86,9 +87,11 @@ const Avatar: React.FC<AvatarProps> = ({
         <Image
           source={{ uri: src }}
           style={[tw`w-full h-full`, getSizeStyles()]}
-          resizeMode="cover"
+          contentFit="cover"
+          transition={200}
+          cachePolicy="disk"
           onError={(error) => {
-            logger.log('Avatar image error:', error.nativeEvent.error);
+            logger.log('Avatar image error:', error);
           }}
         />
       ) : fallback ? (

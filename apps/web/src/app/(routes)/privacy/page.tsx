@@ -1,306 +1,160 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
-
-const privacyPolicy = `BOCM PRIVACY POLICY
-
-Effective Date: December 2025
-
-Last Updated: December 2025
-
-Welcome to BOCM. We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and related services (collectively, the "Services").
-
-By using our Services, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree with our policies and practices, do not use our Services.
-
-1. INFORMATION WE COLLECT
-
-1.1 Information You Provide to Us
-
-Account Registration:
-• Name and email address
-• Phone number
-• Password (encrypted and stored securely)
-• User role (client or barber/professional)
-• Business name (for barbers/professionals)
-• Username and profile information
-
-Profile Information:
-• Profile photo and cover photo
-• Bio and description
-• Location and address information
-• Social media links (Instagram, Twitter, TikTok, Facebook)
-• Business information (for barbers)
-
-Booking Information:
-• Service preferences
-• Booking history
-• Payment information (processed securely through Stripe)
-• Notes and special requests for appointments
-
-User-Generated Content:
-• Videos and images uploaded to your portfolio
-• Reviews and ratings
-• Comments and feedback
-• Service descriptions and pricing
-
-1.2 Information Automatically Collected
-
-Device Information:
-• Device type and model
-• Operating system and version
-• Unique device identifiers
-• Mobile network information
-• Device settings and configurations
-
-Location Information:
-• Precise location data (when you grant permission)
-• Approximate location based on IP address
-• Location history for finding nearby barbers
-
-Usage Information:
-• App features you access
-• Content you view and interact with
-• Search queries
-• Booking patterns and preferences
-• Time and date of your activities
-• Clicks, taps, and scrolling behavior
-
-Technical Information:
-• IP address
-• Browser type and version
-• Log files and error reports
-• Performance data
-
-1.3 Information from Third Parties
-
-• Payment information processed through Stripe (we do not store full payment card details)
-• Social media information (if you choose to link accounts)
-• Analytics data from third-party services
-
-2. HOW WE USE YOUR INFORMATION
-
-We use the information we collect for the following purposes:
-
-Service Delivery:
-• To create and manage your account
-• To facilitate bookings and appointments
-• To connect clients with barbers/professionals
-• To process payments for services
-• To send booking confirmations and reminders
-• To provide customer support
-
-Communication:
-• To respond to your inquiries and requests
-• To send you service-related notifications
-• To provide updates about your bookings
-• To send marketing communications (with your consent)
-• To notify you about changes to our Services
-
-Personalization:
-• To personalize your experience
-• To show you relevant barbers and services
-• To recommend services based on your preferences
-• To customize content and features
-
-Safety and Security:
-• To detect and prevent fraud, abuse, and illegal activity
-• To verify user identities
-• To protect the rights and safety of our users
-• To enforce our Terms of Service
-• To respond to legal requests
-
-Analytics and Improvement:
-• To understand how users interact with our Services
-• To analyze usage patterns and trends
-• To improve our Services and develop new features
-• To conduct research and analytics
-• To monitor performance and fix technical issues
-• To capture error reports and debugging information (via Sentry)
-
-3. HOW WE SHARE YOUR INFORMATION
-
-We may share your information in the following circumstances:
-
-With Barbers/Professionals:
-• When you book a service, we share necessary information (name, contact details, service preferences) with the barber/professional
-• Your profile information (name, photo, reviews) is visible to other users as set in your privacy settings
-
-With Service Providers:
-• Stripe (payment processing)
-• Supabase (database and authentication services)
-• Sentry (error tracking and performance monitoring)
-• Cloud storage providers (for hosting images and videos)
-• Analytics providers (to understand app usage)
-
-Legal Requirements:
-• When required by law or legal process
-• To comply with government requests
-• To protect our rights and property
-• To prevent harm to users or others
-• In connection with a business transaction (merger, acquisition, etc.)
-
-With Your Consent:
-• When you explicitly authorize us to share your information
-• When you choose to share content publicly
-
-4. DATA SECURITY
-
-We implement appropriate technical and organizational measures to protect your personal information:
-
-• Encryption of sensitive data in transit and at rest
-• Secure authentication and authorization systems
-• Regular security assessments and updates
-• Access controls and employee training
-• Secure payment processing through Stripe (PCI DSS compliant)
-• Regular backups and disaster recovery procedures
-
-However, no method of transmission over the Internet or electronic storage is 100% secure. While we strive to protect your information, we cannot guarantee absolute security.
-
-5. DATA RETENTION
-
-We retain your personal information for as long as necessary to:
-
-• Provide our Services to you
-• Comply with legal obligations
-• Resolve disputes
-• Enforce our agreements
-
-When you delete your account, we will delete or anonymize your personal information within a reasonable timeframe, except where we are required to retain it for legal purposes.
-
-6. YOUR PRIVACY RIGHTS
-
-Depending on your location, you may have the following rights:
-
-Access: Request access to your personal information
-Correction: Request correction of inaccurate information
-Deletion: Request deletion of your personal information
-Portability: Request transfer of your data to another service
-Objection: Object to processing of your information
-Restriction: Request restriction of processing
-Withdrawal: Withdraw consent for data processing
-
-To exercise these rights, please contact us at primbocm@gmail.com.
-
-7. LOCATION SERVICES
-
-We collect location information to:
-• Help you find nearby barbers and services
-• Provide location-based recommendations
-• Improve search results and matching
-
-You can control location sharing through your device settings. Disabling location services may limit certain features of the app.
-
-8. CAMERA AND PHOTO LIBRARY
-
-We access your camera and photo library to:
-• Allow you to upload profile pictures
-• Enable you to add portfolio images and videos
-• Support document uploads (if applicable)
-
-You can control these permissions through your device settings.
-
-9. THIRD-PARTY SERVICES
-
-Our Services integrate with third-party services:
-
-Stripe: Payment processing (see Stripe's Privacy Policy)
-
-Supabase: Database and backend services (see Supabase Privacy Policy)
-
-Sentry: Error tracking and performance monitoring. Sentry collects error reports, performance data, and may capture limited user interaction data for debugging purposes. This may include device information, IP addresses, and error context. Session replay may capture user interface interactions in error scenarios. For more information, see Sentry's Privacy Policy.
-
-These services have their own privacy policies. We encourage you to read them.
-
-10. COOKIES AND TRACKING TECHNOLOGIES
-
-We use cookies and similar technologies to:
-• Remember your preferences
-• Analyze usage patterns
-• Provide personalized experiences
-• Ensure security and prevent fraud
-
-You can control cookies through your device or browser settings.
-
-11. CHILDREN'S PRIVACY
-
-Our Services are not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.
-
-12. CHANGES TO THIS PRIVACY POLICY
-
-We may update this Privacy Policy from time to time. We will notify you of any material changes by:
-• Posting the new Privacy Policy in the app
-• Updating the "Last Updated" date
-• Sending you an email notification (if you have provided an email)
-
-Your continued use of the Services after changes become effective constitutes acceptance of the updated Privacy Policy.
-
-13. CALIFORNIA PRIVACY RIGHTS
-
-If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA):
-
-• Right to know what personal information is collected
-• Right to know if personal information is sold or shared
-• Right to opt-out of the sale or sharing of personal information
-• Right to non-discrimination for exercising your privacy rights
-
-To exercise these rights, contact us at primbocm@gmail.com.
-
-14. EUROPEAN PRIVACY RIGHTS (GDPR)
-
-If you are located in the European Economic Area (EEA), you have rights under the General Data Protection Regulation (GDPR):
-
-• Right to access your personal data
-• Right to rectification of inaccurate data
-• Right to erasure ("right to be forgotten")
-• Right to restrict processing
-• Right to data portability
-• Right to object to processing
-• Right to withdraw consent
-
-Our legal basis for processing your data includes:
-• Performance of a contract (providing our Services)
-• Your consent
-• Legitimate interests (security, fraud prevention, service improvement)
-• Legal obligations
-
-To exercise these rights, contact us at primbocm@gmail.com.
-
-15. INTERNATIONAL DATA TRANSFERS
-
-Your information may be transferred to and processed in countries other than your country of residence. These countries may have different data protection laws. We take steps to ensure your information receives adequate protection, including:
-
-• Using standard contractual clauses approved by regulatory authorities
-• Implementing appropriate safeguards
-• Ensuring third-party service providers comply with data protection requirements
-
-16. CONTACT US
-
-If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:
-
-Email: primbocm@gmail.com
-
-We will respond to your inquiries within a reasonable timeframe.
-
-17. CONSENT
-
-By using our Services, you consent to the collection and use of your information as described in this Privacy Policy. If you do not agree with any part of this Privacy Policy, please do not use our Services.`;
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { ChevronLeft } from 'lucide-react';
+import { Button } from '@/shared/components/ui/button';
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-primary flex flex-col items-center justify-center py-12 px-4">
-      <div className="w-full max-w-2xl bg-darkpurple/90 rounded-3xl shadow-2xl border border-white/10 p-8">
-        <h1 className="text-3xl font-bebas text-white text-center mb-2">Privacy Policy</h1>
-        <p className="text-white/70 text-center mb-6">How we collect, use, and protect your data</p>
-        <pre className="whitespace-pre-wrap text-white text-base" style={{ fontFamily: 'inherit' }}>
-          {privacyPolicy}
-        </pre>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background Gradients - Matching Landing/Support Page */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-[28rem] h-[28rem] rounded-full blur-3xl bg-primary/10 dark:bg-primary/8" />
+        <div className="absolute bottom-1/4 left-0 w-80 h-80 rounded-full blur-3xl bg-secondary/8 dark:bg-secondary/5" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl bg-primary/5 dark:bg-primary/3" />
+      </div>
 
-        <div className="mt-6 pt-6 border-t border-white/10 text-center text-sm text-white/70">
-          Also review our{' '}
-          <Link href="/terms" className="text-saffron hover:underline">
-            Terms & Conditions
+      <div className="max-w-4xl mx-auto px-4 py-12 sm:py-20 relative z-10">
+        <div className="mb-8">
+          <Link href="/">
+            <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
+              <ChevronLeft className="w-4 h-4" />
+              Back to Home
+            </Button>
           </Link>
-          .
         </div>
+
+        <Card className="bg-card/50 backdrop-blur-xl border-border shadow-2xl rounded-3xl overflow-hidden">
+          <CardHeader className="text-center pb-8 border-b border-border/50">
+            <CardTitle className="text-4xl sm:text-5xl font-bebas text-foreground mb-2 tracking-wide">
+              Privacy Policy
+            </CardTitle>
+            <CardDescription className="text-base text-muted-foreground">
+              Effective Date: December 2025 • Last Updated: December 2025
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-8 sm:p-12 space-y-10 text-foreground/90 leading-relaxed">
+            <section className="space-y-4">
+              <p>
+                Welcome to Talii. We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and related services (collectively, the "Services").
+              </p>
+              <p>
+                By using our Services, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree with our policies and practices, do not use our Services.
+              </p>
+            </section>
+
+            <section className="space-y-6">
+              <h2 className="text-2xl font-bold text-foreground">1. INFORMATION WE COLLECT</h2>
+              
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-secondary">1.1 Information You Provide to Us</h3>
+                <div className="pl-4 border-l-2 border-secondary/30 space-y-4">
+                  <div>
+                    <h4 className="font-bold mb-1">Account Registration:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                      <li>Name and email address</li>
+                      <li>Phone number</li>
+                      <li>Password (encrypted and stored securely)</li>
+                      <li>User role (client or barber/professional)</li>
+                      <li>Business name (for barbers/professionals)</li>
+                      <li>Username and profile information</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold mb-1">Profile Information:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                      <li>Profile photo and cover photo</li>
+                      <li>Bio and description</li>
+                      <li>Location and address information</li>
+                      <li>Social media links (Instagram, Twitter, TikTok, Facebook)</li>
+                      <li>Business information (for barbers)</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-bold mb-1">Booking Information:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                      <li>Service preferences</li>
+                      <li>Booking history</li>
+                      <li>Payment information (processed securely through Stripe)</li>
+                      <li>Notes and special requests for appointments</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-secondary">1.2 Information Automatically Collected</h3>
+                <div className="pl-4 border-l-2 border-secondary/30 space-y-2 text-muted-foreground">
+                  <p><span className="font-bold text-foreground">Device Information:</span> Device type, model, OS, unique identifiers, and network information.</p>
+                  <p><span className="font-bold text-foreground">Location Information:</span> Precise location data (with permission) and approximate location based on IP address.</p>
+                  <p><span className="font-bold text-foreground">Usage Information:</span> Features accessed, content interactions, search queries, and booking patterns.</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <h2 className="text-2xl font-bold text-foreground">2. HOW WE USE YOUR INFORMATION</h2>
+              <ul className="grid sm:grid-cols-2 gap-4">
+                <li className="bg-muted/50 p-4 rounded-2xl border border-border">
+                  <h4 className="font-bold mb-2">Service Delivery</h4>
+                  <p className="text-sm text-muted-foreground">Facilitating bookings, processing payments, and connecting clients with professionals.</p>
+                </li>
+                <li className="bg-muted/50 p-4 rounded-2xl border border-border">
+                  <h4 className="font-bold mb-2">Communication</h4>
+                  <p className="text-sm text-muted-foreground">Sending reminders, confirmations, and responding to support inquiries.</p>
+                </li>
+                <li className="bg-muted/50 p-4 rounded-2xl border border-border">
+                  <h4 className="font-bold mb-2">Personalization</h4>
+                  <p className="text-sm text-muted-foreground">Showing relevant barbers and recommending services based on your preferences.</p>
+                </li>
+                <li className="bg-muted/50 p-4 rounded-2xl border border-border">
+                  <h4 className="font-bold mb-2">Safety & Security</h4>
+                  <p className="text-sm text-muted-foreground">Detecting fraud, verifying identities, and enforcing our terms.</p>
+                </li>
+              </ul>
+            </section>
+
+            <section className="space-y-6">
+              <h2 className="text-2xl font-bold text-foreground">3. HOW WE SHARE YOUR INFORMATION</h2>
+              <p>
+                We share information with <span className="font-semibold text-secondary">Barbers/Professionals</span> when you book a service, and with trusted <span className="font-semibold text-secondary">Service Providers</span> like Stripe (payments), Supabase (database), and Sentry (error tracking). We may also share data if required by law or with your explicit consent.
+              </p>
+            </section>
+
+            <section className="space-y-6">
+              <h2 className="text-2xl font-bold text-foreground">4. DATA SECURITY & RETENTION</h2>
+              <p>
+                We use industry-standard encryption and secure payment processing through Stripe. We retain your information as long as necessary to provide Services, comply with legal obligations, or until you delete your account.
+              </p>
+            </section>
+
+            <section className="space-y-6 border-t border-border pt-10">
+              <h2 className="text-2xl font-bold text-foreground">CONTACT US</h2>
+              <p>
+                If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us at:
+              </p>
+              <div className="bg-primary/5 p-6 rounded-2xl border border-primary/20 inline-block">
+                <p className="font-bold text-lg text-primary">Email: support@talii.com</p>
+              </div>
+            </section>
+          </CardContent>
+          <div className="bg-muted/30 p-8 text-center border-t border-border/50">
+            <p className="text-sm text-muted-foreground mb-4">
+              By using our Services, you consent to the collection and use of your information as described in this Privacy Policy.
+            </p>
+            <div className="flex justify-center gap-4 text-sm font-semibold">
+              <Link href="/terms" className="text-secondary hover:underline">
+                Terms of Service
+              </Link>
+              <span className="text-border">|</span>
+              <Link href="/support" className="text-secondary hover:underline">
+                Support Center
+              </Link>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
