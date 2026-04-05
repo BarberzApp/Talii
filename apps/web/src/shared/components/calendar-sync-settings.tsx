@@ -103,9 +103,6 @@ export function CalendarSyncSettings() {
             <div>
               <CardTitle className="text-4xl text-foreground font-bebas tracking-wider flex items-center gap-4">
                 Google Calendar Sync
-                <Badge variant="secondary" className="text-[10px] font-black tracking-widest px-3 py-1 bg-secondary/20 border-secondary/30 text-secondary rounded-full">
-                  ALPHA
-                </Badge>
               </CardTitle>
               <CardDescription className="text-foreground/50 text-lg font-medium italic mt-1">
                 Automate your professional schedule across platforms
@@ -118,11 +115,11 @@ export function CalendarSyncSettings() {
         <div className="mt-4 p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl">
           <div className="flex items-start gap-3">
             <div className="p-1 bg-yellow-500/20 rounded-full">
-              <AlertCircle className="h-4 w-4 text-yellow-500" />
+              <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
             </div>
             <div>
-              <p className="text-sm font-medium text-yellow-400 mb-1">Alpha Version</p>
-              <p className="text-xs text-yellow-300/80">
+              <p className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-1">Alpha Version</p>
+              <p className="text-xs text-yellow-700/80 dark:text-yellow-300/80">
                 This feature may not work properly. Please notify the team if you encounter any issues.
               </p>
             </div>

@@ -197,10 +197,11 @@ export async function POST(request: Request) {
     }
 
     // Unified fee model ($3.40 total charged to customer; Stripe fee absorbed by platform)
-    // NOTE: application_fee_amount must be the platform's GROSS share of the net amount
-    // so that the barber receives exactly their 40% share via transfer_data.
+    // NOTE: application_fee_amount must be the exact amount the platform withholds
+    // so that the barber receives exactly their 40% share ($1.20) via transfer_data.
     const fee = calculateFeeBreakdown()
     const platformFee = fee.platformFee // 340
+    const applicationFeeAmount = fee.applicationFeeAmount // 220
     const bocmShare = fee.bocmGrossShare // 180
     const barberShare = fee.barberShare // 120
 
@@ -229,7 +230,7 @@ export async function POST(request: Request) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: platformFee,
       currency: 'usd',
-      application_fee_amount: bocmShare,
+      application_fee_amount: applicationFeeAmount,
       transfer_data: { destination: barber.stripe_account_id },
       metadata,
       automatic_payment_methods: { enabled: true },

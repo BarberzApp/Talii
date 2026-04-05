@@ -1060,7 +1060,7 @@ export default function ProfilePortfolio() {
       {/* Name, Username, Stats */}
       {/* Profile Info Details (Modernized) */}
       {/* Name, Username, Location - Aligned Info Section */}
-      <div className="pt-24 pb-8 flex flex-col items-center relative z-20 bg-background/40 backdrop-blur-3xl max-w-5xl mx-auto rounded-b-3xl">
+      <div className="pt-24 pb-8 flex flex-col items-center relative z-20 max-w-5xl mx-auto">
         <h1 className="text-4xl sm:text-6xl font-bebas font-bold text-foreground tracking-tight mb-2 uppercase">
           {barberProfile?.business_name || profile?.name || 'Your Craft'}
         </h1>
@@ -1121,28 +1121,28 @@ export default function ProfilePortfolio() {
             <TabsList className="inline-flex h-14 items-center justify-center rounded-2xl bg-white/5 border border-white/10 p-1.5 backdrop-blur-2xl shadow-2xl">
               <TabsTrigger 
                 value="portfolio" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
               >
                 <ImageIcon className="h-4 w-4" />
                 Gallery
               </TabsTrigger>
               <TabsTrigger 
                 value="reels" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
               >
                 <VideoIcon className="h-4 w-4" />
                 Cuts
               </TabsTrigger>
               <TabsTrigger 
                 value="services" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
               >
                 <Star className="h-4 w-4" />
                 Services
               </TabsTrigger>
               <TabsTrigger 
                 value="reviews" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
               >
                 <MessageCircle className="h-4 w-4" />
                 Reviews
@@ -1507,10 +1507,10 @@ export default function ProfilePortfolio() {
             {/* Sub-tabs for Services and Add-ons */}
             <Tabs defaultValue="services" className="w-full">
               <TabsList className="w-full h-14 flex bg-white/5 border border-white/5 p-1 rounded-2xl mb-8 backdrop-blur-xl">
-                <TabsTrigger value="services" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] transition-all">
+                <TabsTrigger value="services" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground transition-all">
                   Services ({services.length})
                 </TabsTrigger>
-                <TabsTrigger value="addons" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-secondary data-[state=active]:text-[#1A1A1A] transition-all">
+                <TabsTrigger value="addons" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground transition-all">
                   Add-ons ({addons.length})
                 </TabsTrigger>
               </TabsList>

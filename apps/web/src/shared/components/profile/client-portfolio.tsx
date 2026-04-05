@@ -557,7 +557,7 @@ export default function ClientPortfolio() {
       </div>
 
       {/* Name, Username, Location - Spaced & Modernized */}
-      <div className="pt-24 pb-8 flex flex-col items-center relative z-20 bg-background/40 backdrop-blur-3xl max-w-5xl mx-auto rounded-b-3xl">
+      <div className="pt-24 pb-8 flex flex-col items-center relative z-20 max-w-5xl mx-auto">
         <h1 className="text-4xl sm:text-6xl font-bebas font-bold text-foreground tracking-tight mb-2">
           {profile?.name}
         </h1>
@@ -575,18 +575,12 @@ export default function ClientPortfolio() {
       </div>
 
       {/* Stats Row - Premium Visuals */}
-      <div className="w-full max-w-4xl mx-auto grid grid-cols-3 gap-4 sm:gap-8 mb-12">
-        <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
-          <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
-            {likedVideos.length}
-          </span>
-          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Likes</span>
-        </div>
+      <div className="w-full max-w-4xl mx-auto grid grid-cols-2 gap-4 sm:gap-8 mb-12">
         <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
           <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
             {pastBarbers.length}
           </span>
-          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Past Barbers</span>
+          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Stylists</span>
         </div>
         <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
           <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
@@ -597,26 +591,19 @@ export default function ClientPortfolio() {
       </div>
       {/* Tabs */}
       <div className="w-full max-w-5xl mx-auto mb-16">
-        <Tabs defaultValue="liked" className="w-full">
+        <Tabs defaultValue="past-barbers" className="w-full">
           <div className="flex justify-center mb-8">
             <TabsList className="inline-flex h-14 items-center justify-center rounded-2xl bg-white/5 border border-white/10 p-1.5 backdrop-blur-2xl shadow-2xl">
               <TabsTrigger 
-                value="liked" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-primary data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
-              >
-                <Heart className="h-4 w-4" />
-                <span className="uppercase">Likes</span>
-              </TabsTrigger>
-              <TabsTrigger 
                 value="past-barbers" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-primary data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
               >
                 <Users className="h-4 w-4" />
                 <span className="uppercase">Stylists</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="bookings" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-primary data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
               >
                 <Star className="h-4 w-4" />
                 <span className="uppercase">Reviews</span>
@@ -624,98 +611,7 @@ export default function ClientPortfolio() {
             </TabsList>
           </div>
 
-          <TabsContent value="liked" className="mt-0 outline-none">
-            {videosLoading ? (
-              <div className="text-center py-20">
-                <Loader2 className="h-10 w-10 animate-spin mx-auto text-secondary/60 mb-4" />
-                <p className="text-muted-foreground font-bebas text-lg tracking-widest">Retrieving your gallery...</p>
-              </div>
-            ) : likedVideos.length === 0 ? (
-              <div className="text-center py-20 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl max-w-2xl mx-auto shadow-2xl">
-                <div className="p-4 bg-secondary/10 rounded-full w-fit mx-auto mb-6">
-                  <Heart className="h-10 w-10 text-secondary/60" />
-                </div>
-                <h3 className="text-foreground font-bebas font-bold text-3xl mb-4 tracking-tight">Gallery Empty</h3>
-                <p className="text-muted-foreground text-base mb-8 max-w-sm mx-auto leading-relaxed">
-                  Cuts you like from top barbers will appear here. Build your inspiration gallery today.
-                </p>
-                <Button
-                  onClick={() => window.location.href = '/cuts'}
-                  className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
-                >
-                  Explore Top Cuts
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {likedVideos.map((video) => (
-                  <div 
-                    key={video.id} 
-                    className="group relative aspect-[4/5] rounded-3xl overflow-hidden cursor-pointer border border-white/5 bg-muted shadow-xl hover:shadow-secondary/20 hover:border-secondary/30 transition-all duration-500"
-                    onMouseEnter={(e) => {
-                      const videoEl = e.currentTarget.querySelector('video') as HTMLVideoElement;
-                      if (videoEl) videoEl.play().catch(() => {});
-                    }}
-                    onMouseLeave={(e) => {
-                      const videoEl = e.currentTarget.querySelector('video') as HTMLVideoElement;
-                      if (videoEl) {
-                        videoEl.pause();
-                        videoEl.currentTime = 0;
-                      }
-                    }}
-                    onClick={() => window.location.href = `/cuts?cutId=${video.id}`}
-                  >
-                    {video.thumbnail ? (
-                      <img 
-                        src={video.thumbnail} 
-                        alt={video.title} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
-                    ) : (
-                      <video 
-                        src={video.url} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        muted 
-                        playsInline 
-                        loop
-                        preload="metadata"
-                      />
-                    )}
-                    
-                    {/* Premium Video Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
-                    
-                    <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                      <div className="flex items-center justify-between text-white mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
-                            <Heart className="h-3.5 w-3.5 text-secondary fill-secondary" />
-                            <span className="text-xs font-bold">{video.likes || 0}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
-                            <Eye className="h-3.5 w-3.5 text-white/70" />
-                            <span className="text-xs font-bold">{video.views || 0}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-                        <Avatar className="h-6 w-6 border border-white/20">
-                          <AvatarImage src={video.barber.image} alt={video.barber.name} />
-                          <AvatarFallback className="text-[8px] bg-secondary text-primary-foreground font-bold">
-                            {video.barber.name?.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-white/90 font-medium truncate drop-shadow-md">
-                          {video.barber.name}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
+
 
           <TabsContent value="past-barbers" className="mt-0 outline-none">
             {pastBarbers.length === 0 ? (

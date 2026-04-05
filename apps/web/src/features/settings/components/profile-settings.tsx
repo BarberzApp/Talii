@@ -789,7 +789,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                   value={watch('carrier')}
                   onValueChange={(value: string) => setValue('carrier', value)}
                 >
-                  <SelectTrigger className={`h-12 px-4 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl backdrop-blur-sm transition-all duration-200 ${errors.carrier ? 'border-red-400' : ''}`}>
+                  <SelectTrigger className={`h-12 px-4 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl backdrop-blur-sm transition-all duration-200 ${validationErrors.carrier ? 'border-red-400' : ''}`}>
                     <SelectValue placeholder="Select your carrier…" />
                   </SelectTrigger>
                   <SelectContent className="bg-gradient-to-br from-white/10 to-white/5 dark:from-white/10 dark:to-white/5 backdrop-blur-2xl border-black/10 dark:border-white/20 rounded-2xl shadow-2xl p-2 text-foreground">
@@ -801,28 +801,27 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.carrier && (
-                  <p className="text-red-400 text-sm">Carrier is required</p>
+                {validationErrors.carrier && (
+                  <p className="text-sm text-red-400 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.carrier}
+                  </p>
                 )}
               </div>
               <div>
-                {!watch('sms_notifications') ? (
-                  <Button
-                    type="button"
-                    className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl px-6 py-2 text-base"
-                    onClick={() => setValue('sms_notifications', true)}
-                  >
-                    Enable SMS Notifications
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    className="bg-green-600/20 border border-green-500/30 text-green-400 font-semibold rounded-xl px-6 py-2 text-base flex items-center gap-2 cursor-default"
-                    disabled
-                  >
-                    <Check className="h-4 w-4" /> SMS Notifications Enabled
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  className={!watch('sms_notifications') 
+                    ? "bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-secondary-foreground font-semibold shadow-lg rounded-xl px-6 py-2 text-base transition-all" 
+                    : "bg-green-600/20 border border-green-500/30 text-green-400 hover:text-green-300 font-semibold rounded-xl px-6 py-2 text-base flex items-center gap-2 hover:bg-green-600/30 transition-all"}
+                  onClick={() => setValue('sms_notifications', !watch('sms_notifications'))}
+                >
+                  {!watch('sms_notifications') ? (
+                    "Enable SMS Notifications"
+                  ) : (
+                    <><Check className="h-4 w-4" /> SMS Notifications Enabled</>
+                  )}
+                </Button>
               </div>
             </div>
 
@@ -831,7 +830,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-semibold shadow-lg rounded-xl px-8 py-3 text-lg"
+                className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-secondary-foreground font-semibold shadow-lg rounded-xl px-8 py-3 text-lg"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />

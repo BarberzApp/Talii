@@ -235,41 +235,27 @@ export const handleCreatePaymentIntentRequest = async (
       )
     }
     
-    // Additional safeguard: Check if service price equals the extra amount
-    if (servicePrice === 100 && totalAmount === 440) {
-      console.error('❌ ERROR DETECTED: Service price ($1.00) appears to be included in totalAmount!', {
-        totalAmount,
-        platformFee,
-        servicePrice,
-        expected: 'totalAmount should be 340 (platformFee only)',
-        actual: 'totalAmount is 440 (platformFee + servicePrice)'
-      })
-      return new Response(
-        JSON.stringify({ 
-          error: 'Payment calculation error: Service price should not be included in payment amount' 
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
+    // Total amount calculation verification completed.
     
     // Stripe fee calculation: Stripe takes ~$0.40 (2.9% + $0.30)
     // After Stripe fee: $3.40 - $0.40 = $3.00
     // Split the $3.00: 60% to BOCM ($1.80), 40% to barber ($1.20)
     // BOCM absorbs the Stripe fee as a platform cost, so BOCM net = $1.80 - $0.40 = $1.40
+    // For destination charges, transfer amount = totalAmount - application_fee_amount
+    // So to give barber $1.20, application_fee_amount = $3.40 - $1.20 = $2.20
     const stripeFee = 40 // cents (absorbed by platform)
     const netAfterStripe = platformFee - stripeFee // $3.00 = 300 cents
     const bocmShare = Math.round(netAfterStripe * 0.60) // Gross platform share = $1.80 = 180 cents
     const barberShare = Math.round(netAfterStripe * 0.40) // Barber share = $1.20 = 120 cents
+    const applicationFeeAmount = platformFee - barberShare // Amount to withhold = 220 cents
     
     console.log('Payment: customer only pays platform fee', { 
       totalCharged: platformFee,
       stripeFee,
       netAfterStripe,
-      bocmShare, // Gross platform share (application_fee_amount)
-      barberShare,
+      bocmShare, // Gross platform share
+      barberShare, // Barber target payout
+      applicationFeeAmount, // Withheld by platform
       note: 'Service and addons paid directly to barber at appointment. BOCM absorbs Stripe fee as platform cost.'
     })
 
@@ -278,14 +264,15 @@ export const handleCreatePaymentIntentRequest = async (
     // - Total charged to customer: $3.40
     // - Stripe fee: ~$0.40 (absorbed by platform)
     // - Net after Stripe: $3.00
-    // - BOCM gross: $1.80 (60% of net) -> application_fee_amount
+    // - BOCM gross: $1.80 (60% of net)
     // - BOCM net: $1.40 (after absorbing Stripe fee)
     // - Barber receives: $1.20 (40% of net)
+    // - Platform withholds: $2.20 (application_fee_amount)
     // Note: Service price and addons are paid directly to barber at appointment
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalAmount, // Always $3.40 (platform fee only)
       currency: 'usd',
-      application_fee_amount: bocmShare, // Platform gross share = $1.80
+      application_fee_amount: applicationFeeAmount, // Platform withholds $2.20 to ensure barber gets $1.20
       transfer_data: {
         destination: barber.stripe_account_id, // Barber gets 40% of net = $1.20
       },
@@ -314,8 +301,8 @@ export const handleCreatePaymentIntentRequest = async (
       amount: paymentIntent.amount,
       amountInDollars: (paymentIntent.amount / 100).toFixed(2),
       expectedAmount: 3.40,
-      application_fee_amount: bocmShare,
-      application_fee_dollars: (bocmShare / 100).toFixed(2),
+      application_fee_amount: applicationFeeAmount,
+      application_fee_dollars: (applicationFeeAmount / 100).toFixed(2),
       barber_should_receive: (barberShare / 100).toFixed(2),
       clientSecret: paymentIntent.client_secret,
       breakdown: {

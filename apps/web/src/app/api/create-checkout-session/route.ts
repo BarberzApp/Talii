@@ -131,11 +131,13 @@ export async function POST(request: Request) {
     // Platform fee calculation (unified $3.40 model)
     const breakdown = calculateFeeBreakdown()
     const platformFee = breakdown.platformFee
+    let applicationFeeAmount = breakdown.applicationFeeAmount // $2.20 (Withheld by platform so barber receives exactly $1.20)
     let bocmShare = breakdown.bocmGrossShare // $1.80 (Platform net after Stripe will be $1.40)
     let barberShare = breakdown.barberShare // $1.20
 
     // If barber is a developer, bypass all platform fees
     if (barber.is_developer) {
+      applicationFeeAmount = 0
       bocmShare = 0
       barberShare = 0
     }
@@ -196,7 +198,7 @@ export async function POST(request: Request) {
         transfer_data: {
           destination: barber.stripe_account_id,
         },
-        application_fee_amount: bocmShare, // Platform net after absorbing Stripe fee = $1.42 (or 0 for developer)
+        application_fee_amount: applicationFeeAmount, // Withheld by platform to ensure Barber receives exactly $1.20 (or 0 for developer)
         // Critical: webhook creates bookings from PaymentIntent.metadata for mobile parity
         metadata,
       },

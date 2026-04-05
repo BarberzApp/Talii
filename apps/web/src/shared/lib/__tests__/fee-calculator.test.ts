@@ -27,6 +27,9 @@ describe('Fee Calculator', () => {
       
       // Barber gets 40% of net: $3.00 * 0.40 = $1.20
       expect(breakdown.barberShare).toBe(120) // $1.20 in cents
+      
+      // applicationFeeAmount must equal total - barber_share
+      expect(breakdown.applicationFeeAmount).toBe(220) // $2.20 in cents
     })
 
     it('should ensure bocmGrossShare + barberShare equals netAfterStripe', () => {
@@ -69,19 +72,20 @@ describe('Fee Calculator', () => {
   })
 
   describe('calculatePlatformFee', () => {
-    it('should return gross platform share (application_fee_amount)', () => {
+    it('should return the correct application_fee_amount', () => {
       const platformFee = calculatePlatformFee()
       
-      // Platform gets 60% of net after Stripe
-      expect(platformFee).toBe(180) // $1.80 in cents
+      // Platform withholds enough to ensure barber gets exactly $1.20
+      // $3.40 - $1.20 = $2.20 (220 cents)
+      expect(platformFee).toBe(220) // $2.20 in cents
     })
 
-    it('should match bocmGrossShare from calculateFeeBreakdown', () => {
+    it('should match applicationFeeAmount from calculateFeeBreakdown', () => {
       const platformFee = calculatePlatformFee()
-      const { bocmGrossShare } = calculateFeeBreakdown()
+      const { applicationFeeAmount } = calculateFeeBreakdown()
       
-      expect(platformFee).toBe(bocmGrossShare)
-      expect(platformFee).toBe(180) // $1.80
+      expect(platformFee).toBe(applicationFeeAmount)
+      expect(platformFee).toBe(220) // $2.20
     })
   })
 
@@ -95,12 +99,14 @@ describe('Fee Calculator', () => {
       // Net after Stripe: $3.00
       // BOCM receives: $1.80 (60%)
       // Barber receives: $1.20 (40%)
+      // Withheld by platform (applicationFeeAmount): $3.40 - $1.20 = $2.20
       
       expect(breakdown.platformFee).toBe(340) // $3.40
       expect(breakdown.stripeFee).toBe(40) // $0.40
       expect(breakdown.netAfterStripe).toBe(300) // $3.00
       expect(breakdown.bocmGrossShare).toBe(180) // $1.80
       expect(breakdown.barberShare).toBe(120) // $1.20
+      expect(breakdown.applicationFeeAmount).toBe(340 - 120) // $2.20
       
       // Verify math
       expect(breakdown.bocmGrossShare + breakdown.barberShare).toBe(breakdown.netAfterStripe)
