@@ -23,6 +23,9 @@ import { ActionButton } from '../shared/components/ActionButton';
 import { Card } from '../shared/components/ui/Card';
 import Input from '../shared/components/ui/Input';
 import { theme } from '../shared/lib/theme';
+import { GlassyCard } from '../shared/components/ui/GlassyCard';
+import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
+import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 
 type SignUpScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -251,7 +254,7 @@ export default function SignUpPage() {
             <AnimatedBackground />
             
             {/* Back Button */}
-            <TouchableOpacity
+            <AnimatedPressable
                 onPress={handleBack}
                 style={{
                     position: 'absolute',
@@ -269,7 +272,7 @@ export default function SignUpPage() {
                 }}
             >
                 <ArrowLeft size={24} color={colors.foreground} />
-            </TouchableOpacity>
+            </AnimatedPressable>
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -285,7 +288,8 @@ export default function SignUpPage() {
                         
                         {/* Header */}
                         {showContent && (
-                            <View style={{ alignItems: 'center', marginBottom: 32 }}>
+                            <AnimatedSection type="fade">
+                                <View style={{ alignItems: 'center', marginBottom: 32 }}>
                                 <Text style={{
                                 fontSize: 28,
                                 fontWeight: '700',
@@ -303,12 +307,14 @@ export default function SignUpPage() {
                                 }}>
                                     Join Talii and start your journey
                                 </Text>
-                            </View>
+                                </View>
+                            </AnimatedSection>
                         )}
 
                         {/* Sign Up Form */}
                         {showContent && (
-                            <Card variant="hero" style={{ backgroundColor: colors.surface }}>
+                            <AnimatedSection type="slideUp" delay={150}>
+                            <GlassyCard>
                                     {errors.general && (
                                         <View style={{
                                             padding: 16,
@@ -332,7 +338,7 @@ export default function SignUpPage() {
                                         backgroundColor: colors.muted,
                                         padding: 4,
                                     }}>
-                                        <TouchableOpacity
+                                    <AnimatedPressable
                                             style={{
                                                 flex: 1,
                                                 paddingVertical: 12,
@@ -356,8 +362,8 @@ export default function SignUpPage() {
                                             }}>
                                                 Client
                                             </Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
+                                        </AnimatedPressable>
+                                        <AnimatedPressable
                                             style={{
                                                 flex: 1,
                                                 paddingVertical: 12,
@@ -381,7 +387,7 @@ export default function SignUpPage() {
                                             }}>
                                                 Barber
                                             </Text>
-                                        </TouchableOpacity>
+                                        </AnimatedPressable>
                                     </View>
 
                                     <Input
@@ -468,7 +474,7 @@ export default function SignUpPage() {
                                     />
 
                                     {/* Terms Agreement */}
-                                    <TouchableOpacity
+                                    <AnimatedPressable
                                         style={{
                                             flexDirection: 'row',
                                             alignItems: 'center',
@@ -527,7 +533,7 @@ export default function SignUpPage() {
                                                 privacy policy
                                             </Text>
                                         </Text>
-                                    </TouchableOpacity>
+                                    </AnimatedPressable>
                                     {errors.terms && (
                                         <Text style={{ color: colors.destructive, fontSize: 12, marginBottom: 16 }}>
                                             {errors.terms}
@@ -541,7 +547,8 @@ export default function SignUpPage() {
                                     >
                                         {isLoading ? 'Creating account...' : 'Create account'}
                                     </ActionButton>
-                            </Card>
+                            </GlassyCard>
+                            </AnimatedSection>
                         )}
                         {showContent && (
                             <>

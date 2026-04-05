@@ -26,6 +26,9 @@ import { ShareSettings } from '../shared/components/settings/ShareSettings';
 import { AvailabilityManager } from '../shared/components/settings/AvailabilityManager';
 import { EarningsDashboard } from '../shared/components/settings/EarningsDashboard';
 import { Button, Card, CardContent } from '../shared/components/ui';
+import { GlassyCard } from '../shared/components/ui/GlassyCard';
+import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
+import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import { 
   User, 
   Scissors, 
@@ -213,9 +216,19 @@ export default function SettingsPage() {
       
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-32`}>
         {/* Header */}
-        <View style={tw`px-6 pt-6 pb-4`}>
+        <AnimatedSection type="fade" style={tw`px-6 pt-6 pb-4`}>
           <View style={tw`items-center mb-6`}>
-            <View style={[tw`p-4 rounded-full mb-3`, { backgroundColor: colors.muted }]}>
+            <View style={[
+              tw`p-4 rounded-full mb-3`,
+              {
+                backgroundColor: colors.primarySubtle,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 12,
+                elevation: 6,
+              }
+            ]}>
               <SettingsIcon size={32} color={colors.primary} />
             </View>
             <Text style={[tw`text-2xl font-bold`, { color: colors.foreground }]}>Settings</Text>
@@ -223,7 +236,7 @@ export default function SettingsPage() {
               Manage your profile, services, and preferences
             </Text>
           </View>
-        </View>
+        </AnimatedSection>
 
         {/* Theme Toggle */}
         <View style={tw`px-6 mb-6`}>
@@ -250,7 +263,7 @@ export default function SettingsPage() {
             const status = getTabStatus(tab.id);
             
             return (
-              <TouchableOpacity
+              <AnimatedPressable
                 key={tab.id}
                 style={[
                   tw`py-4 px-4 mr-3`,
@@ -273,7 +286,7 @@ export default function SettingsPage() {
                     <CheckCircle size={14} color={colors.primary} style={tw`ml-2`} />
                   )}
                 </View>
-              </TouchableOpacity>
+              </AnimatedPressable>
             );
           })}
         </ScrollView>
@@ -302,109 +315,121 @@ export default function SettingsPage() {
         </View>
 
         {/* Legal Information */}
-        <View style={tw`px-6 mt-8`}>
-          <Card style={{ backgroundColor: colors.surface }}>
-            <CardContent style={tw`p-4`}>
-              <Text style={[tw`text-base font-semibold mb-4`, { color: colors.foreground }]}>
-                Legal Information
+        <AnimatedSection type="slideUp" delay={100} style={tw`px-6 mt-8`}>
+          <GlassyCard style={tw`p-4 rounded-2xl`}>
+            <Text style={[tw`text-base font-semibold mb-4`, { color: colors.foreground }]}>
+              Legal Information
+            </Text>
+            <AnimatedPressable
+              style={[tw`flex-row items-center py-3 border-b`, { borderColor: colors.border }]}
+              onPress={() => navigation.navigate('Terms' as any)}
+            >
+              <FileText size={18} color={colors.primary} style={tw`mr-3`} />
+              <Text style={[tw`flex-1 text-base`, { color: colors.foreground }]}>
+                Terms & Conditions
               </Text>
-              <TouchableOpacity
-                style={[tw`flex-row items-center py-3 border-b`, { borderColor: colors.border }]}
-                onPress={() => navigation.navigate('Terms' as any)}
-              >
-                <FileText size={18} color={colors.primary} style={tw`mr-3`} />
-                <Text style={[tw`flex-1 text-base`, { color: colors.foreground }]}>
-                  Terms & Conditions
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={tw`flex-row items-center py-3`}
-                onPress={() => navigation.navigate('PrivacyPolicy' as any)}
-              >
-                <Shield size={18} color={colors.primary} style={tw`mr-3`} />
-                <Text style={[tw`flex-1 text-base`, { color: colors.foreground }]}>
-                  Privacy Policy
-                </Text>
-              </TouchableOpacity>
-            </CardContent>
-          </Card>
-        </View>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={tw`flex-row items-center py-3`}
+              onPress={() => navigation.navigate('PrivacyPolicy' as any)}
+            >
+              <Shield size={18} color={colors.primary} style={tw`mr-3`} />
+              <Text style={[tw`flex-1 text-base`, { color: colors.foreground }]}>
+                Privacy Policy
+              </Text>
+            </AnimatedPressable>
+          </GlassyCard>
+        </AnimatedSection>
 
         {/* Logout Button */}
-        <View style={tw`px-6 mt-6`}>
-          <TouchableOpacity
-            style={[tw`py-3 rounded-xl`, { backgroundColor: colors.destructive }]}
+        <AnimatedSection type="slideUp" delay={200} style={tw`px-6 mt-6`}>
+          <AnimatedPressable
+            style={[
+              tw`py-3 rounded-xl`,
+              {
+                backgroundColor: colors.destructive,
+                shadowColor: colors.destructive,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 4,
+              }
+            ]}
             onPress={handleLogout}
           >
             <View style={tw`flex-row items-center justify-center`}>
               <LogOut size={20} color={colors.destructiveForeground} style={tw`mr-2`} />
               <Text style={[tw`font-semibold`, { color: colors.destructiveForeground }]}>Log Out</Text>
             </View>
-          </TouchableOpacity>
-        </View>
+          </AnimatedPressable>
+        </AnimatedSection>
       
        
         {/* Account Deletion */}
-        <View style={tw`px-6 mt-6 mb-10`}>
-          <Card style={[{ backgroundColor: colors.muted, borderColor: colors.border }]}>
-            <CardContent style={tw`p-4`}>
-              <View style={tw`flex-row items-center mb-3`}>
-                <AlertCircle size={18} color={colors.destructive} style={tw`mr-2`} />
-                <Text style={[tw`text-base font-semibold`, { color: colors.destructive }]}>
-                  Delete Account
-                </Text>
-              </View>
-              <Text style={[tw`text-sm mb-4`, { color: colors.mutedForeground }]}>
-                This will permanently remove your account and data. Type YES in all caps to confirm.
+        <AnimatedSection type="slideUp" delay={300} style={tw`px-6 mt-6 mb-10`}>
+          <GlassyCard style={[
+            tw`p-4 rounded-2xl`,
+            { borderWidth: 1, borderColor: colors.destructive + '40' }
+          ]}>
+            <View style={tw`flex-row items-center mb-3`}>
+              <AlertCircle size={18} color={colors.destructive} style={tw`mr-2`} />
+              <Text style={[tw`text-base font-semibold`, { color: colors.destructive }]}>
+                Delete Account
               </Text>
+            </View>
+            <Text style={[tw`text-sm mb-4`, { color: colors.mutedForeground }]}>
+              This will permanently remove your account and data. Type YES in all caps to confirm.
+            </Text>
 
-              {isConfirming && (
-                <View style={tw`mb-3`}>
-                  <Input
-                    containerStyle={tw`mb-0`}
-                    placeholder="Type YES to confirm"
-                    autoCapitalize="characters"
-                    value={confirmText}
-                    onChangeText={(text) => setConfirmText(text.toUpperCase())}
-                  />
-                  <TouchableOpacity
+            {isConfirming && (
+              <View style={tw`mb-3`}>
+                <Input
+                  containerStyle={tw`mb-0`}
+                  placeholder="Type YES to confirm"
+                  autoCapitalize="characters"
+                  value={confirmText}
+                  onChangeText={(text) => setConfirmText(text.toUpperCase())}
+                />
+                <AnimatedPressable
+                  style={[
+                    tw`mt-3 py-3 rounded-xl`,
+                    {
+                      backgroundColor: isConfirmed ? colors.destructive : colors.muted,
+                      opacity: isDeleting ? 0.7 : 1,
+                    },
+                  ]}
+                  onPress={deleteAccount}
+                  disabled={!isConfirmed || isDeleting}
+                >
+                  <Text
                     style={[
-                      tw`mt-3 py-3 rounded-xl`,
-                      {
-                        backgroundColor: isConfirmed ? colors.destructive : colors.muted,
-                        opacity: isDeleting ? 0.7 : 1,
-                      },
+                      tw`text-center font-semibold`,
+                      { color: isConfirmed ? colors.destructiveForeground : colors.mutedForeground },
                     ]}
-                    onPress={deleteAccount}
-                    disabled={!isConfirmed || isDeleting}
                   >
-                    <Text
-                      style={[
-                        tw`text-center font-semibold`,
-                        { color: isConfirmed ? colors.destructiveForeground : colors.mutedForeground },
-                      ]}
-                    >
-                      {isDeleting ? 'Deleting...' : 'Confirm Delete'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+                    {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                  </Text>
+                </AnimatedPressable>
+              </View>
+            )}
 
-              <TouchableOpacity
-                style={[
-                  tw`py-3 rounded-xl`,
-                  { backgroundColor: colors.destructive },
-                ]}
-                onPress={requestDelete}
-                disabled={isDeleting}
-              >
-                <Text style={[tw`text-center font-semibold`, { color: colors.destructiveForeground }]}>
-                  Delete My Account
-                </Text>
-              </TouchableOpacity>
-            </CardContent>
-          </Card>
-        </View>
+            <AnimatedPressable
+              style={[
+                tw`py-3 rounded-xl`,
+                {
+                  backgroundColor: colors.destructive,
+                  opacity: isDeleting ? 0.7 : 1,
+                },
+              ]}
+              onPress={requestDelete}
+              disabled={isDeleting}
+            >
+              <Text style={[tw`text-center font-semibold`, { color: colors.destructiveForeground }]}>
+                Delete My Account
+              </Text>
+            </AnimatedPressable>
+          </GlassyCard>
+        </AnimatedSection>
       </ScrollView>
     </SafeAreaView>
   );

@@ -35,6 +35,9 @@ import {
   Scissors,
 } from 'lucide-react-native';
 import { Avatar } from '../shared/components/ui';
+import { GlassyCard } from '../shared/components/ui/GlassyCard';
+import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
+import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import { RootStackParamList } from '../shared/types';
 import StaircaseGrid from '../shared/components/StaircaseGrid';
 import BookingForm from '../shared/components/BookingForm';
@@ -296,7 +299,7 @@ function ReviewsList({
         <Text style={[tw`text-sm text-center mb-6`, { color: colors.mutedForeground }]}>
           Be the first to review this stylist!
         </Text>
-        <TouchableOpacity
+        <AnimatedPressable
           style={[
             tw`px-8 py-3 rounded-xl`,
             {
@@ -313,7 +316,7 @@ function ReviewsList({
           <Text style={[tw`font-bold`, { color: colors.primaryForeground }]}>
             Write a Review
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
     );
   }
@@ -322,7 +325,7 @@ function ReviewsList({
     <View style={tw`flex-1`}>
       {/* Add Review Button */}
       <View style={[tw`px-4 py-3`, { borderBottomWidth: 1, borderColor: colors.border }]}>
-        <TouchableOpacity
+        <AnimatedPressable
           style={[
             tw`py-3 rounded-xl items-center flex-row justify-center`,
             {
@@ -340,7 +343,7 @@ function ReviewsList({
           <Text style={[tw`font-bold`, { color: colors.primaryForeground }]}>
             Write a Review
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
       
       {/* Reviews List */}
@@ -1288,7 +1291,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
         {/* Filters */}
         {showFilters && (
-          <View style={[tw`mb-4 p-4 rounded-xl`, { backgroundColor: colors.glass }]}>
+          <GlassyCard style={tw`mb-4 p-4 rounded-xl`}>
             {/* Specialty Filter */}
             <View style={tw`mb-4`}>
               <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
@@ -1296,7 +1299,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
               </Text>
               <View style={tw`flex-row flex-wrap gap-2`}>
                 {allSpecialties.map(specialty => (
-                  <TouchableOpacity
+                  <AnimatedPressable
                     key={specialty}
                     style={[
                       tw`px-3 py-1 rounded-full`,
@@ -1314,7 +1317,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                     ]}>
                       {specialty}
                     </Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 ))}
               </View>
             </View>
@@ -1322,15 +1325,15 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
 
             {/* Clear Filters */}
-            <TouchableOpacity
+            <AnimatedPressable
               style={[tw`mt-2 p-2 rounded-lg items-center`, { backgroundColor: colors.glass }]}
               onPress={clearFilters}
             >
               <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>
                 Clear All Filters
               </Text>
-            </TouchableOpacity>
-          </View>
+            </AnimatedPressable>
+          </GlassyCard>
         )}
 
       </View>
@@ -1400,18 +1403,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                 {filteredBarbers.map((barber) => (
                   <View key={barber.id} style={tw`mb-6 mx-4`}>
                     {/* Barber Card - Web App Style */}
-                    <View style={[
-                      tw`border rounded-xl overflow-hidden shadow-2xl`,
-                      { 
-                        backgroundColor: colors.surfaceElevated,
-                        borderColor: colors.border,
-                        shadowColor: colors.primary,
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.12,
-                        shadowRadius: 16,
-                        elevation: 6
-                      }
-                    ]}>
+                    <GlassyCard style={tw`rounded-xl overflow-hidden`}>
                       {/* Cover Photo Section */}
                       <View style={tw`relative h-56`}>
                         {barber.coverPhotoUrl ? (
@@ -1572,7 +1564,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
                         {/* Action Buttons */}
                         <View style={tw`flex-row gap-3`}>
-                          <TouchableOpacity
+                          <AnimatedPressable
                             style={[
                               tw`flex-1 py-3 rounded-xl items-center border-2`,
                               { 
@@ -1588,9 +1580,9 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                             <Text style={[tw`font-semibold text-sm`, { color: colors.primary }]}>
                               Reviews
                             </Text>
-                          </TouchableOpacity>
+                          </AnimatedPressable>
                           
-                          <TouchableOpacity
+                          <AnimatedPressable
                             style={[
                               tw`flex-1 py-3 rounded-xl items-center`,
                               { 
@@ -1614,17 +1606,17 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                             <Text style={[tw`font-semibold text-sm`, { color: colors.primaryForeground }]}>
                               Book Now
                             </Text>
-                          </TouchableOpacity>
+                          </AnimatedPressable>
                         </View>
                       </View>
-                    </View>
+                    </GlassyCard>
                   </View>
                 ))}
                 
                 {/* Load More Section */}
                 {hasMoreBarbers && (
                   <View style={tw`py-6 px-4`}>
-                    <TouchableOpacity
+                    <AnimatedPressable
                       style={[
                         tw`py-4 px-6 rounded-xl items-center border-2 border-dashed`,
                         { 
@@ -1652,7 +1644,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                           </Text>
                         </View>
                       )}
-                    </TouchableOpacity>
+                    </AnimatedPressable>
                   </View>
                 )}
                 

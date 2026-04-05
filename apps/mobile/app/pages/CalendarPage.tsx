@@ -32,6 +32,9 @@ import { useTheme } from '../shared/components/theme';
 import Input from '../shared/components/ui/Input';
 import { logger } from '../shared/lib/logger';
 import { ReviewForm } from '../shared/components/ReviewForm';
+import { GlassyCard } from '../shared/components/ui/GlassyCard';
+import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
+import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import { useCalendarData } from '../shared/hooks/useCalendarData';
 import { useCalendarState } from '../shared/hooks/useCalendarState';
 import { formatTimeSlot } from '../shared/lib/calendar/calendarUtils';
@@ -581,7 +584,7 @@ export default function CalendarPage() {
               borderWidth: 1,
               borderColor: colors.glassBorder
             }]}>
-              <TouchableOpacity
+              <AnimatedPressable
                 onPress={() => handleBarberViewToggle('appointments')}
                 style={[
                   tw`flex-1 py-3 px-4 rounded-lg items-center`,
@@ -613,9 +616,9 @@ export default function CalendarPage() {
                 ]}>
                   Clients Coming In
                 </Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
               
-              <TouchableOpacity
+              <AnimatedPressable
                 onPress={() => handleBarberViewToggle('bookings')}
                 style={[
                   tw`flex-1 py-3 px-4 rounded-lg items-center`,
@@ -647,7 +650,7 @@ export default function CalendarPage() {
                 ]}>
                   Going Somewhere
                 </Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
           )}
         </View>

@@ -19,6 +19,7 @@ import { RootStackParamList } from '../types';
 import { bookingService, Service, TimeSlot } from '../lib/bookingService';
 import * as WebBrowser from 'expo-web-browser';
 import { confirmPayment, presentPaymentSheet, CardField } from '@stripe/stripe-react-native';
+import { Button, Textarea } from './ui';
 
 // Add-on types
 interface ServiceAddon {
@@ -876,17 +877,11 @@ export default function BookingForm({
 
                 {/* Notes */}
                 <View style={tw`mt-4`}>
-                  <TextInput
-                    style={[
-                      tw`px-4 py-3 rounded-xl min-h-[100px]`,
-                      { backgroundColor: colors.glass, color: colors.foreground }
-                    ]}
+                  <Textarea
                     placeholder="Any special requests or notes... (Optional)"
-                    placeholderTextColor={colors.mutedForeground}
                     value={guestInfo.notes}
-                    onChangeText={(text) => setGuestInfo({ ...guestInfo, notes: text })}
-                    multiline
-                    textAlignVertical="top"
+                    onChangeText={(text: string) => setGuestInfo({ ...guestInfo, notes: text })}
+                    rows={4}
                   />
                 </View>
               </View>
@@ -1178,61 +1173,40 @@ export default function BookingForm({
         </ScrollView>
 
         {/* Footer with Navigation */}
-        <View style={[tw`p-5 border-t`, { borderColor: colors.glassBorder }]}>
-          <View style={tw`flex-row gap-3`}>
-            {currentStep > 1 && (
-              <TouchableOpacity
+        <View style={[tw`p-5 border-t flex-row gap-3`, { borderColor: colors.glassBorder }]}>
+          {currentStep > 1 && (
+            <View style={tw`flex-1`}>
+              <Button
+                variant="outline"
+                size="hero"
                 onPress={handlePrevStep}
-                style={tw`flex-1`}
               >
-                <View style={[
-                  tw`py-4 rounded-full items-center`,
-                  { backgroundColor: colors.glass }
-                ]}>
-                  <Text style={[tw`font-medium`, { color: colors.foreground }]}>
-                    Back
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            
-            {currentStep < totalSteps ? (
-              <TouchableOpacity
+                Back
+              </Button>
+            </View>
+          )}
+
+          {currentStep < totalSteps ? (
+            <View style={tw`flex-1`}>
+              <Button
+                size="hero"
                 onPress={handleNextStep}
                 disabled={!validateStep()}
-                style={tw`flex-1`}
               >
-                <View style={[
-                  tw`py-4 rounded-full items-center`,
-                  { backgroundColor: colors.primary },
-                  !validateStep() && { opacity: 0.5 }
-                ]}>
-                  <Text style={[tw`font-medium`, { color: colors.background }]}>
-                    Continue
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
+                Continue
+              </Button>
+            </View>
+          ) : (
+            <View style={tw`flex-1`}>
+              <Button
+                size="hero"
                 onPress={handleCreateBooking}
                 disabled={bookingLoading}
-                style={tw`flex-1`}
               >
-                <View style={[
-                  tw`py-4 rounded-full items-center`,
-                  { backgroundColor: colors.primary }
-                ]}>
-                  {bookingLoading ? (
-                    <ActivityIndicator color={colors.background} size="small" />
-                  ) : (
-                    <Text style={[tw`font-medium`, { color: colors.background }]}>
-                      Complete Booking
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            )}
-          </View>
+                {bookingLoading ? 'Processing...' : 'Complete Booking'}
+              </Button>
+            </View>
+          )}
         </View>
       </SafeAreaView>
     </Modal>

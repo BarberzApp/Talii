@@ -2,7 +2,7 @@ import React from 'react';
 import { TextInput, View, Text, TextInputProps } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-
+import { theme } from '../../lib/theme';
 interface TextareaProps extends TextInputProps {
   label?: string;
   error?: string;
@@ -26,6 +26,7 @@ const Textarea: React.FC<TextareaProps> = ({
   ...props
 }) => {
   const { colors } = useTheme();
+  const [isFocused, setIsFocused] = React.useState(false);
   const minHeight = multiline ? Math.max(80, rows * 20) : 50;
   const disabled = props.editable === false;
 
@@ -43,15 +44,19 @@ const Textarea: React.FC<TextareaProps> = ({
       )}
       <TextInput
         style={[
-          tw`w-full px-4 py-3 rounded-xl border text-base`,
           {
-            backgroundColor: colors.glass,
+            backgroundColor: colors.input,
             color: colors.foreground,
-            borderColor: error ? colors.destructive : colors.glassBorder,
+            borderColor: error ? colors.destructive : isFocused ? colors.ring : colors.border,
+            borderWidth: isFocused ? 2 : 1,
+            borderRadius: theme.borderRadius.lg,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
             minHeight,
             opacity: disabled ? 0.5 : 1,
             textAlignVertical: multiline ? 'top' : 'center',
             includeFontPadding: false,
+            fontSize: 16,
           },
         ]}
         placeholder={placeholder}
@@ -60,6 +65,14 @@ const Textarea: React.FC<TextareaProps> = ({
         onChangeText={onChangeText}
         multiline={multiline}
         maxLength={maxLength}
+        onFocus={(e) => {
+          setIsFocused(true);
+          props.onFocus && props.onFocus(e);
+        }}
+        onBlur={(e) => {
+          setIsFocused(false);
+          props.onBlur && props.onBlur(e);
+        }}
         {...props}
       />
       {description && !error && (

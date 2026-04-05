@@ -14,6 +14,8 @@ import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 import { AnimatedLogo } from '../shared/components/AnimatedLogo';
 import { AnimatedText } from '../shared/components/AnimatedText';
 import { ActionButton } from '../shared/components/ActionButton';
+import { GlassyCard } from '../shared/components/ui/GlassyCard';
+import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import type { RootStackParamList } from '../shared/types';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -55,7 +57,7 @@ export default function HomePage() {
       />
       
       {/* Theme toggle - quick access */}
-      <TouchableOpacity
+      <AnimatedPressable
         onPress={() => setColorScheme(themePreference === 'dark' ? 'light' : 'dark')}
         style={{
           position: 'absolute',
@@ -77,7 +79,7 @@ export default function HomePage() {
         ) : (
           <Moon size={22} color={colors.foreground} />
         )}
-      </TouchableOpacity>
+      </AnimatedPressable>
 
       {/* Animated Background */}
       <AnimatedBackground />
@@ -159,18 +161,15 @@ export default function HomePage() {
           alignItems: 'center',
           paddingHorizontal: 32,
         }}>
-          <View style={{
+          <GlassyCard style={{
             paddingVertical: 16,
             paddingHorizontal: 24,
             borderRadius: 16,
-            backgroundColor: colors.muted,
-            borderWidth: 1,
-            borderColor: colors.border,
           }}>
             <Animated.Text
               style={{
                 fontSize: 12,
-                color: colors.mutedForeground,
+                color: colors.foreground,
                 textAlign: 'center',
                 marginBottom: 4,
                 fontWeight: '500',
@@ -197,7 +196,7 @@ export default function HomePage() {
             >
               The future of booking.
             </Animated.Text>
-          </View>
+          </GlassyCard>
         </View>
       </View>
     </SafeAreaView>

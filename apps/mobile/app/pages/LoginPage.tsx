@@ -23,6 +23,9 @@ import { ActionButton } from '../shared/components/ActionButton';
 import { Card } from '../shared/components/ui/Card';
 import Input from '../shared/components/ui/Input';
 import { theme } from '../shared/lib/theme';
+import { GlassyCard } from '../shared/components/ui/GlassyCard';
+import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
+import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 
 type RootStackParamList = {
   Home: undefined;
@@ -393,7 +396,7 @@ export default function LoginPage() {
       <AnimatedBackground />
       
       {/* Back Button */}
-      <TouchableOpacity
+      <AnimatedPressable
         onPress={handleBack}
         style={{
           position: 'absolute',
@@ -411,7 +414,7 @@ export default function LoginPage() {
         }}
       >
         <ArrowLeft size={24} color={colors.foreground} />
-      </TouchableOpacity>
+      </AnimatedPressable>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -427,7 +430,8 @@ export default function LoginPage() {
             
             {/* Header */}
             {showContent && (
-              <View style={{ alignItems: 'center', marginBottom: 48 }}>
+              <AnimatedSection type="fade">
+                <View style={{ alignItems: 'center', marginBottom: 48 }}>
                 <View style={{
                   width: 80,
                   height: 80,
@@ -459,13 +463,15 @@ export default function LoginPage() {
                 }}>
                   Sign in to your account
                 </Text>
-              </View>
+                </View>
+              </AnimatedSection>
             )}
 
             {/* Login Form */}
             {showContent && (
-              <View style={{ width: '100%' }}>
-                <Card variant="hero" style={{ backgroundColor: colors.surface }}>
+              <AnimatedSection type="slideUp" delay={150}>
+                <View style={{ width: '100%' }}>
+                  <GlassyCard>
                   {error && (
                     <View style={{
                       padding: 16,
@@ -522,7 +528,7 @@ export default function LoginPage() {
                     }
                   />
 
-                  <TouchableOpacity
+                  <AnimatedPressable
                     onPress={handleForgotPassword}
                     disabled={isLoading}
                     style={{ alignSelf: 'flex-end', marginTop: 8, marginBottom: 24 }}
@@ -534,7 +540,7 @@ export default function LoginPage() {
                     }}>
                       Forgot password?
                     </Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
 
                   <ActionButton
                     variant="primary"
@@ -543,7 +549,7 @@ export default function LoginPage() {
                   >
                     {isLoading ? 'Signing in...' : 'Sign in'}
                   </ActionButton>
-                </Card>
+                </GlassyCard>
 
                 {/* Sign Up Link */}
                 <View style={{ alignItems: 'center', marginTop: 32 }}>
@@ -566,6 +572,7 @@ export default function LoginPage() {
                   </Text>
                 </View>
               </View>
+            </AnimatedSection>
             )}
           </View>
         </ScrollView>

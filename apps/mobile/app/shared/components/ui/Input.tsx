@@ -49,10 +49,10 @@ const Input: React.FC<InputProps> = ({
       <View
         style={[
           {
-            height: 56,
-            borderRadius: theme.borderRadius['2xl'],
-            borderWidth: 1,
-            borderColor: error ? colors.destructive : isFocused ? colors.primary : colors.border,
+            height: 48,
+            borderRadius: theme.borderRadius.lg,
+            borderWidth: isFocused ? 2 : 1,
+            borderColor: error ? colors.destructive : isFocused ? colors.ring : colors.border,
             backgroundColor: colors.input,
             paddingHorizontal: 16,
             flexDirection: 'row',

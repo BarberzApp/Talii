@@ -32,6 +32,9 @@ import {
   Dialog,
   DialogContent,
 } from '../shared/components/ui';
+import { GlassyCard } from '../shared/components/ui/GlassyCard';
+import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
+import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 
 const { width, height } = Dimensions.get('window');
 
@@ -428,7 +431,7 @@ export default function ProfilePreview() {
                     const itemWidth = (width - 48) / 3;
                     const hasFailed = failedImages.has(post.id);
                     return (
-                      <TouchableOpacity
+                      <AnimatedPressable
                         key={post.id}
                         style={[
                           tw`mb-2 rounded-lg overflow-hidden`,
@@ -493,7 +496,7 @@ export default function ProfilePreview() {
                             }}
                           />
                         )}
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                     );
                   })}
                 </View>
@@ -518,20 +521,10 @@ export default function ProfilePreview() {
             ) : (
               <View style={tw`space-y-4`}>
                 {services.map((service) => (
-                  <View
+                  <GlassyCard
                     key={service.id}
                     style={[
                       tw`p-4 rounded-xl`,
-                      {
-                        backgroundColor: colors.glass,
-                        borderWidth: 1,
-                        borderColor: colors.glassBorder,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 8,
-                        elevation: 3,
-                      }
                     ]}
                   >
                     <View style={tw`flex-row items-start justify-between mb-3`}>
@@ -598,7 +591,7 @@ export default function ProfilePreview() {
                          </Text>
                        </TouchableOpacity>
                     </View>
-                  </View>
+                  </GlassyCard>
                 ))}
               </View>
             )}
@@ -705,18 +698,7 @@ export default function ProfilePreview() {
           
           {/* Action Buttons */}
           <View style={tw`flex-row items-center gap-3`}>
-            <TouchableOpacity
-              style={[
-                tw`px-6 py-2 rounded-full`,
-                {
-                  backgroundColor: colors.primary,
-                  shadowColor: colors.primary,
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 6,
-                  elevation: 3,
-                }
-              ]}
+            <Button
               onPress={() => {
                 if (!profile) return;
                 navigation.navigate('BookingCalendar', {
@@ -725,11 +707,10 @@ export default function ProfilePreview() {
                   guestMode: isGuest,
                 });
               }}
+              style={tw`px-6`}
             >
-              <Text style={[tw`font-semibold text-sm`, { color: colors.primaryForeground }]}>
-                Book Appointment
-              </Text>
-            </TouchableOpacity>
+              Book Appointment
+            </Button>
 
             
             {/* Report/Block Menu - Only show if not own profile */}
@@ -831,7 +812,9 @@ export default function ProfilePreview() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {renderTabContent()}
+        <AnimatedSection key={activeTab} type="fade" duration={250}>
+          {renderTabContent()}
+        </AnimatedSection>
       </ScrollView>
 
       {/* Portfolio Image Dialog */}

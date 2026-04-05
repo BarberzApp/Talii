@@ -1,7 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Modal, FlatList, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Modal, FlatList } from 'react-native';
 import { ChevronDown, Check } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
+import tw from 'twrnc';
+import { BlurView } from 'expo-blur';
+import { AnimatedSection } from './AnimatedSection';
 
 interface SelectOption {
   value: string;
@@ -16,94 +19,35 @@ interface SelectProps {
   disabled?: boolean;
 }
 
-const Select: React.FC<SelectProps> = ({
+export function Select({
   value,
   onValueChange,
   options,
   placeholder = 'Select an option',
   disabled = false,
-}) => {
-  const { colors } = useTheme();
+}: SelectProps) {
+  const { colors, colorScheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find(option => option.value === value);
-
-  const styles = useMemo(() => StyleSheet.create({
-    trigger: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 6,
-      backgroundColor: colors.background,
-    },
-    triggerText: {
-      fontSize: 16,
-      color: colors.foreground,
-    },
-    placeholder: {
-      color: colors.mutedForeground,
-    },
-    disabled: {
-      opacity: 0.5,
-    },
-    overlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    content: {
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      margin: 20,
-      maxHeight: 400,
-      minWidth: 300,
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.foreground,
-    },
-    closeButton: {
-      fontSize: 24,
-      color: colors.foreground,
-    },
-    option: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    optionText: {
-      fontSize: 16,
-      color: colors.foreground,
-    },
-  }), [colors]);
 
   return (
     <View>
       <TouchableOpacity
-        style={[styles.trigger, disabled && styles.disabled]}
+        style={[
+          tw`flex-row items-center justify-between px-3 py-3 rounded-xl border`,
+          { 
+            borderColor: colors.border, 
+            backgroundColor: colors.background,
+            opacity: disabled ? 0.5 : 1
+          }
+        ]}
         onPress={() => !disabled && setIsOpen(true)}
         disabled={disabled}
       >
-        <Text style={[styles.triggerText, !selectedOption && styles.placeholder]}>
+        <Text style={[tw`text-base`, { color: selectedOption ? colors.foreground : colors.mutedForeground }]}>
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
-        <ChevronDown size={20} stroke={colors.mutedForeground} />
+        <ChevronDown size={20} color={colors.mutedForeground} />
       </TouchableOpacity>
 
       <Modal
@@ -112,37 +56,58 @@ const Select: React.FC<SelectProps> = ({
         animationType="fade"
         onRequestClose={() => setIsOpen(false)}
       >
-        <View style={styles.overlay}>
-          <View style={styles.content}>
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Select an option</Text>
-              <TouchableOpacity onPress={() => setIsOpen(false)}>
-                <Text style={styles.closeButton}>×</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={options}
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.option}
-                  onPress={() => {
-                    onValueChange(item.value);
-                    setIsOpen(false);
-                  }}
-                >
-                  <Text style={styles.optionText}>{item.label}</Text>
-                  {item.value === value && (
-                    <Check size={20} stroke={colors.primary} />
+        <TouchableOpacity 
+          style={tw`flex-1 justify-center items-center px-4`} 
+          activeOpacity={1} 
+          onPress={() => setIsOpen(false)}
+        >
+          <BlurView 
+            intensity={40} 
+            tint={colorScheme === 'dark' ? 'dark' : 'light'} 
+            style={tw`absolute inset-0`} 
+          />
+          
+          <TouchableOpacity activeOpacity={1} style={tw`w-full max-w-sm`}>
+            <AnimatedSection type="scale" duration={250} spring>
+              <View style={[
+                tw`rounded-[1rem] overflow-hidden`,
+                { backgroundColor: colors.popover, borderWidth: 1, borderColor: colors.border }
+              ]}>
+                <View style={[tw`px-4 py-4 border-b flex-row justify-between items-center`, { borderColor: colors.border }]}>
+                  <Text style={[tw`text-lg font-bold`, { color: colors.foreground }]}>Select Option</Text>
+                  <TouchableOpacity onPress={() => setIsOpen(false)}>
+                    <Text style={[tw`text-xl`, { color: colors.mutedForeground }]}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <FlatList
+                  data={options}
+                  keyExtractor={(item) => item.value}
+                  style={{ maxHeight: 300 }}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[tw`px-4 py-4 flex-row items-center justify-between border-b`, { borderColor: colors.border }]}
+                      onPress={() => {
+                        onValueChange(item.value);
+                        setIsOpen(false);
+                      }}
+                    >
+                      <Text style={[tw`text-base`, { color: colors.foreground, fontWeight: item.value === value ? 'bold' : 'normal' }]}>
+                        {item.label}
+                      </Text>
+                      {item.value === value && (
+                        <Check size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
+                />
+              </View>
+            </AnimatedSection>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
-};
+}
 
-export default Select; 
+export default Select;

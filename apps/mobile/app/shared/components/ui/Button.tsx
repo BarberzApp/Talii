@@ -9,6 +9,9 @@ import {
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
 import { theme } from '../../lib/theme';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 type ButtonSize = 'sm' | 'default' | 'lg' | 'hero' | 'icon';
 type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
@@ -86,24 +89,40 @@ const Button: React.FC<ButtonProps> = ({
     link: { color: colors.primary, textDecorationLine: 'underline' }
   };
 
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+  };
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  };
+
   return (
-    <TouchableOpacity
+    <AnimatedTouchableOpacity
       style={[
         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
         sizeContainerStyles[size],
         variantStyles[variant],
         disabled && { opacity: 0.5 },
-        style
+        style,
+        animatedStyle
       ]}
       onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={disabled}
-      activeOpacity={0.8}
+      activeOpacity={0.9}
       {...props}
     >
       {typeof children === 'string' ? (
         <Text
           style={[
-            tw`font-medium text-center`,
+            tw`font-semibold text-center`,
             textVariantStyles[variant],
             { fontSize: textSizeStyles[size] },
             textStyle
@@ -114,7 +133,7 @@ const Button: React.FC<ButtonProps> = ({
       ) : (
         children
       )}
-    </TouchableOpacity>
+    </AnimatedTouchableOpacity>
   );
 };
 

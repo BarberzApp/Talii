@@ -41,14 +41,6 @@ export const theme = {
     surface: '#FAFAF9',
     surfaceForeground: '#1C1917',
 
-    // @deprecated — retained for legacy references, migrate away from these
-    grey: '#272a2f',
-    saffronBrown: '#EE6D23',
-    coffeeBrown: '#D85A1A',
-    beige: '#F5F5F5',
-    darkGrey: '#272a2f',
-    lightGrey: '#F5F5F5',
-
     // Social Media Colors
     bookingHighlight: '#ff3b30',
     socialInstagram: '#e1306c',

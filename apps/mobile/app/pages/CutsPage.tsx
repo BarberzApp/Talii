@@ -12,6 +12,7 @@ import { supabase } from '../shared/lib/supabase';
 import { ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../shared/components/theme';
 import { theme } from '../shared/lib/theme';
+import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 
 const { height, width } = Dimensions.get('window');
 const PAGE_HEIGHT = height;
@@ -323,12 +324,12 @@ export default function CutsPage() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Back Button */}
       <SafeAreaView style={styles.backButtonContainer} edges={['top']}>
-        <TouchableOpacity
+        <AnimatedPressable
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <ArrowLeft size={22} color="#FFFFFF" />
-        </TouchableOpacity>
+        </AnimatedPressable>
       </SafeAreaView>
       
       <FlatList
