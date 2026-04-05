@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const nodemailer = require('nodemailer');
+
 
 // Import logger from TypeScript module
 // Next.js supports importing TS modules in JS files
@@ -208,12 +210,7 @@ async function sendBookingReminderSMS(bookingData) {
   
   try {
     const bookingDate = new Date(booking.date);
-    const formattedDate = bookingDate.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+
     const formattedTime = bookingDate.toLocaleTimeString('en-US', { 
       hour: 'numeric', 
       minute: '2-digit',

@@ -7,14 +7,14 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 // Check for required environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
-  logger.error('Missing Supabase environment variables', undefined, {
+  const missingInfo = {
     url: supabaseUrl ? 'present' : 'missing',
     anonKey: supabaseAnonKey ? 'present' : 'missing'
-  })
+  }
+  logger.error('Missing Supabase environment variables', undefined, missingInfo)
   
-  // In development, throw an error
   if (process.env.NODE_ENV === 'development') {
-    throw new Error('Missing Supabase environment variables')
+    throw new Error(`Missing Supabase environment variables: ${JSON.stringify(missingInfo)}`)
   }
 }
 
@@ -43,10 +43,22 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
 })
 
 // Create a Supabase client with the service role key for admin operations
-export const supabaseAdmin = createClient(supabaseUrl || '', supabaseServiceKey || supabaseAnonKey || '', {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
+// In production, this client MUST have the service role key to bypass RLS.
+// We throw an error if it's missing to avoid silent failures of admin tasks.
+if (!supabaseServiceKey && process.env.NODE_ENV === 'production') {
+  logger.error('CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing in production!')
+  // We don't throw here to avoid crashing the whole app, but admin calls will fail with the fallback anon key.
+}
+
+export const supabaseAdmin = createClient(
+  supabaseUrl || '', 
+  supabaseServiceKey || supabaseAnonKey || '', 
+  {
+    auth: {
+      persistSession: false, // Don't persist session for admin client
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
   }
-}) 
+)
+ 

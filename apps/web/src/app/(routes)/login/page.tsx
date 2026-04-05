@@ -53,9 +53,11 @@ export default function LoginPage() {
       logger.error('Redirect error', error)
       setError('Failed to redirect. Please try again.')
       
-      // Fallback to reload after 3 seconds
+      // Fallback to reload after 3 seconds - only if in browser
       setTimeout(() => {
-        window.location.reload()
+        if (typeof window !== 'undefined') {
+          window.location.reload()
+        }
       }, 3000)
     }
   }
@@ -103,10 +105,10 @@ export default function LoginPage() {
     try {
       logger.debug('Starting Google OAuth login')
       
-      // Use ngrok URL for development, production URL for production
-      const redirectUrl = process.env.NODE_ENV === 'development' 
-        ? 'https://3d6b1eb7b7c8.ngrok-free.app/auth/callback'
-        : 'https://www.bocmstyle.com/auth/callback';
+      // Use NEXT_PUBLIC_APP_URL for redirects
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3002');
+      const redirectUrl = `${baseUrl}/auth/callback`;
+
       
       logger.debug('Using redirect URL', { redirectUrl })
       

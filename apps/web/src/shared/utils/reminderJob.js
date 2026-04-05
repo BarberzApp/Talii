@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { sendBookingReminderSMS } = require('./sendSMS');
+
 const { supabaseAdmin } = require('../lib/supabase');
 const { logger } = require('../lib/logger');
 

@@ -12,6 +12,8 @@ import { ErrorReportingProvider } from "@/shared/components/error-reporting-prov
 import { cn } from "@/shared/lib/utils"
 import React from 'react'
 
+import dynamic from 'next/dynamic'
+
 const inter = Inter({ subsets: ['latin'] })
 
 export const viewport: Viewport = {
@@ -31,14 +33,17 @@ export const metadata: Metadata = {
   }
 }
 
-// ClientNavWrapper is a client component that handles nav visibility
-const ClientNavWrapper = React.lazy(() => import('@/shared/components/layout/client-nav-wrapper'));
+// Use next/dynamic instead of React.lazy for better App Router compatibility
+const ClientNavWrapper = dynamic(() => import('@/shared/components/layout/client-nav-wrapper'), {
+  ssr: true
+});
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head />

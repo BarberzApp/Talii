@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // TODO: Fix testing library imports
+
 // import React, { ReactElement } from 'react'
 // import { render, RenderOptions } from '@testing-library/react'
 // import { ThemeProvider } from '@/shared/components/theme/ThemeProvider'

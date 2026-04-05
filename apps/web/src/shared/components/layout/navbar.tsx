@@ -34,7 +34,7 @@ import { NotificationBell } from "@/shared/notifications/notification-bell"
 import { useCurrentPathname } from "@/shared/hooks/use-current-pathname"
 
 export function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, status } = useAuth();
   const isMobile = useMobile();
   const { resolvedTheme } = useTheme();
   const pathname = useCurrentPathname();

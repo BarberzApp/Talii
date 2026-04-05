@@ -1,5 +1,6 @@
 // Performance testing utilities for the barber app
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from '../lib/logger'
 
 export interface PerformanceMetrics {

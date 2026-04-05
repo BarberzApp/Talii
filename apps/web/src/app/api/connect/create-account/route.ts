@@ -9,12 +9,14 @@ if (!process.env.STRIPE_SECRET_KEY) {
 }
 
 const getBaseUrl = () => {
-  if (process.env.NODE_ENV === 'production') {
-    return process.env.NEXT_PUBLIC_APP_URL || 'https://bocmstyle.com';
-  } else {
-    return 'http://localhost:3002';
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
   }
+  return process.env.NODE_ENV === 'production' 
+    ? 'https://bocmstyle.com' 
+    : 'http://localhost:3002';
 };
+
 
 const APP_URL = getBaseUrl();
 logger.debug('Using app URL', { url: APP_URL });
