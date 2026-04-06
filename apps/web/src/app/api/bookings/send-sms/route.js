@@ -1,5 +1,10 @@
 import { sendSMS } from '@/shared/utils/sendSMS';
-const { logger } = require('@/shared/lib/logger');
+import { logger } from '@/shared/lib/logger';
+
+// Force dynamic rendering - this route must not be statically pre-rendered
+export const dynamic = 'force-dynamic';
+
+
 
 export async function POST(req) {
   try {
