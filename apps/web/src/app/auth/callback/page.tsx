@@ -106,19 +106,10 @@ export default function AuthCallbackPage() {
           }
         }
 
-        // Step 5: Determine redirect path
+        // Step 5: Determine redirect path using identical logic to standard login
         setStatus('redirecting')
-        let redirectPath = '/'
-
-        if (profile.email === 'primbocm@gmail.com') {
-          redirectPath = '/super-admin'
-        } else if (profile.role === 'barber') {
-          redirectPath = '/barber/onboarding'
-        } else if (profile.location) {
-          redirectPath = '/browse'
-        } else {
-          redirectPath = '/client/onboarding'
-        }
+        const { getRedirectPath } = await import('@/shared/hooks/use-auth-zustand')
+        const redirectPath = await getRedirectPath(userId)
 
         logger.debug('Redirecting', { redirectPath })
         
