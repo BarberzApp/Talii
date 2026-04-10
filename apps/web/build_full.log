@@ -1,0 +1,70 @@
+   ▲ Next.js 15.3.4
+   - Environments: .env
+   - Experiments (use with caution):
+     · clientTraceMetadata
+
+   Creating an optimized production build ...
+[@sentry/nextjs] Could not find `onRequestError` hook in instrumentation file. This indicates outdated configuration of the Sentry SDK. Use `Sentry.captureRequestError` to instrument the `onRequestError` hook: https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#errors-from-nested-react-server-components
+[@sentry/nextjs] It seems like you don't have a global error handler set up. It is recommended that you add a 'global-error.js' file with Sentry instrumentation so that React rendering errors are reported to Sentry. Read more: https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/#react-render-errors-in-app-router (you can suppress this warning by setting SENTRY_SUPPRESS_GLOBAL_ERROR_HANDLER_FILE_WARNING=1 as environment variable)
+[@sentry/nextjs] DEPRECATION WARNING: It is recommended renaming your `sentry.client.config.ts` file, or moving its content to `instrumentation-client.ts`. When using Turbopack `sentry.client.config.ts` will no longer work. Read more about the `instrumentation-client.ts` file: https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
+
+warn - The class `duration-[2000ms]` is ambiguous and matches multiple utilities.
+warn - If this is content and not a class, replace it with `duration-&lsqb;2000ms&rsqb;` to silence this warning.
+
+warn - The class `duration-[8000ms]` is ambiguous and matches multiple utilities.
+warn - If this is content and not a class, replace it with `duration-&lsqb;8000ms&rsqb;` to silence this warning.
+ ✓ Compiled successfully in 12.0s
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/67) ...
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /cuts. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /cuts. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+Error occurred prerendering page "/cuts". Read more: https://nextjs.org/docs/messages/prerender-error
+ReferenceError: status is not defined
+    at T (/Users/yaseenkhalil/Downloads/Talii_Code/apps/web/.next/server/chunks/7591.js:1:64268)
+    at nF (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:46843)
+    at nH (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:48618)
+    at nW (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:67762)
+    at nz (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:65337)
+    at nY (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:71193)
+    at nX (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:69876)
+    at nW (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:68029)
+    at nz (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:65337)
+    at nH (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:61531)
+Export encountered an error on /cuts/page: /cuts, exiting the build.
+TypeError: Cannot read properties of null (reading 'useContext')
+    at h (.next/server/pages/_error.js:1:7080)
+Error occurred prerendering page "/404". Read more: https://nextjs.org/docs/messages/prerender-error
+TypeError: Cannot read properties of null (reading 'useContext')
+    at exports.useContext (/Users/yaseenkhalil/Downloads/Talii_Code/apps/web/node_modules/react/cjs/react.production.js:489:33)
+    at h (/Users/yaseenkhalil/Downloads/Talii_Code/apps/web/.next/server/pages/_error.js:1:7080)
+    at renderWithHooks (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/react-dom/cjs/react-dom-server.edge.production.js:4189:18)
+    at renderElement (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/react-dom/cjs/react-dom-server.edge.production.js:4327:14)
+    at retryNode (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/react-dom/cjs/react-dom-server.edge.production.js:4871:16)
+    at renderNodeDestructive (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/react-dom/cjs/react-dom-server.edge.production.js:4689:7)
+    at renderNode (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/react-dom/cjs/react-dom-server.edge.production.js:5128:14)
+    at renderChildrenArray (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/react-dom/cjs/react-dom-server.edge.production.js:5019:7)
+    at retryNode (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/react-dom/cjs/react-dom-server.edge.production.js:4885:9)
+    at renderNodeDestructive (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/react-dom/cjs/react-dom-server.edge.production.js:4689:7)
+Export encountered an error on /_error: /404, exiting the build.
+ ⚠ Unsupported metadata themeColor is configured in metadata export in /privacy-policy. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /privacy-policy. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+Error occurred prerendering page "/privacy-policy". Read more: https://nextjs.org/docs/messages/prerender-error
+ReferenceError: status is not defined
+    at T (/Users/yaseenkhalil/Downloads/Talii_Code/apps/web/.next/server/chunks/7591.js:1:64268)
+    at nF (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:46843)
+    at nH (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:48618)
+    at nW (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:67762)
+    at nz (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:65337)
+    at nY (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:71193)
+    at nX (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:69876)
+    at nW (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:68029)
+    at nz (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:65337)
+    at nH (/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:76:61531)
+Export encountered an error on /(routes)/privacy-policy/page: /privacy-policy, exiting the build.
+ ⨯ Next.js build worker exited with code: 1 and signal: null

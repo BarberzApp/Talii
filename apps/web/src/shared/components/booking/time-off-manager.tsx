@@ -112,7 +112,7 @@ export function TimeOffManager({ timeOff: timeOffEntries, onAdd, onRemove }: Tim
             <Button
               onClick={handleAdd}
               disabled={isAdding || !newTimeOff.startDate || !newTimeOff.endDate}
-              className="w-full bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-bold shadow-xl rounded-xl h-12 text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold shadow-xl rounded-xl h-12 text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             >
               {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : "Schedule Time Off"}
             </Button>

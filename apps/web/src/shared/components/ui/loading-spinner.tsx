@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/utils'
+import { Loader2 } from 'lucide-react'
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg'
@@ -16,16 +17,15 @@ export function LoadingSpinner({ size = 'md', className, text }: LoadingSpinnerP
 
   return (
     <div className={cn('flex flex-col items-center justify-center space-y-4', className)}>
-      <div className="relative flex items-center justify-center" style={{ width: logoSize, height: logoSize }}>
+      <div className="relative flex items-center justify-center">
         {/* Animated Glow Effect - Talii primary #EE6D23 */}
-        <div className="absolute inset-0 rounded-full animate-talii-glow z-0" style={{ filter: 'blur(16px)', background: 'radial-gradient(circle at 60% 40%, hsl(var(--primary)) 0%, hsl(var(--background)) 40%, hsl(var(--muted)) 100%)', opacity: 0.7 }} />
-        {/* Floating Animation */}
-        <img
-          src="/brand/talii-logo-zoomed.png"
-          alt="Loading..."
-          width={logoSize}
-          height={logoSize}
-          className="relative z-10 animate-talii-float drop-shadow-xl object-contain max-h-full max-w-full"
+        <div 
+          className="absolute inset-0 rounded-full animate-talii-glow z-0" 
+          style={{ 
+            filter: 'blur(32px)', 
+            background: 'radial-gradient(circle at 60% 40%, hsl(var(--primary)) 0%, transparent 70%)', 
+            opacity: 0.3 
+          }} 
         />
       </div>
       {text && (

@@ -114,9 +114,9 @@ export function NotificationBell() {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="relative p-2 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 transition-all duration-300 hover:border-saffron/30 hover:shadow-lg hover:shadow-saffron/20 group"
+          className="relative p-2 h-10 w-10 rounded-full bg-muted hover:bg-muted/80 border border-border transition-all duration-300 hover:border-saffron/30 hover:shadow-lg hover:shadow-saffron/20 group"
         >
-          <Bell className="h-5 w-5 text-white group-hover:text-saffron transition-colors duration-300" />
+          <Bell className="h-5 w-5 text-foreground group-hover:text-saffron transition-colors duration-300" />
           {unreadCount > 0 && (
             <>
               {/* Red blinker dot */}
@@ -129,9 +129,9 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 bg-black/95 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <h4 className="font-semibold text-white">Notifications</h4>
+      <DropdownMenuContent align="end" className="w-80 bg-popover backdrop-blur-xl border border-border shadow-2xl rounded-2xl">
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h4 className="font-semibold text-foreground">Notifications</h4>
           {unreadCount > 0 && (
             <Button 
               variant="ghost" 
@@ -152,7 +152,7 @@ export function NotificationBell() {
               </div>
               <div className="flex-1">
                 <p className="text-xs font-medium text-saffron uppercase tracking-wider mb-0.5">Weekly Performance</p>
-                <div className="text-sm text-white leading-tight">
+                <div className="text-sm text-foreground leading-tight">
                   You have <span className="font-bold text-saffron">{weeklyStats.count}</span> {weeklyStats.count === 1 ? 'booking' : 'bookings'} this week and you are making <span className="font-bold text-saffron">${weeklyStats.total.toFixed(2)}</span> this week in Talii tips!
                 </div>
               </div>
@@ -161,8 +161,8 @@ export function NotificationBell() {
         )}
         <ScrollArea className="max-h-[300px]">
           {notifications.length === 0 ? (
-            <div className="p-6 text-center text-white/60">
-              <Bell className="h-8 w-8 mx-auto mb-2 text-white/40" />
+            <div className="p-6 text-center text-muted-foreground">
+              <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
               <p className="text-sm">No notifications</p>
             </div>
           ) : (
@@ -181,14 +181,14 @@ export function NotificationBell() {
                   <div className="flex flex-col gap-2">
                     <div className={cn(
                       "font-medium text-sm",
-                      !notification.read ? "text-saffron" : "text-white"
+                      !notification.read ? "text-saffron" : "text-foreground"
                     )}>
                       {notification.title}
                     </div>
-                    <div className="text-sm text-white/70 leading-relaxed">
+                    <div className="text-sm text-muted-foreground leading-relaxed">
                       {notification.message}
                     </div>
-                    <div className="text-xs text-white/50 flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground/50 flex items-center justify-between">
                       <span>{new Date(notification.created_at).toLocaleString()}</span>
                       {!notification.read && (
                         <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse" />

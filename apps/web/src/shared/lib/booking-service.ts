@@ -1,5 +1,6 @@
 import { supabase } from '@/shared/lib/supabase';
 import { NotificationService } from './notification-service';
+import { backgroundSync } from './background-sync';
 import { Booking, BookingStatus, PaymentStatus } from '../types';
 import { reportApiError } from '@/shared/utils/error-reporter';
 import { logger } from './logger';
@@ -106,6 +107,11 @@ export class BookingService {
         });
       }
 
+      // Trigger Google Calendar Sync
+      backgroundSync.syncBooking(data.id).catch(err => 
+        logger.error('Background sync trigger failed', err)
+      );
+
       return data;
     } catch (error) {
       logger.error('Error creating booking', error);
@@ -151,6 +157,11 @@ export class BookingService {
         type: 'booking_status_updated',
         booking_id: data.id
       });
+
+      // Trigger Google Calendar Sync (for status updates like cancellation/confirmation)
+      backgroundSync.syncBooking(data.id).catch(err => 
+        logger.error('Background sync trigger failed', err)
+      );
 
       return data;
     } catch (error) {

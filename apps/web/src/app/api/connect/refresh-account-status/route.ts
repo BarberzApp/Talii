@@ -102,8 +102,34 @@ export async function POST(request: Request) {
         }
       })
 
-    } catch (stripeError) {
+    } catch (stripeError: any) {
       logger.error('Error retrieving Stripe account', stripeError)
+      
+      // Specifically handle the "key does not have access to account" error
+      // This happens when the account was deleted in Stripe or keys were swapped (Test/Live)
+      const isMissingAccount = 
+        stripeError.type === 'StripeInvalidRequestError' && 
+        (stripeError.message?.includes('does not have access to account') || 
+         stripeError.message?.includes('No such account') ||
+         stripeError.code === 'resource_missing');
+
+      if (isMissingAccount) {
+        logger.warn('Stripe account invalid or missing, marking for re-connect', { 
+          stripeAccountId: barber.stripe_account_id,
+          error: stripeError.message 
+        });
+
+        return NextResponse.json({
+          success: false,
+          message: 'Stripe account invalid or access revoked',
+          data: {
+            hasStripeAccount: false,
+            needsReconnect: true,
+            error: stripeError.message
+          }
+        })
+      }
+
       return NextResponse.json(
         { error: 'Failed to retrieve Stripe account status' },
         { status: 500 }

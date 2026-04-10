@@ -826,7 +826,8 @@ function BookPageContent() {
                     key={reel.id}
                     className="group relative aspect-square bg-black/5 dark:bg-white/5 cursor-pointer"
                     onClick={() => {
-                      window.location.href = `/cuts?cutId=${reel.id}`
+                      setSelectedVideo(reel)
+                      setShowVideoDialog(true)
                     }}
                   >
                     <video
@@ -996,7 +997,7 @@ function BookPageContent() {
 
       {/* Video Dialog */}
       <Dialog open={showVideoDialog} onOpenChange={setShowVideoDialog}>
-        <DialogContent className="max-w-2xl w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-0 overflow-hidden">
+        <DialogContent className="max-w-2xl w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-0 overflow-hidden [&>button]:left-4 [&>button]:right-auto">
           {selectedVideo ? (
             <>
               <div className="aspect-video">
@@ -1037,7 +1038,7 @@ function BookPageContent() {
       {/* Image Dialog */}
       {selectedImage !== null && (
         <Dialog open={!!selectedImage} onOpenChange={open => !open && setSelectedImage(null)}>
-          <DialogContent className="max-w-2xl w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-0 flex flex-col items-center justify-center">
+          <DialogContent className="max-w-2xl w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-0 flex flex-col items-center justify-center [&>button]:left-4 [&>button]:right-auto">
             <div className="w-full flex items-center justify-between px-6 py-4 border-b border-black/10 dark:border-white/10">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-secondary/20">

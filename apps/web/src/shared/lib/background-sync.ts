@@ -45,7 +45,7 @@ export class BackgroundSyncService {
     // Set up interval
     this.syncInterval = setInterval(async () => {
       await this.runSync();
-    }, intervalMinutes * 60 * 1000);
+    }, intervalMinutes * 60 * 1000) as any;
   }
 
   // Stop background sync service
@@ -180,15 +180,39 @@ export class BackgroundSyncService {
   // Sync bookings to Google Calendar
   private async syncToGoogle(connection: any, api: GoogleCalendarAPI, results: any) {
     try {
-      const { data: bookings } = await supabase
+      // Fetch user profile to determine role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, name')
+        .eq('id', connection.user_id)
+        .single();
+
+      if (!profile) return;
+
+      let query = supabase
         .from('bookings')
         .select(`
           *,
           barbers!inner(*),
-          services!inner(*)
-        `)
-        .eq('user_id', connection.user_id)
-        .gte('start_time', new Date().toISOString());
+          services!inner(*),
+          profiles:client_id(name, email)
+        `);
+
+      if (profile.role === 'barber') {
+        const { data: barber } = await supabase
+          .from('barbers')
+          .select('id')
+          .eq('user_id', connection.user_id)
+          .single();
+        
+        if (barber) {
+          query = query.eq('barber_id', barber.id);
+        }
+      } else {
+        query = query.eq('client_id', connection.user_id);
+      }
+
+      const { data: bookings } = await query.gte('date', new Date().toISOString());
 
       for (const booking of bookings || []) {
         try {
@@ -200,16 +224,22 @@ export class BackgroundSyncService {
           );
 
           if (!isSynced) {
+            const isBarber = profile.role === 'barber';
+            const clientName = booking.profiles?.name || booking.guest_name || 'Client';
+            const serviceName = booking.services?.name || 'Service';
+            
             const event = {
-              summary: `Haircut with ${booking.barbers.name}`,
-              description: `Service: ${booking.services.name}\nNotes: ${booking.notes || 'No notes'}`,
+              summary: isBarber 
+                ? `${serviceName} - ${clientName}`
+                : `${serviceName} with ${booking.barbers.name}`,
+              description: `Service: ${serviceName}\nbBooking ID: ${booking.id}\nStatus: ${booking.status}${booking.notes ? `\nNotes: ${booking.notes}` : ''}`,
               location: booking.barbers.location || 'Barber Shop',
               start: {
-                dateTime: booking.start_time,
+                dateTime: booking.date,
                 timeZone: 'UTC'
               },
               end: {
-                dateTime: booking.end_time,
+                dateTime: new Date(new Date(booking.date).getTime() + (booking.services.duration || 30) * 60000).toISOString(),
                 timeZone: 'UTC'
               },
               reminders: {
@@ -313,6 +343,35 @@ export class BackgroundSyncService {
     } catch (error) {
       logger.error('Error in manual sync', error);
       throw error;
+    }
+  }
+
+  // Sync a specific booking immediately
+  async syncBooking(bookingId: string) {
+    try {
+      const { data: booking } = await supabase
+        .from('bookings')
+        .select('*, barbers(*)')
+        .eq('id', bookingId)
+        .single();
+
+      if (!booking) return;
+
+      // Sync for the barber
+      const barberConnection = await CalendarSyncService.getCalendarConnection(booking.barbers.user_id);
+      if (barberConnection?.sync_enabled) {
+        await this.syncConnection(barberConnection);
+      }
+
+      // Sync for the client (if registered)
+      if (booking.client_id) {
+        const clientConnection = await CalendarSyncService.getCalendarConnection(booking.client_id);
+        if (clientConnection?.sync_enabled) {
+          await this.syncConnection(clientConnection);
+        }
+      }
+    } catch (error) {
+      logger.error('Error in instant booking sync', error);
     }
   }
 

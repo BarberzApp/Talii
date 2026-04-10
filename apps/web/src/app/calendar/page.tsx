@@ -543,31 +543,24 @@ export default function BarberCalendar() {
                 <div className="animate-spin rounded-[1.5rem] h-14 w-14 border-b-2 border-secondary mx-auto mb-6 shadow-xl shadow-secondary/10"></div>
                 <p className="text-foreground/40 font-bebas text-xl tracking-widest italic animate-pulse">Syncing Appointments...</p>
               </div>
-            ) : events.length === 0 ? (
-               <div className="text-center py-16">
-                <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-2xl rounded-3xl p-10 max-w-lg mx-auto shadow-2xl ring-1 ring-white/5">
-                  <div className="bg-foreground/5 p-4 rounded-full w-fit mx-auto mb-6">
-                    <CalendarIcon className="h-14 w-14 text-foreground/30" />
-                  </div>
-                  <h3 className="text-foreground font-bebas font-bold text-3xl mb-3 tracking-wide">
-                    {userRole === 'barber' ? 'No appointments yet' : 'No upcoming appointments'}
-                  </h3>
-                  <p className="text-white/60 text-sm mb-6">
-                    {userRole === 'barber' 
-                      ? 'When clients book appointments with you, they will appear here.'
-                      : 'Book your first appointment to see it here.'
-                    }
-                  </p>
-                   <Button
-                    onClick={() => window.location.href = userRole === 'barber' ? '/profile' : '/browse'}
-                    className="bg-secondary text-primary-foreground hover:bg-secondary/90 rounded-2xl px-10 h-14 text-lg font-bold shadow-xl shadow-secondary/20 transition-all active:scale-95"
-                  >
-                    {userRole === 'barber' ? 'View Profile' : 'Browse Barbers'}
-                  </Button>
-                </div>
-              </div>
             ) : (
-              <EnhancedCalendar />
+              <div className="w-full">
+                <EnhancedCalendar />
+                {events.length === 0 && !loading && (
+                  <div className="mt-8 text-center animate-fade-in">
+                    <p className="text-foreground/40 font-bebas text-xl tracking-widest italic opacity-50">
+                      Currently no scheduled appointments
+                    </p>
+                    <Button
+                      variant="ghost"
+                      onClick={() => window.location.href = userRole === 'barber' ? '/profile' : '/browse'}
+                      className="mt-2 text-secondary hover:text-secondary/80 hover:bg-secondary/10"
+                    >
+                      {userRole === 'barber' ? 'Manage Services' : 'Browse Barbers'}
+                    </Button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

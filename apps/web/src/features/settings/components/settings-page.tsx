@@ -401,11 +401,11 @@ export function SettingsPage() {
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               {/* Modern Tab Navigation */}
               <div className="p-8 border-b border-black/5 dark:border-white/10">
-                <div className="bg-black/5 dark:bg-black/20 border border-black/5 dark:border-white/10 shadow-2xl rounded-[1.5rem] p-1.5 backdrop-blur-xl">
-                  <TabsList className="flex w-full gap-2 bg-transparent overflow-x-auto no-scrollbar scroll-smooth">
+                <div className="bg-black/5 dark:bg-black/20 border border-black/5 dark:border-white/10 shadow-2xl rounded-[1.5rem] p-1.5 backdrop-blur-xl overflow-hidden">
+                  <TabsList className="flex flex-wrap w-full gap-2 bg-transparent h-auto">
                     <TabsTrigger 
                       value="profile" 
-                      className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
+                      className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                         activeTab === 'profile' 
                           ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
                           : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
@@ -419,7 +419,7 @@ export function SettingsPage() {
                       <>
                         <TabsTrigger 
                           value="services" 
-                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
+                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'services' 
                               ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
@@ -431,7 +431,7 @@ export function SettingsPage() {
                         
                         <TabsTrigger 
                           value="earnings" 
-                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
+                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'earnings' 
                               ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
@@ -442,7 +442,7 @@ export function SettingsPage() {
                         </TabsTrigger>
                         <TabsTrigger 
                           value="addons" 
-                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
+                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'addons' 
                               ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
@@ -454,7 +454,7 @@ export function SettingsPage() {
                         
                         <TabsTrigger 
                           value="availability" 
-                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold whitespace-nowrap snap-start ${
+                          className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'availability' 
                               ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'

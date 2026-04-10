@@ -793,7 +793,7 @@ export default function ClientPortfolio() {
 
       {/* Video Dialog - Modernized */}
       <Dialog open={openDialog === 'video'} onOpenChange={open => setOpenDialog(open ? 'video' : null)}>
-        <DialogContent className="max-w-4xl w-full bg-background/80 border border-white/10 backdrop-blur-[40px] rounded-3xl shadow-2xl p-0 overflow-hidden outline-none">
+        <DialogContent className="max-w-4xl w-full bg-background/80 border border-white/10 backdrop-blur-[40px] rounded-3xl shadow-2xl p-0 overflow-hidden outline-none [&>button]:left-4 [&>button]:right-auto">
           {selectedVideo && (
             <div className="flex flex-col">
               <div className="relative aspect-video bg-black group/video">

@@ -13,7 +13,6 @@ import { supabase } from '@/shared/lib/supabase'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
 import { addToGoogleCalendar, addMultipleToGoogleCalendar, downloadICalFile } from '@/shared/lib/google-calendar-utils'
-import { ManualAppointmentForm } from './manual-appointment-form'
 import { EnhancedCalendarHeader } from './enhanced-calendar-header'
 import { EnhancedCalendarGrid } from './enhanced-calendar-grid'
 import { EnhancedCalendarEventsPanel } from './enhanced-calendar-events-panel'
@@ -313,7 +312,6 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [isMarkingMissed, setIsMarkingMissed] = useState(false)
-  const [showManualAppointmentForm, setShowManualAppointmentForm] = useState(false)
   const [isBarber, setIsBarber] = useState(false)
   const { user } = useAuth()
 
@@ -677,22 +675,6 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
           Today
         </button>
 
-        {/* Manual Appointment Button - Only for Barbers */}
-        {isBarber && (
-          <div className="mt-4 p-4 bg-gradient-to-r from-secondary/10 to-secondary/10 border border-secondary/20 rounded-xl backdrop-blur-sm">
-            <div className="text-center mb-3">
-              <h4 className="text-white font-semibold text-sm mb-1">Quick Add Appointment</h4>
-              <p className="text-white/60 text-xs">For walk-ins, phone bookings, or admin purposes</p>
-            </div>
-            <Button
-              onClick={() => setShowManualAppointmentForm(true)}
-              className="w-full bg-secondary text-black hover:bg-secondary/90 font-semibold rounded-lg py-2.5 shadow-lg shadow-secondary/25 transition-all duration-200 hover:scale-[1.02]"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Manual Appointment
-            </Button>
-          </div>
-        )}
 
         {selectedDate && (
           <EnhancedCalendarEventsPanel
@@ -713,17 +695,6 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
         user={user}
       />
 
-      {/* Manual Appointment Form */}
-      <ManualAppointmentForm
-        isOpen={showManualAppointmentForm}
-        onClose={() => setShowManualAppointmentForm(false)}
-        selectedDate={selectedDate || undefined}
-        onAppointmentCreated={(appointment) => {
-          setShowManualAppointmentForm(false)
-          // Refresh the calendar to show the new appointment
-          fetchBookings()
-        }}
-      />
     </div>
   )
 }

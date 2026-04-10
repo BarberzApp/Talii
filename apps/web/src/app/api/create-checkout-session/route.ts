@@ -215,8 +215,25 @@ export async function POST(request: Request) {
       url: session.url,
       sessionId: session.id 
     })
-  } catch (error) {
+  } catch (error: any) {
     logger.error("Error creating checkout session", error)
+    
+    // Handle specific Stripe account errors
+    if (error.type === 'StripeInvalidRequestError' && 
+       (error.message?.includes('No such destination') || 
+        error.message?.includes('does not have access to account') ||
+        error.param === 'payment_intent_data[transfer_data][destination]')) {
+      
+      return NextResponse.json(
+        { 
+          error: "This barber's payment account is not correctly configured or has been disconnected. Please notify them.",
+          details: error.message,
+          code: 'STRIPE_ACCOUNT_INVALID'
+        },
+        { status: 400 } // Bad request because the destination is invalid
+      )
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create checkout session" },
       { status: 500 }

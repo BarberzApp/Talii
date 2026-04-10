@@ -96,10 +96,21 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
 
       if (refreshResponse.ok) {
         const refreshData = await refreshResponse.json();
-        logger.debug('Stripe account refresh result', { hasAccount: refreshData.success && refreshData.data.hasStripeAccount });
+        logger.debug('Stripe account refresh result', { 
+          hasAccount: refreshData.success && refreshData.data.hasStripeAccount,
+          needsReconnect: refreshData.data?.needsReconnect
+        });
         
         if (refreshData.success && refreshData.data.hasStripeAccount) {
           setHasStripeAccount(true);
+          return;
+        }
+
+        // If the account needs re-connecting (e.g. invalid key/account deleted)
+        // explicitly set hasStripeAccount to false to show the setup button
+        if (refreshData.data?.needsReconnect) {
+          logger.warn('Stripe account needs re-connect', { barberId });
+          setHasStripeAccount(false);
           return;
         }
       }
@@ -333,7 +344,9 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
     return (
       <div className={cn("rounded-2xl min-h-[300px]", isLight ? "bg-surface border border-border" : "bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10")}>
         <CardContent className="pt-6 flex justify-center items-center min-h-[300px]">
-          <LoadingSpinner size="md" text="Loading earnings..." />
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-muted-foreground font-medium animate-pulse">Loading earnings dashboard...</p>
+          </div>
         </CardContent>
       </div>
     )

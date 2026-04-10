@@ -126,7 +126,7 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
                 type="date"
                 value={newHours.date}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, date: e.target.value })}
-                className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl h-12 text-base transition-all"
+                className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary focus:ring-1 focus:ring-secondary/50 rounded-xl h-12 text-base transition-all shadow-inner"
               />
             </div>
             <div className="space-y-3">
@@ -198,7 +198,7 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
           <Button
             onClick={handleAdd}
             disabled={isAdding || !newHours.date}
-            className="w-full bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-bold shadow-xl rounded-xl h-14 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold shadow-xl rounded-xl h-14 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
           >
             {isAdding ? <Loader2 className="h-6 w-6 animate-spin mr-3" /> : <Plus className="h-6 w-6 mr-3" />}
             {isAdding ? "Saving..." : "Set Special Hours"}
