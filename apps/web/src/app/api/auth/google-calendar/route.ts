@@ -4,12 +4,20 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { logger } from '@/shared/lib/logger';
 
+const getRedirectUri = () => {
+  if (process.env.GOOGLE_REDIRECT_URI) {
+    return process.env.GOOGLE_REDIRECT_URI;
+  }
+  
+  // Fallback for development/preview if GOOGLE_REDIRECT_URI is not set
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002';
+  return `${baseUrl}/api/auth/google-calendar/callback`;
+};
+
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.NODE_ENV === 'development' 
-    ? 'https://3d6b1eb7b7c8.ngrok-free.app/api/auth/google-calendar/callback'
-    : process.env.GOOGLE_REDIRECT_URI
+  getRedirectUri()
 );
 
 export async function GET(request: NextRequest) {
