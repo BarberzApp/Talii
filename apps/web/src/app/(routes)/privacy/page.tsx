@@ -135,7 +135,7 @@ export default function PrivacyPage() {
                     If you created an account inside our mobile application, you have the right to request the complete deletion of your account and associated personal data. 
                   </p>
                   <ul className="list-disc pl-5 mt-3 space-y-2 text-sm text-muted-foreground">
-                    <li><strong>In-App Deletion:</strong> You can delete your account by logging into the Talii app and navigating to Settings > Delete Account.</li>
+                    <li><strong>In-App Deletion:</strong> You can delete your account by logging into the Talii app and navigating to Settings &gt; Delete Account.</li>
                     <li><strong>Email Request:</strong> Alternatively, you can email us at support@talii.com with the subject "Account Deletion Request".</li>
                   </ul>
                   <p className="text-sm text-muted-foreground mt-3">

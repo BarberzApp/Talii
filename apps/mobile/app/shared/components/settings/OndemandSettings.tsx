@@ -132,7 +132,7 @@ export function OnDemandSettings({ barberId, onUpdate }: OnDemandSettingsProps) 
           <View style={[tw`flex-row items-center justify-between p-4 rounded-xl border mb-6`, { borderColor: colors.border }]}>
             <View style={tw`flex-1 pr-4`}>
               <Text style={[tw`text-base font-medium`, { color: colors.foreground }]}>Enable On-Demand</Text>
-              <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>You'll receive notifications for urgent requests.</Text>
+              <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>You&apos;ll receive notifications for urgent requests.</Text>
             </View>
             <Switch
               value={isEnabled}

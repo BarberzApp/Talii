@@ -1,0 +1,408 @@
+
+> bocm@1.0.0 lint
+> expo lint app -- --no-error-on-unmatched-pattern
+
+env: load .env
+env: export EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY EXPO_PUBLIC_API_URL EXPO_PUBLIC_SENTRY_DSN
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/components/OptimizedVideoCard.tsx
+    2:107  warning  'Linking' is defined but never used                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   42:6    warning  React Hook useEffect has a missing dependency: 'onVideoStateChange'. Either include it or remove the dependency array. If 'onVideoStateChange' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+   82:6    warning  React Hook useCallback has a missing dependency: 'item.id'. Either include it or remove the dependency array                                                                                                                                         react-hooks/exhaustive-deps
+   96:6    warning  React Hook useCallback has a missing dependency: 'item.id'. Either include it or remove the dependency array                                                                                                                                         react-hooks/exhaustive-deps
+  174:6    warning  React Hook useEffect has a missing dependency: 'fadeAnim'. Either include it or remove the dependency array                                                                                                                                          react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/hooks/useOptimizedFeed.ts
+   16:10  warning  'locationPermission' is assigned a value but never used                                                                                                                               @typescript-eslint/no-unused-vars
+  180:6   warning  React Hook useCallback has missing dependencies: 'calculateDistance', 'endReached', 'loading', 'useLocation', and 'userLocation'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  264:9   warning  'geocodeLocation' is assigned a value but never used                                                                                                                                  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/navigation/AppNavigator.tsx
+  10:9   warning  'Home' is defined but never used              @typescript-eslint/no-unused-vars
+  10:59  warning  'Video' is defined but never used             @typescript-eslint/no-unused-vars
+  14:8   warning  'FindBarberPage' is defined but never used    @typescript-eslint/no-unused-vars
+  32:10  warning  'ROUTE_MAPPING' is defined but never used     @typescript-eslint/no-unused-vars
+  32:25  warning  'isRouteProtected' is defined but never used  @typescript-eslint/no-unused-vars
+  32:43  warning  'getRouteRole' is defined but never used      @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/BarberOnboardingPage.tsx
+    5:5    warning  'TextInput' is defined but never used                        @typescript-eslint/no-unused-vars
+   49:10   warning  'SocialMediaLinks' is defined but never used                 @typescript-eslint/no-unused-vars
+   51:10   warning  'BARBER_SPECIALTIES' is defined but never used               @typescript-eslint/no-unused-vars
+   53:10   warning  'handleStripeConnect' is defined but never used              @typescript-eslint/no-unused-vars
+   54:118  warning  'validateServices' is defined but never used                 @typescript-eslint/no-unused-vars
+   59:7    warning  'API_BASE_URL' is assigned a value but never used            @typescript-eslint/no-unused-vars
+   93:15   warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+  108:13   warning  'theme' is assigned a value but never used                   @typescript-eslint/no-unused-vars
+  115:12   warning  'stripeStatus' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  118:12   warning  'showStripeWebView' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  118:31   warning  'setShowStripeWebView' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  119:12   warning  'stripeUrl' is assigned a value but never used               @typescript-eslint/no-unused-vars
+  119:23   warning  'setStripeUrl' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  553:23   warning  'result' is assigned a value but never used                  @typescript-eslint/no-unused-vars
+  653:11   warning  'handleSkip' is assigned a value but never used              @typescript-eslint/no-unused-vars
+  682:15   warning  'Icon' is assigned a value but never used                    @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/BookingCalendarPage.tsx
+  15:14  warning  A `require()` style import is forbidden         @typescript-eslint/no-require-imports
+  16:1   warning  Import in body of module; reorder to top        import/first
+  17:1   warning  Import in body of module; reorder to top        import/first
+  26:55  warning  'guestMode' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/BookingSuccessPage.tsx
+  13:14  warning  A `require()` style import is forbidden   @typescript-eslint/no-require-imports
+  14:1   warning  Import in body of module; reorder to top  import/first
+  15:1   warning  Import in body of module; reorder to top  import/first
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/BrowsePage.tsx
+     1:38  warning  'useMemo' is defined but never used                                                                                                  @typescript-eslint/no-unused-vars
+    14:3   warning  'PermissionsAndroid' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+    15:3   warning  'Platform' is defined but never used                                                                                                 @typescript-eslint/no-unused-vars
+    16:3   warning  'Linking' is defined but never used                                                                                                  @typescript-eslint/no-unused-vars
+    26:8   warning  'ProfilePreview' is defined but never used                                                                                           @typescript-eslint/no-unused-vars
+    36:8   warning  '/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/lucide-react-native/dist/esm/lucide-react-native.js' imported multiple times  import/no-duplicates
+    37:10  warning  'Avatar' is defined but never used                                                                                                   @typescript-eslint/no-unused-vars
+    39:10  warning  'AnimatedSection' is defined but never used                                                                                          @typescript-eslint/no-unused-vars
+    48:22  warning  '/Users/yaseenkhalil/Downloads/Talii_Code/node_modules/lucide-react-native/dist/esm/lucide-react-native.js' imported multiple times  import/no-duplicates
+    49:29  warning  'sortByDistance' is defined but never used                                                                                           @typescript-eslint/no-unused-vars
+    51:3   warning  'getLocationPreferences' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+    52:3   warning  'setLocationEnabled' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+    53:3   warning  'updateLastLocation' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+    54:3   warning  'getLastLocation' is defined but never used                                                                                          @typescript-eslint/no-unused-vars
+    58:9   warning  'width' is assigned a value but never used                                                                                           @typescript-eslint/no-unused-vars
+    63:6   warning  'BarberFromDB' is defined but never used                                                                                             @typescript-eslint/no-unused-vars
+    80:6   warning  'ProfileFromDB' is defined but never used                                                                                            @typescript-eslint/no-unused-vars
+   116:6   warning  'SortOption' is defined but never used                                                                                               @typescript-eslint/no-unused-vars
+   117:6   warning  'SortOrder' is defined but never used                                                                                                @typescript-eslint/no-unused-vars
+   226:6   warning  React Hook useEffect has a missing dependency: 'fetchReviews'. Either include it or remove the dependency array                      react-hooks/exhaustive-deps
+   394:5   warning  'locationPermission' is assigned a value but never used                                                                              @typescript-eslint/no-unused-vars
+   398:5   warning  'getUserLocation' is assigned a value but never used                                                                                 @typescript-eslint/no-unused-vars
+   404:10  warning  'showReviewForm' is assigned a value but never used                                                                                  @typescript-eslint/no-unused-vars
+   434:6   warning  React Hook useEffect has missing dependencies: 'fetchBarbers' and 'fetchPosts'. Either include them or remove the dependency array   react-hooks/exhaustive-deps
+   499:6   warning  React Hook useEffect has a missing dependency: 'userLocation.coords'. Either include it or remove the dependency array               react-hooks/exhaustive-deps
+  1095:9   warning  'renderStarRating' is assigned a value but never used                                                                                @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/CalendarPage.tsx
+   14:3   warning  'TextInput' is defined but never used                                                                                                               @typescript-eslint/no-unused-vars
+   19:3   warning  'User' is defined but never used                                                                                                                    @typescript-eslint/no-unused-vars
+   20:3   warning  'DollarSign' is defined but never used                                                                                                              @typescript-eslint/no-unused-vars
+   22:3   warning  'Plus' is defined but never used                                                                                                                    @typescript-eslint/no-unused-vars
+   23:3   warning  'RefreshCw' is defined but never used                                                                                                               @typescript-eslint/no-unused-vars
+   24:3   warning  'Filter' is defined but never used                                                                                                                  @typescript-eslint/no-unused-vars
+   25:3   warning  'Search' is defined but never used                                                                                                                  @typescript-eslint/no-unused-vars
+   35:10  warning  'GlassyCard' is defined but never used                                                                                                              @typescript-eslint/no-unused-vars
+   36:10  warning  'AnimatedSection' is defined but never used                                                                                                         @typescript-eslint/no-unused-vars
+  139:6   warning  React Hook useEffect has missing dependencies: 'fadeAnim', 'glowAnim', 'scaleAnim', and 'user'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  146:6   warning  React Hook useEffect has a missing dependency: 'fetchServices'. Either include it or remove the dependency array                                    react-hooks/exhaustive-deps
+  153:6   warning  React Hook useEffect has a missing dependency: 'fetchTimeSlots'. Either include it or remove the dependency array                                   react-hooks/exhaustive-deps
+  225:9   warning  'hasEvents' is assigned a value but never used                                                                                                      @typescript-eslint/no-unused-vars
+  280:13  warning  'itemType' is assigned a value but never used                                                                                                       @typescript-eslint/no-unused-vars
+  288:13  warning  'itemTypeCapitalized' is assigned a value but never used                                                                                            @typescript-eslint/no-unused-vars
+  304:13  warning  'itemType' is assigned a value but never used                                                                                                       @typescript-eslint/no-unused-vars
+  312:13  warning  'itemTypeCapitalized' is assigned a value but never used                                                                                            @typescript-eslint/no-unused-vars
+  395:9   warning  'getGlowOpacity' is assigned a value but never used                                                                                                 @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/CutsPage.tsx
+   2:72  warning  'ActivityIndicator' is defined but never used                                                                @typescript-eslint/no-unused-vars
+   2:91  warning  'TouchableOpacity' is defined but never used                                                                 @typescript-eslint/no-unused-vars
+  14:10  warning  'theme' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  17:17  warning  'width' is assigned a value but never used                                                                   @typescript-eslint/no-unused-vars
+  45:10  warning  'videoStates' is assigned a value but never used                                                             @typescript-eslint/no-unused-vars
+  84:6   warning  React Hook useEffect has a missing dependency: 'activeId'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/EmailConfirmationScreen.tsx
+  54:6   warning  React Hook useEffect has a missing dependency: 'handleConfirmed'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  83:14  warning  'error' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/FindBarberPage.tsx
+  22:14  warning  A `require()` style import is forbidden    @typescript-eslint/no-require-imports
+  63:13  warning  'user' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/HomePage.tsx
+   7:3   warning  'TouchableOpacity' is defined but never used          @typescript-eslint/no-unused-vars
+  28:10  warning  'showSocialProof' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/LoginPage.tsx
+   23:10  warning  'Card' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+   26:10  warning  'GlassyCard' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+   43:11  warning  'user' is assigned a value but never used                                                                          @typescript-eslint/no-unused-vars
+   77:6   warning  React Hook useEffect has a missing dependency: 'handleRedirect'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  346:14  warning  'error' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+  351:9   warning  'handleGoogleSignIn' is assigned a value but never used                                                            @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/PrivacyPolicyPage.tsx
+  5:10  warning  'LinearGradient' is defined but never used  @typescript-eslint/no-unused-vars
+  9:10  warning  'theme' is defined but never used           @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/ProfilePortfolio.tsx
+    33:3   warning  'Loader2' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+    41:8   warning  'VideoPreview' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+    48:16  warning  'height' is assigned a value but never used                                                                          @typescript-eslint/no-unused-vars
+    74:14  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead                                                          @typescript-eslint/array-type
+    81:13  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead                                                          @typescript-eslint/array-type
+   126:30  warning  'logout' is assigned a value but never used                                                                          @typescript-eslint/no-unused-vars
+   136:25  warning  'setSelectedVideo' is assigned a value but never used                                                                @typescript-eslint/no-unused-vars
+   274:6   warning  React Hook useEffect has a missing dependency: 'fetchProfileData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   284:9   warning  'loadMoreCuts' is assigned a value but never used                                                                    @typescript-eslint/no-unused-vars
+   394:9   warning  'pastBarbers' is assigned a value but never used                                                                     @typescript-eslint/no-unused-vars
+   430:30  warning  'error' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+   461:30  warning  'error' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+   522:30  warning  'error' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+  1022:24  warning  'error' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+  1064:24  warning  'error' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/ProfilePreview.tsx
+   17:21   warning  'Calendar' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+   17:31   warning  'MapPin' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+   17:39   warning  'Star' is defined but never used                                                                                     @typescript-eslint/no-unused-vars
+   17:72   warning  'Users' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+   17:88   warning  'Camera' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+   17:96   warning  'Loader2' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+   17:105  warning  'Eye' is defined but never used                                                                                      @typescript-eslint/no-unused-vars
+   17:117  warning  'Share2' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+   17:125  warning  'Flag' is defined but never used                                                                                     @typescript-eslint/no-unused-vars
+   17:131  warning  'Ban' is defined but never used                                                                                      @typescript-eslint/no-unused-vars
+   28:3    warning  'Card' is defined but never used                                                                                     @typescript-eslint/no-unused-vars
+   29:3    warning  'CardContent' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+   30:3    warning  'Badge' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+   31:3    warning  'Avatar' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+   39:16   warning  'height' is assigned a value but never used                                                                          @typescript-eslint/no-unused-vars
+   71:14   warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead                                                          @typescript-eslint/array-type
+  130:6    warning  React Hook useEffect has a missing dependency: 'fetchProfileData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  339:9    warning  'formatDate' is assigned a value but never used                                                                      @typescript-eslint/no-unused-vars
+  347:9    warning  'formatTime' is assigned a value but never used                                                                      @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/SettingsPage.tsx
+   6:3   warning  'TouchableOpacity' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+  19:26  warning  '/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/theme/index.ts' imported multiple times  import/no-duplicates
+  21:29  warning  '/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/theme/index.ts' imported multiple times  import/no-duplicates
+  28:10  warning  'Button' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+  28:18  warning  'Card' is defined but never used                                                                                     @typescript-eslint/no-unused-vars
+  28:24  warning  'CardContent' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  36:3   warning  'Share2' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+  43:3   warning  'RefreshCw' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+  66:10  warning  'showVerifyBanner' is assigned a value but never used                                                                @typescript-eslint/no-unused-vars
+  66:28  warning  'setShowVerifyBanner' is assigned a value but never used                                                             @typescript-eslint/no-unused-vars
+  83:6   warning  React Hook useEffect has a missing dependency: 'loadSettingsData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/SignUpPage.tsx
+   23:10  warning  'Card' is defined but never used                         @typescript-eslint/no-unused-vars
+   26:10  warning  'GlassyCard' is defined but never used                   @typescript-eslint/no-unused-vars
+  234:11  warning  'handleGoogleSignUp' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/pages/TermsPage.tsx
+   6:10  warning  'LinearGradient' is defined but never used  @typescript-eslint/no-unused-vars
+  10:10  warning  'theme' is defined but never used           @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ActionButton.tsx
+  32:9  warning  'isTertiary' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/AnimatedBackground.tsx
+   43:6  warning  React Hook useEffect has missing dependencies: 'animatedValue' and 'delay'. Either include them or remove the dependency array            react-hooks/exhaustive-deps
+  107:6  warning  React Hook useEffect has missing dependencies: 'animatedValue', 'delay', and 'index'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  158:6  warning  React Hook useEffect has a missing dependency: 'backgroundOpacity'. Either include it or remove the dependency array                      react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/AnimatedLogo.tsx
+   39:6  warning  React Hook useEffect has missing dependencies: 'animatedValue' and 'delay'. Either include them or remove the dependency array                     react-hooks/exhaustive-deps
+  117:6  warning  React Hook useEffect has missing dependencies: 'opacityValue', 'pulseValue', and 'scaleValue'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/AnimatedText.tsx
+   2:16  warning  'Text' is defined but never used                                                                                                          @typescript-eslint/no-unused-vars
+  83:6   warning  React Hook useEffect has missing dependencies: 'animatedValues', 'delay', and 'text'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/BookingForm.tsx
+    7:3   warning  'TextInput' is defined but never used                                                                                                                             @typescript-eslint/no-unused-vars
+   20:13  warning  'WebBrowser' is defined but never used                                                                                                                            @typescript-eslint/no-unused-vars
+   21:26  warning  'presentPaymentSheet' is defined but never used                                                                                                                   @typescript-eslint/no-unused-vars
+   35:1   warning  Import in body of module; reorder to top                                                                                                                          import/first
+   36:1   warning  Import in body of module; reorder to top                                                                                                                          import/first
+   37:1   warning  Import in body of module; reorder to top                                                                                                                          import/first
+   37:10  warning  'supabase' is defined but never used                                                                                                                              @typescript-eslint/no-unused-vars
+   38:1   warning  Import in body of module; reorder to top                                                                                                                          import/first
+   39:1   warning  Import in body of module; reorder to top                                                                                                                          import/first
+   39:10  warning  'notificationService' is defined but never used                                                                                                                   @typescript-eslint/no-unused-vars
+   39:31  warning  'formatAppointmentTime' is defined but never used                                                                                                                 @typescript-eslint/no-unused-vars
+   40:1   warning  Import in body of module; reorder to top                                                                                                                          import/first
+  103:10  warning  'paymentType' is assigned a value but never used                                                                                                                  @typescript-eslint/no-unused-vars
+  103:23  warning  'setPaymentType' is assigned a value but never used                                                                                                               @typescript-eslint/no-unused-vars
+  123:6   warning  React Hook useEffect has missing dependencies: 'fetchBarberStatus', 'fetchServices', and 'userProfile?.name'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  145:6   warning  React Hook useEffect has a missing dependency: 'fetchTimeSlots'. Either include it or remove the dependency array                                                 react-hooks/exhaustive-deps
+  396:36  warning  A `require()` style import is forbidden                                                                                                                           @typescript-eslint/no-require-imports
+  454:9   warning  'getStepDescription' is assigned a value but never used                                                                                                           @typescript-eslint/no-unused-vars
+  473:9   warning  'BOOKING_FEE_AMOUNT' is assigned a value but never used                                                                                                           @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ReviewCard.tsx
+  3:16  warning  'MessageSquare' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/StaircaseGrid.tsx
+  4:3  warning  'Text' is defined but never used               @typescript-eslint/no-unused-vars
+  9:3  warning  'ActivityIndicator' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/auth/AuthGuard.tsx
+  57:6  warning  React Hook useEffect has a missing dependency: 'reset'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/AddonsSettings.tsx
+  17:10  warning  'Button' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  20:3   warning  'Plus' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  25:3   warning  'AlertCircle' is defined but never used                                                                          @typescript-eslint/no-unused-vars
+  26:3   warning  'CheckCircle' is defined but never used                                                                          @typescript-eslint/no-unused-vars
+  27:3   warning  'Sparkles' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+  54:6   warning  React Hook useEffect has a missing dependency: 'loadBarberId'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/AdvancedSchedulingSlots.tsx
+  26:3   warning  'Clock' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+  27:3   warning  'Calendar' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+  28:3   warning  'Save' is defined but never used                                                                                        @typescript-eslint/no-unused-vars
+  29:3   warning  'AlertCircle' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  52:11  warning  'user' is assigned a value but never used                                                                               @typescript-eslint/no-unused-vars
+  64:6   warning  React Hook useEffect has a missing dependency: 'loadSchedulingSlots'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/AvailabilityManager.tsx
+   19:3   warning  'Clock' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+   24:3   warning  'RefreshCw' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+   65:7   warning  'NUMBER_TO_DAY' is assigned a value but never used                                                                   @typescript-eslint/no-unused-vars
+   93:11  warning  'user' is assigned a value but never used                                                                            @typescript-eslint/no-unused-vars
+  109:6   warning  React Hook useEffect has a missing dependency: 'loadAvailability'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/BookingRestrictionsSettings.tsx
+  23:3   warning  'AlertCircle' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  32:11  warning  'user' is assigned a value but never used                                                                            @typescript-eslint/no-unused-vars
+  46:6   warning  React Hook useEffect has a missing dependency: 'loadRestrictions'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/CalendarSyncSettings.tsx
+   6:3  warning  'TouchableOpacity' is defined but never used  @typescript-eslint/no-unused-vars
+  24:3  warning  'AlertCircle' is defined but never used       @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/EarningsDashboard.tsx
+    8:3   warning  'Linking' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+   17:29  warning  'LoadingSpinner' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+   68:6   warning  React Hook useEffect has a missing dependency: 'loadEarningsData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  191:15  warning  'result' is assigned a value but never used                                                                          @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/OndemandSettings.tsx
+  31:11  warning  'user' is assigned a value but never used                                                                        @typescript-eslint/no-unused-vars
+  47:6   warning  React Hook useEffect has a missing dependency: 'loadSettings'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/ProfileSettings.tsx
+  17:10  warning  'Button' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  32:3   warning  'Info' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  33:3   warning  'Camera' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  37:3   warning  'CARRIER_OPTIONS' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+  38:3   warning  'PRICE_RANGES' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+  81:6   warning  React Hook useEffect has a missing dependency: 'fetchProfile'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/ServicesSettings.tsx
+  16:10  warning  'Button' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  25:3   warning  'AlertCircle' is defined but never used                                                                          @typescript-eslint/no-unused-vars
+  55:6   warning  React Hook useEffect has a missing dependency: 'loadBarberId'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/settings/ShareSettings.tsx
+    9:3   warning  'Platform' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+   22:3   warning  'ExternalLink' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+   26:3   warning  'Globe' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+   27:3   warning  'Download' is defined but never used                                                                                @typescript-eslint/no-unused-vars
+   54:6   warning  React Hook useEffect has a missing dependency: 'loadProfileData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  115:14  warning  'err' is defined but never used                                                                                     @typescript-eslint/no-unused-vars
+  138:9   warning  'openBookingLink' is assigned a value but never used                                                                @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ui/AlertDialog.tsx
+  5:10  warning  'theme' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ui/AnimatedPressable.tsx
+  7:3   warning  'withTiming' is defined but never used  @typescript-eslint/no-unused-vars
+  9:10  warning  'theme' is defined but never used       @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ui/AnimatedSection.tsx
+  11:10  warning  'theme' is defined but never used                                                                                                        @typescript-eslint/no-unused-vars
+  69:6   warning  React Hook useEffect has missing dependencies: 'opacity', 'scale', and 'translateY'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ui/Skeleton.tsx
+  35:6  warning  React Hook useEffect has a missing dependency: 'opacity'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ui/SocialMediaLinks.tsx
+   13:10  warning  'supabase' is defined but never used           @typescript-eslint/no-unused-vars
+   36:10  warning  'getSocialMediaUrl' is defined but never used  @typescript-eslint/no-unused-vars
+   96:11  warning  'user' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  129:16  warning  'err' is defined but never used                @typescript-eslint/no-unused-vars
+  142:16  warning  'err' is defined but never used                @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ui/SpecialtyAutocomplete.tsx
+  7:3  warning  'ScrollView' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ui/popover.tsx
+  2:16  warning  'Text' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ui/toaster.tsx
+  2:26  warning  'Dimensions' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/components/ui/tooltip.tsx
+  2:47  warning  'Dimensions' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/contexts/data-context.tsx
+    5:10  warning  'Barber' is defined but never used            @typescript-eslint/no-unused-vars
+    5:94  warning  'OnDemandSettings' is defined but never used  @typescript-eslint/no-unused-vars
+  152:10  warning  'events' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  232:36  warning  A `require()` style import is forbidden       @typescript-eslint/no-require-imports
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/hooks/useCalendarData.ts
+  27:8  warning  'CalendarEvent' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+  51:5  warning  'manualFormData' is assigned a value but never used                                                                   @typescript-eslint/no-unused-vars
+  94:6  warning  React Hook useCallback has a missing dependency: 'processBookings'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/hooks/useCalendarSync.ts
+  15:19  warning  'setLoading' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/hooks/useCuts.tsx
+  1:44  warning  'useMemo' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/hooks/useData.tsx
+  293:5  warning  React Hook useCallback has a missing dependency: 'barbers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/hooks/useErrorRecovery.ts
+  345:6  warning  React Hook useCallback has a missing dependency: 'fetchInBackground'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/hooks/useLocationManager.ts
+  2:20  warning  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/hooks/useMobileSecurity.ts
+  258:38  warning  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  263:38  warning  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  268:38  warning  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  273:38  warning  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/hooks/useReporting.ts
+  10:15  warning  'BlockUserParams' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/hooks/useSafeNavigation.tsx
+  82:14  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/lib/bookingDetailsHelper.ts
+  164:9  warning  'pricing' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/lib/bookingService.ts
+   7:1   warning  Import in body of module; reorder to top  import/first
+  94:36  warning  A `require()` style import is forbidden   @typescript-eslint/no-require-imports
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/lib/geocode.ts
+  26:12  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead      @typescript-eslint/array-type
+  50:77  warning  Array type using 'Array<any>' is forbidden. Use 'any[]' instead  @typescript-eslint/array-type
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/lib/logger.ts
+  18:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-var-requires')
+  19:20  warning  A `require()` style import is forbidden                                                                @typescript-eslint/no-require-imports
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/lib/mobile-security.ts
+    1:20  warning  'Alert' is defined but never used                            @typescript-eslint/no-unused-vars
+  215:26  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/lib/secure-auth.ts
+   50:13  warning  'hashedPassword' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  103:13  warning  'sanitizedName' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  104:13  warning  'sanitizedBusinessName' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/yaseenkhalil/Downloads/Talii_Code/apps/mobile/app/shared/stores/auth-store.ts
+  101:25  warning  'subscription' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 272 problems (0 errors, 272 warnings)
+  0 errors and 22 warnings potentially fixable with the `--fix` option.
+

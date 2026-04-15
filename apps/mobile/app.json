@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Talii",
-    "slug": "talii",
+    "slug": "BOCM",
+    "owner": "talii_app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

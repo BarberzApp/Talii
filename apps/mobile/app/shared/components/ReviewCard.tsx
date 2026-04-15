@@ -154,7 +154,7 @@ export function ReviewCard({
           { backgroundColor: colors.surface }
         ]}>
           <Text style={[tw`text-sm leading-6`, { color: colors.foreground }]}>
-            "{review.comment}"
+            &quot;{review.comment}&quot;
           </Text>
         </View>
       )}
