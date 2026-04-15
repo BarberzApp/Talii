@@ -9,288 +9,56 @@ import { useTheme } from '../shared/components/theme';
 import { theme } from '../shared/lib/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 
-const privacyPolicy = `BOCM PRIVACY POLICY
+const privacyPolicy = `TALII PRIVACY POLICY
 
-Effective Date: December 2025
+Effective Date: December 2025 • Last Updated: April 2026
 
-Last Updated: December 2025
+Welcome to Talii. We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and related services (collectively, the "Services").
 
-Welcome to BOCM. We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and related services (collectively, the "Services").
+By using our Services, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree with our policies and practices, do not use our Services. This policy applies to all users (Clients and Professionals).
 
-By using our Services, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree with our policies and practices, do not use our Services.
+1. WHAT DATA WE COLLECT AND WHY
+App Store guidelines require us to be transparent about what data we collect. Here is exactly what we collect:
 
-1. INFORMATION WE COLLECT
+1.1 Information You Provide to Us (Account & Profile Data)
+• Account Registration: Name, email address, phone number, and password (encrypted and never accessible to us). We use this to secure your account and communicate with you.
+• Profile Information: Profile photos, cover photos, bio, social media links, and location. We use this to display your profile in our marketplace.
+• Booking Information: Service preferences, appointment history, and special requests.
 
-1.1 Information You Provide to Us
+1.2 Data From Device Permissions (Camera, Photos, & Location)
+• Camera & Photos: If you choose to upload an avatar, cover photo, or portfolio image, we require access to your device's Camera or Photo Library. This data is only uploaded when you explicitly select it. We do not scan or collect photos you do not select.
+• Location Data: We use Precise Location (with your permission) to help you find nearby barbers and to facilitate on-demand bookings. You can decline this permission at any time via your device settings, though distance-based search features will be disabled.
 
-Account Registration:
-• Name and email address
-• Phone number
-• Password (encrypted and stored securely)
-• User role (client or barber/professional)
-• Business name (for barbers/professionals)
-• Username and profile information
-
-Profile Information:
-• Profile photo and cover photo
-• Bio and description
-• Location and address information
-• Social media links (Instagram, Twitter, TikTok, Facebook)
-• Business information (for barbers)
-
-Booking Information:
-• Service preferences
-• Booking history
-• Payment information (processed securely through Stripe)
-• Notes and special requests for appointments
-
-User-Generated Content:
-• Videos and images uploaded to your portfolio
-• Reviews and ratings
-• Comments and feedback
-• Service descriptions and pricing
-
-1.2 Information Automatically Collected
-
-Device Information:
-• Device type and model
-• Operating system and version
-• Unique device identifiers
-• Mobile network information
-• Device settings and configurations
-
-Location Information:
-• Precise location data (when you grant permission)
-• Approximate location based on IP address
-• Location history for finding nearby barbers
-
-Usage Information:
-• App features you access
-• Content you view and interact with
-• Search queries
-• Booking patterns and preferences
-• Time and date of your activities
-• Clicks, taps, and scrolling behavior
-
-Technical Information:
-• IP address
-• Browser type and version
-• Log files and error reports
-• Performance data
-
-1.3 Information from Third Parties
-
-• Payment information processed through Stripe (we do not store full payment card details)
-• Social media information (if you choose to link accounts)
-• Analytics data from third-party services
+1.3 Automated Technical Data
+• Device Information: Device type, OS version, and network identifiers. We use this to debug crashes and optimize the app.
+• Diagnostic Data: If the app crashes, we securely collect error logs via Sentry. This data does not contain personally identifiable information unless strictly necessary for debugging.
 
 2. HOW WE USE YOUR INFORMATION
-
-We use the information we collect for the following purposes:
-
-Service Delivery:
-• To create and manage your account
-• To facilitate bookings and appointments
-• To connect clients with barbers/professionals
-• To process payments for services
-• To send booking confirmations and reminders
-• To provide customer support
-
-Communication:
-• To respond to your inquiries and requests
-• To send you service-related notifications
-• To provide updates about your bookings
-• To send marketing communications (with your consent)
-• To notify you about changes to our Services
-
-Personalization:
-• To personalize your experience
-• To show you relevant barbers and services
-• To recommend services based on your preferences
-• To customize content and features
-
-Safety and Security:
-• To detect and prevent fraud, abuse, and illegal activity
-• To verify user identities
-• To protect the rights and safety of our users
-• To enforce our Terms of Service
-• To respond to legal requests
-
-Analytics and Improvement:
-• To understand how users interact with our Services
-• To analyze usage patterns and trends
-• To improve our Services and develop new features
-• To conduct research and analytics
-• To monitor performance and fix technical issues
-• To capture error reports and debugging information (via Sentry)
+We collect and use your data strictly for the following purposes:
+• Service Delivery: To connect Clients with Professionals and process bookings.
+• Account Management: To authenticate you and secure your data.
+• Payment Processing: Payments are securely handled by Stripe. We do not view or store your full credit card details.
+• Safety & Security: To monitor for fraudulent activity or abuse of our platform.
 
 3. HOW WE SHARE YOUR INFORMATION
+Talii does NOT sell your personal data to data brokers or advertising platforms.
 
-We may share your information in the following circumstances:
+We only share data with the following trusted third parties necessary to operate our app:
+• Other Users: When a Client books a Professional, the Professional receives the Client's name and contact information to fulfill the appointment.
+• Service Providers: Stripe (for processing payments), Supabase (our secure database and authentication provider), and Sentry (for crash reporting).
 
-With Barbers/Professionals:
-• When you book a service, we share necessary information (name, contact details, service preferences) with the barber/professional
-• Your profile information (name, photo, reviews) is visible to other users as set in your privacy settings
+4. DATA RETENTION AND ACCOUNT DELETION
+You have full control over your data.
 
-With Service Providers:
-• Stripe (payment processing)
-• Supabase (database and authentication services)
-• Sentry (error tracking and performance monitoring)
-• Cloud storage providers (for hosting images and videos)
-• Analytics providers (to understand app usage)
+• Data Retention: We retain your account data only for as long as your account is active or as needed to provide you with the Services.
+• Account Deletion: You may delete your account at any time directly through the Talii App (Settings > Delete Account) or by emailing us. When you delete your account, we immediately initiate the permanent deletion of your profile, bookings, and uploaded photos from our active databases.
 
-Legal Requirements:
-• When required by law or legal process
-• To comply with government requests
-• To protect our rights and property
-• To prevent harm to users or others
-• In connection with a business transaction (merger, acquisition, etc.)
+5. CHILDREN'S PRIVACY
+Our Services strictly require users to be at least 13 years of age. We do not knowingly collect personal data from children. If you become aware that a child has provided us with personal information, please contact us immediately.
 
-With Your Consent:
-• When you explicitly authorize us to share your information
-• When you choose to share content publicly
-
-4. DATA SECURITY
-
-We implement appropriate technical and organizational measures to protect your personal information:
-
-• Encryption of sensitive data in transit and at rest
-• Secure authentication and authorization systems
-• Regular security assessments and updates
-• Access controls and employee training
-• Secure payment processing through Stripe (PCI DSS compliant)
-• Regular backups and disaster recovery procedures
-
-However, no method of transmission over the Internet or electronic storage is 100% secure. While we strive to protect your information, we cannot guarantee absolute security.
-
-5. DATA RETENTION
-
-We retain your personal information for as long as necessary to:
-
-• Provide our Services to you
-• Comply with legal obligations
-• Resolve disputes
-• Enforce our agreements
-
-When you delete your account, we will delete or anonymize your personal information within a reasonable timeframe, except where we are required to retain it for legal purposes.
-
-6. YOUR PRIVACY RIGHTS
-
-Depending on your location, you may have the following rights:
-
-Access: Request access to your personal information
-Correction: Request correction of inaccurate information
-Deletion: Request deletion of your personal information
-Portability: Request transfer of your data to another service
-Objection: Object to processing of your information
-Restriction: Request restriction of processing
-Withdrawal: Withdraw consent for data processing
-
-To exercise these rights, please contact us at primbocm@gmail.com.
-
-7. LOCATION SERVICES
-
-We collect location information to:
-• Help you find nearby barbers and services
-• Provide location-based recommendations
-• Improve search results and matching
-
-You can control location sharing through your device settings. Disabling location services may limit certain features of the app.
-
-8. CAMERA AND PHOTO LIBRARY
-
-We access your camera and photo library to:
-• Allow you to upload profile pictures
-• Enable you to add portfolio images and videos
-• Support document uploads (if applicable)
-
-You can control these permissions through your device settings.
-
-9. THIRD-PARTY SERVICES
-
-Our Services integrate with third-party services:
-
-Stripe: Payment processing (see Stripe's Privacy Policy)
-
-Supabase: Database and backend services (see Supabase Privacy Policy)
-
-Sentry: Error tracking and performance monitoring. Sentry collects error reports, performance data, and may capture limited user interaction data for debugging purposes. This may include device information, IP addresses, and error context. Session replay may capture user interface interactions in error scenarios. For more information, see Sentry's Privacy Policy.
-
-These services have their own privacy policies. We encourage you to read them.
-
-10. COOKIES AND TRACKING TECHNOLOGIES
-
-We use cookies and similar technologies to:
-• Remember your preferences
-• Analyze usage patterns
-• Provide personalized experiences
-• Ensure security and prevent fraud
-
-You can control cookies through your device or browser settings.
-
-11. CHILDREN'S PRIVACY
-
-Our Services are not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe we have collected information from a child under 13, please contact us immediately.
-
-12. CHANGES TO THIS PRIVACY POLICY
-
-We may update this Privacy Policy from time to time. We will notify you of any material changes by:
-• Posting the new Privacy Policy in the app
-• Updating the "Last Updated" date
-• Sending you an email notification (if you have provided an email)
-
-Your continued use of the Services after changes become effective constitutes acceptance of the updated Privacy Policy.
-
-13. CALIFORNIA PRIVACY RIGHTS
-
-If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA):
-
-• Right to know what personal information is collected
-• Right to know if personal information is sold or shared
-• Right to opt-out of the sale or sharing of personal information
-• Right to non-discrimination for exercising your privacy rights
-
-To exercise these rights, contact us at primbocm@gmail.com.
-
-14. EUROPEAN PRIVACY RIGHTS (GDPR)
-
-If you are located in the European Economic Area (EEA), you have rights under the General Data Protection Regulation (GDPR):
-
-• Right to access your personal data
-• Right to rectification of inaccurate data
-• Right to erasure ("right to be forgotten")
-• Right to restrict processing
-• Right to data portability
-• Right to object to processing
-• Right to withdraw consent
-
-Our legal basis for processing your data includes:
-• Performance of a contract (providing our Services)
-• Your consent
-• Legitimate interests (security, fraud prevention, service improvement)
-• Legal obligations
-
-To exercise these rights, contact us at primbocm@gmail.com.
-
-15. INTERNATIONAL DATA TRANSFERS
-
-Your information may be transferred to and processed in countries other than your country of residence. These countries may have different data protection laws. We take steps to ensure your information receives adequate protection, including:
-
-• Using standard contractual clauses approved by regulatory authorities
-• Implementing appropriate safeguards
-• Ensuring third-party service providers comply with data protection requirements
-
-16. CONTACT US
-
-If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:
-
-Email: primbocm@gmail.com
-
-We will respond to your inquiries within a reasonable timeframe.
-
-17. CONSENT
-
-By using our Services, you consent to the collection and use of your information as described in this Privacy Policy. If you do not agree with any part of this Privacy Policy, please do not use our Services.`;
+6. CONTACT US
+If you have any questions, concerns, or requests regarding this Privacy Policy or how your data is handled, please contact our privacy team at:
+Email: support@talii.com`;
 
 export default function PrivacyPolicyPage() {
   const { theme, colors, colorScheme } = useTheme();

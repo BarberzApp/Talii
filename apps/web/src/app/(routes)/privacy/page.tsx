@@ -124,10 +124,25 @@ export default function PrivacyPage() {
             </section>
 
             <section className="space-y-6">
-              <h2 className="text-2xl font-bold text-foreground">4. DATA SECURITY & RETENTION</h2>
-              <p>
-                We use industry-standard encryption and secure payment processing through Stripe. We retain your information as long as necessary to provide Services, comply with legal obligations, or until you delete your account.
-              </p>
+              <h2 className="text-2xl font-bold text-foreground">4. DATA SECURITY & ACCOUNT DELETION</h2>
+              <div className="space-y-4">
+                <p>
+                  We use industry-standard encryption and secure payment processing through Stripe. We retain your information as long as necessary to provide Services, comply with legal obligations, or until you delete your account.
+                </p>
+                <div className="bg-muted/50 p-6 rounded-2xl border border-secondary/20">
+                  <h3 className="font-bold text-foreground mb-2 text-lg">Account Deletion</h3>
+                  <p className="text-sm text-foreground/90">
+                    If you created an account inside our mobile application, you have the right to request the complete deletion of your account and associated personal data. 
+                  </p>
+                  <ul className="list-disc pl-5 mt-3 space-y-2 text-sm text-muted-foreground">
+                    <li><strong>In-App Deletion:</strong> You can delete your account by logging into the Talii app and navigating to Settings > Delete Account.</li>
+                    <li><strong>Email Request:</strong> Alternatively, you can email us at support@talii.com with the subject "Account Deletion Request".</li>
+                  </ul>
+                  <p className="text-sm text-muted-foreground mt-3">
+                    Upon initiating deletion, we will promptly remove your profile, bookings, and uploaded photos from our active databases, except where we are legally required to retain certain transactional records.
+                  </p>
+                </div>
+              </div>
             </section>
 
             <section className="space-y-6 border-t border-border pt-10">

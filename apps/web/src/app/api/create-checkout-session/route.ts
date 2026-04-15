@@ -6,20 +6,37 @@ import {
   calculateFeeBreakdown,
 } from '@/shared/lib/fee-calculator'
 import { buildStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata'
+import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20" as any,
 })
 
-function getBearerToken(request: Request): string | null {
-  const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return null
-  const token = authHeader.slice('Bearer '.length).trim()
-  return token.length > 0 ? token : null
-}
+// Optional rate limit for guests to prevent spamming Stripe session creation
+const guestLimiter = new Map<string, { count: number, reset: number }>()
 
 export async function POST(request: Request) {
   try {
+    // Try to authenticate the caller (optional for checkout)
+    let user = null
+    try {
+      user = await validateBearerToken(request)
+    } catch (e) {
+      // Not logged in — handle as guest
+      const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
+      const now = Date.now()
+      const limit = guestLimiter.get(ip)
+      
+      if (limit && now < limit.reset) {
+        if (limit.count > 20) { // Max 20 checkout attempts per hour for guests
+          return NextResponse.json({ error: 'Too many booking attempts. Please try again later.' }, { status: 429 })
+        }
+        limit.count++
+      } else {
+        guestLimiter.set(ip, { count: 1, reset: now + 3600000 })
+      }
+    }
+
     logger.debug('Starting checkout session creation...')
     const body = await request.json()
     logger.debug('Request body', { body })
@@ -37,16 +54,8 @@ export async function POST(request: Request) {
       addonIds = []
     } = body
 
-    // If a Supabase access token is provided (mobile / API callers), use it to derive the clientId.
-    // This keeps guests working for web while allowing authenticated mobile callers to be consistent.
-    let derivedClientId: string | null | undefined = clientId
-    const bearerToken = getBearerToken(request)
-    if (bearerToken) {
-      const { data: { user }, error: authError } = await supabase.auth.getUser(bearerToken)
-      if (!authError && user?.id) {
-        derivedClientId = user.id
-      }
-    }
+    // Use user ID if authenticated, else use provided clientId or 'guest'
+    const derivedClientId: string = user?.id || (clientId === 'guest' ? 'guest' : (clientId || 'guest'))
 
     // Validate required fields
     if (!barberId || !serviceId || !date) {
@@ -216,6 +225,9 @@ export async function POST(request: Request) {
       sessionId: session.id 
     })
   } catch (error: any) {
+    if (error instanceof ApiAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     logger.error("Error creating checkout session", error)
     
     // Handle specific Stripe account errors

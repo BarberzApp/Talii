@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/shared/lib/supabase'
+import { supabaseAdmin } from '@/shared/lib/supabase'
 import { calculateFeeBreakdown } from '@/shared/lib/fee-calculator'
 import { logger } from '@/shared/lib/logger'
+import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +22,9 @@ interface EarningsResponse {
 
 export async function GET(request: Request) {
   try {
+    // Authenticate the caller
+    const user = await validateBearerToken(request)
+
     const { searchParams } = new URL(request.url)
     const barberId = searchParams.get('barberId')
 
@@ -30,6 +35,17 @@ export async function GET(request: Request) {
     // Validate barber ID format
     if (typeof barberId !== 'string' || barberId.trim().length === 0) {
       return NextResponse.json({ error: 'Invalid Barber ID format' }, { status: 400 })
+    }
+
+    // Verify the authenticated user owns this barber account
+    const { data: barber, error: barberError } = await supabaseAdmin
+      .from('barbers')
+      .select('id, user_id')
+      .eq('id', barberId)
+      .single()
+
+    if (barberError || !barber || barber.user_id !== user.id) {
+      return NextResponse.json({ error: 'Unauthorized — you can only view your own earnings' }, { status: 403 })
     }
 
     logger.debug('Fetching earnings for barber', { barberId })
@@ -176,6 +192,9 @@ export async function GET(request: Request) {
     logger.debug('Sending response', { hasResponse: !!response })
     return NextResponse.json(response)
   } catch (error) {
+    if (error instanceof ApiAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     logger.error('Error fetching earnings', error)
     return NextResponse.json({ error: 'Failed to fetch earnings' }, { status: 500 })
   }

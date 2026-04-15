@@ -246,12 +246,18 @@ export async function POST(request: Request) {
       clientSecret: paymentIntent.client_secret,
       amount: paymentIntent.amount,
     })
-  } catch (err) {
+  } catch (err: any) {
     if (err instanceof ApiAuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status })
     }
     logger.error('Mobile /bookings POST error', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    // Surface Stripe-specific errors to aid debugging (safe — no sensitive data in Stripe error messages)
+    const stripeMessage = err?.raw?.message || err?.message || 'Internal server error'
+    const stripeCode = err?.raw?.code || err?.code || null
+    return NextResponse.json(
+      { error: stripeMessage, stripeCode },
+      { status: 500 }
+    )
   }
 }
 

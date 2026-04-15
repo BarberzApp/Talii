@@ -471,7 +471,7 @@ export default function LoginPage() {
             {showContent && (
               <AnimatedSection type="slideUp" delay={150}>
                 <View style={{ width: '100%' }}>
-                  <GlassyCard>
+                  <View>
                   {error && (
                     <View style={{
                       padding: 16,
@@ -549,7 +549,7 @@ export default function LoginPage() {
                   >
                     {isLoading ? 'Signing in...' : 'Sign in'}
                   </ActionButton>
-                </GlassyCard>
+                </View>
 
                 {/* Sign Up Link */}
                 <View style={{ alignItems: 'center', marginTop: 32 }}>

@@ -2,9 +2,13 @@ import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/shared/lib/supabase"
 import { sendBookingConfirmationSMS } from "@/shared/utils/sendSMS"
 import { logger } from "@/shared/lib/logger"
+import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
 
 export async function POST(request: Request) {
   try {
+    // Authenticate the caller
+    const user = await validateBearerToken(request)
+
     const body = await request.json()
     const { 
       barber_id, 
@@ -208,6 +212,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ booking })
   } catch (error) {
+    if (error instanceof ApiAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     logger.error('Error in booking creation API', error)
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -413,6 +413,7 @@ export default function SettingsPage() {
               </View>
             )}
 
+            {!isConfirming && (
             <AnimatedPressable
               style={[
                 tw`py-3 rounded-xl`,
@@ -428,6 +429,7 @@ export default function SettingsPage() {
                 Delete My Account
               </Text>
             </AnimatedPressable>
+            )}
           </GlassyCard>
         </AnimatedSection>
       </ScrollView>

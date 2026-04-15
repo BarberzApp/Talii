@@ -205,7 +205,7 @@ export default function SignUpPage() {
                                 if (userType === 'barber') {
                                     navigation.navigate('BarberOnboarding' as any);
                                 } else {
-                                    navigation.navigate('Home' as any);
+                                    navigation.navigate('MainTabs' as any);
                                 }
                             }
                         }
@@ -314,7 +314,7 @@ export default function SignUpPage() {
                         {/* Sign Up Form */}
                         {showContent && (
                             <AnimatedSection type="slideUp" delay={150}>
-                            <GlassyCard>
+                            <View>
                                     {errors.general && (
                                         <View style={{
                                             padding: 16,
@@ -547,7 +547,7 @@ export default function SignUpPage() {
                                     >
                                         {isLoading ? 'Creating account...' : 'Create account'}
                                     </ActionButton>
-                            </GlassyCard>
+                            </View>
                             </AnimatedSection>
                         )}
                         {showContent && (

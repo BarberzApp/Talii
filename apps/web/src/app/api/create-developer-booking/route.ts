@@ -2,17 +2,13 @@ import { NextResponse } from "next/server"
 import { supabaseAdmin } from '@/shared/lib/supabase'
 import { sendBookingConfirmationSMS } from "@/shared/utils/sendSMS"
 import { logger } from '@/shared/lib/logger'
-import { supabase } from '@/shared/lib/supabase'
-
-function getBearerToken(request: Request): string | null {
-  const authHeader = request.headers.get('authorization') || request.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return null
-  const token = authHeader.slice('Bearer '.length).trim()
-  return token.length > 0 ? token : null
-}
+import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
 
 export async function POST(request: Request) {
   try {
+    // Authenticate the caller
+    const user = await validateBearerToken(request)
+
     logger.debug('Creating developer booking (bypassing Stripe)...')
     const body = await request.json()
     logger.debug('Request body', { body })
@@ -30,16 +26,8 @@ export async function POST(request: Request) {
       addonIds = []
     } = body
 
-    // If a Supabase access token is provided, derive clientId from it.
-    // This supports mobile callers while preserving existing guest behavior for web.
-    let derivedClientId: string | null | undefined = clientId
-    const bearerToken = getBearerToken(request)
-    if (bearerToken) {
-      const { data: { user }, error: authError } = await supabase.auth.getUser(bearerToken)
-      if (!authError && user?.id) {
-        derivedClientId = user.id
-      }
-    }
+    // Use authenticated user's ID
+    const derivedClientId: string = user.id
 
     // Validate required fields
     if (!barberId || !serviceId || !date) {
@@ -215,6 +203,9 @@ export async function POST(request: Request) {
     })
 
   } catch (error) {
+    if (error instanceof ApiAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     logger.error("Error creating developer booking", error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to create developer booking" },

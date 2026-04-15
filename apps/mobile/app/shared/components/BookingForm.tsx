@@ -283,8 +283,7 @@ export default function BookingForm({
       case 4:
         return true;
       case 5:
-        return !isDeveloperAccount; // Only validate for regular bookings
-
+        return true; // Card validation handled by Stripe SDK during confirmPayment
       default:
         return false;
     }

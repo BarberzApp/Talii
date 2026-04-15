@@ -54,10 +54,7 @@ export async function middleware(req: NextRequest) {
         }
       }
 
-      // Add session info to response headers for client-side access
-      res.headers.set('x-session-user', session.user.id)
-      res.headers.set('x-session-role', session.user.user_metadata.role || 'client')
-      res.headers.set('x-session-expires', session.expires_at?.toString() || '')
+      // Session info is available via Supabase client-side auth — never expose in headers
 
       // Barber profile completeness guard
       const { data: profile } = await supabase

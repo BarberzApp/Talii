@@ -2,7 +2,7 @@
 // Requests are proxied through the Next.js backend to keep the API key server-side.
 import { logger } from './logger';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://www.bocmstyle.com';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL!;
 
 /** Geocode a full address string to { lat, lon } */
 export async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {

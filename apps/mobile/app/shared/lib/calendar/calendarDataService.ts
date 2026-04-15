@@ -393,7 +393,7 @@ export async function fetchAvailableTimeSlots(
 
     // Generate time slots
     const slots: TimeSlot[] = [];
-    const bookedTimes = new Set((bookings || []).map(b => new Date(b.date).toISOString()));
+    const bookedTimestamps = new Set((bookings || []).map(b => new Date(b.date).getTime()));
 
     // Calculate slot interval based on service duration (minimum 10 minutes)
     const slotInterval = Math.max(serviceDuration, 10);
@@ -410,12 +410,12 @@ export async function fetchAvailableTimeSlots(
         // Skip if service would go past 6 PM
         const endTime = new Date(slotTime);
         endTime.setMinutes(endTime.getMinutes() + serviceDuration);
-        if (endTime.getHours() >= endHour) {
+        if (endTime.getHours() >= endHour && endTime.getMinutes() > 0) {
           continue;
         }
         
-        const slotISO = slotTime.toISOString();
-        const isBooked = bookedTimes.has(slotISO);
+        const slotTimestamp = slotTime.getTime();
+        const isBooked = bookedTimestamps.has(slotTimestamp);
         
         // Check if there's enough time for the service
         let hasEnoughTime = true;
@@ -423,9 +423,8 @@ export async function fetchAvailableTimeSlots(
           const serviceEndTime = new Date(slotTime);
           serviceEndTime.setMinutes(serviceEndTime.getMinutes() + serviceDuration);
           
-          for (const bookedTime of bookedTimes) {
-            const booked = new Date(bookedTime);
-            if (booked >= slotTime && booked < serviceEndTime) {
+          for (const bookedTimestamp of bookedTimestamps) {
+            if (bookedTimestamp >= slotTimestamp && bookedTimestamp < serviceEndTime.getTime()) {
               hasEnoughTime = false;
               break;
             }
@@ -491,12 +490,20 @@ export async function createManualAppointment(appointmentData: {
     }
 
     const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL || 'https://www.bocmstyle.com';
+    
+    // Get the current session to pass the Bearer token (required by backend)
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'expo-platform': Platform.OS,
+    };
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
     const response = await fetch(`${apiBaseUrl}/api/bookings/create`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'expo-platform': Platform.OS,
-      },
+      headers,
       body: JSON.stringify({
         barber_id: appointmentData.barberId,
         service_id: appointmentData.serviceId,

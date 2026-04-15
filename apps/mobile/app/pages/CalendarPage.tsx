@@ -194,7 +194,7 @@ export default function CalendarPage() {
   const handleBarberViewToggle = async (mode: 'appointments' | 'bookings') => {
     setBarberViewMode(mode);
     Vibration.vibrate(30); // Light haptic feedback
-    await loadBookings(userRole || undefined);
+    await loadBookings(userRole || undefined, mode);
   };
 
   const onRefresh = async () => {

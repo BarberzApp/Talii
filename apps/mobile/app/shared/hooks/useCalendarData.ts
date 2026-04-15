@@ -51,7 +51,48 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
     manualFormData,
   } = state;
 
+  
   /**
+   * Load bookings based on user role
+   */
+  const loadBookings = useCallback(async (role?: 'client' | 'barber', explicitViewMode?: 'appointments' | 'bookings') => {
+    if (!userId) return;
+
+    try {
+      const roleToUse = role || userRole;
+      if (!roleToUse) return;
+
+      // Use explicitly passed view mode (avoids stale closure after setBarberViewMode)
+      const viewMode = explicitViewMode || barberViewMode;
+
+      logger.log('Loading bookings for user:', userId, 'with role:', roleToUse);
+
+      let bookings: any[] = [];
+
+      if (roleToUse === 'barber') {
+        // Fetch barber ID first
+        const barberId = await fetchBarberId(userId);
+        if (!barberId) {
+          logger.log('No barber found for user');
+          return;
+        }
+
+        setBarberId(barberId);
+
+        // Fetch bookings based on view mode
+        bookings = await fetchBarberBookings(barberId, userId, viewMode);
+      } else {
+        // Fetch client bookings
+        bookings = await fetchClientBookings(userId);
+      }
+
+      // Process bookings into calendar events
+      await processBookings(bookings, roleToUse, viewMode);
+    } catch (error) {
+      logger.error('Error loading bookings:', error);
+    }
+  }, [userId, userRole, barberViewMode, setBarberId]);
+/**
    * Initialize user role and fetch initial data
    */
   const initialize = useCallback(async () => {
@@ -69,51 +110,14 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
     } finally {
       setLoading(false);
     }
-  }, [userId, setLoading, setUserRole]);
-
-  /**
-   * Load bookings based on user role
-   */
-  const loadBookings = useCallback(async (role?: 'client' | 'barber') => {
-    if (!userId) return;
-
-    try {
-      const roleToUse = role || userRole;
-      if (!roleToUse) return;
-
-      logger.log('Loading bookings for user:', userId, 'with role:', roleToUse);
-
-      let bookings: any[] = [];
-
-      if (roleToUse === 'barber') {
-        // Fetch barber ID first
-        const barberId = await fetchBarberId(userId);
-        if (!barberId) {
-          logger.log('No barber found for user');
-          return;
-        }
-
-        setBarberId(barberId);
-
-        // Fetch bookings based on view mode
-        bookings = await fetchBarberBookings(barberId, userId, barberViewMode);
-      } else {
-        // Fetch client bookings
-        bookings = await fetchClientBookings(userId);
-      }
-
-      // Process bookings into calendar events
-      await processBookings(bookings, roleToUse);
-    } catch (error) {
-      logger.error('Error loading bookings:', error);
-    }
-  }, [userId, userRole, barberViewMode, setBarberId]);
+  }, [userId, setLoading, setUserRole, loadBookings]);
 
   /**
    * Process raw bookings into calendar events
    */
-  const processBookings = useCallback(async (bookings: any[], role: 'client' | 'barber') => {
+  const processBookings = useCallback(async (bookings: any[], role: 'client' | 'barber', viewMode?: 'appointments' | 'bookings') => {
     try {
+      const effectiveViewMode = viewMode || barberViewMode;
       const events = await Promise.all(
         bookings.map(async (booking) => {
           // Fetch service details
@@ -127,7 +131,7 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
 
           // Fetch barber details for client view or barber bookings view
           let barber = null;
-          if (role === 'client' || (role === 'barber' && barberViewMode === 'bookings')) {
+          if (role === 'client' || (role === 'barber' && effectiveViewMode === 'bookings')) {
             barber = await fetchBarberProfile(booking.barber_id);
           }
 
@@ -143,7 +147,7 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
             calculatedAddonTotal,
             addonNames,
             role,
-            barberViewMode
+            effectiveViewMode
           );
         })
       );

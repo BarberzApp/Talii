@@ -61,7 +61,7 @@ export const useAccountDeletionHelper = ({ barberId }: AccountDeletionHelperOpti
       if (barberId) {
         await supabase.from('services').delete().eq('barber_id', barberId);
         await supabase.from('availability').delete().eq('barber_id', barberId);
-        await supabase.from('addons').delete().eq('barber_id', barberId);
+        await supabase.from('service_addons').delete().eq('barber_id', barberId);
         await supabase.from('barbers').delete().eq('id', barberId);
         await supabase.from('bookings').delete().eq('barber_id', barberId);
       }
