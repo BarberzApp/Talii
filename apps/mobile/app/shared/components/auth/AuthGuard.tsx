@@ -41,10 +41,10 @@ export function AuthGuard({
         // Redirect based on user role
         switch (userProfile?.role) {
           case 'barber':
-            push('MainTabs');
+            reset([{ name: 'MainTabs' }]);
             break;
           case 'client':
-            push('MainTabs');
+            reset([{ name: 'MainTabs' }]);
             break;
           default:
             push(fallbackRoute);

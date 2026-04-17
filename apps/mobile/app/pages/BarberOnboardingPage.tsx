@@ -13,6 +13,7 @@ import {
     StatusBar,
     AppState,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as WebBrowser from 'expo-web-browser';
@@ -168,44 +169,61 @@ export default function BarberOnboardingPage() {
         };
     }, []);
 
-    // // Check if onboarding is already complete
-    // useEffect(() => {
-    //     const checkOnboardingComplete = async () => {
-    //         if (!user) return;
+    // Check if onboarding is already complete
+    useEffect(() => {
+        const checkOnboardingComplete = async () => {
+            if (!user) return;
             
-    //         try {
-    //             // Checking if onboarding is already complete
-                
-    //             // Fetch barber data to check completion
-    //             const { data: barberData, error: barberError } = await supabase
-    //                 .from('barbers')
-    //                 .select('onboarding_complete, business_name, bio, specialties')
-    //                 .eq('user_id', user.id)
-    //                 .single();
+            try {
+                // First check local storage for faster response
+                const localStatus = await AsyncStorage.getItem(`onboarding_complete_${user.id}`);
+                if (localStatus === 'true') {
+                    logger.log('🚀 Onboarding complete found in local storage - redirecting');
+                    setOnboardingComplete(true);
+                    navigation.replace('MainTabs' as any);
+                    return;
+                }
 
-    //             if (barberError) {
-    //                 logger.error('Error checking onboarding status:', barberError);
-    //                 return;
-    //             }
+                // If not in local storage or false, fetch from Supabase
+                // Fetch barber data to check completion
+                const { data: barberData, error: barberError } = await supabase
+                    .from('barbers')
+                    .select('onboarding_complete, business_name, bio, specialties')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
 
-    //             // Onboarding completion check
+                if (barberError) {
+                    logger.error('Error checking onboarding status:', barberError);
+                    return;
+                }
 
-    //             // If onboarding is marked as complete, skip to main app
-    //             if (barberData?.onboarding_complete) {
-    //                 logger.log('Onboarding is already complete - redirecting to main app');
-    //                 setOnboardingComplete(true);
-    //                 navigation.navigate('MainTabs' as any);
-    //                 return;
-    //             }
-    //         } catch (error) {
-    //             logger.error('Error checking onboarding completion:', error);
-    //         }
-    //     };
+                // If onboarding is marked as complete in Supabase, skip to main app
+                if (barberData?.onboarding_complete) {
+                    logger.log('✅ Onboarding is already complete in Supabase - redirecting');
+                    await AsyncStorage.setItem(`onboarding_complete_${user.id}`, 'true');
+                    setOnboardingComplete(true);
+                    navigation.replace('MainTabs' as any);
+                    return;
+                }
 
-    //     if (user) {
-    //         checkOnboardingComplete();
-    //     }
-    // }, [user, navigation]);
+                // Robust check: if they have key data but flag is false, maybe update the flag
+                if (barberData?.business_name && barberData?.bio && 
+                    barberData?.specialties && barberData.specialties.length > 0) {
+                    logger.log('⚠️ Barber has complete data but flag was false - updating flag');
+                    await supabase.from('barbers').update({ onboarding_complete: true }).eq('user_id', user.id);
+                    await AsyncStorage.setItem(`onboarding_complete_${user.id}`, 'true');
+                    setOnboardingComplete(true);
+                    navigation.replace('MainTabs' as any);
+                }
+            } catch (error) {
+                logger.error('Error checking onboarding completion:', error);
+            }
+        };
+
+        if (user) {
+            checkOnboardingComplete();
+        }
+    }, [user, navigation]);
 
     // Check if user is a barber
     useEffect(() => {
@@ -455,6 +473,11 @@ export default function BarberOnboardingPage() {
             logger.log('Onboarding completed successfully');
             setOnboardingComplete(true);
             
+            // Save to local storage for faster future checks
+            if (user?.id) {
+                await AsyncStorage.setItem(`onboarding_complete_${user.id}`, 'true');
+            }
+            
             // Check if Stripe is connected to determine navigation
             if (formData.stripeConnected) {
                 // If Stripe is connected, show completion message and go to settings
@@ -472,7 +495,7 @@ export default function BarberOnboardingPage() {
                 );
             } else {
                 // If Stripe is not connected, go to main app
-                navigation.navigate('MainTabs' as any);
+                navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] } as any);
             }
             
         } catch (error: any) {
@@ -576,6 +599,9 @@ export default function BarberOnboardingPage() {
                             // Mark onboarding as complete
                             setFormData(prev => ({ ...prev, stripeConnected: true }));
                             setOnboardingComplete(true);
+                            if (user?.id) {
+                                await AsyncStorage.setItem(`onboarding_complete_${user.id}`, 'true');
+                            }
                             
                             // Show success message
                             Alert.alert(
@@ -586,7 +612,7 @@ export default function BarberOnboardingPage() {
                                         text: 'Go to Main App',
                                         onPress: () => {
                                             // Navigate to main app
-                                            navigation.navigate('MainTabs' as any);
+                                            navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] } as any);
                                         }
                                     }
                                 ]
@@ -1096,7 +1122,7 @@ export default function BarberOnboardingPage() {
                             </Text>
                             <Button
                                 variant="secondary"
-                                onPress={() => navigation.navigate('MainTabs' as any)}
+                                onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] } as any)}
                                 style={tw`mt-3 rounded-xl`}
                                 size="sm"
                             >

@@ -1,7 +1,7 @@
-const { sendSMS } = require('./sendSMS');
-const { supabaseAdmin } = require('../lib/supabase');
+import { sendSMS } from './sendSMS';
+import { supabaseAdmin } from '../lib/supabase';
 
-async function handleNewBooking(booking) {
+export async function handleNewBooking(booking: any) {
   // Send to client
   if (booking.client_phone && booking.client_carrier && booking.client_sms_notifications) {
     await sendSMS({
@@ -23,6 +23,4 @@ async function handleNewBooking(booking) {
     .from('booking_texts')
     .update({ confirmation_sent: true })
     .eq('id', booking.id);
-}
-
-module.exports = { handleNewBooking }; 
+} 

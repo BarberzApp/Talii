@@ -595,27 +595,7 @@ export async function POST(request: Request) {
           })
         }
 
-        // Store the successful payment in Supabase with all required fields
-        if (bookingId) {
-          const { error: paymentError } = await supabase.from('payments').insert({
-            payment_intent_id: paymentIntent.id,
-            amount: paymentIntent.amount, // Already in cents from Stripe
-            currency: paymentIntent.currency,
-            status: paymentIntent.status,
-            barber_stripe_account_id: paymentIntent.transfer_data?.destination,
-            platform_fee: paymentIntent.application_fee_amount || 0,
-            booking_id: bookingId, // ✅ Now properly set
-            created_at: new Date().toISOString(),
-          })
 
-          if (paymentError) {
-            logger.error('Error storing payment in Supabase', paymentError)
-            return NextResponse.json(
-              { error: 'Error storing payment' },
-              { status: 500 }
-            )
-          }
-        }
         break
       }
 
@@ -719,22 +699,7 @@ export async function POST(request: Request) {
           payment_intent_id: charge.payment_intent as string,
         })
 
-        // Create a refund payment record
-        const { error: refundError } = await supabase.from('payments').insert({
-          payment_intent_id: charge.payment_intent,
-          amount: -charge.amount_refunded, // Negative amount for refunds
-          currency: charge.currency,
-          status: refundStatus,
-          barber_stripe_account_id: typeof charge.transfer === 'string' ? charge.transfer : charge.transfer?.destination,
-          platform_fee: 0, // No platform fee on refunds
-          booking_id: booking.id,
-          created_at: new Date().toISOString(),
-        })
 
-        if (refundError) {
-          logger.error('Error storing refund payment record', refundError)
-          // Don't fail the webhook for this, just log the error
-        }
 
         break
       }

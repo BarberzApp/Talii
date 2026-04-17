@@ -11,6 +11,7 @@ import { AuthProvider } from './app/shared/hooks/useAuth';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { Toaster, useToast } from './app/shared/components/ui';
 import { ThemeProvider, useTheme } from './app/shared/components/theme';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 // Initialize Sentry as early as possible (using secure configuration from sentry.ts)
 // The initSentry() function handles proper configuration with data privacy protections
 initSentry();
@@ -167,20 +168,22 @@ const App = () => {
   }
 
   return (
-    <ThemeProvider>
-      {!fontsLoaded || isLoading ? (
-        <AppLoadingScreen />
-      ) : !stripePublishableKey ? (
-        <AppConfigErrorScreen />
-      ) : (
-        <StripeProvider publishableKey={stripePublishableKey}>
-          <AuthProvider>
-            <AppNavigator />
-            <Toaster toasts={toasts} onDismiss={dismiss} />
-          </AuthProvider>
-        </StripeProvider>
-      )}
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        {!fontsLoaded || isLoading ? (
+          <AppLoadingScreen />
+        ) : !stripePublishableKey ? (
+          <AppConfigErrorScreen />
+        ) : (
+          <StripeProvider publishableKey={stripePublishableKey}>
+            <AuthProvider>
+              <AppNavigator />
+              <Toaster toasts={toasts} onDismiss={dismiss} />
+            </AuthProvider>
+          </StripeProvider>
+        )}
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 };
 

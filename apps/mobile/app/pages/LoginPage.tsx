@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Scissors, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '../shared/hooks/useAuth';
 import { supabase } from '../shared/lib/supabase';
@@ -155,30 +156,49 @@ export default function LoginPage() {
       } else if (profile.role === 'barber') {
         // Check if barber onboarding is already complete
         logger.log('💈 Checking if barber onboarding is complete...');
-        const { data: barberData, error: barberError } = await supabase
-          .from('barbers')
-          .select('onboarding_complete, business_name, bio, specialties')
-          .eq('user_id', userId)
-          .single();
-
-        if (barberError) {
-          logger.error('❌ Error checking barber data:', barberError);
-          redirectPath = 'BarberOnboarding';
+        
+        // 1. Check local storage first for speed
+        const localStatus = await AsyncStorage.getItem(`onboarding_complete_${userId}`);
+        if (localStatus === 'true') {
+          logger.log('🚀 Onboarding complete found in local storage - skipping check');
+          redirectPath = 'MainTabs';
         } else {
-          logger.log('💈 Onboarding completion check:', {
-            onboarding_complete: barberData?.onboarding_complete,
-            businessName: barberData?.business_name,
-            bio: barberData?.bio,
-            specialties: barberData?.specialties
-          });
+          // 2. Not in local storage or false, check Supabase
+          const { data: barberData, error: barberError } = await supabase
+            .from('barbers')
+            .select('onboarding_complete, business_name, bio, specialties')
+            .eq('user_id', userId)
+            .maybeSingle();
 
-          // If onboarding is marked as complete, skip to main app
-          if (barberData?.onboarding_complete) {
-            logger.log('✅ Barber onboarding is already complete! Going to main app...');
-            redirectPath = 'MainTabs';
-          } else {
-            logger.log('⚠️ Barber onboarding incomplete, going to onboarding...');
+          if (barberError) {
+            logger.error('❌ Error checking barber data:', barberError);
+            // If it's a network error, maybe don't force onboarding? 
+            // For now, default to onboarding only if we are sure it's not complete
             redirectPath = 'BarberOnboarding';
+          } else {
+            logger.log('💈 Onboarding completion check from DB:', {
+              onboarding_complete: barberData?.onboarding_complete,
+              businessName: barberData?.business_name,
+              bio: barberData?.bio,
+              specialties: barberData?.specialties
+            });
+
+            // If onboarding is marked as complete, skip to main app
+            if (barberData?.onboarding_complete) {
+              logger.log('✅ Barber onboarding is already complete! Going to main app...');
+              await AsyncStorage.setItem(`onboarding_complete_${userId}`, 'true');
+              redirectPath = 'MainTabs';
+            } else if (barberData?.business_name && barberData?.bio && 
+                       barberData?.specialties && barberData.specialties.length > 0) {
+              // Robust check: if they have the data but no flag, update the flag and skip
+              logger.log('⚠️ Barber has data but flag was false - fixing flag and going to main app');
+              await supabase.from('barbers').update({ onboarding_complete: true }).eq('user_id', userId);
+              await AsyncStorage.setItem(`onboarding_complete_${userId}`, 'true');
+              redirectPath = 'MainTabs';
+            } else {
+              logger.log('⚠️ Barber onboarding incomplete, going to onboarding...');
+              redirectPath = 'BarberOnboarding';
+            }
           }
         }
       } else if (profile.location) {

@@ -205,7 +205,7 @@ export default function SignUpPage() {
                                 if (userType === 'barber') {
                                     navigation.navigate('BarberOnboarding' as any);
                                 } else {
-                                    navigation.navigate('MainTabs' as any);
+                                    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] } as any);
                                 }
                             }
                         }

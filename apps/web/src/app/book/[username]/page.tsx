@@ -13,6 +13,7 @@ import { useToast } from '@/shared/components/ui/use-toast'
 import { Badge } from '@/shared/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
+import { Textarea } from '@/shared/components/ui/textarea'
 import Link from 'next/link'
 import { 
   Play, 
@@ -186,6 +187,10 @@ function BookPageContent() {
   const [activeTab, setActiveTab] = useState('cuts')
   const [reviews, setReviews] = useState<Review[]>([])
   const [loadingReviews, setLoadingReviews] = useState(false)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false)
+  const [showReviewForm, setShowReviewForm] = useState(false)
 
   // Share functionality
   const handleShare = async () => {
@@ -488,6 +493,43 @@ function BookPageContent() {
       logger.error('Error fetching reviews', error)
     } finally {
       setLoadingReviews(false)
+    }
+  }
+
+  const submitReview = async () => {
+    if (!barber) return;
+    try {
+      setIsSubmittingReview(true);
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          barberId: barber.id,
+          rating: reviewRating,
+          comment: reviewComment
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit review');
+      }
+      toast({
+        title: 'Review submitted!',
+        description: 'Thank you for your feedback.',
+      });
+      setShowReviewForm(false);
+      setReviewComment('');
+      setReviewRating(5);
+      // Refresh reviews
+      await fetchReviews(barber.id);
+    } catch (e) {
+      toast({
+        title: 'Error',
+        description: e instanceof Error ? e.message : 'Could not submit review',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingReview(false);
     }
   }
 
@@ -936,6 +978,62 @@ function BookPageContent() {
 
           {/* Reviews Tab */}
           <TabsContent value="reviews" className="mt-6">
+            <div className="mb-6 border-b border-black/10 dark:border-white/10 pb-6">
+              {!showReviewForm ? (
+                <Button 
+                  onClick={() => setShowReviewForm(true)} 
+                  variant="outline" 
+                  className="w-full text-foreground dark:text-white border-black/20 dark:border-white/20"
+                >
+                  Leave a Review
+                </Button>
+              ) : (
+                <div className="bg-black/5 dark:bg-white/5 p-4 rounded-2xl border border-black/10 dark:border-white/10 space-y-4">
+                  <h3 className="font-semibold text-foreground dark:text-white">Write a Review</h3>
+                  <div>
+                    <label className="text-sm text-foreground dark:text-white/80 block mb-2">Rating</label>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button 
+                          key={star} 
+                          onClick={() => setReviewRating(star)}
+                          className="focus:outline-none"
+                        >
+                          <Star className={`h-6 w-6 ${reviewRating >= star ? 'text-yellow-400 fill-current' : 'text-muted-foreground dark:text-white/30'}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-foreground dark:text-white/80 block mb-2">Comment</label>
+                    <Textarea 
+                      placeholder="Share your experience (optional)"
+                      value={reviewComment}
+                      onChange={(e: any) => setReviewComment(e.target.value)}
+                      className="bg-transparent border-black/20 dark:border-white/20"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={submitReview} 
+                      disabled={isSubmittingReview}
+                      className="bg-secondary text-primary-foreground flex-1"
+                    >
+                      {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+                    </Button>
+                    <Button 
+                      onClick={() => setShowReviewForm(false)} 
+                      variant="ghost" 
+                      className="text-muted-foreground"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {loadingReviews ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary"></div>

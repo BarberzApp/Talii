@@ -84,36 +84,51 @@ export default function BookingSuccessPage({
   }, [sessionId, router, toast])
 
   return (
-    <div className="container max-w-2xl py-10">
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Successful! 🎉</CardTitle>
-          <CardDescription>
+    <div className="container max-w-2xl py-10 min-h-screen flex items-center justify-center">
+      <Card className="w-full shadow-lg border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-xl">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-foreground dark:text-white">Payment Successful</CardTitle>
+          <CardDescription className="text-muted-foreground dark:text-white/70">
             Your payment has been processed and your booking will be confirmed shortly.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-800">
-              ✅ Your payment was successful! 
+        <CardContent className="space-y-6">
+          <div className="bg-secondary/10 border border-secondary/20 rounded-lg p-5">
+            <p className="text-secondary font-semibold text-lg">
+              Payment Confirmed
             </p>
-            <p className="text-green-700 text-sm mt-2">
-              Your booking is being processed automatically. You'll receive a confirmation email and SMS shortly.
+            <p className="text-foreground dark:text-white/80 text-sm mt-2 leading-relaxed">
+              Your booking is being processed automatically. You will receive a confirmation email and SMS shortly.
             </p>
           </div>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800 font-medium">What happens next?</p>
-            <ul className="text-blue-700 text-sm mt-2 space-y-1">
-              <li>• Your booking will be created automatically</li>
-              <li>• You'll receive a confirmation email</li>
-              <li>• You'll get an SMS notification</li>
-              <li>• The barber will be notified of your appointment</li>
+          <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg p-5">
+            <p className="text-foreground dark:text-white font-medium mb-3">What happens next?</p>
+            <ul className="text-muted-foreground dark:text-white/70 text-sm space-y-2">
+              <li className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-secondary"></div>
+                Your booking will be created automatically
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-secondary"></div>
+                You will receive a confirmation email
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-secondary"></div>
+                You will get an SMS notification
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-secondary"></div>
+                The barber will be notified of your appointment
+              </li>
             </ul>
           </div>
           
-          <Button onClick={() => safePush('/')} className="w-full">
-            Return to Home
+          <Button 
+            onClick={() => safePush('/browse')} 
+            className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90 py-6 text-base font-semibold rounded-full"
+          >
+            Browse
           </Button>
         </CardContent>
       </Card>
