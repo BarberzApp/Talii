@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { AdminRouteGuard } from "@/shared/components/admin/AdminRouteGuard";
 import { ReviewModeration } from "@/shared/components/admin/ReviewModeration";
+import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
@@ -14,16 +15,21 @@ import {
   BarChart3, 
   Settings, 
   Shield,
+  Star,
   Calendar,
   DollarSign,
   TrendingUp,
   AlertTriangle,
   CheckCircle,
+  Clock,
   UserCheck,
+  UserX,
   Activity,
+  Zap,
   Crown,
   Database,
-  Globe
+  Globe,
+  Bell
 } from "lucide-react";
 import { useAdminAuth } from "@/shared/hooks/useAdminAuth";
 
@@ -39,6 +45,7 @@ export default function AdminDashboard() {
     newUsersToday: 0,
     revenueToday: 0
   });
+  const [loading, setLoading] = useState(true);
   const { adminUser, isSuperAdmin } = useAdminAuth();
 
   useEffect(() => {
@@ -47,6 +54,7 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
+      setLoading(true);
       // Simulate fetching real stats - replace with actual API calls
       const mockStats = {
         totalUsers: 1247,
@@ -62,6 +70,7 @@ export default function AdminDashboard() {
     } catch (error) {
       logger.error('Error fetching stats', error);
     } finally {
+      setLoading(false);
     }
   };
 
@@ -72,16 +81,7 @@ export default function AdminDashboard() {
     }).format(amount);
   };
 
-  interface StatCardProps {
-    title: string;
-    value: string | number;
-    icon: React.ElementType;
-    color: string;
-    trend?: number;
-    subtitle?: string;
-  }
-
-  const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }: StatCardProps) => (
+  const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }: any) => (
     <Card className="bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-300">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
@@ -106,19 +106,8 @@ export default function AdminDashboard() {
     </Card>
   );
 
-  interface QuickActionCardProps {
-    title: string;
-    description: string;
-    icon: React.ElementType;
-    action?: () => void;
-    color: string;
-  }
-
-  const QuickActionCard = ({ title, description, icon: Icon, action, color }: QuickActionCardProps) => (
-    <Card 
-      className="bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer group"
-      onClick={action}
-    >
+  const QuickActionCard = ({ title, description, icon: Icon, action, color }: any) => (
+    <Card className="bg-white/5 border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer group">
       <CardContent className="p-6">
         <div className="flex items-center gap-4">
           <div className={`p-3 rounded-xl ${color} group-hover:scale-110 transition-transform duration-300`}>

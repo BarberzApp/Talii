@@ -25,6 +25,12 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Talii',
   description: 'Book your next haircut with ease',
+  themeColor: '#EE6D23',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1
+  }
 }
 
 // Use next/dynamic instead of React.lazy for better App Router compatibility

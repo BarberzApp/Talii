@@ -27,15 +27,6 @@ const nextConfig = {
     // your project has TypeScript errors.
     ignoreBuildErrors: true,
   },
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/landing',
-        permanent: false,
-      },
-    ]
-  },
   // Copy service worker to public directory during build
   webpack: (config, { isServer }) => {
     if (!isServer) {

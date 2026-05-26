@@ -38,7 +38,7 @@ export default function PrivacyPage() {
           <CardContent className="p-8 sm:p-12 space-y-10 text-foreground/90 leading-relaxed">
             <section className="space-y-4">
               <p>
-                Welcome to Talii. We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and related services (collectively, the &quot;Services&quot;).
+                Welcome to Talii. We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and related services (collectively, the "Services").
               </p>
               <p>
                 By using our Services, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree with our policies and practices, do not use our Services.
@@ -136,8 +136,8 @@ export default function PrivacyPage() {
                   </p>
                   <ul className="list-disc pl-5 mt-3 space-y-2 text-sm text-muted-foreground">
                     <li><strong>In-App Deletion:</strong> You can delete your account by logging into the Talii app and navigating to Settings &gt; Delete Account.</li>
-                    <li><strong>Email Request:</strong> Alternatively, you can email us at support@talii.com with the subject &quot;Account Deletion Request&quot;.</li>
-                   </ul>
+                    <li><strong>Email Request:</strong> Alternatively, you can email us at support@talii.com with the subject "Account Deletion Request".</li>
+                  </ul>
                   <p className="text-sm text-muted-foreground mt-3">
                     Upon initiating deletion, we will promptly remove your profile, bookings, and uploaded photos from our active databases, except where we are legally required to retain certain transactional records.
                   </p>

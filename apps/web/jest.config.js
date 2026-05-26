@@ -7,15 +7,11 @@ const createJestConfig = nextJest({
 /** @type {import('jest').Config} */
 const customJestConfig = {
   testEnvironment: 'jsdom',
-  setupFiles: ['<rootDir>/jest.polyfills.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@barber-app/shared$': '<rootDir>/../../packages/shared/src/index.ts',
   },
-  transformIgnorePatterns: [
-    '/node_modules/(?!(jose|@supabase/auth-helpers-nextjs|@supabase/auth-helpers-shared)/)',
-  ],
 }
 
 module.exports = createJestConfig(customJestConfig)

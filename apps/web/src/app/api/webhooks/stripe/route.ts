@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { supabaseAdmin } from "@/shared/lib/supabase"
+import { headers } from "next/headers"
 import { sendBookingConfirmationSMS } from '@/shared/utils/sendSMS'
 import { logger } from '@/shared/lib/logger'
 import { calculateFeeBreakdown } from '@/shared/lib/fee-calculator'
@@ -15,9 +16,9 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20" as Stripe.StripeConfig['apiVersion'],
+  apiVersion: "2024-06-20" as any,
 })
- 
+
 const supabase = supabaseAdmin
 
 type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled'
@@ -342,7 +343,7 @@ export async function POST(request: Request) {
                   raw: parsed.raw,
                 },
                 created_at: new Date().toISOString(),
-              })
+              } as any)
             } catch (trackingError) {
               logger.error('Error tracking missing-metadata event', trackingError)
             }
@@ -449,11 +450,23 @@ export async function POST(request: Request) {
           const servicePrice = service?.price ? Number(service.price) : 0
 
           // Calculate add-on total from add-ons table using addonIds (deduplicate first)
+          let addon_total = 0
           let addonIdArray: string[] = []
           if (addonIdsCsv && typeof addonIdsCsv === 'string' && addonIdsCsv.length > 0) {
             // Deduplicate addon IDs to prevent double-counting
             addonIdArray = [...new Set(addonIdsCsv.split(',').filter(id => id.trim()))]
+            if (addonIdArray.length > 0) {
+              const { data: addons } = await supabase
+                .from('service_addons')
+                .select('price')
+                .in('id', addonIdArray)
+                .eq('is_active', true)
+              if (addons && addons.length > 0) {
+                addon_total = addons.reduce((sum, addon) => sum + Number(addon.price), 0)
+              }
+            }
           }
+
           const { data: newBooking, error: createError } = await supabase.from('bookings').insert({
             barber_id: barberId,
             service_id: serviceId,
@@ -565,14 +578,14 @@ export async function POST(request: Request) {
               }
             }
           }
-        } else if (findError && typeof findError === 'object' && (findError as Record<string, unknown>).code !== 'PGRST116') {
+        } else if (findError && typeof findError === 'object' && (findError as any).code !== 'PGRST116') {
           // Only log error if it's not the 'no rows' error
           logger.error('Error finding booking', findError)
           return NextResponse.json(
             { error: 'Failed to find booking' },
             { status: 500 }
           )
-         } else {
+        } else {
           // Booking already exists, just update status
           bookingId = existingBooking.id
           await updateBooking(existingBooking.id, {

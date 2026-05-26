@@ -15,8 +15,8 @@ import { logger } from '@/shared/lib/logger'
 export default function RegisterCompletePage() {
   const router = useRouter()
   const { user } = useAuth()
-  const [profile, setProfile] = useState<{ role: string | null; username: string | null } | null>(null)
-   const [loading, setLoading] = useState(false)
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     role: "",
     username: ""
@@ -26,14 +26,11 @@ export default function RegisterCompletePage() {
     if (!user) return
     const fetchProfile = async () => {
       setLoading(true)
-      const { data, error: fetchError } = await supabase
-         .from("profiles")
+      const { data, error } = await supabase
+        .from("profiles")
         .select("role, username")
         .eq("id", user.id)
         .single()
-      if (fetchError) {
-        logger.error('Error fetching profile', fetchError)
-      }
       setProfile(data)
       setLoading(false)
       // Autofill username if present and not already set in form
@@ -50,8 +47,8 @@ export default function RegisterCompletePage() {
       }
     }
     fetchProfile()
-  }, [user, router, form.username])
- 
+  }, [user, router])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }

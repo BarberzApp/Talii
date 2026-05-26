@@ -1,52 +1,33 @@
-/** @jest-environment node */
-// @ts-nocheck
+process.env.STRIPE_SECRET_KEY = 'sk_test_mock'
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
-
-// Define mock functions at the top scope
-const mockStripeCreate = jest.fn();
-const mockSupabaseFrom = jest.fn();
-const mockValidateBearerToken = jest.fn();
-
-// Share them via global to bypass hoisting issues in factory functions
-(global as any)._mockStripeCreate = mockStripeCreate;
-(global as any)._mockSupabaseFrom = mockSupabaseFrom;
-(global as any)._mockValidateBearerToken = mockValidateBearerToken;
-
+const mockStripeCreate = jest.fn()
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => ({
     paymentIntents: {
-      create: (args: any) => (global as any)._mockStripeCreate(args),
+      create: mockStripeCreate,
     },
-    checkout: {
-      sessions: {
-        create: (args: any) => (global as any)._mockStripeCreate(args),
-      }
-    }
   }))
 })
 
-jest.mock('@/shared/lib/supabase', () => {
-  return {
-    supabaseAdmin: { from: (table: string) => (global as any)._mockSupabaseFrom(table) },
-    supabase: { from: (table: string) => (global as any)._mockSupabaseFrom(table) }
-  }
-})
+const mockSupabaseFrom = jest.fn()
+const supabaseAdmin = { from: mockSupabaseFrom }
+jest.mock('@/shared/lib/supabase', () => ({
+  supabaseAdmin,
+}))
 
-jest.mock('@/shared/lib/api-auth', () => {
-  class ApiAuthError extends Error {
-    status: number
-    constructor(message: string, status = 401) {
-      super(message)
-      this.name = 'ApiAuthError'
-      this.status = status
-    }
+const mockValidateBearerToken = jest.fn()
+class ApiAuthError extends Error {
+  status: number
+  constructor(message: string, status = 401) {
+    super(message)
+    this.name = 'ApiAuthError'
+    this.status = status
   }
-  return {
-    ApiAuthError,
-    validateBearerToken: (req: any) => (global as any)._mockValidateBearerToken(req),
-  }
-})
+}
+jest.mock('@/shared/lib/api-auth', () => ({
+  ApiAuthError,
+  validateBearerToken: mockValidateBearerToken,
+}))
 
 jest.mock('@/shared/lib/logger', () => ({
   logger: {
@@ -113,35 +94,35 @@ describe('Mobile bookings API', () => {
 
     setSupabaseHandlers({
       barbers: {
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: barber, error: null }),
-          }),
-        }),
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: barber, error: null }),
+          })),
+        })),
       },
       services: {
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: service, error: null }),
-          }),
-        }),
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: service, error: null }),
+          })),
+        })),
       },
       service_addons: {
-        select: () => ({
-          in: () => ({
-            eq: () => Promise.resolve({ data: addons, error: null }),
-          }),
-        }),
+        select: jest.fn(() => ({
+          in: jest.fn(() => ({
+            eq: jest.fn().mockResolvedValue({ data: addons, error: null }),
+          })),
+        })),
       },
       bookings: {
-        insert: () => ({
-          select: () => ({
-            single: () => Promise.resolve({ data: booking, error: null }),
-          }),
-        }),
+        insert: jest.fn(() => ({
+          select: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: booking, error: null }),
+          })),
+        })),
       },
       booking_addons: {
-        insert: () => Promise.resolve({ error: null }),
+        insert: jest.fn().mockResolvedValue({ error: null }),
       },
     })
 
@@ -180,18 +161,18 @@ describe('Mobile bookings API', () => {
 
     setSupabaseHandlers({
       barbers: {
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: barber, error: null }),
-          }),
-        }),
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: barber, error: null }),
+          })),
+        })),
       },
       services: {
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: service, error: null }),
-          }),
-        }),
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: service, error: null }),
+          })),
+        })),
       },
     })
 
@@ -228,18 +209,18 @@ describe('Mobile bookings API', () => {
 
     setSupabaseHandlers({
       barbers: {
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: barber, error: null }),
-          }),
-        }),
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: barber, error: null }),
+          })),
+        })),
       },
       services: {
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: service, error: null }),
-          }),
-        }),
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            single: jest.fn().mockResolvedValue({ data: service, error: null }),
+          })),
+        })),
       },
     })
 
@@ -256,13 +237,13 @@ describe('Mobile bookings API', () => {
     const json = await response.json()
 
     const fee = calculateFeeBreakdown()
-    
+
     expect(response.status).toBe(200)
     expect(json.success).toBe(true)
     expect(mockStripeCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         amount: fee.platformFee,
-        application_fee_amount: fee.applicationFeeAmount,
+        application_fee_amount: fee.bocmGrossShare,
       })
     )
   })

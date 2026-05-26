@@ -28,11 +28,7 @@
       "@/*": [
         "./src/*"
       ]
-    },
-    "types": [
-      "jest",
-      "node"
-    ]
+    }
   },
   "include": [
     "**/*.ts",
@@ -43,6 +39,9 @@
   "exclude": [
     "node_modules",
     "future-features/**/*",
-    "supabase/functions/**/*"
+    "supabase/functions/**/*",
+    "**/__tests__/**/*",
+    "**/*.test.*",
+    "**/*.spec.*"
   ]
 }

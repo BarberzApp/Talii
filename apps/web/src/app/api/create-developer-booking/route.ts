@@ -21,8 +21,8 @@ export async function POST(request: Request) {
       guestName, 
       guestEmail, 
       guestPhone, 
-      clientId: _clientId, 
-      paymentType: _paymentType,
+      clientId, 
+      paymentType,
       addonIds = []
     } = body
 

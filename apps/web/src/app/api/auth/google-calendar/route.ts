@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import type { User } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { logger } from '@/shared/lib/logger';
 
@@ -28,7 +27,7 @@ export async function GET(request: NextRequest) {
     
     // First try to get session from cookies
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    let user: User | null = session?.user || null;
+    let user: any = session?.user || null;
     let userError = sessionError;
     
     // If no session from cookies, try to get user directly

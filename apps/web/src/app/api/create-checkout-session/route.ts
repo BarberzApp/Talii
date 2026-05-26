@@ -9,7 +9,7 @@ import { buildStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata
 import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20" as Stripe.StripeConfig['apiVersion'],
+  apiVersion: "2024-06-20" as any,
 })
 
 // Optional rate limit for guests to prevent spamming Stripe session creation
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     let user = null
     try {
       user = await validateBearerToken(request)
-    } catch (_err) {
+    } catch (e) {
       // Not logged in — handle as guest
       const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
       const now = Date.now()
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       guestEmail, 
       guestPhone, 
       clientId, 
-      paymentType: _paymentType,
+      paymentType,
       addonIds = []
     } = body
 
@@ -105,6 +105,7 @@ export async function POST(request: Request) {
     
     // Get add-ons if any are selected (deduplicate first)
     let addonTotal = 0
+    let addonItems: any[] = []
     
     if (addonIds && addonIds.length > 0) {
       // Deduplicate addon IDs to prevent double-counting
@@ -123,6 +124,17 @@ export async function POST(request: Request) {
       }
 
       addonTotal = addons.reduce((total, addon) => total + addon.price, 0)
+      addonItems = addons.map(addon => ({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: addon.name,
+            description: "Additional service"
+          },
+          unit_amount: Math.round(addon.price * 100),
+        },
+        quantity: 1,
+      }))
     }
     
     // Platform fee calculation (unified $3.40 model)
@@ -141,6 +153,7 @@ export async function POST(request: Request) {
 
     // Customer only pays the platform fee (fee-only payment model)
     // Service price and addons are paid directly to barber at appointment
+    const totalAmount = platformFee
     
     const lineItems = [
       {
@@ -211,27 +224,22 @@ export async function POST(request: Request) {
       url: session.url,
       sessionId: session.id 
     })
-  } catch (err: unknown) {
-    if (err instanceof ApiAuthError) {
-      return NextResponse.json({ error: err.message }, { status: err.status })
+  } catch (error: any) {
+    if (error instanceof ApiAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
     }
-    logger.error("Error creating checkout session", err)
+    logger.error("Error creating checkout session", error)
     
     // Handle specific Stripe account errors
-    const error = err as Record<string, unknown>;
-    const errorType = error.type as string | undefined;
-    const errorMessage = error.message as string | undefined;
-    const errorParam = error.param as string | undefined;
-
-    if ((errorType === 'invalid_request_error' || errorType === 'StripeInvalidRequestError') && 
-       (errorMessage?.includes('No such destination') || 
-        errorMessage?.includes('does not have access to account') ||
-        errorParam === 'payment_intent_data[transfer_data][destination]')) {
+    if (error.type === 'StripeInvalidRequestError' && 
+       (error.message?.includes('No such destination') || 
+        error.message?.includes('does not have access to account') ||
+        error.param === 'payment_intent_data[transfer_data][destination]')) {
       
       return NextResponse.json(
         { 
           error: "This barber's payment account is not correctly configured or has been disconnected. Please notify them.",
-          details: errorMessage,
+          details: error.message,
           code: 'STRIPE_ACCOUNT_INVALID'
         },
         { status: 400 } // Bad request because the destination is invalid

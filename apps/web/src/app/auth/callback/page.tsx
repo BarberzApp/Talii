@@ -11,6 +11,7 @@ import { logger } from '@/shared/lib/logger'
 export default function AuthCallbackPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<'verifying' | 'completing' | 'redirecting' | 'error'>('verifying')
   const [error, setError] = useState<string | null>(null)
   const { replace: safeReplace } = useSafeNavigation();
@@ -139,8 +140,8 @@ export default function AuthCallbackPage() {
         safeReplace('/login')
         }, 3000)
       } finally {
-        // Callback completed
-      }
+        setLoading(false)
+    }
     }
 
     handleAuthCallback()

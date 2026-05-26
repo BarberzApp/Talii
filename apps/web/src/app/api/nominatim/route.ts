@@ -10,34 +10,8 @@ import { logger } from '@/shared/lib/logger';
 
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
-interface GoogleAddressComponent {
-  long_name: string;
-  short_name: string;
-  types: string[];
-}
-
-interface GoogleGeocodeResult {
-  place_id: string;
-  formatted_address: string;
-  geometry: {
-    location: {
-      lat: number;
-      lng: number;
-    };
-  };
-  address_components: GoogleAddressComponent[];
-}
-
-interface NominatimResult {
-  place_id: string;
-  display_name: string;
-  lat: string;
-  lon: string;
-  address: Record<string, string>;
-}
-
 /** Map a Google Geocoding result to the Nominatim-compatible shape expected by callers */
-function normalizeGeocodeResult(result: GoogleGeocodeResult): NominatimResult {
+function normalizeGeocodeResult(result: any) {
   const lat = result.geometry?.location?.lat?.toString() ?? '';
   const lon = result.geometry?.location?.lng?.toString() ?? '';
   const addressComponents: Record<string, string> = {};
@@ -59,7 +33,7 @@ function normalizeGeocodeResult(result: GoogleGeocodeResult): NominatimResult {
 }
 
 /** Map a Google Places Autocomplete prediction to Nominatim-compatible shape */
-async function expandAutocompleteToGeocode(placeId: string): Promise<NominatimResult | null> {
+async function expandAutocompleteToGeocode(placeId: string): Promise<any> {
   const url = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${encodeURIComponent(placeId)}&key=${GOOGLE_MAPS_API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
@@ -152,8 +126,8 @@ export async function GET(request: NextRequest) {
     // Enrich predictions with full geocode data (lat, lon, address components)
     const predictions = data.predictions ?? [];
     const normalized = await Promise.all(
-      predictions.slice(0, 5).map((p: { place_id: string }) => expandAutocompleteToGeocode(p.place_id))
-     );
+      predictions.slice(0, 5).map((p: any) => expandAutocompleteToGeocode(p.place_id))
+    );
 
     return withCors(request, NextResponse.json(normalized.filter(Boolean)));
   } catch (error) {

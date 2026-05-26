@@ -18,10 +18,10 @@
     "test:ci": "jest --ci --coverage --watchAll=false",
     "test:e2e": "cypress run",
     "test:e2e:open": "cypress open",
-    "test:api": "jest --testPathPatterns=api",
-    "test:components": "jest --testPathPatterns=components",
-    "test:utils": "jest --testPathPatterns=utils",
-    "test:integration": "jest --testPathPatterns=integration"
+    "test:api": "jest --testPathPattern=api",
+    "test:components": "jest --testPathPattern=components",
+    "test:utils": "jest --testPathPattern=utils",
+    "test:integration": "jest --testPathPattern=integration"
   },
   "dependencies": {
     "@auth/supabase-adapter": "^1.9.1",

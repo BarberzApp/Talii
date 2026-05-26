@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
-import { buildAvailabilitySlots, BookingTimeLike } from '@/shared/lib/availability-engine'
+import { buildAvailabilitySlots } from '@/shared/lib/availability-engine'
 
 export const dynamic = 'force-dynamic'
 
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
       durationMinutes: duration,
       availabilityWindow,
       specialHours: specialHours?.[0] || null,
-      bookings: (bookings || []) as BookingTimeLike[],
+      bookings: (bookings || []) as any,
     })
 
     const slots = coreSlots.map((s) => ({

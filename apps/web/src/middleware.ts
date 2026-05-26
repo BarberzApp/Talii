@@ -71,12 +71,8 @@ export async function middleware(req: NextRequest) {
           profile.location &&
           profile.phone
 
-        // Allow access to profile setup, onboarding, role selection, and auth pages
-        const exemptPaths = ['/settings/barber-profile', '/barber/onboarding', '/select-role', '/auth']
-        const isExemptPath = exemptPaths.some(path => req.nextUrl.pathname.startsWith(path))
-
-        if (!isProfileComplete && !isExemptPath) {
-          return NextResponse.redirect(new URL('/barber/onboarding', req.url))
+        if (!isProfileComplete && !req.nextUrl.pathname.startsWith('/settings/barber-profile')) {
+          return NextResponse.redirect(new URL('/settings/barber-profile', req.url))
         }
       }
     }

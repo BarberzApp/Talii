@@ -5,7 +5,7 @@ import { logger } from '@/shared/lib/logger'
 export const dynamic = 'force-dynamic'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20' as Stripe.StripeConfig['apiVersion'],
+  apiVersion: '2024-06-20' as any,
 })
 
 export async function GET(request: Request) {
