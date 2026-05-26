@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       )
     }
 
-    let barber: any = null
+    let barber: unknown = null
     if (profile?.role === 'barber') {
       const { data: barberRow, error: barberError } = await supabaseAdmin
         .from('barbers')

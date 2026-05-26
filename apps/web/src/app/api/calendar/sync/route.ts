@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
           .eq('id', connection.id);
 
         // Update connection object
-        connection.access_token = newTokens.access_token;
+        connection.access_token = newTokens.access_token ?? connection.access_token;
         connection.expires_at = newTokens.expires_at;
       } catch (refreshError) {
         logger.error('Error refreshing token', refreshError);

@@ -12,8 +12,8 @@ npx expo start
 
 ## Docs
 
-- Mobile documentation index: `apps/mobile/docs/README.md`
+- Mobile documentation index: [DOC_INDEX.md](../../docs/mobile/DOC_INDEX.md)
 - EAS builds:
-  - `apps/mobile/docs/build/EAS_QUICK_START.md`
-  - `apps/mobile/docs/build/EAS_BUILD_GUIDE.md`
+ - [EAS_QUICK_START.md](../../docs/mobile/build/EAS_QUICK_START.md)
+ - [EAS_BUILD_GUIDE.md](../../docs/mobile/build/EAS_BUILD_GUIDE.md)
 

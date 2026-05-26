@@ -7,14 +7,14 @@ We will leverage the existing Jest setup in `apps/web` to create integration tes
 
 ### Key Focus Areas & Required Checks:
 - **Booking Creation (`/api/mobile/bookings`)**:
-    - [ ] **Validation**: Verify 400 errors for missing `barberId`, `serviceId`, or `date`.
-    - [ ] **Conflict Handling**: Ensure 409 status when a time slot is already booked.
-    - [ ] **Business Rules**: Test constraints like "same day bookings not allowed" or "outside availability".
-    - [ ] **Developer Mode**: Verify that developer barbers bypass Stripe and create bookings directly.
+ - [ ] **Validation**: Verify 400 errors for missing `barberId`, `serviceId`, or `date`.
+ - [ ] **Conflict Handling**: Ensure 409 status when a time slot is already booked.
+ - [ ] **Business Rules**: Test constraints like "same day bookings not allowed" or "outside availability".
+ - [ ] **Developer Mode**: Verify that developer barbers bypass Stripe and create bookings directly.
 - **Payment Logic (`/api/create-checkout-session`)**:
-    - [ ] **Fee Model**: Verify the $3.40 total charge and $1.80 application fee (BOCM share).
-    - [ ] **Metadata**: Ensure all required metadata (barberId, serviceId, etc.) is correctly passed to Stripe.
-    - [ ] **Add-ons**: Verify that add-on prices are correctly calculated but *not* added to the platform fee (fee-only model).
+ - [ ] **Fee Model**: Verify the $3.40 total charge and $1.80 application fee (BOCM share).
+ - [ ] **Metadata**: Ensure all required metadata (barberId, serviceId, etc.) is correctly passed to Stripe.
+ - [ ] **Add-ons**: Verify that add-on prices are correctly calculated but *not* added to the platform fee (fee-only model).
 
 ### Implementation Pattern:
 - **Mocking**: Implement a standard, reusable mock for `supabaseAdmin` and `stripe` in a shared test utility.
@@ -25,12 +25,12 @@ Edge Functions require a Deno-native testing approach using `deno test`.
 
 ### Key Focus Areas & Required Checks:
 - **Payment Intent (`create-payment-intent`)**:
-    - [ ] **Fee Integrity**: CRITICAL check that `totalAmount` exactly equals `platformFee` ($3.40).
-    - [ ] **Stripe Integration**: Mock Stripe API to verify `application_fee_amount` and `transfer_data` destination.
-    - [ ] **CORS**: Verify correct headers for cross-origin requests from the mobile app.
+ - [ ] **Fee Integrity**: CRITICAL check that `totalAmount` exactly equals `platformFee` ($3.40).
+ - [ ] **Stripe Integration**: Mock Stripe API to verify `application_fee_amount` and `transfer_data` destination.
+ - [ ] **CORS**: Verify correct headers for cross-origin requests from the mobile app.
 - **Stripe Webhooks**:
-    - [ ] **Signature Verification**: Test that invalid signatures are rejected.
-    - [ ] **Event Handling**: Verify `checkout.session.completed` correctly triggers booking creation in Supabase.
+ - [ ] **Signature Verification**: Test that invalid signatures are rejected.
+ - [ ] **Event Handling**: Verify `checkout.session.completed` correctly triggers booking creation in Supabase.
 
 ### Implementation Pattern:
 - Create a `__tests__` directory within each function folder (e.g., `supabase/functions/create-payment-intent/__tests__/`).

@@ -34,7 +34,7 @@ const getMobileRedirectUrls = () => {
 };
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-06-20' as any,
+  apiVersion: '2024-06-20' as Stripe.StripeConfig['apiVersion'],
 })
 
 // Type definitions
@@ -157,8 +157,8 @@ export async function POST(request: NextRequest) {
           existing: true,
         })
         return withCors(request, response)
-      } catch (stripeError) {
-        logger.debug('Existing account not found or invalid, will create new one')
+      } catch (err) {
+        logger.debug('Existing account not found or invalid, will create new one', { error: err })
         // Continue to create new account
       }
     }

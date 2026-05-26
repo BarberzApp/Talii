@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { CalendarSyncService } from '@/shared/lib/google-calendar-api';
 import { logger } from '@/shared/lib/logger';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get current user
     const supabase = createRouteHandlerClient({ cookies });
@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  try {
+export async function DELETE() {
+   try {
     // Get current user
     const supabase = createRouteHandlerClient({ cookies });
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -129,8 +129,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update connection settings
-    const updateData: any = {
-      updated_at: new Date().toISOString()
+    const updateData: Record<string, unknown> = {
+       updated_at: new Date().toISOString()
     };
 
     if (sync_enabled !== undefined) {

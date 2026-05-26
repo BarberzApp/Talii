@@ -9,7 +9,7 @@ import { buildStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata
 export const dynamic = 'force-dynamic'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20' as any,
+  apiVersion: '2024-06-20' as Stripe.StripeConfig['apiVersion'],
 })
 
 export async function GET(request: Request) {
@@ -246,14 +246,16 @@ export async function POST(request: Request) {
       clientSecret: paymentIntent.client_secret,
       amount: paymentIntent.amount,
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof ApiAuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status })
     }
-    logger.error('Mobile /bookings POST error', err)
+    const error = err as Record<string, unknown>;
+    logger.error('Mobile /bookings POST error', error)
     // Surface Stripe-specific errors to aid debugging (safe — no sensitive data in Stripe error messages)
-    const stripeMessage = err?.raw?.message || err?.message || 'Internal server error'
-    const stripeCode = err?.raw?.code || err?.code || null
+    const errRaw = error.raw as Record<string, unknown> | undefined;
+    const stripeMessage = (errRaw?.message as string | undefined) || (error.message as string | undefined) || 'Internal server error'
+    const stripeCode = (errRaw?.code as string | undefined) || (error.code as string | undefined) || null
     return NextResponse.json(
       { error: stripeMessage, stripeCode },
       { status: 500 }

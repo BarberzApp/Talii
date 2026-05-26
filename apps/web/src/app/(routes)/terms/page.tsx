@@ -43,7 +43,7 @@ export default function TermsPage() {
                 <h2 className="text-2xl font-bold font-bebas tracking-tight">Overview</h2>
               </div>
               <p>
-                Welcome to <span className="font-bold text-foreground">Talii</span>. These Terms of Service ("Terms") govern your access to and use of the Talii website, mobile application, and all associated services (collectively, the "Services").
+                Welcome to <span className="font-bold text-foreground">Talii</span>. These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Talii website, mobile application, and all associated services (collectively, the &quot;Services&quot;).
               </p>
               <p>
                 By using our Services, you agree to be bound by these Terms, our Privacy Policy, and all applicable laws and regulations. If you do not agree, do not use the Services.
@@ -56,7 +56,7 @@ export default function TermsPage() {
                 <h2 className="text-2xl font-bold font-bebas tracking-tight">Our Services</h2>
               </div>
               <p>
-                Talii is a digital marketplace that connects clients seeking beauty and barbering services ("Clients") with independent cosmetologists and barbers ("Professionals"). Talii provides the digital infrastructure for booking, service management, payment processing, and content discovery but does not directly offer any hair or beauty services.
+                Talii is a digital marketplace that connects clients seeking beauty and barbering services (&quot;Clients&quot;) with independent cosmetologists and barbers (&quot;Professionals&quot;). Talii provides the digital infrastructure for booking, service management, payment processing, and content discovery but does not directly offer any hair or beauty services.
               </p>
               
               <div className="grid sm:grid-cols-2 gap-6 mt-6">

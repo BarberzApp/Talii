@@ -7,7 +7,7 @@ import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
 export async function POST(request: Request) {
   try {
     // Authenticate the caller
-    const user = await validateBearerToken(request)
+    await validateBearerToken(request)
 
     const body = await request.json()
     const { 

@@ -191,7 +191,7 @@ export default function StripeConnectReturn() {
             Return to App
           </button>
           <p style={{ fontSize: '14px', opacity: 0.6 }}>
-            If the app doesn't open automatically, tap the button above
+            If the app doesn&apos;t open automatically, tap the button above
           </p>
         </>
       )}

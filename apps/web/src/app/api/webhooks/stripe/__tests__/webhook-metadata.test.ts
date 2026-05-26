@@ -1,3 +1,5 @@
+// @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { buildStripeBookingMetadata, parseStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata'
 
 describe('Stripe booking metadata contract', () => {

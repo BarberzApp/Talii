@@ -21,7 +21,6 @@ export default function RegisterPage() {
   const router = useRouter()
   const { register } = useAuth()
   const { toast } = useToast()
-  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [role, setRole] = useState<"" | "client" | "barber">("")
 
@@ -44,7 +43,6 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     logger.debug('Form submitted')
     e.preventDefault()
-    setError(null)
 
     if (!role) {
       toast({
@@ -87,7 +85,6 @@ export default function RegisterPage() {
         router.push(`/confirm?email=${encodeURIComponent(formData.email)}`)
       }
     } catch (err) {
-      setError('Failed to create account')
       toast({
         title: "Registration failed",
         description: err instanceof Error ? err.message : "An error occurred during registration",

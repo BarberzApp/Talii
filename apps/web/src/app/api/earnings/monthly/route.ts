@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/shared/lib/supabase'
 import { supabaseAdmin } from '@/shared/lib/supabase'
-import { calculateFeeBreakdown } from '@/shared/lib/fee-calculator'
 import { logger } from '@/shared/lib/logger'
 import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
 
@@ -105,7 +104,7 @@ export async function GET(request: Request) {
     }
 
     // Validate prices in bookings
-    const validatePrices = (bookings: any[]): boolean => {
+    const validatePrices = (bookings: { price: number | null }[]): boolean => {
       return bookings.every(booking => 
         booking && 
         typeof booking.price === 'number' && 

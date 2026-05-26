@@ -1,10 +1,8 @@
 'use client'
 
-import { useState, useEffect, type ChangeEvent } from 'react'
-import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
+import React, { useState, useEffect, type ChangeEvent } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { useToast } from '@/shared/components/ui/use-toast'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
@@ -16,18 +14,20 @@ import { getAndClearRedirectUrl } from '@/shared/lib/redirect-utils'
 import { getRedirectPath } from '@/shared/hooks/use-auth-zustand'
 import { logger } from '@/shared/lib/logger'
 
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { push } = useSafeNavigation()
-  const { login, user, status, isInitialized } = useAuth()
-  const { toast } = useToast()
+  const { login, user, isInitialized } = useAuth()
+  const hasRedirected = React.useRef(false)
 
-  // Function to handle redirect with proper error handling
-  const handleRedirect = async (userId: string) => {
+  // Hard-navigate to the correct post-login page
+  const handleRedirect = React.useCallback(async (userId: string) => {
+    if (hasRedirected.current) return
+    hasRedirected.current = true
     setRedirecting(true)
     setError(null)
     
@@ -38,7 +38,7 @@ export default function LoginPage() {
       const redirectUrl = getAndClearRedirectUrl()
       if (redirectUrl) {
         logger.debug('Using stored redirect URL', { redirectUrl })
-        push(redirectUrl)
+        window.location.href = redirectUrl
         return
       }
 
@@ -46,31 +46,29 @@ export default function LoginPage() {
       const redirectPath = await getRedirectPath(userId)
       logger.debug('Determined redirect path', { redirectPath })
       
-      // Attempt to redirect
-      push(redirectPath)
+      // Use hard navigation to guarantee leaving the login page
+      window.location.href = redirectPath
       
     } catch (error) {
       logger.error('Redirect error', error)
+      hasRedirected.current = false
+      setRedirecting(false)
       setError('Failed to redirect. Please try again.')
-      
-      // Fallback to reload after 3 seconds - only if in browser
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          window.location.reload()
-        }
-      }, 3000)
     }
-  }
+  }, []);
 
-  // Use global auth state for session check and redirect
+  // If user is already logged in, redirect them away
   useEffect(() => {
-    if (isInitialized && user) {
+    if (isInitialized && user && !hasRedirected.current) {
       handleRedirect(user.id)
     }
-  }, [isInitialized, user])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  }, [isInitialized, user, handleRedirect])
+ 
+  const handleSubmit = async () => {
+    if (!email || !password) {
+      setError('Please enter both email and password')
+      return
+    }
     setIsLoading(true)
     setError(null)
 
@@ -79,14 +77,15 @@ export default function LoginPage() {
       const success = await login(email, password)
       
       if (success) {
-        logger.debug('Login successful, getting session')
-        // Use global auth state for redirect
-        if (user) {
-          logger.debug('Session confirmed, redirecting')
-          await handleRedirect(user.id)
+        logger.debug('Login successful, getting session from Supabase')
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          logger.debug('Session confirmed, redirecting', { userId: session.user.id })
+          await handleRedirect(session.user.id)
         } else {
-          logger.error('No user after successful login')
-          setError('Login successful but user not found. Please try again.')
+          logger.debug('Session not yet available, waiting for store update')
+          setRedirecting(true)
         }
       } else {
         logger.debug('Login failed')
@@ -197,7 +196,7 @@ export default function LoginPage() {
               </div>
             )}
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-foreground">Email</Label>
                 <Input
@@ -206,8 +205,8 @@ export default function LoginPage() {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                  required
                   className="h-12 bg-muted border border-border text-foreground placeholder-muted-foreground focus:border-primary rounded-xl px-4 py-3"
+                  onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSubmit() }}
                 />
               </div>
               <div className="space-y-2">
@@ -225,12 +224,13 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                  required
                   className="h-12 bg-muted border border-border text-foreground placeholder-muted-foreground focus:border-primary rounded-xl px-4 py-3"
+                  onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSubmit() }}
                 />
               </div>
               <Button 
-                type="submit" 
+                type="button"
+                onClick={handleSubmit}
                 className="w-full bg-secondary text-primary-foreground font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-secondary/90 transition-all text-lg font-bebas" 
                 disabled={isLoading}
               >
@@ -243,7 +243,7 @@ export default function LoginPage() {
                   'Sign in'
                 )}
               </Button>
-            </form>
+            </div>
             {/* Divider */}
             <div className="flex items-center my-4">
               <div className="flex-grow border-t border-border" />
