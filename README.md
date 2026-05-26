@@ -12,107 +12,71 @@ This repository is organized as an **npm monorepo** utilizing workspaces. It is 
 - **`packages/shared`**: Shared TypeScript types, constants, and domain logic
 
 ### 1. Monorepo Topology
-The diagram below shows how the workspaces are structured and how dependencies flow between packages.
+The monorepo uses npm workspaces to isolate concerns while sharing a single source of truth for types and logic.
 
 ```text
-+-------------------------------------------------------------+
-| TALII MONOREPO ROOT (npm workspaces) |
-| [package.json] |
-+-------------------------------------------------------------+
- | |
- v (workspace apps) v (workspace packages)
-+-------------------------------+ +---------------------+
-| /apps | | /packages |
-| | | |
-| +-------------------------+ | | +---------------+ |
-| | web | | | | shared | |
-| | (Next.js 15.3 Gateway | | | | (Domain Logic, | |
-| | & UI - Port 3002) | | | | Types, etc.) | |
-| +------------+------------+ | | +-------+-------+ |
-| ^ | | ^ |
-| HTTP Request | | | | |
-| (with JWT) | | | | |
-| +------------+------------+ | | | |
-| | mobile |--+-------+----------+ |
-| | (Expo SDK 53) | | (Shared imports) |
-| +------------+------------+ | |
-+---------------+---------------+-----------------------------+
- |
- v (Supabase API & Deno Runtime)
-+-------------------------------------------------------------+
-| /supabase |
-| |
-| +-----------------------------------------------------+ |
-| | Supabase Postgres | |
-| | (Data Storage, Schema, RLS, Auth) | |
-| +--------------------------+--------------------------+ |
-| ^ |
-| | (RPC / HTTP Calls) |
-| +--------------------------+--------------------------+ |
-| | Edge Functions | |
-| | (stripe-connect, stripe-dashboard, etc.) | |
-| +-----------------------------------------------------+ |
-+-------------------------------------------------------------+
+┌─────────────────────────────────────────────────────────────┐
+│                  TALII MONOREPO ROOT (npm)                  │
+│                        [package.json]                       │
+└──────────────┬──────────────────────────────┬───────────────┘
+               │                              │
+       ┌───────▼───────┐              ┌───────▼───────┐
+       │     /apps     │              │   /packages   │
+       └───────┬───────┘              └───────┬───────┘
+               │                              │
+   ┌───────────┴───────────┐          ┌───────▼───────┐
+   │          web          │          │     shared    │
+   │ (Next.js 15 Gateway)  │◄─────────┤ (Domain Logic, │
+   └───────────┬───────────┘          │  Types, etc.) │
+               │                      └───────▲───────┘
+   ┌───────────▼───────────┐                  │
+   │         mobile        │                  │
+   │     (Expo SDK 53)     ├──────────────────┘
+   └───────────┬───────────┘
+               │
+       ┌───────▼───────┐
+       │   /supabase   │
+       │ (Postgres/RLS)│
+       └───────────────┘
 ```
 
 ---
 
 ### 2. End-to-End Booking and Payment Flow
-This sequence shows the secure transaction flow from the mobile app through the Next.js API Gateway, Stripe payment sheet validation, and final database insertion via the Stripe Webhook.
+Secure transaction flow from mobile through the Next.js API Gateway to Stripe and Supabase.
 
-```text
- Client (Mobile) Next.js Gateway (/api) Stripe API / Webhook Supabase DB
-================== ======================== ====================== =============
- | | | |
- [1] |-- POST /bookings --------->| | |
- | (Barber, Date, Addons) | | |
- | |-- [2] Calculate Fees (fees.ts) |
- | |-- [3] Build Metadata (stripe-metadata.ts) |
- | |-- [4] Create PaymentIntent ->| |
- | |<-- [5] Return ClientSecret --| |
- |<-- [6] Return Secrets -----| | |
- | | | |
- [7] |-- Present Card Form & | | |
- | Confirm Payment Intent -------------------------------->| |
- |<-- [8] Succeeded Confirmation ----------------------------| |
- | | | |
- | | (Asynchronous) |
- | |<-- [9] POST Webhook (payment_intent.succeeded) |
- | |-- [10] Verify Signature & Parse Metadata |
- | |================= DATABASE TRANSACTION =====================|
- | |-- [11] Insert Booking (status: 'confirmed') --------------->|
- | |-- [12] Insert Payment Record ------------------------------>|
- | |============================================================|
- | |-- [13] 200 OK Response ----->| |
-```
+| Step | Participant | Action |
+|:---|:---|:---|
+| **01** | **Mobile** | `POST /bookings` (Selection + Add-ons) |
+| **02** | **Gateway** | Fee calculation (`fees.ts`) + Metadata build |
+| **03** | **Stripe** | Create `PaymentIntent` -> Return `ClientSecret` |
+| **04** | **Mobile** | Present Stripe Payment Sheet |
+| **05** | **Stripe** | Async Webhook: `payment_intent.succeeded` |
+| **06** | **Gateway** | **DB Transaction:** Insert Booking + Payment Record |
+| **07** | **DB** | Confirm rows written (status: `confirmed`) |
 
 ---
 
 ### 3. Stripe Connect Barber Onboarding Flow
-This sequence represents the onboarding flow for a professional barber to receive payouts directly.
+Onboarding sequence for professional barbers to receive direct payouts.
 
 ```text
- Barber (Mobile) Supabase DB Edge Function (stripe-connect) Stripe Connect API
-================= ============= =============================== ====================
- | | | |
- [1] |-- Complete profile info >| | |
- [2] |-- Tap "Connect Stripe" --+------------------------------>| |
- | | |-- [3] Query existing account |
- | | |-- [4] Create Express Account ---->|
- | | |<-- [5] Return account_id ---------|
- | |<-- [6] Store account_id ------| |
- | | (status: 'pending') | |
- | | |-- [7] Create Account Link ------->|
- | | |<-- [8] Return Link URL -----------|
- |<-- [9] Onboarding URL ---+-------------------------------| |
- | | | |
- [10] |-- WebBrowser.openBrowserAsync(onboardingUrl) ------------+---------------------------------->|
- [11] | (Barber completes Stripe onboarding flow) <------------+----------------------------------|
- [12] |<-- Redirects to return_url ------------------------------+-----------------------------------|
- | | |
- [13] |-- Poll/Read status ----->| |
- |<-- Returns status info --| |
- | (stripe_account_ready)| |
+BARBER (Mobile)        NEXT.js / EDGE          STRIPE API
+      │                      │                     │
+  [1] ├─ Submit Profile ────►│                     │
+  [2] ├─ "Connect Stripe" ──►│                     │
+      │                      │ [3] Query Account   │
+      │                      ├────────────────────►│
+      │                      │ [4] Create Express  │
+      │                      ├────────────────────►│
+      │                      │◄─── [5] Account ID ─┤
+  [6] │◄── Onboarding URL ───┤                     │
+      │                      │                     │
+  [7] ├─ Complete Flow ──────┼────────────────────►│
+  [8] │◄─── Redirect ────────┼─────────────────────┤
+      │                      │                     │
+  [9] ├─ Poll Status ───────►│ [10] Check DB      │
+      │◄── Ready (Active) ───┤                     │
 ```
 
 ---
@@ -213,4 +177,3 @@ npm run test:shared
  ```bash
  stripe listen --forward-to localhost:3002/api/webhooks/stripe
  ```
-
