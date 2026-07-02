@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { supabaseAdmin } from "@/shared/lib/supabase"
-import { headers } from "next/headers"
-import { sendBookingConfirmationSMS } from '@/shared/utils/sendSMS'
 import { logger } from '@/shared/lib/logger'
 import { calculateFeeBreakdown } from '@/shared/lib/fee-calculator'
 import { parseStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata'
+import { BarberAccountService } from '@/shared/services/BarberAccountService'
+import { BookingPaymentService, BookingPaymentPayload } from '@/shared/services/BookingPaymentService'
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing STRIPE_SECRET_KEY')
@@ -19,278 +18,77 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20" as any,
 })
 
-const supabase = supabaseAdmin
-
-type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled'
-type PaymentStatus =
-  | 'pending'
-  | 'succeeded'
-  | 'failed'
-  | 'refunded'
-  | 'partially_refunded'
-
-// Helper function to update booking status/payment status (DB-aligned)
-async function updateBooking(
-  bookingId: string,
-  patch: {
-    status?: BookingStatus
-    payment_status?: PaymentStatus
-    payment_intent_id?: string
-  }
-) {
-  // Validate inputs
-  if (!bookingId || typeof bookingId !== 'string') {
-    throw new Error('Invalid booking ID')
-  }
-
-  if (!patch || typeof patch !== 'object') {
-    throw new Error('Invalid patch')
-  }
-
-  const { error } = await supabase
-    .from('bookings')
-    .update({
-      ...(patch.status ? { status: patch.status } : {}),
-      ...(patch.payment_status ? { payment_status: patch.payment_status } : {}),
-      ...(patch.payment_intent_id ? { payment_intent_id: patch.payment_intent_id } : {}),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', bookingId)
-
-  if (error) {
-    logger.error('Error updating booking', error)
-    throw error
-  }
-}
-
 export async function POST(request: Request) {
   try {
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
 
     if (!signature) {
-      return NextResponse.json(
-        { error: 'No signature found' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'No signature found' }, { status: 400 })
     }
 
-    // Validate webhook secret is configured
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
       logger.error('STRIPE_WEBHOOK_SECRET is not configured')
-      return NextResponse.json(
-        { error: 'Webhook secret not configured' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
     }
 
-    // Verify webhook signature
     let event: Stripe.Event
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
     } catch (err) {
       logger.error('Webhook signature verification failed', err)
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
-    // Validate event type
     if (!event.type || typeof event.type !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid event type' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid event type' }, { status: 400 })
     }
 
-    // Handle specific events
-    switch (event.type as string) {
+    switch (event.type) {
       case 'account.created': {
         const account = event.data.object as Stripe.Account
-        logger.debug('Processing account.created event', { accountId: account.id })
-
-        // Validate account object
-        if (!account.id || typeof account.id !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid account ID' },
-            { status: 400 }
-          )
-        }
-
-        // Get barber ID from metadata
         const barberId = account.metadata?.barber_id
         if (!barberId) {
           logger.error('No barber ID found in account metadata')
-          return NextResponse.json(
-            { error: 'No barber ID found' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'No barber ID found' }, { status: 400 })
         }
-
-        // Update barber's Stripe account ID
-        const { error: updateError } = await supabase
-          .from('barbers')
-          .update({
-            stripe_account_id: account.id,
-            stripe_account_status: 'pending',
-            stripe_account_ready: false,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', barberId)
-
-        if (updateError) {
-          logger.error('Error updating barber', updateError)
-          return NextResponse.json(
-            { error: 'Failed to update barber' },
-            { status: 500 }
-          )
-        }
-
-        logger.debug('Successfully saved Stripe account ID for barber', { barberId })
+        await BarberAccountService.createAccount(account.id, barberId)
         break
       }
 
       case 'account.updated': {
         const account = event.data.object as Stripe.Account
-        logger.debug('Processing account.updated event', { accountId: account.id })
-
-        // Validate account object
-        if (!account.id || typeof account.id !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid account ID' },
-            { status: 400 }
-          )
-        }
-
-        // Find barber with this Stripe account ID
-        const { data: barber, error: findError } = await supabase
-          .from('barbers')
-          .select('id')
-          .eq('stripe_account_id', account.id)
-          .single()
-
-        if (findError) {
-          logger.error('Error finding barber', findError)
-          return NextResponse.json(
-            { error: 'Failed to find barber' },
-            { status: 500 }
-          )
-        }
-
-        if (!barber) {
-          return NextResponse.json(
-            { error: 'Barber not found' },
-            { status: 404 }
-          )
-        }
-
-        // Update barber's Stripe account status
-        const { error: updateError } = await supabase
-          .from('barbers')
-          .update({
-            stripe_account_status: account.charges_enabled ? 'active' : 'pending',
-            stripe_account_ready: account.charges_enabled && account.details_submitted,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', barber.id)
-
-        if (updateError) {
-          logger.error('Error updating barber', updateError)
-          return NextResponse.json(
-            { error: 'Failed to update barber' },
-            { status: 500 }
-          )
-        }
-
+        await BarberAccountService.updateAccountStatus(account.id, account.charges_enabled, account.details_submitted)
         break
       }
 
       case 'account.application.deauthorized': {
         const application = event.data.object as Stripe.Application
-        logger.debug('Processing account.application.deauthorized event', { applicationId: application.id })
-
-        // Validate application object
-        if (!application.id || typeof application.id !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid application ID' },
-            { status: 400 }
-          )
-        }
-
-        // Find and update barber's status
-        const { error: updateError } = await supabase
-          .from('barbers')
-          .update({
-            stripe_account_status: 'deauthorized',
-            stripe_account_ready: false,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('stripe_account_id', application.id)
-
-        if (updateError) {
-          logger.error('Error updating barber', updateError)
-          return NextResponse.json(
-            { error: 'Failed to update barber' },
-            { status: 500 }
-          )
-        }
-
+        await BarberAccountService.deauthorizeAccount(application.id)
         break
       }
 
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
-        logger.debug('Processing checkout.session.completed event', { sessionId: session.id })
-
-        // Validate session object
-        if (!session.id || typeof session.id !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid session ID' },
-            { status: 400 }
-          )
-        }
-
         if (!session.metadata?.bookingId) {
           logger.error('No booking ID found in session metadata')
-          return NextResponse.json(
-            { error: 'No booking ID found' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'No booking ID found' }, { status: 400 })
         }
-
-        await updateBooking(session.metadata.bookingId, {
+        await BookingPaymentService.updateBookingStatus(session.metadata.bookingId, {
           status: 'confirmed',
           payment_status: 'succeeded',
           payment_intent_id: session.payment_intent as string,
         })
-
         break
       }
 
       case 'checkout.session.expired': {
         const session = event.data.object as Stripe.Checkout.Session
-        logger.debug('Processing checkout.session.expired event', { sessionId: session.id })
-
-        // Validate session object
-        if (!session.id || typeof session.id !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid session ID' },
-            { status: 400 }
-          )
-        }
-
         if (!session.metadata?.bookingId) {
-          logger.error('No booking ID found in session metadata')
-          return NextResponse.json(
-            { error: 'No booking ID found' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'No booking ID found' }, { status: 400 })
         }
-
-        // DB constraint: bookings.status cannot be "expired" (use payment_status failed + cancel booking)
-        await updateBooking(session.metadata.bookingId, {
+        await BookingPaymentService.updateBookingStatus(session.metadata.bookingId, {
           status: 'cancelled',
           payment_status: 'failed',
         })
@@ -299,443 +97,73 @@ export async function POST(request: Request) {
 
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        logger.debug('Processing payment_intent.succeeded event', { paymentIntentId: paymentIntent.id })
+        const rawMeta = (paymentIntent.metadata || {}) as Record<string, string>
+        const parsed = parseStripeBookingMetadata(rawMeta)
 
-        // Validate payment intent object
-        if (!paymentIntent.id || typeof paymentIntent.id !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid payment intent ID' },
-            { status: 400 }
-          )
+        if (!parsed.ok) {
+          logger.error('Missing required booking metadata in payment intent', { paymentIntentId: paymentIntent.id, missing: parsed.missing })
+          await BookingPaymentService.trackMissingMetadata(paymentIntent.id, paymentIntent.amount, paymentIntent.currency, parsed.missing, parsed.raw)
+          break
         }
 
-        // Check if a booking already exists for this payment intent
-        const { data: existingBooking, error: findError } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('payment_intent_id', paymentIntent.id)
-          .single()
+        const meta = parsed.value
 
-        let bookingId: string | null = null
+        const normalizedClientId = meta.clientId && meta.clientId.trim().length > 0
+          ? meta.clientId
+          : (meta.guestName || meta.guestEmail || meta.guestPhone) ? 'guest' : ''
 
-        if (!existingBooking) {
-          // Create the booking using metadata
-          const rawMeta = (paymentIntent.metadata || {}) as Record<string, string>
-          const parsed = parseStripeBookingMetadata(rawMeta)
-
-          if (!parsed.ok) {
-            logger.error('Missing required booking metadata in payment intent', {
-              paymentIntentId: paymentIntent.id,
-              missing: parsed.missing,
-              meta: parsed.raw,
-            })
-
-            // Best-effort telemetry for missing metadata (do not fail the webhook)
-            try {
-              await supabase.from('payment_events').insert({
-                payment_intent_id: paymentIntent.id,
-                event_type: 'payment_intent_missing_metadata',
-                booking_id: null,
-                amount: paymentIntent.amount,
-                currency: paymentIntent.currency,
-                metadata: {
-                  missing: parsed.missing,
-                  raw: parsed.raw,
-                },
-                created_at: new Date().toISOString(),
-              } as any)
-            } catch (trackingError) {
-              logger.error('Error tracking missing-metadata event', trackingError)
-            }
-
-            // Returning 200 prevents Stripe retry storms; booking creation is impossible without metadata.
-            break
-          }
-
-          const {
-            barberId,
-            serviceId,
-            date,
-            notes,
-            guestName,
-            guestEmail,
-            guestPhone,
-            clientId,
-            addonIdsCsv,
-            addonTotalCents,
-            addonsPaidSeparately,
-            platformFeeCents,
-            bocmShareCents,
-            barberShareCents,
-            isDeveloper,
-          } = parsed.value
-          
-          // Debug logging
-          logger.debug('Payment intent metadata (parsed)', {
-            paymentIntentId: paymentIntent.id,
-            barberId,
-            serviceId,
-            date,
-            clientId,
-            hasGuestInfo: !!(guestName || guestEmail || guestPhone),
-            addonIdsCsv,
-            addonTotalCents,
-            addonsPaidSeparately,
-          })
-          
-          // Defensive: if clientId is missing or empty, treat as guest if guest info exists; else bail.
-          const normalizedClientId =
-            clientId && clientId.trim().length > 0
-              ? clientId
-              : (guestName || guestEmail || guestPhone) ? 'guest' : ''
-
-          if (!normalizedClientId) {
-            logger.error('Payment intent missing clientId and no guest info provided; cannot create booking', {
-              paymentIntentId: paymentIntent.id,
-              meta: rawMeta,
-            })
-            break
-          }
-
-          // Fee contract verification (log-only; do not block booking creation)
-          try {
-            const fee = calculateFeeBreakdown()
-            const expectedPlatformFee = String(fee.platformFee)
-            const expectedBocmShare = String(fee.bocmGrossShare)
-            const expectedBarberShare = String(fee.barberShare)
-
-            const mismatches: Record<string, { expected: string; got?: string }> = {}
-            if (platformFeeCents && platformFeeCents !== expectedPlatformFee) {
-              mismatches.platformFee = { expected: expectedPlatformFee, got: platformFeeCents }
-            }
-            if (bocmShareCents && bocmShareCents !== expectedBocmShare) {
-              mismatches.bocmShare = { expected: expectedBocmShare, got: bocmShareCents }
-            }
-            if (barberShareCents && barberShareCents !== expectedBarberShare) {
-              mismatches.barberShare = { expected: expectedBarberShare, got: barberShareCents }
-            }
-            if (isDeveloper && isDeveloper !== 'false' && isDeveloper !== 'true') {
-              mismatches.isDeveloper = { expected: 'true|false', got: isDeveloper }
-            }
-
-            if (Object.keys(mismatches).length > 0) {
-              logger.warn('Payment intent fee metadata mismatch (log-only)', {
-                paymentIntentId: paymentIntent.id,
-                mismatches,
-              })
-            }
-          } catch (feeErr) {
-            logger.error('Failed fee metadata verification', feeErr)
-          }
-
-          // Convert Stripe cents to dollars for bookings table (which stores NUMERIC dollars)
-          // We use the shared fee breakdown to ensure consistency
-          const breakdown = calculateFeeBreakdown()
-          
-          // application_fee_amount is the gross platform share (e.g. $1.80)
-          // For the DB, we store the shares of the net amount ($3.00)
-          const platform_fee = breakdown.bocmGrossShare / 100 // $1.80
-          const barber_payout = breakdown.barberShare / 100 // $1.20
-          
-          // Price in DB reflects the net amount split between platform and barber
-          const price = breakdown.netAfterStripe / 100 // $3.00
-          
-          // Get service price to store historically (so it doesn't change if service price is updated later)
-          const { data: service } = await supabase
-            .from('services')
-            .select('price')
-            .eq('id', serviceId)
-            .single()
-
-          const servicePrice = service?.price ? Number(service.price) : 0
-
-          // Calculate add-on total from add-ons table using addonIds (deduplicate first)
-          let addon_total = 0
-          let addonIdArray: string[] = []
-          if (addonIdsCsv && typeof addonIdsCsv === 'string' && addonIdsCsv.length > 0) {
-            // Deduplicate addon IDs to prevent double-counting
-            addonIdArray = [...new Set(addonIdsCsv.split(',').filter(id => id.trim()))]
-            if (addonIdArray.length > 0) {
-              const { data: addons } = await supabase
-                .from('service_addons')
-                .select('price')
-                .in('id', addonIdArray)
-                .eq('is_active', true)
-              if (addons && addons.length > 0) {
-                addon_total = addons.reduce((sum, addon) => sum + Number(addon.price), 0)
-              }
-            }
-          }
-
-          const { data: newBooking, error: createError } = await supabase.from('bookings').insert({
-            barber_id: barberId,
-            service_id: serviceId,
-            date,
-            status: 'confirmed',
-            payment_status: 'succeeded',
-            payment_intent_id: paymentIntent.id,
-            price,        // total amount charged (platform_fee + barber_payout) to satisfy constraint
-            service_price: servicePrice, // Store historical service price
-            addon_total: 0,  // Let the trigger calculate this from booking_addons
-            platform_fee, // dollars - platform's share
-            barber_payout, // dollars - barber's share from platform fee
-            notes: notes || null,
-            guest_name: guestName || null,
-            guest_email: guestEmail || null,
-            guest_phone: guestPhone || null,
-            client_id: normalizedClientId === 'guest' ? null : normalizedClientId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }).select('*, barber:barber_id(*), service:service_id(*), client:client_id(*)').single()
-
-          // Debug logging for the insert operation
-          logger.debug('Inserting booking with client_id', {
-            clientId: normalizedClientId === 'guest' ? null : normalizedClientId,
-            isGuest: normalizedClientId === 'guest',
-          })
-
-          if (createError) {
-            logger.error('Error creating booking after payment', createError)
-            return NextResponse.json(
-              { error: 'Error creating booking after payment' },
-              { status: 500 }
-            )
-          }
-
-          bookingId = newBooking.id
-          logger.debug('Booking created after payment for payment_intent', { paymentIntentId: paymentIntent.id })
-
-          // Send SMS notifications to both barber and client
-          try {
-            logger.debug('Sending SMS notifications for Stripe booking', { bookingId: newBooking.id })
-            const smsResults = await sendBookingConfirmationSMS(newBooking)
-            logger.debug('SMS notification results', { smsResults })
-          } catch (smsError) {
-            logger.error('Failed to send SMS notifications', smsError)
-            // Don't fail the booking creation if SMS fails
-          }
-
-          // Log successful booking creation for mobile payments
-          logger.debug('Mobile payment booking created successfully', {
-            bookingId: newBooking.id,
-            paymentIntentId: paymentIntent.id,
-            barberId,
-            clientId: normalizedClientId,
-            amount: paymentIntent.amount,
-            status: newBooking.status
-          })
-
-          // Track mobile payment success for analytics
-          try {
-            await supabase
-              .from('payment_events')
-              .insert({
-                payment_intent_id: paymentIntent.id,
-                event_type: 'mobile_payment_success',
-                booking_id: newBooking.id,
-                amount: paymentIntent.amount,
-                currency: paymentIntent.currency,
-                metadata: {
-                  source: 'mobile_app',
-                  barberId,
-                  serviceId,
-                  clientId: normalizedClientId,
-                  addonIds: addonIdArray
-                },
-                created_at: new Date().toISOString()
-              })
-          } catch (trackingError) {
-            logger.error('Error tracking mobile payment event', trackingError)
-            // Don't fail the webhook if tracking fails
-          }
-
-          // Add add-ons to the booking if any were selected (deduplicate first)
-          if (addonIdsCsv && addonIdsCsv.length > 0) {
-            const addonIdArray = [...new Set(addonIdsCsv.split(',').filter(id => id.trim()))]
-            if (addonIdArray.length > 0) {
-              const { data: addons } = await supabase
-                .from('service_addons')
-                .select('id, price')
-                .in('id', addonIdArray)
-                .eq('is_active', true)
-
-              if (addons && addons.length > 0) {
-                const bookingAddons = addons.map(addon => ({
-                  booking_id: newBooking.id,
-                  addon_id: addon.id,
-                  price: addon.price
-                }))
-
-                const { error: addonError } = await supabase
-                  .from('booking_addons')
-                  .insert(bookingAddons)
-
-                if (addonError) {
-                  logger.error('Error adding add-ons to booking', addonError)
-                } else {
-                  logger.debug(`Added ${addons.length} add-ons to booking`)
-                }
-              }
-            }
-          }
-        } else if (findError && typeof findError === 'object' && (findError as any).code !== 'PGRST116') {
-          // Only log error if it's not the 'no rows' error
-          logger.error('Error finding booking', findError)
-          return NextResponse.json(
-            { error: 'Failed to find booking' },
-            { status: 500 }
-          )
-        } else {
-          // Booking already exists, just update status
-          bookingId = existingBooking.id
-          await updateBooking(existingBooking.id, {
-            status: 'confirmed',
-            payment_status: 'succeeded',
-            payment_intent_id: paymentIntent.id,
-          })
+        if (!normalizedClientId) {
+          logger.error('Payment intent missing clientId and no guest info provided')
+          break
         }
 
-        // Store the successful payment in Supabase with all required fields
-        if (bookingId) {
-          const { error: paymentError } = await supabase.from('payments').insert({
-            payment_intent_id: paymentIntent.id,
-            amount: paymentIntent.amount, // Already in cents from Stripe
-            currency: paymentIntent.currency,
-            status: paymentIntent.status,
-            barber_stripe_account_id: paymentIntent.transfer_data?.destination,
-            platform_fee: paymentIntent.application_fee_amount || 0,
-            booking_id: bookingId, // ✅ Now properly set
-            created_at: new Date().toISOString(),
-          })
-
-          if (paymentError) {
-            logger.error('Error storing payment in Supabase', paymentError)
-            return NextResponse.json(
-              { error: 'Error storing payment' },
-              { status: 500 }
-            )
-          }
+        const breakdown = calculateFeeBreakdown()
+        
+        let addonIdArray: string[] = []
+        if (meta.addonIdsCsv && typeof meta.addonIdsCsv === 'string' && meta.addonIdsCsv.length > 0) {
+          addonIdArray = [...new Set(meta.addonIdsCsv.split(',').filter(id => id.trim()))]
         }
+
+        const payload: BookingPaymentPayload = {
+          stripePaymentIntentId: paymentIntent.id,
+          amountCents: paymentIntent.amount,
+          currency: paymentIntent.currency,
+          status: paymentIntent.status,
+          destinationAccountId: typeof paymentIntent.transfer_data?.destination === 'string' 
+            ? paymentIntent.transfer_data.destination 
+            : undefined,
+          applicationFeeAmountCents: paymentIntent.application_fee_amount || 0,
+          barberId: meta.barberId,
+          serviceId: meta.serviceId,
+          date: meta.date,
+          clientId: normalizedClientId === 'guest' ? null : normalizedClientId,
+          guestName: meta.guestName || null,
+          guestEmail: meta.guestEmail || null,
+          guestPhone: meta.guestPhone || null,
+          addonIds: addonIdArray,
+          platformFeeCents: breakdown.bocmGrossShare, 
+          barberPayoutCents: breakdown.barberShare,
+          priceCents: breakdown.netAfterStripe,
+          notes: meta.notes || null
+        }
+
+        await BookingPaymentService.confirmPayment(payload)
         break
       }
 
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        logger.debug('Processing payment_intent.payment_failed event', { paymentIntentId: paymentIntent.id })
-
-        // Validate payment intent object
-        if (!paymentIntent.id || typeof paymentIntent.id !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid payment intent ID' },
-            { status: 400 }
-          )
-        }
-
-        // Find booking with this payment intent ID
-        const { data: booking, error: findError } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('payment_intent_id', paymentIntent.id)
-          .single()
-
-        if (findError) {
-          logger.error('Error finding booking', findError)
-          return NextResponse.json(
-            { error: 'Failed to find booking' },
-            { status: 500 }
-          )
-        }
-
-        if (!booking) {
-          return NextResponse.json(
-            { error: 'Booking not found' },
-            { status: 404 }
-          )
-        }
-
-        // DB constraint: bookings.status cannot be "failed" (use payment_status failed + cancel booking)
-        await updateBooking(booking.id, {
-          status: 'cancelled',
-          payment_status: 'failed',
-          payment_intent_id: paymentIntent.id,
-        })
-
-        // Handle retry logic if needed
-        if (paymentIntent.next_action) {
-          logger.debug('Payment requires additional action', { nextAction: paymentIntent.next_action })
-          // You might want to notify the user or handle the next action
-        }
-
+        await BookingPaymentService.markPaymentFailed(paymentIntent.id)
         break
       }
 
       case 'charge.refunded': {
         const charge = event.data.object as Stripe.Charge
-        logger.debug('Processing charge.refunded event', { chargeId: charge.id })
-
-        // Validate charge object
-        if (!charge.id || typeof charge.id !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid charge ID' },
-            { status: 400 }
-          )
-        }
-
         if (!charge.payment_intent || typeof charge.payment_intent !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid payment intent reference' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'Invalid payment intent reference' }, { status: 400 })
         }
-
-        // Find booking with this payment intent ID
-        const { data: booking, error: findError } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('payment_intent_id', charge.payment_intent)
-          .single()
-
-        if (findError) {
-          logger.error('Error finding booking', findError)
-          return NextResponse.json(
-            { error: 'Failed to find booking' },
-            { status: 500 }
-          )
-        }
-
-        if (!booking) {
-          return NextResponse.json(
-            { error: 'Booking not found' },
-            { status: 404 }
-          )
-        }
-
-        const isPartialRefund = charge.amount_refunded < charge.amount
-        const refundStatus = isPartialRefund ? 'partially_refunded' : 'refunded'
-        
-        // DB constraint: bookings.status cannot be "refunded" (keep status; update payment_status only)
-        await updateBooking(booking.id, {
-          payment_status: refundStatus,
-          payment_intent_id: charge.payment_intent as string,
-        })
-
-        // Create a refund payment record
-        const { error: refundError } = await supabase.from('payments').insert({
-          payment_intent_id: charge.payment_intent,
-          amount: -charge.amount_refunded, // Negative amount for refunds
-          currency: charge.currency,
-          status: refundStatus,
-          barber_stripe_account_id: typeof charge.transfer === 'string' ? charge.transfer : charge.transfer?.destination,
-          platform_fee: 0, // No platform fee on refunds
-          booking_id: booking.id,
-          created_at: new Date().toISOString(),
-        })
-
-        if (refundError) {
-          logger.error('Error storing refund payment record', refundError)
-          // Don't fail the webhook for this, just log the error
-        }
-
+        const destinationAccountId = typeof charge.transfer === 'string' ? charge.transfer : undefined;
+        await BookingPaymentService.handleRefund(charge.payment_intent, charge.amount_refunded, charge.amount, charge.currency, destinationAccountId)
         break
       }
     }
@@ -743,9 +171,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true })
   } catch (error) {
     logger.error('Error processing webhook', error)
-    return NextResponse.json(
-      { error: 'Webhook error' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Webhook error' }, { status: 400 })
   }
 }
