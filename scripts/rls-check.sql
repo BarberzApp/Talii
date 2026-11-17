@@ -1,31 +1,31 @@
--- RLS Verification Script (manual execution)
--- Use service_role to seed data, then switch to authenticated role for checks.
--- Replace placeholder UUIDs before running.
+-- Read-only catalog checks for the security model in docs/database/SCHEMA.md.
+-- Safe to run in any SQL console; every query should return zero rows.
+-- The full behavioural suite is in supabase/tests (run with `supabase test db`).
 
--- Required session context variables (example):
--- SET LOCAL "request.jwt.claim.sub" = 'user-uuid';
--- SET LOCAL "request.jwt.claim.role" = 'authenticated';
+-- 1. Tables in public without row-level security.
+select c.relname as table_without_rls
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relkind in ('r', 'p') and not c.relrowsecurity;
 
--- 1) Client can only see their own bookings
--- Expect: 1 row for client_a, 0 rows for client_b
-SELECT id, client_id, barber_id
-FROM bookings
-WHERE client_id IN ('client_a_uuid', 'client_b_uuid');
+-- 2. SECURITY DEFINER functions in public that do not pin search_path to ''.
+select p.oid::regprocedure as unsafe_security_definer
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public' and p.prosecdef
+  and not coalesce('search_path=""' = any (p.proconfig), false);
 
--- 2) Barber can only see their own bookings
--- Expect: rows only for barber_a
-SELECT id, client_id, barber_id
-FROM bookings
-WHERE barber_id IN ('barber_a_uuid', 'barber_b_uuid');
+-- 3. Write privileges held by anon or authenticated on public tables and views.
+select r.role, c.relname, p.priv
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+cross join (values ('anon'), ('authenticated')) r (role)
+cross join (values ('INSERT'), ('UPDATE'), ('DELETE'), ('TRUNCATE')) p (priv)
+where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm')
+  and has_table_privilege(r.role, c.oid, p.priv);
 
--- 3) Users cannot update other users' profiles
--- Expect: update should affect 0 rows
-UPDATE profiles
-SET phone = '0000000000'
-WHERE id = 'other_user_uuid';
-
--- 4) Service role can bypass RLS
--- Expect: update should succeed when using service_role key
-UPDATE profiles
-SET phone = '1111111111'
-WHERE id = 'other_user_uuid';
+-- 4. Server-only tables readable by anon or authenticated.
+select r.role, t.tbl
+from (values ('anon'), ('authenticated')) r (role)
+cross join (values ('public.barber_billing'), ('public.stripe_events'), ('public.waitlist')) t (tbl)
+where has_table_privilege(r.role, t.tbl, 'SELECT');

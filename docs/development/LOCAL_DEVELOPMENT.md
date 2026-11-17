@@ -81,6 +81,6 @@ SUPABASE_PROJECT_REF=your-project-ref npm run types:generate
 ## Related Documentation
 
 - **[Documentation Index](../DOC_INDEX.md)**: Web application documentation overview.
-- **[Database Schema](../database/database-schema.txt)**: Structure of the database profiles and tables.
-- **[RLS Policies](../database/rowlevelsecurity.txt)**: Supabase Row Level Security policy documentation.
+- **[Database Schema](../database/SCHEMA.md)**: Structure of the database profiles and tables.
+- **[RLS Policies](../database/SCHEMA.md)**: Supabase Row Level Security policy documentation.
 - **[Root README](../../README.md)**: Monorepo system overview.

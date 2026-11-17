@@ -8,9 +8,7 @@
 - [development/TYPE_GENERATION.md](development/TYPE_GENERATION.md): generating Supabase TypeScript types into the shared package.
 - [development/SECURITY.md](development/SECURITY.md): security headers, auth and role-based access measures.
 - [development/CURRENT_PROBLEMS.md](development/CURRENT_PROBLEMS.md): log of open compile, lint and TypeScript problems per workspace.
-- [database/database-schema.txt](database/database-schema.txt): table and column listing.
-- [database/constraints.txt](database/constraints.txt): primary keys, foreign keys, unique and check constraints per table.
-- [database/rowlevelsecurity.txt](database/rowlevelsecurity.txt): row-level security policies per table.
+- [database/SCHEMA.md](database/SCHEMA.md): tables, who can read and write them, the booking hold lifecycle, and how to reset and test locally.
 - [mobile/build/EAS_BUILD_GUIDE.md](mobile/build/EAS_BUILD_GUIDE.md): EAS build prerequisites and commands.
 - [mobile/build/EAS_QUICK_START.md](mobile/build/EAS_QUICK_START.md): quick path to a production EAS build, including environment secrets.
 - [mobile/release/APP_STORE_CONNECT_METADATA.md](mobile/release/APP_STORE_CONNECT_METADATA.md): paste-ready App Store Connect metadata and review notes.

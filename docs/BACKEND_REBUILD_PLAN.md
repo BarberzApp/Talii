@@ -31,7 +31,7 @@ Update the status column as phases land.
 |---|---|---|
 | 0 | Safety net: make the test suites run | done 2026-11-17 |
 | 1 | Delete dead code and cut features | done 2026-11-17 |
-| 2 | Database baseline | not started |
+| 2 | Database baseline | done locally 2026-11-17; live reset pending |
 | 3 | API rebuild | not started |
 | 4 | Clients go through the API | not started |
 | 5 | Front end | not started |

@@ -52,3 +52,6 @@ apps/**/dist/
 apps/**/.expo/
 apps/**/web-build/
 .npm-cache/
+
+# Supabase CLI local state
+supabase/.temp/

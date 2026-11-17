@@ -8,7 +8,7 @@ This document provides a high-level overview of the Talii platform's architectur
 - **API Gateway & Backend:** Next.js API Routes, Supabase PostgreSQL, Supabase Auth, Deno Edge Functions
 - **Payments:** Stripe Connect (Express) & Stripe Payment Intents
 - **Shared Logic:** Workspace library (`packages/shared`) containing canonical fees, availability slots engine, and Stripe metadata schemas.
-- **Database Schema:** See [database-schema.txt](../database/database-schema.txt)
+- **Database Schema:** See [database-schema.txt](../database/SCHEMA.md)
 
 ## Main Flows
 
@@ -21,7 +21,7 @@ This document provides a high-level overview of the Talii platform's architectur
 - **Stripe Connect:** Handled via the Edge Function at `supabase/functions/stripe-connect`
 - **Logic:**
  - Checks for required fields and Stripe account status before marking onboarding as complete.
- - RLS policies restrict permissions to only the profile owner (see [rowlevelsecurity.txt](../database/rowlevelsecurity.txt)).
+ - RLS policies restrict permissions to only the profile owner (see [rowlevelsecurity.txt](../database/SCHEMA.md)).
 
 ### 2. Booking Flow
 - **Purpose:** Clients browse profiles, view availability slots, choose service add-ons, and book appointments.
@@ -46,9 +46,9 @@ This document provides a high-level overview of the Talii platform's architectur
 ## Where to Find Key Logic
 - **Authentication:** `packages/shared/src/domain/auth/` & `apps/web/src/shared/lib/api-auth.ts`
 - **Profile Management:** `apps/web/src/features/profile/` & `apps/mobile/app/pages/UserProfilePage.tsx`
-- **RLS Policies:** [rowlevelsecurity.txt](../database/rowlevelsecurity.txt)
+- **RLS Policies:** [rowlevelsecurity.txt](../database/SCHEMA.md)
 
 ## Additional References
 - [README.md](../../README.md)
-- [Database Schema](../database/database-schema.txt)
+- [Database Schema](../database/SCHEMA.md)
 - [Local Development Guide](LOCAL_DEVELOPMENT.md)
