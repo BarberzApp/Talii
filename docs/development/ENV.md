@@ -35,7 +35,7 @@ This document details the environment variables required to run the Talii platfo
 ## 2. Server-Only Secrets
 
 > [!WARNING]
-> These keys must only be read in secure execution contexts (Next.js server-side, Supabase Edge Functions, or CI/CD).
+> These keys must only be read in secure execution contexts (Next.js server-side or CI/CD).
 > They must **never** have the `NEXT_PUBLIC_` or `EXPO_PUBLIC_` prefix.
 
 ### Stripe & Database Integrations
@@ -44,6 +44,7 @@ This document details the environment variables required to run the Talii platfo
 | :--- | :--- | :--- |
 | `STRIPE_SECRET_KEY` | Next.js API | Privileged Stripe operations (creating Intents, Transfers) |
 | `STRIPE_WEBHOOK_SECRET` | Next.js API | Validates authenticity of incoming Stripe webhook calls |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | Next.js API | Optional: signing secret of a separate Connect webhook endpoint (connected-account events such as `account.updated`) pointing at the same URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Next.js API / CI | Bypasses database Row Level Security (RLS) for gateway transactions |
 | `OPENAI_API_KEY` | Next.js API | Used for profile and review content moderation |
 

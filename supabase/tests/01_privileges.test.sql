@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(109);
+select plan(114);
 
 -- Catalog checks ---------------------------------------------------------------
 
@@ -52,6 +52,29 @@ select ok(has_function_privilege('service_role', 'public.create_booking_hold(uui
   'service_role can execute create_booking_hold');
 select ok(has_function_privilege('anon', 'public.nearby_barbers(double precision,double precision,double precision,integer)', 'execute'),
   'anon can execute nearby_barbers');
+
+select is(
+  (select count(*)::int from pg_attribute a
+    where a.attrelid = 'public.public_reviews'::regclass and a.attnum > 0
+      and a.attname in ('client_id', 'booking_id')),
+  0, 'public_reviews exposes no client_id or booking_id');
+
+select ok(
+  not has_function_privilege('anon', 'public.barber_earnings_totals(uuid,timestamptz,timestamptz)', 'execute')
+  and not has_function_privilege('authenticated', 'public.barber_earnings_totals(uuid,timestamptz,timestamptz)', 'execute'),
+  'clients cannot execute barber_earnings_totals');
+select ok(
+  not has_function_privilege('anon', 'public.barber_earnings_bookings(uuid,timestamptz,timestamptz,integer,integer)', 'execute')
+  and not has_function_privilege('authenticated', 'public.barber_earnings_bookings(uuid,timestamptz,timestamptz,integer,integer)', 'execute'),
+  'clients cannot execute barber_earnings_bookings');
+select ok(
+  has_function_privilege('service_role', 'public.barber_earnings_totals(uuid,timestamptz,timestamptz)', 'execute')
+  and has_function_privilege('service_role', 'public.barber_earnings_bookings(uuid,timestamptz,timestamptz,integer,integer)', 'execute'),
+  'service_role can execute the earnings functions');
+select ok(
+  not has_column_privilege('anon', 'public.special_hours', 'reason', 'select')
+  and not has_column_privilege('authenticated', 'public.reviews', 'client_id', 'select'),
+  'private columns are not granted (special_hours.reason, reviews.client_id)');
 
 -- Behaviour: anon --------------------------------------------------------------
 

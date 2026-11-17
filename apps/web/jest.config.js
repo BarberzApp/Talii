@@ -11,6 +11,7 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@barber-app/shared$': '<rootDir>/../../packages/shared/src/index.ts',
+    '^server-only$': '<rootDir>/jest/server-only.js',
   },
 }
 

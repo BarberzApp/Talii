@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(45);
+select plan(56);
 
 -- Fixture (as postgres) ----------------------------------------------------------
 --   barber A (public), barber B (public), barber H (not public), barber D (profile disabled)
@@ -39,8 +39,13 @@ insert into public.service_addons (id, barber_id, name, price_cents, is_active) 
   ('d0000000-0000-4000-8000-0000000000a1', 'b0000000-0000-4000-8000-00000000000a', 'A beard', 500, true),
   ('d0000000-0000-4000-8000-0000000000a2', 'b0000000-0000-4000-8000-00000000000a', 'A old addon', 500, false);
 
-insert into public.availability (barber_id, day_of_week, start_time, end_time)
-values ('b0000000-0000-4000-8000-00000000000a', 1, '09:00', '17:00');
+insert into public.availability (barber_id, day_of_week, start_time, end_time) values
+  ('b0000000-0000-4000-8000-00000000000a', 1, '09:00', '17:00'),
+  ('b0000000-0000-4000-8000-00000000000c', 1, '09:00', '17:00');
+
+insert into public.special_hours (barber_id, date, is_closed, reason) values
+  ('b0000000-0000-4000-8000-00000000000a', '2030-01-02', true, 'dentist appointment'),
+  ('b0000000-0000-4000-8000-00000000000c', '2030-01-02', true, 'private');
 
 insert into public.bookings (id, barber_id, client_id, service_id, starts_at, ends_at, status, payment_status, payment_intent_id) values
   ('e0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-00000000000a', '33333333-3333-4333-8333-333333333333',
@@ -96,19 +101,38 @@ select is(
   array['A beard'], 'anon sees active add-ons only');
 
 select is((select count(*)::int from public.availability where barber_id = 'b0000000-0000-4000-8000-00000000000a'), 1,
-  'anon can read availability');
+  'anon can read availability of a listed barber');
+select is_empty($$select 1 from public.availability where barber_id = 'b0000000-0000-4000-8000-00000000000c'$$,
+  'anon cannot read availability of a barber that is not public');
+select is((select count(*)::int from public.special_hours where barber_id = 'b0000000-0000-4000-8000-00000000000a'), 1,
+  'anon can read special hours of a listed barber (without reason)');
+select is_empty($$select 1 from public.special_hours where barber_id = 'b0000000-0000-4000-8000-00000000000c'$$,
+  'anon cannot read special hours of a barber that is not public');
+select throws_ok('select reason from public.special_hours', '42501', null, 'anon cannot read special_hours.reason');
 
 select is(
   (select array_agg(comment) from public.reviews where id::text like 'f0000000-%'),
   array['Great'], 'anon sees visible reviews but not hidden ones');
+select throws_ok('select client_id from public.reviews', '42501', null, 'anon cannot read reviews.client_id');
+select throws_ok('select booking_id from public.reviews', '42501', null, 'anon cannot read reviews.booking_id');
+select is(
+  (select array_agg(reviewer_name || ':' || comment) from public.public_reviews where id::text like 'f0000000-%'),
+  array['Client:Great'], 'public_reviews shows visible reviews with the reviewer''s first name only');
+select is_empty($$select 1 from public.public_reviews where id = 'f0000000-0000-4000-8000-000000000002'$$,
+  'public_reviews excludes hidden reviews');
 
 select is((select review_count from public.barber_rating_stats where barber_id = 'b0000000-0000-4000-8000-00000000000a'), 1,
   'barber_rating_stats counts visible reviews');
 select is_empty($$select 1 from public.barber_rating_stats where barber_id = 'b0000000-0000-4000-8000-00000000000b'$$,
   'barber_rating_stats ignores hidden reviews');
 
-select is((select count(*)::int from public.public_profiles where id = '44444444-4444-4444-8444-444444444444'), 1,
-  'anon can read a public profile through public_profiles');
+select is((select count(*)::int from public.public_profiles where id = '11111111-1111-4111-8111-111111111111'), 1,
+  'anon can read a listed barber''s profile through public_profiles');
+select is_empty($$select 1 from public.public_profiles where id in
+    ('33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444')$$,
+  'public_profiles does not list clients');
+select is_empty($$select 1 from public.public_profiles where id = '55555555-5555-4555-8555-555555555555'$$,
+  'public_profiles excludes barbers that are not public');
 select is_empty($$select 1 from public.public_profiles where id = '66666666-6666-4666-8666-666666666666'$$,
   'public_profiles excludes disabled profiles');
 
@@ -213,6 +237,8 @@ select is((select count(*)::int from public.barbers where id = 'b0000000-0000-40
   'non-public barber can read own barber row');
 select is((select count(*)::int from public.services where id = 'c0000000-0000-4000-8000-0000000000c1'), 1,
   'non-public barber can read own services');
+select is((select count(*)::int from public.availability where barber_id = 'b0000000-0000-4000-8000-00000000000c'), 1,
+  'non-public barber can read own availability');
 
 reset role;
 

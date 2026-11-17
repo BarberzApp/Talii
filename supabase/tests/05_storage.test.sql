@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(15);
+select plan(18);
 
 -- The Storage API sets this before deleting rows; without it a statement-level
 -- trigger blocks every direct DELETE regardless of policy.
@@ -20,10 +20,33 @@ select ok(
 
 insert into auth.users (id, email) values
   ('51000000-0000-4000-8000-000000000001', 'store.one@example.com'),
-  ('51000000-0000-4000-8000-000000000002', 'store.two@example.com');
+  ('51000000-0000-4000-8000-000000000002', 'store.two@example.com'),
+  ('51000000-0000-4000-8000-000000000003', 'store.disabled@example.com');
 
-insert into storage.objects (bucket_id, name, owner)
-values ('media', '51000000-0000-4000-8000-000000000002/portfolio/1.jpg', '51000000-0000-4000-8000-000000000002');
+update public.profiles set is_disabled = true where id = '51000000-0000-4000-8000-000000000003';
+
+insert into storage.objects (bucket_id, name, owner) values
+  ('media', '51000000-0000-4000-8000-000000000002/portfolio/1.jpg', '51000000-0000-4000-8000-000000000002'),
+  ('media', '51000000-0000-4000-8000-000000000003/portfolio/1.jpg', '51000000-0000-4000-8000-000000000003');
+
+-- Disabled user ----------------------------------------------------------------------
+
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"51000000-0000-4000-8000-000000000003","role":"authenticated"}';
+
+select throws_ok($$insert into storage.objects (bucket_id, name, owner)
+  values ('avatars', '51000000-0000-4000-8000-000000000003/avatar.png', '51000000-0000-4000-8000-000000000003')$$,
+  '42501', null, 'a disabled user cannot upload, even into own folder');
+update storage.objects set metadata = '{"x":1}' where name = '51000000-0000-4000-8000-000000000003/portfolio/1.jpg';
+delete from storage.objects where name = '51000000-0000-4000-8000-000000000003/portfolio/1.jpg';
+
+reset role;
+
+select is(
+  (select metadata from storage.objects where name = '51000000-0000-4000-8000-000000000003/portfolio/1.jpg'), null,
+  'a disabled user cannot update own objects');
+select is((select count(*)::int from storage.objects where name = '51000000-0000-4000-8000-000000000003/portfolio/1.jpg'), 1,
+  'a disabled user cannot delete own objects');
 
 -- User one -------------------------------------------------------------------------
 
@@ -77,7 +100,7 @@ delete from storage.objects where bucket_id in ('avatars', 'media');
 
 reset role;
 
-select is((select count(*)::int from storage.objects where name like '51000000-%'), 2,
+select is((select count(*)::int from storage.objects where name like '51000000-%'), 3,
   'anon cannot delete objects (own-folder delete removed exactly one)');
 
 select * from finish();

@@ -32,7 +32,7 @@ Update the status column as phases land.
 | 0 | Safety net: make the test suites run | done 2026-11-17 |
 | 1 | Delete dead code and cut features | done 2026-11-17 |
 | 2 | Database baseline | done locally 2026-11-17; live reset pending |
-| 3 | API rebuild | not started |
+| 3 | API rebuild | 3a (foundation, bookings, money, Stripe) done 2026-11-17; 3b (remaining routes) not started |
 | 4 | Clients go through the API | not started |
 | 5 | Front end | not started |
 
@@ -84,6 +84,22 @@ One wrapper (`defineRoute`) handling Bearer login, role, zod validation and one 
 - `GET /api/admin/users`, `PATCH /api/admin/users/:id`
 
 Booking flow: validate the slot in the barber's timezone, insert a pending booking that holds the slot, create the PaymentIntent keyed to the booking, confirm on the webhook, and refund automatically if the hold was lost. Cancelling issues a real refund.
+
+### Phase 3a: what landed (2026-11-17)
+
+- Foundation in `apps/web/src/server` (see its README): `env.ts`, `clients.ts` (Stripe API version pinned to `2025-08-27.basil`), `errors.ts`, `route.ts` (`defineRoute`), `validation.ts`, test fakes in `testing/`.
+- Routes: `GET /api/barbers/:id/availability`, `GET|POST /api/bookings`, `PATCH /api/bookings/:id`, `POST /api/bookings/manual`, `POST /api/webhooks/stripe`, `POST /api/stripe/connect/onboarding`, `POST /api/stripe/connect/dashboard`, `GET /api/stripe/connect/status`, `GET /api/earnings`.
+- Removed: `create-checkout-session`, `create-developer-booking`, `mobile/bookings`, `mobile/availability/slots`, `bookings/create`, `payments/session`, `payments/barber-payments`, `earnings/monthly`, `connect/*`, and every Supabase edge function (`stripe-connect`, `stripe-dashboard`, `get-nearby-barbers`; the last is replaced by the `nearby_barbers` database function). The `supabase/functions` folder and its `config.toml` block are gone.
+- **Hold length:** 10 minutes (`HOLD_MINUTES` in `server/bookings/policy.ts`). When the API releases expired holds (before every new hold and walk-in for that barber) it also cancels their PaymentIntents. A payment that succeeds within 2 minutes of the hold's expiry (`HOLD_GRACE_MINUTES`) is applied; later than that the slot is re-validated with the availability engine first. A booking whose start time has passed is never confirmed. A payment that cannot be applied (hold released, booking cancelled, slot gone, start passed) is refunded automatically and recorded in `stripe_events.error` plus Sentry.
+- **Refund policy (booking fee only):** the barber cancels → full refund; the client cancels more than 24 hours before the start → full refund; the client cancels within 24 hours → no refund. Refunds use `reverse_transfer` and `refund_application_fee`. Nobody can cancel once the start time has passed (the barber marks it completed or no-show); completed and no-show bookings cannot be cancelled.
+- **Cancel vs. payment race:** cancelling writes only if the booking's status and payment status are still what it read; otherwise it re-reads and decides again. If an unpaid hold's PaymentIntent cannot be cancelled because it already succeeded, the booking is treated as paid and the refund policy applies. A refund is never repeated: existing refund rows covering the charge, or Stripe's `charge_already_refunded`, count as done. A refund that ends failed or canceled is alerted, and a booking that flips back from refunded to paid is alerted too.
+- **Payment failure:** `payment_intent.payment_failed` changes nothing: Stripe sends it per failed attempt and the client may retry the same intent (for example with another card). The hold's expiry or the client's cancel governs the slot. `payment_intent.canceled` releases the hold. Payment and refund events that carry `event.account` (connected-account events) are ignored.
+- Slots use a 15-minute grid in the barber's time zone. Per client: at most 3 unpaid holds, 5 upcoming (pending or confirmed) bookings with one barber and 10 overall; the caps apply to fee-exempt barbers too.
+- `account.updated` stores what `accounts.retrieve` returns now, not the event payload.
+- Earnings totals come from the service-role-only SQL functions `barber_earnings_totals` / `barber_earnings_bookings` (no 1000-row cap); the list is paged (`limit`, `offset`) and `truncated` means more rows follow.
+- Database privacy fixes made in the baseline after review: `public_profiles` lists only listed barbers; `reviews.client_id`/`booking_id` and `special_hours.reason` are not granted to clients, and reviewer names come from the `public_reviews` view; availability and special hours are readable only for listed barbers (or by the owner); disabled accounts cannot write to storage.
+- Stripe dashboard setup: the webhook endpoint must send `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed`, `charge.refund.updated`, and, from connected accounts, `account.updated` and `account.application.deauthorized`. If connected-account events come from a separate Connect endpoint, set its secret as `STRIPE_CONNECT_WEBHOOK_SECRET`. Set the endpoint API version to `2025-08-27.basil`.
+- Left for Phase 3b: `GET /api/me`, `GET /api/barbers`, `/api/barbers/:id`, `/api/barbers/:id/services`, `GET /api/geocode`, `POST /api/support`, `POST /api/waitlist`, `/api/admin/users`, and the `cut` branch in `super-admin/delete-photo`. `shared/lib/api-auth.ts` (with its `SUPER_ADMIN_EMAIL` fallback) remains only for the routes not yet moved to `defineRoute`.
 
 ### Phase 4: clients
 

@@ -809,8 +809,63 @@ export type Database = {
         }
         Relationships: []
       }
+      public_reviews: {
+        Row: {
+          barber_id: string | null
+          comment: string | null
+          created_at: string | null
+          id: string | null
+          rating: number | null
+          reviewer_avatar_url: string | null
+          reviewer_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      barber_earnings_bookings: {
+        Args: {
+          p_barber_id: string
+          p_from: string
+          p_limit?: number
+          p_offset?: number
+          p_to: string
+        }
+        Returns: {
+          addon_total_cents: number
+          customer_name: string
+          fee_share_cents: number
+          id: string
+          payment_status: string
+          service_name: string
+          service_price_cents: number
+          source: string
+          starts_at: string
+          status: string
+        }[]
+      }
+      barber_earnings_totals: {
+        Args: { p_barber_id: string; p_from: string; p_to: string }
+        Returns: {
+          booking_count: number
+          cancelled_bookings: number
+          completed_bookings: number
+          fee_share_earned_cents: number
+          fee_share_reversed_cents: number
+          no_show_bookings: number
+          refunded_to_clients_cents: number
+          service_revenue_cents: number
+          upcoming_bookings: number
+        }[]
+      }
       barber_is_listed: { Args: { p_barber_id: string }; Returns: boolean }
       create_booking_hold: {
         Args: {
@@ -856,6 +911,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      is_active_user: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       nearby_barbers: {
         Args: {

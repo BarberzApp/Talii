@@ -380,6 +380,21 @@ as $$
   );
 $$;
 
+-- True when the caller has a profile that is not disabled. Used by storage
+-- write policies. SECURITY DEFINER so it does not depend on profiles' RLS.
+create function public.is_active_user()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and not p.is_disabled
+  );
+$$;
+
 -- True when the barber is publicly listed: is_public and its profile is not disabled.
 create function public.barber_is_listed(p_barber_id uuid)
 returns boolean
@@ -449,13 +464,22 @@ create policy "service_addons: read active of listed barber, or own" on public.s
     or (select public.is_admin())
   );
 
-create policy "availability: public read" on public.availability
+create policy "availability: read of listed barber, or own" on public.availability
   for select to anon, authenticated
-  using (true);
+  using (
+    public.barber_is_listed(barber_id)
+    or public.owns_barber(barber_id)
+    or (select public.is_admin())
+  );
 
-create policy "special_hours: public read" on public.special_hours
+-- The reason column is not granted to anon/authenticated (see Grants); owners read it through the API.
+create policy "special_hours: read of listed barber, or own" on public.special_hours
   for select to anon, authenticated
-  using (true);
+  using (
+    public.barber_is_listed(barber_id)
+    or public.owns_barber(barber_id)
+    or (select public.is_admin())
+  );
 
 create policy "bookings: read as client or owning barber" on public.bookings
   for select to authenticated
@@ -491,15 +515,37 @@ create policy "blocked_users: blocker reads own" on public.blocked_users
 -- Views
 -- -----------------------------------------------------------------------------
 
--- Public profile fields of non-disabled users. Runs with the owner's rights on
--- purpose so it bypasses the own-row-only policy on profiles while exposing
--- no email, phone or flags.
+-- Public profile fields of listed barbers only (is_public barber row, profile
+-- not disabled). Clients are never listed. Runs with the owner's rights on
+-- purpose so it bypasses the own-row-only policy on profiles while exposing no
+-- email, phone or flags.
 create view public.public_profiles
 with (security_invoker = false)
 as
-  select id, name, username, avatar_url, cover_photo_url, role
-  from public.profiles
-  where not is_disabled;
+  select p.id, p.name, p.username, p.avatar_url, p.cover_photo_url, p.role
+  from public.profiles p
+  where not p.is_disabled
+    and exists (select 1 from public.barbers b where b.user_id = p.id and b.is_public);
+
+-- Visible reviews with a minimal reviewer identity: first name (or username)
+-- and avatar, never the client id. Owner rights so it can read profiles; it
+-- filters hidden reviews itself. Reviewers whose account is disabled show no
+-- name or avatar.
+create view public.public_reviews
+with (security_invoker = false)
+as
+  select
+    r.id,
+    r.barber_id,
+    r.rating,
+    r.comment,
+    r.created_at,
+    case when p.is_disabled then null
+         else coalesce(nullif(split_part(trim(p.name), ' ', 1), ''), p.username) end as reviewer_name,
+    case when p.is_disabled then null else p.avatar_url end as reviewer_avatar_url
+  from public.reviews r
+  left join public.profiles p on p.id = r.client_id
+  where not r.is_hidden;
 
 -- Rating aggregates over non-hidden reviews. Invoker rights; the reviews
 -- policy already exposes exactly the non-hidden rows.
@@ -658,6 +704,113 @@ end;
 $$;
 
 
+-- Earnings for one barber's appointments starting in [p_from, p_to). Integer
+-- cents, computed in SQL so totals are never cut off by the Data API row limit.
+-- The barber's fee share of a charge is amount - application fee; a refund
+-- reverses that share proportionally (reverse_transfer). Refunds count while
+-- succeeded or pending.
+create function public.barber_earnings_totals(
+  p_barber_id uuid,
+  p_from      timestamptz,
+  p_to        timestamptz
+)
+returns table (
+  fee_share_earned_cents    bigint,
+  fee_share_reversed_cents  bigint,
+  refunded_to_clients_cents bigint,
+  completed_bookings        bigint,
+  no_show_bookings          bigint,
+  cancelled_bookings        bigint,
+  upcoming_bookings         bigint,
+  service_revenue_cents     bigint,
+  booking_count             bigint
+)
+language sql
+stable
+set search_path = ''
+as $$
+  with b as (
+    select bk.id, bk.status, bk.service_price_cents, bk.addon_total_cents
+    from public.bookings bk
+    where bk.barber_id = p_barber_id and bk.starts_at >= p_from and bk.starts_at < p_to
+  ),
+  pay as (
+    select p.type, p.status, p.amount_cents, p.application_fee_cents,
+           c.amount_cents as charge_amount, c.application_fee_cents as charge_fee
+    from public.payments p
+    join b on b.id = p.booking_id
+    left join public.payments c
+      on c.booking_id = p.booking_id and c.type = 'charge' and c.status = 'succeeded'
+     and c.payment_intent_id = p.payment_intent_id
+  )
+  select
+    coalesce((select sum(amount_cents - application_fee_cents) from pay
+               where type = 'charge' and status = 'succeeded'), 0)::bigint,
+    coalesce((select sum(coalesce(round(amount_cents::numeric * (charge_amount - charge_fee)
+                                         / nullif(charge_amount, 0)), 0))
+                from pay where type = 'refund' and status in ('succeeded', 'pending')), 0)::bigint,
+    coalesce((select sum(amount_cents) from pay
+               where type = 'refund' and status in ('succeeded', 'pending')), 0)::bigint,
+    (select count(*) from b where status = 'completed'),
+    (select count(*) from b where status = 'no_show'),
+    (select count(*) from b where status = 'cancelled'),
+    (select count(*) from b where status = 'confirmed'),
+    coalesce((select sum(service_price_cents + addon_total_cents) from b where status = 'completed'), 0)::bigint,
+    (select count(*) from b);
+$$;
+
+-- One page of the same appointments, newest first, with each booking's net fee share.
+create function public.barber_earnings_bookings(
+  p_barber_id uuid,
+  p_from      timestamptz,
+  p_to        timestamptz,
+  p_limit     integer default 100,
+  p_offset    integer default 0
+)
+returns table (
+  id                  uuid,
+  starts_at           timestamptz,
+  status              text,
+  source              text,
+  payment_status      text,
+  customer_name       text,
+  service_name        text,
+  service_price_cents integer,
+  addon_total_cents   integer,
+  fee_share_cents     bigint
+)
+language sql
+stable
+set search_path = ''
+as $$
+  select
+    bk.id, bk.starts_at, bk.status, bk.source, bk.payment_status,
+    coalesce(bk.customer_name, pr.name), s.name, bk.service_price_cents, bk.addon_total_cents,
+    coalesce((
+      select sum(case
+                   when p.type = 'charge' and p.status = 'succeeded'
+                     then p.amount_cents - p.application_fee_cents
+                   when p.type = 'refund' and p.status in ('succeeded', 'pending')
+                     then -coalesce(round(p.amount_cents::numeric * (c.amount_cents - c.application_fee_cents)
+                                          / nullif(c.amount_cents, 0)), 0)
+                   else 0
+                 end)
+      from public.payments p
+      left join public.payments c
+        on c.booking_id = p.booking_id and c.type = 'charge' and c.status = 'succeeded'
+       and c.payment_intent_id = p.payment_intent_id
+      where p.booking_id = bk.id
+    ), 0)::bigint
+  from public.bookings bk
+  left join public.services s on s.id = bk.service_id
+  left join public.profiles pr on pr.id = bk.client_id
+  where bk.barber_id = p_barber_id and bk.starts_at >= p_from and bk.starts_at < p_to
+  order by bk.starts_at desc, bk.id
+  limit least(greatest(coalesce(p_limit, 100), 1), 500)
+  offset greatest(coalesce(p_offset, 0), 0);
+$$;
+
+
 -- -----------------------------------------------------------------------------
 -- Auth hooks: profile creation and email sync
 -- -----------------------------------------------------------------------------
@@ -763,18 +916,23 @@ grant usage on schema public to anon, authenticated, service_role;
 grant all on all tables in schema public to service_role;
 grant execute on all functions in schema public to service_role;
 
-grant select on public.barbers, public.services, public.service_addons,
-                public.availability, public.special_hours, public.reviews
+grant select on public.barbers, public.services, public.service_addons, public.availability
   to anon, authenticated;
+-- Column grants: special_hours.reason and reviews.client_id / booking_id stay private.
+grant select (id, barber_id, date, is_closed, start_time, end_time, created_at, updated_at)
+  on public.special_hours to anon, authenticated;
+grant select (id, barber_id, rating, comment, is_hidden, created_at, updated_at)
+  on public.reviews to anon, authenticated;
 grant select on public.profiles, public.bookings, public.booking_addons,
                 public.payments, public.reports, public.blocked_users
   to authenticated;
-grant select on public.public_profiles, public.barber_rating_stats to anon, authenticated;
+grant select on public.public_profiles, public.public_reviews, public.barber_rating_stats to anon, authenticated;
 
 -- Policy helpers and the public search function.
 grant execute on function public.is_admin()                 to anon, authenticated;
 grant execute on function public.owns_barber(uuid)          to anon, authenticated;
 grant execute on function public.barber_is_listed(uuid)     to anon, authenticated;
+grant execute on function public.is_active_user()           to authenticated;
 grant execute on function public.nearby_barbers(double precision, double precision, double precision, integer)
   to anon, authenticated;
 
@@ -782,8 +940,9 @@ grant execute on function public.nearby_barbers(double precision, double precisi
 -- -----------------------------------------------------------------------------
 -- Storage
 --
--- Two public-read buckets. Authenticated users may write only under a first
--- path segment equal to their own user id: <user_id>/<file>.
+-- Two public-read buckets. Authenticated users whose account is not disabled
+-- may write only under a first path segment equal to their own user id:
+-- <user_id>/<file>.
 -- -----------------------------------------------------------------------------
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -805,6 +964,7 @@ create policy "avatars/media: owner uploads to own folder" on storage.objects
   with check (
     bucket_id in ('avatars', 'media')
     and (storage.foldername(name))[1] = (select auth.uid())::text
+    and (select public.is_active_user())
   );
 
 create policy "avatars/media: owner updates own folder" on storage.objects
@@ -812,10 +972,12 @@ create policy "avatars/media: owner updates own folder" on storage.objects
   using (
     bucket_id in ('avatars', 'media')
     and (storage.foldername(name))[1] = (select auth.uid())::text
+    and (select public.is_active_user())
   )
   with check (
     bucket_id in ('avatars', 'media')
     and (storage.foldername(name))[1] = (select auth.uid())::text
+    and (select public.is_active_user())
   );
 
 create policy "avatars/media: owner deletes own folder" on storage.objects
@@ -823,4 +985,5 @@ create policy "avatars/media: owner deletes own folder" on storage.objects
   using (
     bucket_id in ('avatars', 'media')
     and (storage.foldername(name))[1] = (select auth.uid())::text
+    and (select public.is_active_user())
   );

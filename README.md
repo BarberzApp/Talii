@@ -86,7 +86,7 @@ BARBER (Mobile)        NEXT.js / EDGE          STRIPE API
 - **[apps/web/](apps/web)**: Next.js 15.3 Web application & API Gateway (React 19)
 - **[apps/mobile/](apps/mobile)**: Expo SDK 53 / React Native mobile client (React 19)
 - **[packages/shared/](packages/shared)**: Shared TypeScript types, constants, and domain logic
-- **[supabase/](supabase)**: Database migrations, seed scripts, and Deno Edge Functions
+- **[supabase/](supabase)**: Database migration, seed script and pgTAP tests
 - **[scripts/](scripts)**: Administrative scripts (type generation, diagnostics)
 
 ## Getting Started
