@@ -22,25 +22,19 @@ import {
   Badge,
   Avatar,
   Dialog,
-  DialogContent,
 } from '../shared/components/ui';
 import {
   Heart,
   Users,
   History,
-  Play,
   Camera,
   Loader2,
-  Eye,
   Calendar,
   Clock,
-  Share2,
 } from 'lucide-react-native';
 import { supabase } from '../shared/lib/supabase';
 import { logger } from '../shared/lib/logger';
-import VideoPreview from '../shared/components/VideoPreview';
 import { ImageUpload } from '../shared/components/ui/ImageUpload';
-import { VideoUpload } from '../shared/components/ui/VideoUpload';
 import {
   getAvatarFallbackProps,
 } from '../shared/helpers/fallbackImageHelper';
@@ -88,25 +82,6 @@ interface BarberProfile {
   }>;
 }
 
-interface Cut {
-  id: string;
-  title: string;
-  description?: string;
-  url: string;
-  thumbnail?: string;
-  views: number;
-  likes: number;
-  shares: number;
-  created_at: string;
-  is_public: boolean;
-  is_featured: boolean;
-  barber: {
-    id: string;
-    name: string;
-    image: string;
-  };
-}
-
 interface Booking {
   id: string;
   date: string;
@@ -126,21 +101,15 @@ export default function ProfilePortfolio() {
   const { user, userProfile, logout } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [barberProfile, setBarberProfile] = useState<BarberProfile | null>(null);
-  const [allCuts, setAllCuts] = useState<Cut[]>([]);
-  const [cuts, setCuts] = useState<Cut[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [openDialog, setOpenDialog] = useState<null | 'video'>(null);
-  const [activeTab, setActiveTab] = useState(userProfile?.role === 'barber' ? 'portfolio' : 'cuts');
-  const [selectedVideo, setSelectedVideo] = useState<Cut | null>(null);
+  const [activeTab, setActiveTab] = useState(userProfile?.role === 'barber' ? 'portfolio' : 'stylists');
   const [selectedPortfolioImage, setSelectedPortfolioImage] = useState<string | null>(null);
   const [showAvatarUpload, setShowAvatarUpload] = useState(false);
   const [showCoverUpload, setShowCoverUpload] = useState(false);
-  const [cutsPage, setCutsPage] = useState(0);
   const [avatarError, setAvatarError] = useState(false);
   const [coverError, setCoverError] = useState(false);
-  const CUTS_PER_PAGE = 12;
 
   // Fetch profile data
   const fetchProfileData = async () => {
@@ -180,40 +149,8 @@ export default function ProfilePortfolio() {
           } else {
             setBarberProfile(barberData);
             
-            // Fetch barber's cuts and services using the barber_id
+            // Fetch barber's services using the barber_id
             if (barberData) {
-              // Fetch cuts
-              const { data: cutsData, error: cutsError } = await supabase
-                .from('cuts')
-                .select(`
-                  *,
-                  barbers:barber_id(
-                    id,
-                    user_id,
-                    profiles:user_id(name, avatar_url)
-                  )
-                `)
-                .eq('barber_id', barberData.id)
-                .order('created_at', { ascending: false });
-
-              if (cutsError) {
-                logger.error('Error fetching cuts:', cutsError);
-              } else {
-                logger.log('📹 Fetched cuts:', cutsData?.length || 0);
-                const formattedCuts = (cutsData || []).map((cut: any) => ({
-                  ...cut,
-                  barber: {
-                    id: cut.barbers?.id,
-                    name: cut.barbers?.profiles?.name || 'Unknown',
-                    image: cut.barbers?.profiles?.avatar_url
-                  }
-                }));
-                setAllCuts(formattedCuts);
-                // Load first page
-                setCutsPage(0);
-                setCuts(formattedCuts.slice(0, CUTS_PER_PAGE));
-              }
-
               // Fetch services
               const { data: servicesData, error: servicesError } = await supabase
                 .from('services')
@@ -275,24 +212,8 @@ export default function ProfilePortfolio() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setCutsPage(0);
     await fetchProfileData();
     setRefreshing(false);
-  };
-
-  // Load more cuts when scrolling
-  const loadMoreCuts = () => {
-    if (isBarber) {
-      const nextPage = cutsPage + 1;
-      const startIndex = nextPage * CUTS_PER_PAGE;
-      const endIndex = startIndex + CUTS_PER_PAGE;
-      
-      if (startIndex < allCuts.length) {
-        const newCuts = allCuts.slice(startIndex, endIndex);
-        setCuts(prev => [...prev, ...newCuts]);
-        setCutsPage(nextPage);
-      }
-    }
   };
 
   const handleAvatarUpload = async (imageUrl: string) => {
@@ -361,7 +282,7 @@ export default function ProfilePortfolio() {
       if (userProfile.role === 'barber') {
         setActiveTab('portfolio');
       } else {
-        setActiveTab('cuts');
+        setActiveTab('stylists');
       }
     }
   }, [userProfile]);
@@ -477,124 +398,18 @@ export default function ProfilePortfolio() {
           </View>
         );
 
-      case 'cuts':
+      case 'stylists':
         return (
           <View style={tw`flex-1 px-4`}>
-            {isBarber ? (
-              <View style={tw`space-y-4 py-4`}>
-                {/* Video Upload */}
-                <VideoUpload
-                  onUploadComplete={async (videoData) => {
-                    try {
-                      // Get barber ID
-                      const { data: barberData } = await supabase
-                        .from('barbers')
-                        .select('id')
-                        .eq('user_id', user?.id)
-                        .single();
-
-                      if (!barberData) {
-                        Alert.alert('Error', 'Barber profile not found');
-                        return;
-                      }
-
-                      // Create new cut record
-                      const { error } = await supabase
-                        .from('cuts')
-                        .insert({
-                          barber_id: barberData.id,
-                          title: videoData.title,
-                          description: videoData.description,
-                          url: videoData.url,
-                          is_public: true,
-                          views: 0,
-                          likes: 0,
-                          shares: 0,
-                        });
-
-                      if (error) {
-                        Alert.alert('Error', 'Failed to save cut');
-                      } else {
-                        Alert.alert('Success', 'Cut uploaded successfully!');
-                        // Refresh cuts data
-                        fetchProfileData();
-                      }
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to save cut');
-                    }
-                  }}
-                  onUploadError={(error) => {
-                    Alert.alert('Upload Error', error);
-                  }}
-                  title="Upload New Cut"
-                  description="Share your latest work"
-                />
-
-                {/* Cuts List */}
-                {cuts.length > 0 && (
-                  <View style={tw`space-y-3`}>
-                    <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
-                      My Cuts ({cuts.length})
-                    </Text>
-                    <View style={tw`space-y-3`}>
-                      {cuts.map((cut) => (
-                        <Card key={cut.id} style={[tw`border`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
-                          <CardContent style={tw`p-4`}>
-                            <View style={tw`flex-row items-center gap-3`}>
-                              <View style={[tw`w-16 h-16 rounded-lg overflow-hidden`, { backgroundColor: colors.glass }]}>
-                                {cut.thumbnail ? (
-                                  <Image
-                                    source={{ uri: cut.thumbnail }}
-                                    style={tw`w-full h-full`}
-                                    resizeMode="cover"
-                                  />
-                                ) : (
-                                  <View style={tw`w-full h-full items-center justify-center`}>
-                                    <Play size={24} color={colors.mutedForeground} />
-                                  </View>
-                                )}
-                              </View>
-                              <View style={tw`flex-1`}>
-                                <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
-                                  {cut.title}
-                                </Text>
-                                <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-                                  {cut.description || 'No description'}
-                                </Text>
-                                <View style={tw`flex-row items-center gap-4 mt-1`}>
-                                  <View style={tw`flex-row items-center gap-1`}>
-                                    <Eye size={12} color={colors.mutedForeground} />
-                                    <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
-                                      {cut.views} views
-                                    </Text>
-                                  </View>
-                                  <View style={tw`flex-row items-center gap-1`}>
-                                    <Heart size={12} color={colors.mutedForeground} />
-                                    <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
-                                      {cut.likes} likes
-                                    </Text>
-                                  </View>
-                                </View>
-                              </View>
-                            </View>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </View>
-            ) : (
-              <View style={tw`flex-1 justify-center items-center py-8`}>
-                <Users size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
-                <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: colors.foreground }]}>
-                  No past stylists
-                </Text>
-                <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
-                  Book appointments to see your stylists here
-                </Text>
-              </View>
-            )}
+            <View style={tw`flex-1 justify-center items-center py-8`}>
+              <Users size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
+              <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: colors.foreground }]}>
+                No past stylists
+              </Text>
+              <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
+                Book appointments to see your stylists here
+              </Text>
+            </View>
           </View>
         );
 
@@ -875,21 +690,23 @@ export default function ProfilePortfolio() {
           </TouchableOpacity>
           )}
           
+          {!isBarber && (
           <TouchableOpacity
             style={tw`flex-1 py-3 items-center`}
-            onPress={() => setActiveTab('cuts')}
+            onPress={() => setActiveTab('stylists')}
           >
             <Users 
               size={20} 
-              color={activeTab === 'cuts' ? colors.primary : colors.mutedForeground} 
+              color={activeTab === 'stylists' ? colors.primary : colors.mutedForeground} 
             />
             <Text style={[
               tw`text-xs mt-1`, 
-              { color: activeTab === 'cuts' ? colors.primary : colors.mutedForeground }
+              { color: activeTab === 'stylists' ? colors.primary : colors.mutedForeground }
             ]}>
-              {isBarber ? 'My Cuts' : 'Stylists'}
+              Stylists
             </Text>
           </TouchableOpacity>
+          )}
           
           <TouchableOpacity
             style={tw`flex-1 py-3 items-center`}
@@ -918,56 +735,6 @@ export default function ProfilePortfolio() {
       >
         {renderTabContent()}
       </ScrollView>
-
-      {/* Video Dialog */}
-      <Dialog visible={openDialog === 'video'} onClose={() => setOpenDialog(null)}>
-        <DialogContent>
-          {selectedVideo && (
-            <>
-              <View style={tw`aspect-video`}>
-                <Image
-                  source={{ uri: selectedVideo.url }}
-                  style={tw`w-full h-full`}
-                  resizeMode="cover"
-                />
-              </View>
-              <View style={tw`p-4`}>
-                <View style={tw`flex-row items-center gap-3 mb-3`}>
-                  <Avatar size="md" src={selectedVideo.barber.image} fallback={selectedVideo.barber.name?.charAt(0)} />
-                  <View style={tw`flex-1`}>
-                    <Text style={[tw`font-bold text-lg`, { color: colors.foreground }]}>
-                      {selectedVideo.title}
-                    </Text>
-                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-                      {selectedVideo.barber.name}
-                    </Text>
-                  </View>
-                </View>
-                <View style={tw`flex-row items-center justify-around`}>
-                  <View style={tw`flex-row items-center gap-1`}>
-                    <Eye size={16} color={colors.mutedForeground} />
-                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-                      {selectedVideo.views} views
-                    </Text>
-                  </View>
-                  <View style={tw`flex-row items-center gap-1`}>
-                    <Heart size={16} color={colors.mutedForeground} />
-                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-                      {selectedVideo.likes} likes
-                    </Text>
-                  </View>
-                  <View style={tw`flex-row items-center gap-1`}>
-                    <Share2 size={16} color={colors.mutedForeground} />
-                    <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-                      {selectedVideo.shares} shares
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Portfolio Image Preview Dialog */}
       <Dialog visible={selectedPortfolioImage !== null} onClose={() => setSelectedPortfolioImage(null)}>

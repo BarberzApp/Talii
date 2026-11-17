@@ -7,7 +7,7 @@ import {
   STRIPE_FEE_CENTS,
   BOCM_SHARE_PERCENTAGE,
   BARBER_SHARE_PERCENTAGE
-} from '../fee-calculator'
+} from '@barber-app/shared'
 
 describe('Fee Calculator', () => {
   describe('calculateFeeBreakdown', () => {

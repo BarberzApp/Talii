@@ -6,7 +6,7 @@ import { useToast } from "@/shared/components/ui/use-toast"
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
-import { supabaseAdmin } from "@/shared/lib/supabase"
+import { supabase } from "@/shared/lib/supabase"
 import { logger } from "@/shared/lib/logger"
 
 export default function BookingSuccessPage({
@@ -49,11 +49,11 @@ export default function BookingSuccessPage({
         })
 
         // Check if booking was created by webhook
-        const { data: existingBooking } = await supabaseAdmin
+        const { data: existingBooking } = await supabase
           .from('bookings')
           .select('id, status, payment_status')
           .eq('payment_intent_id', session.payment_intent)
-          .single()
+          .maybeSingle()
 
         if (existingBooking) {
           logger.debug('Booking created by webhook', { bookingId: existingBooking.id })

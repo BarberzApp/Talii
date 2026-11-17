@@ -51,3 +51,4 @@ apps/**/.next/
 apps/**/dist/
 apps/**/.expo/
 apps/**/web-build/
+.npm-cache/

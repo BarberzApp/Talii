@@ -7,7 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, Platform, TouchableOpacity, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import {Home, Search, Settings as SettingsIcon, Calendar, Video, User } from 'lucide-react-native';
+import {Home, Search, Settings as SettingsIcon, Calendar, User } from 'lucide-react-native';
 import HomePage from '../pages/HomePage';
 import LoginPage from '../pages/LoginPage';
 import SignUpPage from '../pages/SignUpPage';
@@ -25,7 +25,6 @@ import ProfilePreview from '../pages/ProfilePreview';
 import tw from 'twrnc';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import CalendarPage from '../pages/CalendarPage';
-import CutsPage from '../pages/CutsPage';
 import { linking } from '../shared/config/deepLinking';
 import { AuthGuard, BarberGuard } from '../shared/components/auth/AuthGuard';
 import { useTheme } from '../shared/components/theme';
@@ -46,13 +45,7 @@ function GlassyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const isSmallScreen = screenWidth < 375;
   
-  // Get the center item (Cuts) and other items
-  // const centerIndex = 2; // Cuts is the center item - commented out since Cuts tab is disabled
-  // const leftItems = state.routes.slice(0, centerIndex);
-  // const centerItem = state.routes[centerIndex];
-  // const rightItems = state.routes.slice(centerIndex + 1);
-  
-  // All items are now regular items (no center highlight)
+  // All items are regular items (no center highlight)
   const allItems = state.routes;
 
   // Responsive sizing
@@ -139,69 +132,6 @@ function GlassyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           </TouchableOpacity>
         );
       })}
-
-      {/* Center item (Cuts) - commented out since Cuts tab is disabled */}
-      {/* {centerItem && (() => {
-        const { options } = descriptors[centerItem.key];
-        const label = typeof options.tabBarLabel === 'string' ? options.tabBarLabel : centerItem.name;
-        const isFocused = state.index === centerIndex;
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: centerItem.key,
-            canPreventDefault: true,
-          });
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(centerItem.name);
-          }
-        };
-
-        return (
-          <TouchableOpacity
-            key={centerItem.key}
-            onPress={onPress}
-            style={[
-              tw`flex flex-col items-center justify-center rounded-3xl`,
-              {
-                backgroundColor: '#b48a3c',
-                borderWidth: 2,
-                borderColor: 'rgba(180, 138, 60, 0.6)',
-                shadowColor: '#b48a3c',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.4,
-                shadowRadius: 16,
-                elevation: 8,
-                paddingVertical: isSmallScreen ? 4 : 5,
-                paddingHorizontal: isSmallScreen ? 10 : 12,
-                minWidth: isSmallScreen ? 60 : 68,
-                transform: [{ scale: isSmallScreen ? 1.0 : 1.02 }],
-              }
-            ]}
-          >
-            <View style={[
-              tw`absolute inset-0 rounded-3xl`,
-              { backgroundColor: 'rgba(180, 138, 60, 0.3)', opacity: 0.6 }
-            ]} />
-            
-            <Video
-              size={iconSize}
-              color="#000"
-              style={tw`mb-2 relative z-10`}
-            />
-            <Text
-              style={[
-                tw`font-bold tracking-wide relative z-10`,
-                { 
-                  color: '#000',
-                  fontSize: textSize,
-                }
-              ]}
-            >
-              {label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })()} */}
 
       {/* Right navigation items - commented out since we're using allItems now */}
       {/* {rightItems.map((route, index) => {
@@ -300,15 +230,6 @@ function MainTabs() {
             tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />, 
           }}
         />
-        {/* TikTok-style feed page commented out */}
-        {/* <Tab.Screen
-          name="Cuts"
-          component={CutsPage}
-          options={{
-            tabBarLabel: 'Cuts',
-            tabBarIcon: ({ color, size }) => <Video color={color} size={size + 2} />, 
-          }}
-        /> */}
         <Tab.Screen
           name="Profile"
           component={ProfilePortfolio}
@@ -391,7 +312,6 @@ export const AppNavigator = () => {
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="ProfilePortfolio" component={ProfilePortfolio} />
         <Stack.Screen name="ProfilePreview" component={ProfilePreview} />
-        <Stack.Screen name="Cuts" component={CutsPage} />
         <Stack.Screen name="Settings" component={SettingsPage} />
         <Stack.Screen name="BookingCalendar" component={BookingCalendarPage} />
         <Stack.Screen name="BookingSuccess" component={BookingSuccessPage} />

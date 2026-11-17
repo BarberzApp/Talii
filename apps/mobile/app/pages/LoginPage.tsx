@@ -150,9 +150,7 @@ export default function LoginPage() {
       // Determine redirect path
       let redirectPath = 'MainTabs';
       
-      if (profile.email === 'primbocm@gmail.com') {
-        redirectPath = 'SuperAdmin' as any;
-      } else if (profile.role === 'barber') {
+      if (profile.role === 'barber') {
         // Check if barber onboarding is already complete
         logger.log('💈 Checking if barber onboarding is complete...');
         const { data: barberData, error: barberError } = await supabase

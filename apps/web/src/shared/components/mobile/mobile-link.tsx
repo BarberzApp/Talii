@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { cn } from "@/shared/lib/utils"
 import { useState, useEffect } from "react"
 
 interface MobileLinkProps extends React.ComponentPropsWithoutRef<typeof Link> {

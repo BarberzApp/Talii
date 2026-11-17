@@ -1,32 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '@/shared/lib/supabase'
+import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
-
-const SUPER_ADMIN_EMAIL = 'primbocm@gmail.com'
+import { authErrorResponse, requireAdmin } from '@/shared/lib/api-auth'
 
 export async function POST(request: Request) {
   try {
-    // Get the authorization header
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Missing authorization header' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Verify the token and get user info
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user || user.email !== SUPER_ADMIN_EMAIL) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Super admin access required' },
-        { status: 403 }
-      )
-    }
+    await requireAdmin(request)
 
     const body = await request.json()
     const { barberId, isDeveloper } = body
@@ -72,6 +51,8 @@ export async function POST(request: Request) {
       message: `Developer status ${isDeveloper ? 'enabled' : 'disabled'} successfully`
     })
   } catch (error) {
+    const authResponse = authErrorResponse(error)
+    if (authResponse) return authResponse
     logger.error('Developer status update error', error)
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -82,27 +63,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    // Get the authorization header
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Missing authorization header' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Verify the token and get user info
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user || user.email !== SUPER_ADMIN_EMAIL) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Super admin access required' },
-        { status: 403 }
-      )
-    }
+    await requireAdmin(request)
 
     // Get all barbers with their developer status using admin client
     const { data, error } = await supabaseAdmin
@@ -139,6 +100,8 @@ export async function GET(request: Request) {
       barbers: transformedData
     })
   } catch (error) {
+    const authResponse = authErrorResponse(error)
+    if (authResponse) return authResponse
     logger.error('Get barbers error', error)
     return NextResponse.json(
       { error: 'Internal server error' },

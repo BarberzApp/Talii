@@ -4,12 +4,12 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'BocmApp/**'
+      - 'apps/mobile/**'
       - '.github/workflows/mobile-app-ci.yml'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'BocmApp/**'
+      - 'apps/mobile/**'
       - '.github/workflows/mobile-app-ci.yml'
 
 env:
@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./BocmApp
+        working-directory: ./apps/mobile
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,10 +32,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: 'BocmApp/package-lock.json'
+          cache-dependency-path: 'package-lock.json'
 
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
@@ -60,7 +58,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: 'BocmApp/package-lock.json'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Setup EAS
         uses: expo/expo-github-action@v8
@@ -70,9 +68,9 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        working-directory: ./BocmApp
+        working-directory: ./apps/mobile
         run: npm ci
 
       - name: Build app
-        working-directory: ./BocmApp
+        working-directory: ./apps/mobile
         run: eas build --platform all --profile production --non-interactive

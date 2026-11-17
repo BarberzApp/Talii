@@ -54,12 +54,6 @@ export const ROUTE_MAPPING: RouteMapping[] = [
     requiresAuth: true,
     description: 'Calendar page'
   },
-  // {
-  //   nextjs: '/reels',
-  //   reactNavigation: 'Cuts',
-  //   requiresAuth: true,
-  //   description: 'Cuts/Reels page'
-  // }, // Commented out - TikTok-style feed disabled
   {
     nextjs: '/profile',
     reactNavigation: 'Profile',
@@ -139,7 +133,6 @@ export const DEEP_LINKING_CONFIG = {
       Terms: 'terms',
       Browse: 'browse',
       Calendar: 'calendar',
-      Cuts: 'reels',
       Profile: 'profile',
       Settings: 'settings',
       BookingCalendar: 'book',

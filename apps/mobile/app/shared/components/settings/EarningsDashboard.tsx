@@ -166,9 +166,12 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
     try {
       logger.log('Starting Stripe Connect process for barber:', barberId);
       
+      const { data: { session } } = await supabase.auth.getSession();
+
       const response = await fetch(`${API_BASE_URL}/api/connect/create-account`, {
         method: 'POST',
         headers: {
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
           'Content-Type': 'application/json',
           'expo-platform': Platform.OS,
         },
@@ -270,122 +273,6 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
         'Error', 
         error instanceof Error ? error.message : 'Failed to open Stripe dashboard. Please try again.'
       );
-    }
-  };
-
-  const debugStripeAccount = async () => {
-    try {
-      logger.log('=== DEBUGGING STRIPE ACCOUNT ===');
-      logger.log('Barber ID:', barberId);
-      
-      // Get current barber data
-      const { data: barber, error } = await supabase
-        .from('barbers')
-        .select('*')
-        .eq('id', barberId)
-        .single();
-
-      if (error) {
-        logger.error('Error fetching barber:', error);
-        Alert.alert('Error', 'Could not fetch barber data.');
-        return;
-      }
-
-      logger.log('Full barber data:', barber);
-      
-      // Check if user has a profile
-      if (barber.user_id) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('id', barber.user_id)
-          .single();
-        
-        if (profileError) {
-          logger.error('Error fetching profile:', profileError);
-        } else {
-          logger.log('User email:', profile?.email);
-        }
-      }
-
-      // Try to create a new Stripe account
-      logger.log('Attempting to create Stripe account...');
-      
-      const response = await fetch(`${API_BASE_URL}/api/connect/create-account`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'expo-platform': Platform.OS,
-        },
-        body: JSON.stringify({ 
-          barberId: barberId,
-          email: user?.email || 'test@example.com'
-        }),
-      });
-
-      logger.log('API Response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        logger.log('API Response data:', data);
-        
-        if (data.accountId) {
-          Alert.alert(
-            'Debug Info',
-            `Stripe account created successfully!\n\nAccount ID: ${data.accountId}\nURL: ${data.url}\n\nCheck the database now.`,
-            [{ text: 'OK' }]
-          );
-          
-          // Test the update status API
-          logger.log('Testing update status API...');
-          const updateResponse = await fetch(`${API_BASE_URL}/api/connect/update-stripe-status`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'expo-platform': Platform.OS,
-            },
-            body: JSON.stringify({ 
-              barberId: barberId,
-              accountId: data.accountId
-            }),
-          });
-          
-          if (updateResponse.ok) {
-            const updateData = await updateResponse.json();
-            logger.log('Update status response:', updateData);
-            Alert.alert(
-              'Success!',
-              `Stripe account ID has been saved to database!\n\nAccount ID: ${data.accountId}`,
-              [{ text: 'OK', onPress: () => loadEarningsData() }]
-            );
-          } else {
-            const updateError = await updateResponse.text();
-            logger.error('Update status error:', updateError);
-            Alert.alert(
-              'Partial Success',
-              `Stripe account created but database update failed.\n\nAccount ID: ${data.accountId}\nError: ${updateError}`,
-              [{ text: 'OK' }]
-            );
-          }
-        } else {
-          Alert.alert(
-            'Debug Info',
-            `API call successful but no account ID returned.\n\nResponse: ${JSON.stringify(data)}`,
-            [{ text: 'OK' }]
-          );
-        }
-      } else {
-        const errorText = await response.text();
-        logger.error('API Error:', errorText);
-        Alert.alert(
-          'Debug Info',
-          `API call failed.\n\nStatus: ${response.status}\nError: ${errorText}`,
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      logger.error('Debug error:', error);
-      Alert.alert('Error', `Debug failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -496,14 +383,6 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
                 >
                   <RefreshCw size={16} color={colors.foreground} style={tw`mr-2`} />
                   <Text>Check Status</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  onPress={debugStripeAccount}
-                  style={[tw`py-2 px-4 rounded-xl flex-row items-center self-start mt-2`, { backgroundColor: colors.destructiveSubtle }]}
-                >
-                  <RefreshCw size={16} color={colors.destructive} style={tw`mr-2`} />
-                  <Text style={{ color: colors.destructive }}>Debug Stripe</Text>
                 </TouchableOpacity>
               </View>
             </View>

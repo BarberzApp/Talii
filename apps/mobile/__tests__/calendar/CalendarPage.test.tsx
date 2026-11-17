@@ -4,8 +4,6 @@ import CalendarPage from '@/pages/CalendarPage';
 import { Animated } from 'react-native';
 
 // Mock Animated to avoid timer issues
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
-
 ;(Animated as any).timing = () => ({
   start: jest.fn(),
   stop: jest.fn(),

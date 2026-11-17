@@ -4,7 +4,9 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'node',
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@expo|expo|@unimodules|unimodules|sentry-expo|native-base|react-navigation|@react-navigation|@react-native-async-storage|@react-native-picker|@react-native-community|react-native-vector-icons|react-native-screens|react-native-safe-area-context|react-native-gesture-handler|react-native-reanimated|react-native-svg|lucide-react-native)/)',
+    // Transform ESM/untranspiled packages (react-native, expo, sentry, navigation, ...).
+    // Works for both apps/mobile/node_modules and the hoisted root node_modules.
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@react-native-.*|expo(nent)?|@expo(nent)?/.*|expo-.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/.*|@stripe/.*|sentry-expo|native-base|unimodules|@unimodules/.*|react-native-.*|lucide-react-native|twrnc|@supabase/.*|@barber-app/.*))',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testMatch: [
@@ -28,6 +30,7 @@ module.exports = {
     '^@/utils/(.*)$': '<rootDir>/app/shared/utils/$1',
     '^@/pages/(.*)$': '<rootDir>/app/pages/$1',
     '^@/navigation/(.*)$': '<rootDir>/app/navigation/$1',
+    '^@barber-app/shared$': '<rootDir>/../../packages/shared/src',
   },
   testTimeout: 10000,
   verbose: true,

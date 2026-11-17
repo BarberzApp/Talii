@@ -1,17 +1,28 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
+import { ApiAuthError, getCallerBarber, validateBearerToken } from '@/shared/lib/api-auth'
 
+// Auth: Bearer token. Returns only the caller's own barber's paid bookings.
+// `?barberId=` is optional; if given it must be the caller's barber id.
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url)
-    const barberId = searchParams.get('barberId')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const user = await validateBearerToken(request)
+    const barber = await getCallerBarber<{ id: string }>(user.id, 'id')
 
-    if (!barberId) {
-      return NextResponse.json({ error: 'Barber ID is required' }, { status: 400 })
+    const { searchParams } = new URL(request.url)
+    const requestedBarberId = searchParams.get('barberId')
+    if (requestedBarberId && requestedBarberId !== barber.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
+    const barberId = barber.id
+
+    const clampInt = (raw: string | null, fallback: number, min: number, max: number) => {
+      const n = parseInt(raw || '', 10)
+      return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : fallback
+    }
+    const limit = clampInt(searchParams.get('limit'), 50, 1, 100)
+    const offset = clampInt(searchParams.get('offset'), 0, 0, 100000)
 
     logger.debug('Fetching payments for barber', { barberId })
 
@@ -112,6 +123,9 @@ export async function GET(request: Request) {
       }
     })
   } catch (error) {
+    if (error instanceof ApiAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     logger.error('Error in barber payments API', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

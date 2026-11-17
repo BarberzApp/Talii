@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/shared/lib/supabase'
 import { supabaseAdmin } from '@/shared/lib/supabase'
-import { calculateFeeBreakdown } from '@/shared/lib/fee-calculator'
 import { logger } from '@/shared/lib/logger'
-import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
+import { ApiAuthError, getCallerBarber, validateBearerToken } from '@/shared/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,48 +23,34 @@ export async function GET(request: Request) {
     // Authenticate the caller
     const user = await validateBearerToken(request)
 
+    // The caller's own barber row. `?barberId=` is optional; if given it must match.
+    const barber = await getCallerBarber<{ id: string }>(user.id, 'id')
     const { searchParams } = new URL(request.url)
-    const barberId = searchParams.get('barberId')
-
-    if (!barberId) {
-      return NextResponse.json({ error: 'Barber ID is required' }, { status: 400 })
-    }
-
-    // Validate barber ID format
-    if (typeof barberId !== 'string' || barberId.trim().length === 0) {
-      return NextResponse.json({ error: 'Invalid Barber ID format' }, { status: 400 })
-    }
-
-    // Verify the authenticated user owns this barber account
-    const { data: barber, error: barberError } = await supabaseAdmin
-      .from('barbers')
-      .select('id, user_id')
-      .eq('id', barberId)
-      .single()
-
-    if (barberError || !barber || barber.user_id !== user.id) {
+    const requestedBarberId = searchParams.get('barberId')
+    if (requestedBarberId && requestedBarberId !== barber.id) {
       return NextResponse.json({ error: 'Unauthorized — you can only view your own earnings' }, { status: 403 })
     }
+    const barberId = barber.id
 
     logger.debug('Fetching earnings for barber', { barberId })
 
     // Get current month's earnings
     const now = new Date()
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const firstDayOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
     logger.debug('Date range for current month', {
       from: firstDayOfMonth.toISOString(),
-      to: lastDayOfMonth.toISOString()
+      toExclusive: firstDayOfNextMonth.toISOString()
     })
 
-    const { data: currentMonthData, error: currentError } = await supabase
+    const { data: currentMonthData, error: currentError } = await supabaseAdmin
       .from('bookings')
       .select('price, platform_fee, barber_payout')
       .eq('barber_id', barberId)
       .eq('payment_status', 'succeeded')
       .gte('created_at', firstDayOfMonth.toISOString())
-      .lte('created_at', lastDayOfMonth.toISOString())
+      .lt('created_at', firstDayOfNextMonth.toISOString())
 
     if (currentError) {
       logger.error('Error fetching current month earnings', currentError)
@@ -77,20 +61,19 @@ export async function GET(request: Request) {
 
     // Get previous month's earnings
     const firstDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const lastDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0)
 
     logger.debug('Date range for previous month', {
       from: firstDayOfPrevMonth.toISOString(),
-      to: lastDayOfPrevMonth.toISOString()
+      toExclusive: firstDayOfMonth.toISOString()
     })
 
-    const { data: prevMonthData, error: prevError } = await supabase
+    const { data: prevMonthData, error: prevError } = await supabaseAdmin
       .from('bookings')
       .select('price, platform_fee, barber_payout')
       .eq('barber_id', barberId)
       .eq('payment_status', 'succeeded')
       .gte('created_at', firstDayOfPrevMonth.toISOString())
-      .lte('created_at', lastDayOfPrevMonth.toISOString())
+      .lt('created_at', firstDayOfMonth.toISOString())
 
     if (prevError) {
       logger.error('Error fetching previous month earnings', prevError)

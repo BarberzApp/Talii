@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import Stripe from "stripe"
-import { supabase } from '@/shared/lib/supabase'
+import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
 import { 
   calculateFeeBreakdown,
@@ -12,50 +12,25 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20" as any,
 })
 
-// Optional rate limit for guests to prevent spamming Stripe session creation
-const guestLimiter = new Map<string, { count: number, reset: number }>()
-
+/**
+ * Creates a Stripe Checkout session for the booking fee.
+ * Auth: Bearer token required (guest checkout is cut). The booking's client is the
+ * token's user; `clientId` and guest fields in the body are ignored.
+ */
 export async function POST(request: Request) {
   try {
-    // Try to authenticate the caller (optional for checkout)
-    let user = null
-    try {
-      user = await validateBearerToken(request)
-    } catch (e) {
-      // Not logged in — handle as guest
-      const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown'
-      const now = Date.now()
-      const limit = guestLimiter.get(ip)
-      
-      if (limit && now < limit.reset) {
-        if (limit.count > 20) { // Max 20 checkout attempts per hour for guests
-          return NextResponse.json({ error: 'Too many booking attempts. Please try again later.' }, { status: 429 })
-        }
-        limit.count++
-      } else {
-        guestLimiter.set(ip, { count: 1, reset: now + 3600000 })
-      }
-    }
+    const user = await validateBearerToken(request)
 
-    logger.debug('Starting checkout session creation...')
     const body = await request.json()
-    logger.debug('Request body', { body })
-    
-    const { 
-      barberId, 
-      serviceId, 
-      date, 
-      notes, 
-      guestName, 
-      guestEmail, 
-      guestPhone, 
-      clientId, 
-      paymentType,
-      addonIds = []
+    const {
+      barberId,
+      serviceId,
+      date,
+      notes,
     } = body
-
-    // Use user ID if authenticated, else use provided clientId or 'guest'
-    const derivedClientId: string = user?.id || (clientId === 'guest' ? 'guest' : (clientId || 'guest'))
+    const addonIds: string[] = Array.isArray(body.addonIds)
+      ? body.addonIds.filter((id: unknown): id is string => typeof id === 'string')
+      : []
 
     // Validate required fields
     if (!barberId || !serviceId || !date) {
@@ -66,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     // Get the barber's Stripe account ID and is_developer flag
-    const { data: barber, error: barberError } = await supabase
+    const { data: barber, error: barberError } = await supabaseAdmin
       .from('barbers')
       .select('stripe_account_id, stripe_account_status, is_developer')
       .eq('id', barberId)
@@ -88,10 +63,11 @@ export async function POST(request: Request) {
     }
 
     // Get service details
-    const { data: service, error: serviceError } = await supabase
+    const { data: service, error: serviceError } = await supabaseAdmin
       .from('services')
       .select('name, price, duration')
       .eq('id', serviceId)
+      .eq('barber_id', barberId)
       .single()
 
     if (serviceError || !service?.price) {
@@ -106,14 +82,16 @@ export async function POST(request: Request) {
     // Get add-ons if any are selected (deduplicate first)
     let addonTotal = 0
     let addonItems: any[] = []
+    let validAddonIds: string[] = []
     
     if (addonIds && addonIds.length > 0) {
       // Deduplicate addon IDs to prevent double-counting
       const uniqueAddonIds = [...new Set(addonIds)]
-      const { data: addons, error: addonsError } = await supabase
+      const { data: addons, error: addonsError } = await supabaseAdmin
         .from('service_addons')
         .select('id, name, price')
         .in('id', uniqueAddonIds)
+        .eq('barber_id', barberId)
         .eq('is_active', true)
 
       if (addonsError) {
@@ -124,6 +102,7 @@ export async function POST(request: Request) {
       }
 
       addonTotal = addons.reduce((total, addon) => total + addon.price, 0)
+      validAddonIds = addons.map(addon => addon.id)
       addonItems = addons.map(addon => ({
         price_data: {
           currency: "usd",
@@ -180,21 +159,21 @@ export async function POST(request: Request) {
       serviceId,
       date,
       notes: notes || '',
-      guestName: guestName || '',
-      guestEmail: guestEmail || '',
-      guestPhone: guestPhone || '',
-      clientId: derivedClientId || 'guest',
+      guestName: '',
+      guestEmail: '',
+      guestPhone: '',
+      clientId: user.id,
       serviceName: service.name,
       servicePriceCents: servicePrice,
       addonTotalCents: Math.round(addonTotal * 100),
-      addonIds,
+      addonIds: validAddonIds,
       platformFeeCents: platformFee,
       paymentType: 'fee',
       feeType: 'fee_only',
       bocmShareCents: bocmShare,
       barberShareCents: barberShare,
       isDeveloper: !!barber.is_developer,
-      addonsPaidSeparately: addonIds.length > 0,
+      addonsPaidSeparately: validAddonIds.length > 0,
     }) satisfies Stripe.MetadataParam
 
     const session = await stripe.checkout.sessions.create({
@@ -216,7 +195,6 @@ export async function POST(request: Request) {
 
     logger.debug('Checkout session created successfully', {
       sessionId: session.id,
-      url: session.url,
       amount: session.amount_total
     })
 
@@ -239,7 +217,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { 
           error: "This barber's payment account is not correctly configured or has been disconnected. Please notify them.",
-          details: error.message,
           code: 'STRIPE_ACCOUNT_INVALID'
         },
         { status: 400 } // Bad request because the destination is invalid
@@ -247,7 +224,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create checkout session" },
+      { error: "Failed to create checkout session" },
       { status: 500 }
     )
   }

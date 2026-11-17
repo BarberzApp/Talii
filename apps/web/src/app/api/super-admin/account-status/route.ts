@@ -1,27 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/shared/lib/supabase'
+import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
+import { authErrorResponse, requireAdmin } from '@/shared/lib/api-auth'
 
 export async function POST(request: Request) {
   try {
-    // Verify super admin access
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.split(' ')[1]
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user || user.email !== 'primbocm@gmail.com') {
-      return NextResponse.json(
-        { error: 'Super admin access required' },
-        { status: 403 }
-      )
-    }
+    await requireAdmin(request)
 
     const { userId, isDisabled } = await request.json()
 
@@ -33,7 +17,7 @@ export async function POST(request: Request) {
     }
 
     // Update the user's disabled status
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('profiles')
       .update({ is_disabled: isDisabled })
       .eq('id', userId)
@@ -53,6 +37,8 @@ export async function POST(request: Request) {
       message: `Account ${statusText} successfully`
     })
   } catch (error) {
+    const authResponse = authErrorResponse(error)
+    if (authResponse) return authResponse
     logger.error('Super admin account status error', error)
     return NextResponse.json(
       { error: 'Internal server error' },

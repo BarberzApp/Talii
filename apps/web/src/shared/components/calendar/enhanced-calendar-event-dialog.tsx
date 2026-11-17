@@ -3,7 +3,6 @@ import {
   Calendar as CalendarIcon,
   Clock,
   DollarSign,
-  ExternalLink,
   Loader2,
   Mail,
   Phone,
@@ -15,8 +14,8 @@ import {
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/shared/components/ui/dialog'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
-import { cn } from '@/lib/utils'
-import { addToGoogleCalendar, downloadICalFile } from '@/shared/lib/google-calendar-utils'
+import { cn } from '@/shared/lib/utils'
+import { downloadICalFile } from '@/shared/lib/ical-export'
 import { logger } from '@/shared/lib/logger'
 import type { CalendarEvent } from './enhanced-calendar'
 
@@ -47,24 +46,6 @@ export function EnhancedCalendarEventDialog({
   isMarkingMissed,
   user,
 }: EnhancedCalendarEventDialogProps) {
-  const handleAddToGoogleCalendar = () => {
-    if (!selectedEvent) return
-    try {
-      addToGoogleCalendar(
-        selectedEvent,
-        selectedEvent.extendedProps.isBarberView ? 'barber' : 'client',
-        {
-          name:
-            user?.user_metadata?.full_name ||
-            (selectedEvent.extendedProps.isBarberView ? 'Barber' : 'Client'),
-          email: user?.email || '',
-          location: '',
-        },
-      )
-    } catch (error) {
-      logger.error('Error adding to Google Calendar', error)
-    }
-  }
 
   const handleDownloadICal = () => {
     if (!selectedEvent) return
@@ -245,15 +226,7 @@ export function EnhancedCalendarEventDialog({
                 </Button>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  onClick={handleAddToGoogleCalendar}
-                  variant="outline"
-                  className="bg-foreground/[0.02] border-foreground/5 text-foreground/70 hover:bg-foreground/5 font-bold py-6 rounded-2xl transition-all"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2 opacity-40" />
-                  Google
-                </Button>
+              <div className="grid grid-cols-1 gap-3">
                 <Button
                   onClick={handleDownloadICal}
                   variant="outline"

@@ -109,7 +109,7 @@ export default function EmailConfirmationScreen() {
       if (error) throw error;
       Alert.alert(
         'Email Sent',
-        'We&apos;ve sent another confirmation email. Please check your inbox.',
+        'We\'ve sent another confirmation email. Please check your inbox.',
       );
       logger.info('Email sent successfully');
       

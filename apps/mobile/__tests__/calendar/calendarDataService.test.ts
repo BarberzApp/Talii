@@ -271,6 +271,9 @@ describe('calendarDataService', () => {
       });
 
       global.fetch = mockFetch as any;
+      (mockSupabase as any).auth = {
+        getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
+      };
 
       mockSupabase.from = jest.fn()
         .mockReturnValueOnce({

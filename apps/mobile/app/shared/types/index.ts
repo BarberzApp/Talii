@@ -47,10 +47,6 @@ export type RootStackParamList = {
   ProfilePreview: {
     barberId: string;
   };
-  Cuts: {
-    cutId?: string;
-    barberId?: string;
-  };
 }
 
 // User Types
@@ -152,9 +148,6 @@ export interface Barber {
   services?: Service[];
   availability?: Availability[];
   special_hours?: SpecialHours[];
-  time_off?: TimeOff[];
-  booking_restrictions?: BookingRestrictions;
-  ondemand_settings?: OnDemandSettings;
 }
 
 // Service Types
@@ -238,33 +231,6 @@ export interface BookingAddon {
   created_at: string;
 }
 
-// Booking Restrictions
-export interface BookingRestrictions {
-  id: string;
-  barber_id: string;
-  min_interval_minutes: number;
-  max_bookings_per_day: number;
-  advance_booking_days: number;
-  same_day_booking_enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-// Booking Texts (SMS notifications)
-export interface BookingTexts {
-  id: string;
-  client_name: string;
-  client_phone: string;
-  client_carrier: string;
-  barber_phone: string;
-  barber_carrier: string;
-  booking_time: string;
-  confirmation_sent: boolean;
-  reminder_sent: boolean;
-  barber_sms_notifications: boolean;
-  client_sms_notifications: boolean;
-}
-
 // Availability Types
 export interface Availability {
   id: string;
@@ -290,117 +256,6 @@ export interface SpecialHours {
   barber?: Barber;
 }
 
-// Time Off
-export interface TimeOff {
-  id: string;
-  barber_id: string;
-  start_date: string;
-  end_date: string;
-  reason?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// Scheduling Slots
-export interface SchedulingSlots {
-  id: string;
-  barber_id: string;
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
-  slot_duration_minutes: number;
-  buffer_minutes_before: number;
-  buffer_minutes_after: number;
-  max_bookings_per_slot: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-// OnDemand Types
-export interface OnDemandRequest {
-  id: string;
-  client_id: string;
-  barber_id: string;
-  service_id: string;
-  requested_time: string;
-  location_lat: number;
-  location_lng: number;
-  location_address: string;
-  status: string;
-  price: number;
-  surge_multiplier: number;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface OnDemandSettings {
-  id: string;
-  barber_id: string;
-  is_enabled: boolean;
-  availability_radius_miles: number;
-  min_notice_minutes: number;
-  max_notice_hours: number;
-  surge_pricing_enabled: boolean;
-  surge_multiplier: number;
-  created_at: string;
-  updated_at: string;
-}
-
-// Cuts (formerly Reels)
-export interface Cut {
-  id: string;
-  barber_id: string;
-  title: string;
-  description?: string;
-  url: string;
-  thumbnail?: string;
-  category?: string;
-  duration: number;
-  views: number;
-  likes: number;
-  shares: number;
-  tags: string[];
-  is_featured: boolean;
-  is_public: boolean;
-  created_at: string;
-  updated_at: string;
-  location_name?: string;
-  latitude?: number;
-  longitude?: number;
-  city?: string;
-  state?: string;
-  country?: string;
-  comments_count: number;
-  barber?: Barber;
-}
-
-// Cut Comments
-export interface CutComment {
-  id: string;
-  cut_id: string;
-  user_id: string;
-  comment: string;
-  created_at: string;
-  updated_at: string;
-  user?: User;
-  cut?: Cut;
-}
-
-// Cut Analytics
-export interface CutAnalytics {
-  id: string;
-  cut_id: string;
-  user_id: string;
-  action_type: string;
-  ip_address: string;
-  user_agent: string;
-  created_at: string;
-  cut?: Cut;
-  user?: User;
-}
-
 // Payments
 export interface Payment {
   id: string;
@@ -412,66 +267,6 @@ export interface Payment {
   platform_fee: number;
   created_at: string;
   booking_id: string;
-  booking?: Booking;
-}
-
-// Calendar Sync
-export interface UserCalendarConnection {
-  id: string;
-  user_id: string;
-  provider: string;
-  access_token: string;
-  refresh_token: string;
-  expires_at: string;
-  calendar_id: string;
-  sync_enabled: boolean;
-  last_sync_at?: string;
-  sync_direction: string;
-  created_at: string;
-  updated_at: string;
-  user?: User;
-}
-
-export interface SyncedEvent {
-  id: string;
-  user_id: string;
-  external_event_id: string;
-  external_calendar_id: string;
-  booking_id?: string;
-  event_data: any;
-  sync_direction: string;
-  sync_status: string;
-  last_synced_at: string;
-  created_at: string;
-  updated_at: string;
-  user?: User;
-  booking?: Booking;
-}
-
-export interface CalendarSyncLog {
-  id: string;
-  user_id: string;
-  connection_id: string;
-  operation: string;
-  status: string;
-  details: any;
-  error_message?: string;
-  created_at: string;
-  user?: User;
-  connection?: UserCalendarConnection;
-}
-
-// Notification Types
-export interface Notification {
-  id: string;
-  user_id: string;
-  title: string;
-  message: string;
-  type: string;
-  booking_id?: string;
-  read: boolean;
-  created_at: string;
-  user?: User;
   booking?: Booking;
 }
 

@@ -49,13 +49,10 @@ jest.mock('lucide-react-native', () => ({
   MapPin: 'MapPin',
   Filter: 'Filter',
   X: 'X',
-  Grid3X3: 'Grid3X3',
-  Heart: 'Heart',
   Scissors: 'Scissors',
   Star: 'Star',
 }));
 
-jest.mock('@/components/StaircaseGrid', () => 'StaircaseGrid');
 jest.mock('@/components/BookingForm', () => 'BookingForm');
 jest.mock('@/pages/ProfilePreview', () => 'ProfilePreview');
 jest.mock('@/components/ReviewCard', () => ({ ReviewCard: 'ReviewCard' }));

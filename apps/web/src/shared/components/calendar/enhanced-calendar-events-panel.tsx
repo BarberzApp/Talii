@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { Calendar as CalendarIcon, Clock } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import type { CalendarEvent } from './enhanced-calendar'
 
 interface EnhancedCalendarEventsPanelProps {

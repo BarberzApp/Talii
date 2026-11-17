@@ -40,8 +40,6 @@ interface ProfileFormData {
     tiktok: string
     facebook: string
   }
-  carrier: string
-  sms_notifications: boolean
 }
 
 interface ProfileSettingsProps {
@@ -74,18 +72,6 @@ async function withTimeout(promise: Promise<any>, ms = 10000) {
     new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
   ])
 }
-
-const CARRIER_OPTIONS = [
-  { value: 'verizon', label: 'Verizon' },
-  { value: 'att', label: 'AT&T' },
-  { value: 'tmobile', label: 'T-Mobile' },
-  { value: 'sprint', label: 'Sprint' },
-  { value: 'boost', label: 'Boost Mobile' },
-  { value: 'uscellular', label: 'US Cellular' },
-  { value: 'cricket', label: 'Cricket' },
-  { value: 'metro', label: 'MetroPCS' },
-  { value: 'googlefi', label: 'Google Fi' },
-];
 
 export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -230,7 +216,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     if (data.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(data.phone.replace(/\s/g, ''))) {
       errors.phone = 'Please enter a valid phone number'
     }
-    if (!data.carrier?.trim()) errors.carrier = 'Carrier is required';
     if (isBarber && !data.businessName?.trim()) {
       errors.businessName = 'Business name is required for barbers'
     }
@@ -276,15 +261,11 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
           const parsedLocation = parseLocation(profile.location || '');
           setAddressFields(parsedLocation);
           
-          // Get carrier and phone from localStorage for autofill
-          const storedCarrier = typeof window !== 'undefined' ? localStorage.getItem('sms_carrier') : null;
-          const storedPhone = typeof window !== 'undefined' ? localStorage.getItem('sms_phone') : null;
-          
           reset({
             name: profile.name || '',
             username: profile.username || '',
             email: profile.email || '',
-            phone: profile.phone || storedPhone || '',
+            phone: profile.phone || '',
             bio: barber.bio || profile.bio || '',
             location: profile.location || '',
             description: profile.description || '',
@@ -297,8 +278,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               tiktok: barber.tiktok || '',
               facebook: barber.facebook || ''
             },
-            carrier: profile.carrier || storedCarrier || '',
-            sms_notifications: profile.sms_notifications || false,
           })
         }
       } else {
@@ -307,15 +286,11 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
         const parsedLocation = parseLocation(profile.location || '');
         setAddressFields(parsedLocation);
         
-                  // Get carrier and phone from localStorage for autofill
-          const storedCarrier = typeof window !== 'undefined' ? localStorage.getItem('sms_carrier') : null;
-          const storedPhone = typeof window !== 'undefined' ? localStorage.getItem('sms_phone') : null;
-          
           reset({
             name: profile.name || '',
             username: profile.username || '',
             email: profile.email || '',
-            phone: profile.phone || storedPhone || '',
+            phone: profile.phone || '',
           bio: profile.bio || '',
           location: profile.location || '',
           description: profile.description || '',
@@ -328,8 +303,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
             tiktok: '',
             facebook: ''
           },
-          carrier: profile.carrier || storedCarrier || '',
-          sms_notifications: profile.sms_notifications || false,
         })
       }
 
@@ -464,8 +437,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
             location: combineAddressFields(addressFields), // Combine address fields
             description: data.description,
             is_public: data.isPublic,
-            carrier: data.carrier,
-            sms_notifications: data.sms_notifications,
           })
           .eq('id', user?.id)
         if (profileError) throw profileError
@@ -769,60 +740,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                   {validationErrors.bio}
                 </p>
               )}
-            </div>
-
-            {/* SMS Notifications */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-5 bg-secondary rounded-full"></div>
-                <h4 className="text-foreground font-semibold text-sm uppercase tracking-widest">SMS Notifications</h4>
-              </div>
-              <div className="space-y-3">
-                <Label htmlFor="carrier" className="text-foreground font-semibold text-base flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-secondary" />
-                  Carrier *
-                  <span title="We need your carrier to send you free SMS reminders. If you're unsure, check your phone bill or carrier app.">
-                    <Info className="h-4 w-4 text-secondary cursor-pointer" />
-                  </span>
-                </Label>
-                <Select
-                  value={watch('carrier')}
-                  onValueChange={(value: string) => setValue('carrier', value)}
-                >
-                  <SelectTrigger className={`h-12 px-4 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl backdrop-blur-sm transition-all duration-200 ${validationErrors.carrier ? 'border-red-400' : ''}`}>
-                    <SelectValue placeholder="Select your carrier…" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gradient-to-br from-white/10 to-white/5 dark:from-white/10 dark:to-white/5 backdrop-blur-2xl border-black/10 dark:border-white/20 rounded-2xl shadow-2xl p-2 text-foreground">
-                    {CARRIER_OPTIONS.map((carrier) => (
-                      <SelectItem key={carrier.value} value={carrier.value} className="flex items-center justify-between px-4 py-2 hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer mb-1 last:mb-0">
-                        <span className="font-medium text-base">{carrier.label}</span>
-                        {watch('carrier') === carrier.value && <Check className="h-4 w-4 text-secondary ml-2" />}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {validationErrors.carrier && (
-                  <p className="text-sm text-red-400 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.carrier}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Button
-                  type="button"
-                  className={!watch('sms_notifications') 
-                    ? "bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-secondary-foreground font-semibold shadow-lg rounded-xl px-6 py-2 text-base transition-all" 
-                    : "bg-green-600/20 border border-green-500/30 text-green-400 hover:text-green-300 font-semibold rounded-xl px-6 py-2 text-base flex items-center gap-2 hover:bg-green-600/30 transition-all"}
-                  onClick={() => setValue('sms_notifications', !watch('sms_notifications'))}
-                >
-                  {!watch('sms_notifications') ? (
-                    "Enable SMS Notifications"
-                  ) : (
-                    <><Check className="h-4 w-4" /> SMS Notifications Enabled</>
-                  )}
-                </Button>
-              </div>
             </div>
 
             {/* Save Button */}

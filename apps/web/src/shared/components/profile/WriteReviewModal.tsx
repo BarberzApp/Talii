@@ -7,7 +7,7 @@ import { MessageSquare, Loader2, AlertTriangle, Shield, CheckCircle, XCircle } f
 import { useToast } from "@/shared/components/ui/use-toast";
 import { useAuth } from "@/shared/hooks/use-auth-zustand";
 import { supabase } from "@/shared/lib/supabase";
-import { validateContent, moderateContentWithAI, getModerationStatus } from "@/shared/lib/contentModeration";
+import { validateContent, getModerationStatus } from "@/shared/lib/contentModeration";
 import { logger } from "@/shared/lib/logger";
 
 interface WriteReviewModalProps {
@@ -75,13 +75,6 @@ export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalPr
         throw new Error(`Content validation failed: ${validation.issues.join(', ')}`);
       }
 
-      // AI moderation
-      const moderation = await moderateContentWithAI(reviewText);
-      if (!moderation.isAppropriate) {
-        setModerationStatus('flagged');
-        throw new Error(`Content flagged as inappropriate: ${moderation.flags.join(', ')}`);
-      }
-
       setModerationStatus('clean');
 
       logger.debug('Checking for completed booking', { userId: user.id, barberId: barber.id });
@@ -143,7 +136,7 @@ export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalPr
           comment: reviewText.trim(),
           is_verified: true, // Since it's from a verified booking
           is_public: true,
-          is_moderated: moderation.isAppropriate // Use AI moderation result
+          is_moderated: true // Passed the local word filter (validateContent)
         });
 
       if (reviewError) {

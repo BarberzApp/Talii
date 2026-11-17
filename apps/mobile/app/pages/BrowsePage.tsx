@@ -30,8 +30,6 @@ import {
   MapPin,
   Filter,
   X,
-  Grid3X3,
-  Heart,
   Scissors,
 } from 'lucide-react-native';
 import { Avatar } from '../shared/components/ui';
@@ -39,7 +37,6 @@ import { GlassyCard } from '../shared/components/ui/GlassyCard';
 import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import { RootStackParamList } from '../shared/types';
-import StaircaseGrid from '../shared/components/StaircaseGrid';
 import BookingForm from '../shared/components/BookingForm';
 import { useReviews } from '../shared/hooks/useReviews';
 import { useLocationManager } from '../shared/hooks/useLocationManager';
@@ -53,7 +50,6 @@ import {
   updateLastLocation,
   getLastLocation,
 } from '../shared/lib/locationPreferences';
-import { geocodeAddress as geocodeAddressHelper } from '../shared/lib/geocode';
 
 const { width } = Dimensions.get('window');
 
@@ -120,38 +116,7 @@ type SortOrder = 'asc' | 'desc';
 function BarberRating({ barberId }: { barberId: string }) {
   const { colors } = useTheme();
   const { stats, loading } = useReviews(barberId);
-  const [likesCount, setLikesCount] = useState(0);
-  const [likesLoading, setLikesLoading] = useState(true);
-
-  // Fetch likes count for this barber
-  useEffect(() => {
-    const fetchLikesCount = async () => {
-      try {
-        setLikesLoading(true);
-        const { data, error } = await supabase
-          .from('cuts')
-          .select('likes')
-          .eq('barber_id', barberId)
-          .eq('is_public', true);
-
-        if (error) {
-          logger.error('Error fetching likes:', error);
-          return;
-        }
-
-        const totalLikes = data?.reduce((sum, cut) => sum + (cut.likes || 0), 0) || 0;
-        setLikesCount(totalLikes);
-      } catch (error) {
-        logger.error('Error fetching likes count:', error);
-      } finally {
-        setLikesLoading(false);
-      }
-    };
-
-    fetchLikesCount();
-  }, [barberId]);
-
-  if (loading || likesLoading) {
+  if (loading) {
     return (
       <View style={tw`flex-row items-center`}>
         <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>Loading...</Text>
@@ -163,14 +128,6 @@ function BarberRating({ barberId }: { barberId: string }) {
     return (
       <View style={tw`flex-row items-center justify-between`}>
         <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>No reviews yet</Text>
-        {likesCount > 0 && (
-          <View style={tw`flex-row items-center`}>
-            <Heart size={12} color={colors.mutedForeground} style={tw`mr-1`} />
-            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-              {likesCount}
-            </Text>
-          </View>
-        )}
       </View>
     );
   }
@@ -191,14 +148,6 @@ function BarberRating({ barberId }: { barberId: string }) {
           {stats.average_rating.toFixed(1)} ({stats.total_reviews})
         </Text>
       </View>
-      {likesCount > 0 && (
-        <View style={tw`flex-row items-center`}>
-          <Heart size={12} color={colors.mutedForeground} style={tw`mr-1`} />
-          <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-            {likesCount}
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -368,9 +317,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [postsLoading, setPostsLoading] = useState(false);
-  const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
   
   // Barber list state
   const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -380,7 +326,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   const [allSpecialties, setAllSpecialties] = useState<string[]>([]);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'explore' | 'cosmetologists'>('cosmetologists');
+  const [viewMode, setViewMode] = useState<'cosmetologists'>('cosmetologists');
   
   // Batch loading state
   const [barbersPage, setBarbersPage] = useState(0);
@@ -428,7 +374,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   }, [navigation]);
 
   useEffect(() => {
-    fetchPosts();
     loadLocationPreferences();
     fetchBarbers(0); // Load first batch
   }, [loadLocationPreferences]);
@@ -504,17 +449,14 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     await toggleLocationHook();
     
     // Refresh barbers after toggling
-    // If turning OFF location, refresh entire page (barbers and posts)
+    // If turning OFF location, refresh the barber list
     if (wasUsingLocation) {
       // Reset pagination state
       setBarbersPage(0);
       setHasMoreBarbers(true);
       
-      // Refresh everything when turning location off
-      await Promise.all([
-        fetchBarbers(0, false, true), // Skip nearby fetch when turning off
-        fetchPosts() // Refresh posts as well
-      ]);
+      // Refresh when turning location off
+      await fetchBarbers(0, false, true); // Skip nearby fetch when turning off
     } else {
       fetchBarbers(0, false, false); // Use nearby fetch when turning on
     }
@@ -674,9 +616,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
         setBarbers(transformedBarbers);
         setFilteredBarbers(transformedBarbers);
         setBarbersPage(0);
-        
-        // Geocode barber locations in the background (don't wait for it)
-        geocodeBarberLocations(transformedBarbers).catch((err) => logger.error('Geocoding error:', err));
       } else {
         // Append new barbers to existing list
         setBarbers(prevBarbers => {
@@ -702,50 +641,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     }
   };
 
-
-  // Geocode a location string to coordinates using the shared helper (Google Maps backed)
-  const geocodeLocation = async (locationText: string): Promise<{lat: number, lng: number} | null> => {
-    try {
-      const coords = await geocodeAddressHelper(locationText);
-      if (coords) return { lat: coords.lat, lng: coords.lon };
-      return null;
-    } catch (error) {
-      logger.error('Geocoding error:', error);
-      return null;
-    }
-  };
-
-  // Geocode barber locations that don't have coordinates
-  const geocodeBarberLocations = async (barbers: any[]) => {
-    const barbersToGeocode = barbers.filter(barber => 
-      !barber.latitude && !barber.longitude && barber.location
-    );
-    
-    logger.log(`Geocoding ${barbersToGeocode.length} barber locations...`);
-    
-    for (const barber of barbersToGeocode) {
-      try {
-        const coordinates = await geocodeLocation(barber.location);
-        if (coordinates) {
-          // Update the barber in the database with coordinates
-          const { error } = await supabase
-            .from('barbers')
-            .update({
-              latitude: coordinates.lat,
-              longitude: coordinates.lng,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', barber.userId);
-            
-          if (!error) {
-            logger.log(`Geocoded and saved coordinates for ${barber.name}`);
-          }
-        }
-      } catch (error) {
-        logger.error(`Failed to geocode ${barber.name}:`, error);
-      }
-    }
-  };
 
   // Check if location is available and working
   const isLocationAvailable = useLocation && userLocation && userLocation.coords;
@@ -873,119 +768,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     await fetchBarbers(nextPage, true);
   };
 
-  const fetchPosts = async () => {
-    try {
-      setPostsLoading(true);
-      
-      // Fetch cuts (videos) and portfolio images
-      const { data: cutsData, error: cutsError } = await supabase
-        .from('cuts')
-        .select(`
-          id,
-          barber_id,
-          title,
-          url,
-          thumbnail,
-          views,
-          likes,
-          duration,
-          created_at
-        `)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (cutsError) {
-        logger.error('Error fetching cuts:', cutsError);
-        return;
-      }
-
-      // Fetch barber info for cuts
-      const barberIds = cutsData?.map(cut => cut.barber_id) || [];
-      const { data: barbersData } = await supabase
-        .from('barbers')
-        .select('id, user_id')
-        .in('id', barberIds);
-
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, name, avatar_url')
-        .in('id', barbersData?.map(b => b.user_id) || [])
-        .eq('is_public', true);
-
-      // Transform cuts to posts
-      const videoPosts = (cutsData || []).map(cut => {
-        const barber = barbersData?.find(b => b.id === cut.barber_id);
-        const profile = profilesData?.find(p => p.id === barber?.user_id);
-        
-        return {
-          id: cut.id,
-          type: 'video' as const,
-          url: cut.url,
-          thumbnail: cut.thumbnail,
-          barberName: profile?.name || 'Unknown',
-          barberAvatar: processAvatarUrl(profile?.avatar_url),
-          barberId: barber?.user_id,
-          views: cut.views || 0,
-          duration: cut.duration,
-          aspectRatio: 9 / 16, // Default video aspect ratio
-        };
-      });
-
-      // Only use real video posts from the database
-      setPosts(videoPosts);
-      setFilteredPosts(videoPosts);
-      
-      // Set real beauty/barber professions
-      const specialties = [
-        'Barber',
-        'Braider',
-        'Stylist',
-        'Nails',
-        'Lash',
-        'Brow',
-        'Tattoo',
-        'Piercings',
-        'Dyeing'
-      ];
-      setAllSpecialties(specialties);
-    } catch (error) {
-      logger.error('Error fetching posts:', error);
-    } finally {
-      setPostsLoading(false);
-    }
-  };
-
-  // Filter posts based on selected criteria
-  useEffect(() => {
-    let filtered = posts;
-
-    // Filter by search query (using debounced value)
-    if (debouncedSearchQuery.trim()) {
-      const query = debouncedSearchQuery.toLowerCase().trim();
-      filtered = filtered.filter(post => {
-        // Search in post title, barber name, and other relevant fields
-        return (
-          (post.title && post.title.toLowerCase().includes(query)) ||
-          (post.barberName && post.barberName.toLowerCase().includes(query)) ||
-          (post.barberId && post.barberId.toLowerCase().includes(query))
-        );
-      });
-    }
-
-    // Filter by specialty
-    if (selectedSpecialties.length > 0) {
-      // For now, we'll filter by barber specialties
-      // In a real implementation, you'd need to fetch barber specialties
-      filtered = filtered.filter(post => {
-        // This is a placeholder - you'd need to match against actual barber specialties
-        return true; // For now, show all posts
-      });
-    }
-
-    setFilteredPosts(filtered);
-  }, [posts, selectedSpecialties, debouncedSearchQuery]);
-
   // Filter barbers based on search query and selected specialties
   useEffect(() => {
     let filtered = barbers;
@@ -1051,46 +833,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     setFilteredBarbers(barbers);
   };
 
-  // Navigation handlers
-  const handleVideoPress = (post: any) => {
-    if (guestMode) {
-      // Guests can view barber profiles/portfolios, but should not enter protected tools/tabs.
-      if (post?.barberId) {
-        navigation.navigate('ProfilePreview', { barberId: post.barberId });
-        return;
-      }
-      promptAuth('view this content');
-      return;
-    }
-    // Navigate to CutsPage with the specific video
-    // Store the selected cut ID in a global way that CutsPage can access
-    (global as any).selectedCutId = post.id;
-    // Use the tab navigation to switch to the Cuts tab
-    navigation.navigate('Cuts' as never);
-  };
-
-  const handleImagePress = (post: any) => {
-    // Navigate to ProfilePreview with the barber's profile
-    if (post.barberId) {
-      navigation.navigate('ProfilePreview', { barberId: post.barberId });
-    }
-  };
-
-  const handleBookBarber = (post: any) => {
-    if (guestMode) {
-      // Guests should be able to view the barber profile, but booking is blocked in ProfilePreview.
-      if (post?.barberId) {
-        navigation.navigate('ProfilePreview', { barberId: post.barberId });
-        return;
-      }
-      return;
-    }
-    if (post.barberId) {
-      setSelectedBarber(post);
-      setShowBookingForm(true);
-    }
-  };
-
   // Function to render star ratings
   const renderStarRating = (rating: number, size: number = 14) => {
     return Array.from({ length: 5 }, (_, index) => (
@@ -1153,28 +895,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
             </Text>
           </View>
 
-          {/* View Toggle Buttons - Explore tab hidden but code preserved */}
+          {/* View Toggle Buttons */}
           <View style={[tw`flex-row rounded-lg p-1`, { backgroundColor: colors.muted }]}>
-            {/* Explore tab - hidden but code preserved for future use */}
-            {/* <TouchableOpacity
-              style={[
-                tw`px-4 py-2 rounded-md`,
-                viewMode === 'explore' 
-                  ? { backgroundColor: colors.background }
-                  : { backgroundColor: 'transparent' }
-              ]}
-              onPress={() => setViewMode('explore')}
-            >
-              <Text style={[
-                tw`font-medium text-sm`,
-                viewMode === 'explore'
-                  ? { color: colors.foreground }
-                  : { color: colors.mutedForeground }
-              ]}>
-                Explore
-              </Text>
-            </TouchableOpacity> */}
-            
             <TouchableOpacity
               style={[
                 tw`px-4 py-2 rounded-md`,
@@ -1202,7 +924,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
             <Search size={20} color={colors.mutedForeground} style={tw`mr-2`} />
             <TextInput
               style={[tw`flex-1 text-base`, { color: colors.foreground }]}
-              placeholder={viewMode === 'explore' ? "Search styles..." : "Search stylists..."}
+              placeholder="Search stylists..."
               placeholderTextColor={colors.mutedForeground}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -1340,36 +1062,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
       {/* Main Content Area */}
       <View style={tw`flex-1`}>
-        {viewMode === 'explore' ? (
-          // Explore View - Grid of videos/pictures
-          <>
-            {postsLoading ? (
-              <View style={tw`flex-1 justify-center items-center`}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={[tw`mt-4 text-lg`, { color: colors.foreground }]}>
-                  Loading posts...
-                </Text>
-              </View>
-            ) : filteredPosts.length === 0 ? (
-              <View style={tw`flex-1 justify-center items-center py-8`}>
-                <Grid3X3 size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
-                <Text style={[tw`text-lg font-bold text-center mb-2`, { color: colors.foreground }]}>
-                  No posts found
-                </Text>
-                <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
-                  {posts.length === 0 ? 'Check back later for new content' : 'Try adjusting your filters'}
-                </Text>
-              </View>
-            ) : (
-              <StaircaseGrid 
-                posts={filteredPosts} 
-                onVideoPress={handleVideoPress}
-                onImagePress={handleImagePress}
-                onBookPress={handleBookBarber}
-              />
-            )}
-          </>
-        ) : (
+        {/* TODO(phase-5): Browse was built around an Explore (cuts feed) / Cosmetologists toggle; only the Cosmetologists list remains. */}
+        {(
           // Cosmetologists View - List of barbers
           <>
             {barbersLoading ? (

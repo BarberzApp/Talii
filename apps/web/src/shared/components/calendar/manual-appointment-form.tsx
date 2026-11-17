@@ -13,7 +13,7 @@ import { useToast } from '@/shared/components/ui/use-toast'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { Calendar, Clock, User, DollarSign, Loader2, Plus, X, Scissors, AlertCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 
 
 interface ManualAppointmentFormProps {

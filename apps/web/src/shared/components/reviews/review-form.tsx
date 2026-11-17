@@ -3,7 +3,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Label } from '@/shared/components/ui/label';
 import { Star, Send, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 interface ReviewFormProps {
   onSubmit: (data: { rating: number; comment?: string }) => Promise<void>;

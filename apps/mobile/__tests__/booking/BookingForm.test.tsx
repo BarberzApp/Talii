@@ -58,11 +58,6 @@ jest.mock('@/lib/bookingService', () => ({
   },
 }));
 
-jest.mock('@/lib/notifications', () => ({
-  notificationService: { scheduleBookingReminder: jest.fn() },
-  formatAppointmentTime: jest.fn(() => '9:00 AM'),
-}));
-
 describe('BookingForm - Basic Tests', () => {
   const mockProps = {
     isVisible: false, // Start with false to avoid Modal rendering issues

@@ -12,14 +12,7 @@ describe('User and Barber Onboarding Flow', () => {
     // 1. Visit the home page and navigate to auth
     cy.visit('/')
     
-    // Check if there is a 'Sign Up' or 'Login' button (depending on your layout, adjust selectors)
-    // For now, we simulate visiting the signup page directly if it exists, or via the auth page.
-    cy.visit('/auth/sign-up', { failOnStatusCode: false }).then((resp) => {
-      if (resp?.status === 404) {
-        // Fallback to auth if sign-up doesn't exist
-        cy.visit('/auth')
-      }
-    })
+    cy.visit('/register')
 
     // 2. We can test the API directly to ensure auth creation is successful if UI changes are frequent
     cy.request({

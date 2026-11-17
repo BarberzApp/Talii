@@ -19,7 +19,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
 import { BARBER_SPECIALTIES, getFilteredSpecialties } from '@/shared/constants/specialties'
 import { Check, ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/shared/lib/utils"
 import {
   Command,
   CommandEmpty,

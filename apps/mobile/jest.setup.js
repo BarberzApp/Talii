@@ -1,3 +1,24 @@
+// Minimal stand-in for the native Expo runtime (normally provided by jest-expo, which is not installed).
+// expo-modules-core reads globalThis.expo at import time.
+process.env.EXPO_OS = process.env.EXPO_OS || 'ios'
+if (!globalThis.expo) {
+  class MockEventEmitter {
+    addListener() { return { remove() {} } }
+    removeListener() {}
+    removeAllListeners() {}
+    emit() {}
+    listenerCount() { return 0 }
+  }
+  globalThis.expo = {
+    EventEmitter: MockEventEmitter,
+    NativeModule: class extends MockEventEmitter {},
+    SharedObject: class extends MockEventEmitter {},
+    SharedRef: class extends MockEventEmitter {},
+    modules: {},
+    getViewConfig: () => null,
+  }
+}
+
 // In-memory storage for mocks
 const mockStorage = new Map()
 
@@ -54,13 +75,6 @@ jest.mock('expo-crypto', () => ({
   },
 }))
 
-// Mock React Native Platform
-jest.mock('react-native/Libraries/Utilities/Platform', () => ({
-  OS: 'ios',
-  Version: '15.0',
-  select: jest.fn((obj) => obj.ios || obj.default),
-}))
-
 // Mock lucide-react-native to avoid SVG/Platform issues in tests
 jest.mock('lucide-react-native', () => {
   const createMockIcon = (name: string) => name;
@@ -76,9 +90,35 @@ jest.mock('lucide-react-native', () => {
   };
 })
 
+// expo-blur renders a native view that does not exist under jest
+jest.mock('expo-blur', () => {
+  const React = require('react')
+  return {
+    BlurView: ({ children, ...props }) => React.createElement('BlurView', props, children),
+  }
+})
+
+// expo-image renders a native view that does not exist under jest
+jest.mock('expo-image', () => {
+  const React = require('react')
+  return {
+    Image: (props) => React.createElement('Image', props),
+  }
+})
+
 // Mock React Native Alert
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
-  alert: jest.fn(),
+  __esModule: true,
+  default: { alert: jest.fn() },
+}))
+
+// Native-only Expo modules that cannot load under jest
+jest.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: jest.fn(),
+  launchCameraAsync: jest.fn(),
+  requestMediaLibraryPermissionsAsync: jest.fn(),
+  requestCameraPermissionsAsync: jest.fn(),
+  MediaTypeOptions: { Images: 'Images', Videos: 'Videos', All: 'All' },
 }))
 
 // Mock theme for tests - provide light theme colors

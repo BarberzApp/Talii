@@ -59,8 +59,7 @@ export default function SettingsPage() {
     profileComplete: false,
     servicesComplete: false,
     availabilityComplete: false,
-    stripeConnected: false,
-    notificationsConfigured: false
+    stripeConnected: false
   });
   const [barberId, setBarberId] = useState<string>('');
   const [showVerifyBanner, setShowVerifyBanner] = useState(true);
@@ -126,14 +125,12 @@ export default function SettingsPage() {
           const servicesComplete = !!(services && services.length > 0);
           const availabilityComplete = !!(availability && availability.length > 0);
           const stripeConnected = barber?.stripe_account_status === 'active';
-          const notificationsConfigured = true;
 
           setSettingsData({
             profileComplete,
             servicesComplete,
             availabilityComplete,
-            stripeConnected,
-            notificationsConfigured
+            stripeConnected
           });
         }
       } else {
@@ -142,8 +139,7 @@ export default function SettingsPage() {
           profileComplete,
           servicesComplete: false,
           availabilityComplete: false,
-          stripeConnected: false,
-          notificationsConfigured: true
+          stripeConnected: false
         });
       }
     } catch (error) {

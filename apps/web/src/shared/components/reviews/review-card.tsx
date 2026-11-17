@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { Star, Calendar, Scissors } from 'lucide-react';
 import { Review } from '@/shared/types';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 interface ReviewCardProps {
   review: Review;

@@ -7,7 +7,6 @@ import { logger } from '@/shared/lib/logger'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Booking } from '@/shared/types/booking'
-import { syncService } from '@/shared/lib/sync-service'
 import { format } from 'date-fns'
 
 interface BookingDetailsProps {
@@ -26,7 +25,7 @@ export function BookingDetails({ booking, isOpen, onClose, onBookingCancelled }:
   if (!booking) return null
 
   const handleCancel = async () => {
-    if (!user || !syncService) return
+    if (!user) return
 
     // Additional safety check
     if (!booking || !booking.id) {
@@ -49,30 +48,12 @@ export function BookingDetails({ booking, isOpen, onClose, onBookingCancelled }:
       return;
     }
 
-    setLoading(true)
-    try {
-      logger.debug(`Cancelling booking ${booking.id} for user ${user.id}`);
-      
-      await syncService.cancelBooking(booking.id)
-      
-      logger.debug(`Successfully cancelled booking ${booking.id}`);
-      
-      toast({
-        title: "Booking cancelled",
-        description: "Your booking has been cancelled successfully.",
-      })
-      onBookingCancelled(booking.id)
-      onClose()
-    } catch (error) {
-      logger.error(`Failed to cancel booking ${booking.id}`, error);
-      toast({
-        title: "Error",
-        description: "Failed to cancel booking. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
+    // STUB: cancelling is unavailable until the bookings API is rebuilt.
+    // TODO(phase-4): call PATCH /api/bookings/:id
+    toast({
+      title: "Not available yet",
+      description: "Cancelling a booking from the app is not available yet.",
+    })
   }
 
   return (

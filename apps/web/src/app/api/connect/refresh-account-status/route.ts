@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { supabase } from '@/shared/lib/supabase'
+import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
+import { ApiAuthError, getCallerBarber, validateBearerToken } from '@/shared/lib/api-auth'
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing STRIPE_SECRET_KEY')
@@ -11,46 +12,28 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20' as any,
 })
 
+/**
+ * Re-reads the caller's own Stripe Connect account and stores its status.
+ * Auth: Bearer token. Body `{ userId }` is accepted for compatibility but must equal
+ * the token's user id.
+ */
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { userId } = body
+    const user = await validateBearerToken(request)
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      )
+    const body = (await request.json().catch(() => ({}))) as { userId?: unknown }
+    if (body.userId !== undefined && body.userId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    logger.debug('Refreshing Stripe account status for user', { userId })
-
-    // Get the barber record
-    const { data: barber, error: barberError } = await supabase
-      .from('barbers')
-      .select('id, stripe_account_id, stripe_account_status')
-      .eq('user_id', userId)
-      .single()
-
-    logger.debug('Barber query result', { barber, barberError })
-
-    if (barberError || !barber) {
-      logger.debug('No barber record found for user ID', { userId })
-      logger.debug('Barber error', { error: barberError })
-      
-      // Let's also check if there are any barber records at all
-      const { data: allBarbers, error: allBarbersError } = await supabase
-        .from('barbers')
-        .select('id, user_id, stripe_account_id')
-        .limit(5)
-      
-      logger.debug('All barbers in database', { allBarbers })
-      logger.debug('All barbers error', { error: allBarbersError })
-      
-      return NextResponse.json(
-        { error: 'Barber record not found' },
-        { status: 404 }
-      )
+    let barber: { id: string; stripe_account_id: string | null; stripe_account_status: string | null }
+    try {
+      barber = await getCallerBarber(user.id, 'id, stripe_account_id, stripe_account_status')
+    } catch (err) {
+      if (err instanceof ApiAuthError) {
+        return NextResponse.json({ error: 'Barber record not found' }, { status: 404 })
+      }
+      throw err
     }
 
     if (!barber.stripe_account_id) {
@@ -69,22 +52,20 @@ export async function POST(request: Request) {
       const stripeAccount = await stripe.accounts.retrieve(barber.stripe_account_id)
       
       const newStatus = stripeAccount.charges_enabled ? 'active' : 'pending'
-      const accountReady = stripeAccount.charges_enabled && stripeAccount.details_submitted
-      
-      // Update database if status has changed
-      if (barber.stripe_account_status !== newStatus) {
-        const { error: updateError } = await supabase
-          .from('barbers')
-          .update({
-            stripe_account_status: newStatus,
-            stripe_account_ready: accountReady,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', barber.id)
+      const accountReady = Boolean(stripeAccount.charges_enabled && stripeAccount.details_submitted)
 
-        if (updateError) {
-          logger.error('Error updating account status', updateError)
-        }
+      // Always write both fields: status can stay 'pending' while readiness changes.
+      const { error: updateError } = await supabaseAdmin
+        .from('barbers')
+        .update({
+          stripe_account_status: newStatus,
+          stripe_account_ready: accountReady,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', barber.id)
+
+      if (updateError) {
+        logger.error('Error updating account status', updateError)
       }
 
       return NextResponse.json({
@@ -116,8 +97,8 @@ export async function POST(request: Request) {
       if (isMissingAccount) {
         logger.warn('Stripe account invalid or missing, marking for re-connect', { 
           stripeAccountId: barber.stripe_account_id,
-          error: stripeError.message 
-        });
+          error: stripeError.message
+        })
 
         return NextResponse.json({
           success: false,
@@ -137,12 +118,12 @@ export async function POST(request: Request) {
     }
 
   } catch (error) {
+    if (error instanceof ApiAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     logger.error('Error refreshing account status', error)
     return NextResponse.json(
-      { 
-        error: 'Failed to refresh account status',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Failed to refresh account status' },
       { status: 500 }
     )
   }

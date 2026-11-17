@@ -2,6 +2,8 @@ import { Metadata } from 'next'
 import { supabase } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
 
+const DEFAULT_OG_IMAGE = `${process.env.NEXT_PUBLIC_APP_URL || ''}/brand/talii-logo.png`
+
 export async function generateMetadata({
   params,
 }: {
@@ -42,7 +44,7 @@ export async function generateMetadata({
           url: `https://bocmstyle.com/book/${username}`,
           images: [
             {
-              url: 'https://bocmstyle.com/BocmLogo.png',
+              url: DEFAULT_OG_IMAGE,
               width: 1200,
               height: 630,
               alt: 'BOCM Style - Professional Barber Booking',
@@ -53,7 +55,7 @@ export async function generateMetadata({
           card: 'summary_large_image',
           title: `${atUsername} - BOCM Style`,
           description: 'Book your next haircut with a professional barber on BOCM Style.',
-          images: ['https://bocmstyle.com/BocmLogo.png'],
+          images: [DEFAULT_OG_IMAGE],
         },
       }
     }
@@ -63,7 +65,7 @@ export async function generateMetadata({
     const barberName = profile?.name || atUsername
     const barberBio = barber.bio || 'Professional barber offering quality haircuts and styling services.'
     const barberLocation = profile?.location || ''
-    const barberImage = profile?.avatar_url || profile?.coverphoto || 'https://bocmstyle.com/BocmLogo.png'
+    const barberImage = profile?.avatar_url || profile?.coverphoto || DEFAULT_OG_IMAGE
     
     // Create specialties text
     const specialtiesText = barber.specialties && barber.specialties.length > 0 
@@ -120,7 +122,7 @@ export async function generateMetadata({
         url: `https://bocmstyle.com/book/${username}`,
         images: [
           {
-            url: 'https://bocmstyle.com/BocmLogo.png',
+            url: DEFAULT_OG_IMAGE,
             width: 1200,
             height: 630,
             alt: 'BOCM Style - Professional Barber Booking',
@@ -131,7 +133,7 @@ export async function generateMetadata({
         card: 'summary_large_image',
         title: `${atUsername} - BOCM Style`,
         description: 'Book your next haircut with a professional barber on BOCM Style.',
-        images: ['https://bocmstyle.com/BocmLogo.png'],
+        images: [DEFAULT_OG_IMAGE],
       },
     }
   }

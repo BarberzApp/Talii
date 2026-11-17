@@ -90,7 +90,7 @@ export function SettingsPage() {
       // Fetch profile data
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('name, email, phone, location, bio, is_public, email_notifications, sms_notifications')
+        .select('name, email, phone, location, bio, is_public, email_notifications')
         .eq('id', user.id)
         .single()
 

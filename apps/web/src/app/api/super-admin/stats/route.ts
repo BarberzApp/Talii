@@ -1,27 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '@/shared/lib/supabase'
+import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
+import { authErrorResponse, requireAdmin } from '@/shared/lib/api-auth'
 
 export async function GET(request: Request) {
   try {
-    // Verify super admin access
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.split(' ')[1]
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user || user.email !== 'primbocm@gmail.com') {
-      return NextResponse.json(
-        { error: 'Super admin access required' },
-        { status: 403 }
-      )
-    }
+    await requireAdmin(request)
 
     // Fetch comprehensive platform statistics
     const [
@@ -34,36 +18,36 @@ export async function GET(request: Request) {
       { data: revenueData }
     ] = await Promise.all([
       // Total users
-      supabase
+      supabaseAdmin
         .from('profiles')
         .select('*', { count: 'exact', head: true }),
       
       // Total barbers
-      supabase
+      supabaseAdmin
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'barber'),
       
       // Total clients
-      supabase
+      supabaseAdmin
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'client'),
       
       // Disabled accounts
-      supabase
+      supabaseAdmin
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('is_disabled', true),
       
       // Developers
-      supabase
+      supabaseAdmin
         .from('barbers')
         .select('*', { count: 'exact', head: true })
         .eq('is_developer', true),
       
       // Active bookings
-      supabase
+      supabaseAdmin
         .from('bookings')
         .select('*', { count: 'exact', head: true })
         .in('status', ['confirmed']),
@@ -108,12 +92,12 @@ export async function GET(request: Request) {
     today.setHours(0, 0, 0, 0)
     const todayStr = today.toISOString()
     
-    const { count: newUsersToday } = await supabase
+    const { count: newUsersToday } = await supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .gte('join_date', todayStr)
     
-    const { data: todayRevenueData } = await supabase
+    const { data: todayRevenueData } = await supabaseAdmin
       .from('bookings')
       .select('price, status')
       .in('status', ['confirmed', 'completed'])
@@ -142,6 +126,8 @@ export async function GET(request: Request) {
       stats
     })
   } catch (error) {
+    const authResponse = authErrorResponse(error)
+    if (authResponse) return authResponse
     logger.error('Super admin stats error', error)
     return NextResponse.json(
       { error: 'Internal server error' },

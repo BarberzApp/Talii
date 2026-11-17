@@ -15,7 +15,6 @@ export interface ProfileFormData {
     tiktok: string;
     facebook: string;
   };
-  sms_notifications: boolean;
 }
 
 export interface Service {
@@ -41,7 +40,6 @@ export interface SettingsData {
   servicesComplete: boolean;
   availabilityComplete: boolean;
   stripeConnected: boolean;
-  notificationsConfigured: boolean;
 }
 
 export type Tab = 'profile' | 'services' | 'addons' | 'availability' | 'earnings'; 

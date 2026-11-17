@@ -30,7 +30,6 @@ import {
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 import { UpdatesBadge } from "@/shared/components/updates/updates-badge"
-import { NotificationBell } from "@/shared/notifications/notification-bell"
 import { useCurrentPathname } from "@/shared/hooks/use-current-pathname"
 
 export function Navbar() {
@@ -158,10 +157,9 @@ export function Navbar() {
               )}
             </Link>
             
-            {/* Theme toggle and Notification Bell */}
+            {/* Theme toggle */}
             <div className="flex items-center gap-2">
               <ModeToggle />
-              <NotificationBell />
               
               {/* User dropdown menu */}
               <DropdownMenu>

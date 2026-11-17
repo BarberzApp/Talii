@@ -73,20 +73,6 @@ type Review = {
   }
 }
 
-type FeaturedReel = {
-  id: string
-  title: string
-  description?: string
-  url: string
-  thumbnail?: string
-  views: number
-  likes: number
-  comments_count: number
-  created_at: string
-  tags: string[]
-  is_featured: boolean
-}
-
 type BarberFromDB = {
   id: string
   user_id: string
@@ -178,12 +164,8 @@ function BookPageContent() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [featuredReels, setFeaturedReels] = useState<FeaturedReel[]>([])
-  const [showVideoDialog, setShowVideoDialog] = useState(false)
-  const [selectedVideo, setSelectedVideo] = useState<FeaturedReel | null>(null)
-  const [loadingReels, setLoadingReels] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState('cuts')
+  const [activeTab, setActiveTab] = useState('services')
   const [reviews, setReviews] = useState<Review[]>([])
   const [loadingReviews, setLoadingReviews] = useState(false)
 
@@ -405,9 +387,6 @@ function BookPageContent() {
 
       setBarber(barberObject)
 
-      // Fetch featured reels
-      await fetchFeaturedReels(barberData.id)
-
       // Fetch reviews
       await fetchReviews(barberData.id)
 
@@ -416,31 +395,6 @@ function BookPageContent() {
       setError(error instanceof Error ? error.message : 'Failed to load barber details')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchFeaturedReels = async (barberId: string) => {
-    try {
-      setLoadingReels(true)
-      
-      const { data, error } = await supabase
-        .from('cuts')
-        .select('*')
-        .eq('barber_id', barberId)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(9)
-
-      if (error) {
-        logger.error('Error fetching featured cuts', error)
-        return
-      }
-
-      setFeaturedReels(data || [])
-    } catch (error) {
-      logger.error('Error fetching featured cuts', error)
-    } finally {
-      setLoadingReels(false)
     }
   }
 
@@ -489,12 +443,6 @@ function BookPageContent() {
     } finally {
       setLoadingReviews(false)
     }
-  }
-
-  const formatViews = (views: number) => {
-    if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`
-    if (views >= 1000) return `${(views / 1000).toFixed(1)}K`
-    return views.toString()
   }
 
   const formatLocation = (location: string) => {
@@ -784,13 +732,6 @@ function BookPageContent() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full bg-transparent border-b border-black/10 dark:border-white/10 rounded-none p-0">
             <TabsTrigger 
-              value="cuts" 
-              className="flex-1 data-[state=active]:text-secondary data-[state=active]:border-b-2 data-[state=active]:border-secondary bg-transparent text-muted-foreground dark:text-white/60 hover:text-foreground dark:text-white"
-            >
-              <Grid3X3 className="h-4 w-4 mr-2" />
-              Cuts
-            </TabsTrigger>
-            <TabsTrigger 
               value="services" 
               className="flex-1 data-[state=active]:text-secondary data-[state=active]:border-b-2 data-[state=active]:border-secondary bg-transparent text-muted-foreground dark:text-white/60 hover:text-foreground dark:text-white"
             >
@@ -813,60 +754,6 @@ function BookPageContent() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Cuts Tab */}
-          <TabsContent value="cuts" className="mt-6">
-            {loadingReels ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary"></div>
-              </div>
-            ) : featuredReels.length > 0 ? (
-              <div className="grid grid-cols-3 gap-1">
-                {featuredReels.map((reel) => (
-                  <div
-                    key={reel.id}
-                    className="group relative aspect-square bg-black/5 dark:bg-white/5 cursor-pointer"
-                    onClick={() => {
-                      setSelectedVideo(reel)
-                      setShowVideoDialog(true)
-                    }}
-                  >
-                    <video
-                      src={reel.url}
-                      className="w-full h-full object-cover"
-                      muted
-                      loop
-                      onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
-                      onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()}
-                    />
-                    
-                    {/* Stats Overlay */}
-                    <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between text-foreground dark:text-white text-xs bg-black/50 backdrop-blur-sm rounded px-2 py-1">
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        <span>{formatViews(reel.views)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-3 w-3" />
-                        <span>{formatViews(reel.likes)}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Play Overlay */}
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Play className="h-8 w-8 text-foreground dark:text-white" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Video className="h-12 w-12 text-muted-foreground dark:text-white/40 mx-auto mb-4" />
-                <p className="text-muted-foreground dark:text-white/60">No cuts available yet</p>
-              </div>
-            )}
-          </TabsContent>
 
           {/* Services Tab */}
           <TabsContent value="services" className="mt-6">
@@ -994,46 +881,6 @@ function BookPageContent() {
 
       {/* Bottom spacing */}
       <div className="h-20"></div>
-
-      {/* Video Dialog */}
-      <Dialog open={showVideoDialog} onOpenChange={setShowVideoDialog}>
-        <DialogContent className="max-w-2xl w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-0 overflow-hidden [&>button]:left-4 [&>button]:right-auto">
-          {selectedVideo ? (
-            <>
-              <div className="aspect-video">
-                <video
-                  src={selectedVideo.url}
-                  className="w-full h-full object-cover"
-                  controls
-                  autoPlay
-                />
-              </div>
-              <div className="p-6">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-bold text-foreground dark:text-white">{selectedVideo.title}</DialogTitle>
-                  <DialogDescription className="text-muted-foreground dark:text-white/80">
-                    {selectedVideo.description}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="flex items-center gap-4 mt-4 text-muted-foreground dark:text-white/60 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Eye className="h-4 w-4" />
-                    <span>{formatViews(selectedVideo.views)} views</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Heart className="h-4 w-4" />
-                    <span>{formatViews(selectedVideo.likes)} likes</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <MessageCircle className="h-4 w-4" />
-                    <span>{formatViews(selectedVideo.comments_count || 0)} comments</span>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
 
       {/* Image Dialog */}
       {selectedImage !== null && (

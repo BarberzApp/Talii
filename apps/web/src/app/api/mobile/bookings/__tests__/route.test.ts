@@ -1,33 +1,37 @@
+/**
+ * @jest-environment node
+ */
 process.env.STRIPE_SECRET_KEY = 'sk_test_mock'
 
 const mockStripeCreate = jest.fn()
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => ({
     paymentIntents: {
-      create: mockStripeCreate,
+      create: (...args: unknown[]) => mockStripeCreate(...args),
     },
   }))
 })
 
 const mockSupabaseFrom = jest.fn()
-const supabaseAdmin = { from: mockSupabaseFrom }
 jest.mock('@/shared/lib/supabase', () => ({
-  supabaseAdmin,
+  supabaseAdmin: { from: (...args: unknown[]) => mockSupabaseFrom(...args) },
 }))
 
 const mockValidateBearerToken = jest.fn()
-class ApiAuthError extends Error {
-  status: number
-  constructor(message: string, status = 401) {
-    super(message)
-    this.name = 'ApiAuthError'
-    this.status = status
+jest.mock('@/shared/lib/api-auth', () => {
+  class ApiAuthError extends Error {
+    status: number
+    constructor(message: string, status = 401) {
+      super(message)
+      this.name = 'ApiAuthError'
+      this.status = status
+    }
   }
-}
-jest.mock('@/shared/lib/api-auth', () => ({
-  ApiAuthError,
-  validateBearerToken: mockValidateBearerToken,
-}))
+  return {
+    ApiAuthError,
+    validateBearerToken: (...args: unknown[]) => mockValidateBearerToken(...args),
+  }
+})
 
 jest.mock('@/shared/lib/logger', () => ({
   logger: {
@@ -243,7 +247,7 @@ describe('Mobile bookings API', () => {
     expect(mockStripeCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         amount: fee.platformFee,
-        application_fee_amount: fee.bocmGrossShare,
+        application_fee_amount: fee.applicationFeeAmount,
       })
     )
   })

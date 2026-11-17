@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { supabaseAdmin } from "@/shared/lib/supabase"
 import { headers } from "next/headers"
-import { sendBookingConfirmationSMS } from '@/shared/utils/sendSMS'
 import { logger } from '@/shared/lib/logger'
 import { calculateFeeBreakdown } from '@/shared/lib/fee-calculator'
 import { parseStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata'
@@ -61,6 +60,51 @@ async function updateBooking(
     logger.error('Error updating booking', error)
     throw error
   }
+}
+
+// Look up the bookings tied to a PaymentIntent. Returns an explicit error when more
+// than one booking references the same intent (should be impossible once Phase 2 adds
+// a unique constraint, but the current schema does not enforce it).
+async function findBookingByPaymentIntent(paymentIntentId: string): Promise<
+  | { ok: true; booking: { id: string; status: string | null } | null }
+  | { ok: false; reason: 'query_failed' | 'multiple'; error?: unknown }
+> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id, status')
+    .eq('payment_intent_id', paymentIntentId)
+    .limit(2)
+
+  if (error) return { ok: false, reason: 'query_failed', error }
+  if (data && data.length > 1) return { ok: false, reason: 'multiple' }
+  return { ok: true, booking: data && data.length === 1 ? data[0] : null }
+}
+
+// Confirm a booking after payment unless it was already cancelled. A cancelled booking
+// must not come back to life on a redelivered or late event.
+// TODO(phase-3): a paid-but-cancelled booking should be refunded automatically.
+async function confirmBookingIfNotCancelled(bookingId: string, paymentIntentId?: string) {
+  const { data: current, error } = await supabase
+    .from('bookings')
+    .select('id, status')
+    .eq('id', bookingId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!current) {
+    logger.warn('Booking referenced by Stripe event not found', { bookingId })
+    return
+  }
+  if (current.status === 'cancelled') {
+    logger.warn('Not re-confirming cancelled booking after payment event', { bookingId, paymentIntentId })
+    return
+  }
+
+  await updateBooking(bookingId, {
+    status: current.status === 'completed' ? undefined : 'confirmed',
+    payment_status: 'succeeded',
+    ...(paymentIntentId ? { payment_intent_id: paymentIntentId } : {}),
+  })
 }
 
 export async function POST(request: Request) {
@@ -122,11 +166,9 @@ export async function POST(request: Request) {
         // Get barber ID from metadata
         const barberId = account.metadata?.barber_id
         if (!barberId) {
-          logger.error('No barber ID found in account metadata')
-          return NextResponse.json(
-            { error: 'No barber ID found' },
-            { status: 400 }
-          )
+          // Not an account we created through onboarding; nothing to do.
+          logger.warn('account.created without barber_id metadata; ignoring', { accountId: account.id })
+          break
         }
 
         // Update barber's Stripe account ID
@@ -169,7 +211,7 @@ export async function POST(request: Request) {
           .from('barbers')
           .select('id')
           .eq('stripe_account_id', account.id)
-          .single()
+          .maybeSingle()
 
         if (findError) {
           logger.error('Error finding barber', findError)
@@ -180,10 +222,9 @@ export async function POST(request: Request) {
         }
 
         if (!barber) {
-          return NextResponse.json(
-            { error: 'Barber not found' },
-            { status: 404 }
-          )
+          // Unknown account (not ours, or onboarding never saved it). Nothing to update.
+          logger.warn('account.updated for unknown Stripe account; ignoring', { accountId: account.id })
+          break
         }
 
         // Update barber's Stripe account status
@@ -191,7 +232,7 @@ export async function POST(request: Request) {
           .from('barbers')
           .update({
             stripe_account_status: account.charges_enabled ? 'active' : 'pending',
-            stripe_account_ready: account.charges_enabled && account.details_submitted,
+            stripe_account_ready: Boolean(account.charges_enabled && account.details_submitted),
             updated_at: new Date().toISOString(),
           })
           .eq('id', barber.id)
@@ -208,15 +249,14 @@ export async function POST(request: Request) {
       }
 
       case 'account.application.deauthorized': {
-        const application = event.data.object as Stripe.Application
-        logger.debug('Processing account.application.deauthorized event', { applicationId: application.id })
+        // The event's data.object is the Application (our platform), not the
+        // connected account. The connected account id is on event.account.
+        const connectedAccountId = event.account
+        logger.debug('Processing account.application.deauthorized event', { accountId: connectedAccountId })
 
-        // Validate application object
-        if (!application.id || typeof application.id !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid application ID' },
-            { status: 400 }
-          )
+        if (!connectedAccountId) {
+          logger.warn('account.application.deauthorized without event.account; ignoring')
+          break
         }
 
         // Find and update barber's status
@@ -227,7 +267,7 @@ export async function POST(request: Request) {
             stripe_account_ready: false,
             updated_at: new Date().toISOString(),
           })
-          .eq('stripe_account_id', application.id)
+          .eq('stripe_account_id', connectedAccountId)
 
         if (updateError) {
           logger.error('Error updating barber', updateError)
@@ -253,18 +293,16 @@ export async function POST(request: Request) {
         }
 
         if (!session.metadata?.bookingId) {
-          logger.error('No booking ID found in session metadata')
-          return NextResponse.json(
-            { error: 'No booking ID found' },
-            { status: 400 }
-          )
+          // Not a booking checkout we created (or booking is created from the
+          // payment_intent.succeeded event instead). Nothing to act on.
+          logger.debug('Checkout session without bookingId metadata; ignoring', { sessionId: session.id })
+          break
         }
 
-        await updateBooking(session.metadata.bookingId, {
-          status: 'confirmed',
-          payment_status: 'succeeded',
-          payment_intent_id: session.payment_intent as string,
-        })
+        await confirmBookingIfNotCancelled(
+          session.metadata.bookingId,
+          typeof session.payment_intent === 'string' ? session.payment_intent : undefined
+        )
 
         break
       }
@@ -282,11 +320,10 @@ export async function POST(request: Request) {
         }
 
         if (!session.metadata?.bookingId) {
-          logger.error('No booking ID found in session metadata')
-          return NextResponse.json(
-            { error: 'No booking ID found' },
-            { status: 400 }
-          )
+          // Not a booking checkout we created (or booking is created from the
+          // payment_intent.succeeded event instead). Nothing to act on.
+          logger.debug('Checkout session without bookingId metadata; ignoring', { sessionId: session.id })
+          break
         }
 
         // DB constraint: bookings.status cannot be "expired" (use payment_status failed + cancel booking)
@@ -310,11 +347,22 @@ export async function POST(request: Request) {
         }
 
         // Check if a booking already exists for this payment intent
-        const { data: existingBooking, error: findError } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('payment_intent_id', paymentIntent.id)
-          .single()
+        const lookup = await findBookingByPaymentIntent(paymentIntent.id)
+        if (!lookup.ok) {
+          if (lookup.reason === 'multiple') {
+            // Data problem that retries cannot fix: log loudly and acknowledge.
+            logger.error('More than one booking references this payment intent; not touching any of them', {
+              paymentIntentId: paymentIntent.id,
+            })
+            break
+          }
+          logger.error('Error finding booking', lookup.error)
+          return NextResponse.json(
+            { error: 'Failed to find booking' },
+            { status: 500 }
+          )
+        }
+        const existingBooking = lookup.booking
 
         let bookingId: string | null = null
 
@@ -330,23 +378,6 @@ export async function POST(request: Request) {
               meta: parsed.raw,
             })
 
-            // Best-effort telemetry for missing metadata (do not fail the webhook)
-            try {
-              await supabase.from('payment_events').insert({
-                payment_intent_id: paymentIntent.id,
-                event_type: 'payment_intent_missing_metadata',
-                booking_id: null,
-                amount: paymentIntent.amount,
-                currency: paymentIntent.currency,
-                metadata: {
-                  missing: parsed.missing,
-                  raw: parsed.raw,
-                },
-                created_at: new Date().toISOString(),
-              } as any)
-            } catch (trackingError) {
-              logger.error('Error tracking missing-metadata event', trackingError)
-            }
 
             // Returning 200 prevents Stripe retry storms; booking creation is impossible without metadata.
             break
@@ -460,6 +491,7 @@ export async function POST(request: Request) {
                 .from('service_addons')
                 .select('price')
                 .in('id', addonIdArray)
+                .eq('barber_id', barberId)
                 .eq('is_active', true)
               if (addons && addons.length > 0) {
                 addon_total = addons.reduce((sum, addon) => sum + Number(addon.price), 0)
@@ -486,7 +518,7 @@ export async function POST(request: Request) {
             client_id: normalizedClientId === 'guest' ? null : normalizedClientId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-          }).select('*, barber:barber_id(*), service:service_id(*), client:client_id(*)').single()
+          }).select('id, status').single()
 
           // Debug logging for the insert operation
           logger.debug('Inserting booking with client_id', {
@@ -505,15 +537,6 @@ export async function POST(request: Request) {
           bookingId = newBooking.id
           logger.debug('Booking created after payment for payment_intent', { paymentIntentId: paymentIntent.id })
 
-          // Send SMS notifications to both barber and client
-          try {
-            logger.debug('Sending SMS notifications for Stripe booking', { bookingId: newBooking.id })
-            const smsResults = await sendBookingConfirmationSMS(newBooking)
-            logger.debug('SMS notification results', { smsResults })
-          } catch (smsError) {
-            logger.error('Failed to send SMS notifications', smsError)
-            // Don't fail the booking creation if SMS fails
-          }
 
           // Log successful booking creation for mobile payments
           logger.debug('Mobile payment booking created successfully', {
@@ -525,29 +548,6 @@ export async function POST(request: Request) {
             status: newBooking.status
           })
 
-          // Track mobile payment success for analytics
-          try {
-            await supabase
-              .from('payment_events')
-              .insert({
-                payment_intent_id: paymentIntent.id,
-                event_type: 'mobile_payment_success',
-                booking_id: newBooking.id,
-                amount: paymentIntent.amount,
-                currency: paymentIntent.currency,
-                metadata: {
-                  source: 'mobile_app',
-                  barberId,
-                  serviceId,
-                  clientId: normalizedClientId,
-                  addonIds: addonIdArray
-                },
-                created_at: new Date().toISOString()
-              })
-          } catch (trackingError) {
-            logger.error('Error tracking mobile payment event', trackingError)
-            // Don't fail the webhook if tracking fails
-          }
 
           // Add add-ons to the booking if any were selected (deduplicate first)
           if (addonIdsCsv && addonIdsCsv.length > 0) {
@@ -557,6 +557,7 @@ export async function POST(request: Request) {
                 .from('service_addons')
                 .select('id, price')
                 .in('id', addonIdArray)
+                .eq('barber_id', barberId)
                 .eq('is_active', true)
 
               if (addons && addons.length > 0) {
@@ -578,25 +579,34 @@ export async function POST(request: Request) {
               }
             }
           }
-        } else if (findError && typeof findError === 'object' && (findError as any).code !== 'PGRST116') {
-          // Only log error if it's not the 'no rows' error
-          logger.error('Error finding booking', findError)
-          return NextResponse.json(
-            { error: 'Failed to find booking' },
-            { status: 500 }
-          )
         } else {
-          // Booking already exists, just update status
+          // Booking already exists (redelivery, or created before payment). Confirm it
+          // unless it was cancelled in the meantime.
           bookingId = existingBooking.id
-          await updateBooking(existingBooking.id, {
-            status: 'confirmed',
-            payment_status: 'succeeded',
-            payment_intent_id: paymentIntent.id,
-          })
+          await confirmBookingIfNotCancelled(existingBooking.id, paymentIntent.id)
         }
 
-        // Store the successful payment in Supabase with all required fields
+        // Store the successful payment once per payment intent (Stripe redelivers events).
         if (bookingId) {
+          const { data: existingPayments, error: existingPaymentError } = await supabase
+            .from('payments')
+            .select('id')
+            .eq('payment_intent_id', paymentIntent.id)
+            .gt('amount', 0)
+            .limit(1)
+
+          if (existingPaymentError) {
+            logger.error('Error checking for existing payment record', existingPaymentError)
+            return NextResponse.json(
+              { error: 'Error storing payment' },
+              { status: 500 }
+            )
+          }
+          if (existingPayments && existingPayments.length > 0) {
+            logger.debug('Payment already recorded for payment intent; skipping insert', { paymentIntentId: paymentIntent.id })
+            break
+          }
+
           const { error: paymentError } = await supabase.from('payments').insert({
             payment_intent_id: paymentIntent.id,
             amount: paymentIntent.amount, // Already in cents from Stripe
@@ -632,25 +642,26 @@ export async function POST(request: Request) {
         }
 
         // Find booking with this payment intent ID
-        const { data: booking, error: findError } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('payment_intent_id', paymentIntent.id)
-          .single()
-
-        if (findError) {
-          logger.error('Error finding booking', findError)
+        const lookup = await findBookingByPaymentIntent(paymentIntent.id)
+        if (!lookup.ok) {
+          if (lookup.reason === 'multiple') {
+            logger.error('More than one booking references this payment intent; not touching any of them', {
+              paymentIntentId: paymentIntent.id,
+            })
+            break
+          }
+          logger.error('Error finding booking', lookup.error)
           return NextResponse.json(
             { error: 'Failed to find booking' },
             { status: 500 }
           )
         }
 
+        const booking = lookup.booking
         if (!booking) {
-          return NextResponse.json(
-            { error: 'Booking not found' },
-            { status: 404 }
-          )
+          // No booking for this intent (not ours, or created before metadata existed).
+          logger.debug('payment_intent.payment_failed with no matching booking; ignoring', { paymentIntentId: paymentIntent.id })
+          break
         }
 
         // DB constraint: bookings.status cannot be "failed" (use payment_status failed + cancel booking)
@@ -682,32 +693,31 @@ export async function POST(request: Request) {
         }
 
         if (!charge.payment_intent || typeof charge.payment_intent !== 'string') {
-          return NextResponse.json(
-            { error: 'Invalid payment intent reference' },
-            { status: 400 }
-          )
+          logger.debug('charge.refunded without a payment intent; ignoring', { chargeId: charge.id })
+          break
         }
 
         // Find booking with this payment intent ID
-        const { data: booking, error: findError } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('payment_intent_id', charge.payment_intent)
-          .single()
-
-        if (findError) {
-          logger.error('Error finding booking', findError)
+        const lookup = await findBookingByPaymentIntent(charge.payment_intent)
+        if (!lookup.ok) {
+          if (lookup.reason === 'multiple') {
+            logger.error('More than one booking references this payment intent; not touching any of them', {
+              paymentIntentId: charge.payment_intent,
+            })
+            break
+          }
+          logger.error('Error finding booking', lookup.error)
           return NextResponse.json(
             { error: 'Failed to find booking' },
             { status: 500 }
           )
         }
 
+        const booking = lookup.booking
         if (!booking) {
-          return NextResponse.json(
-            { error: 'Booking not found' },
-            { status: 404 }
-          )
+          // No booking for this intent (not ours, or created before metadata existed).
+          logger.debug('charge.refunded with no matching booking; ignoring', { paymentIntentId: charge.payment_intent })
+          break
         }
 
         const isPartialRefund = charge.amount_refunded < charge.amount
@@ -743,9 +753,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true })
   } catch (error) {
     logger.error('Error processing webhook', error)
+    // 500 so Stripe retries genuine processing failures.
     return NextResponse.json(
       { error: 'Webhook error' },
-      { status: 400 }
+      { status: 500 }
     )
   }
 }

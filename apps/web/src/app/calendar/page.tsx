@@ -9,14 +9,13 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, DollarSign, Grid, Calendar, Scissors, Mail, Phone } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { supabase } from '@/shared/lib/supabase';
 import { useAuth } from '@/shared/hooks/use-auth-zustand';
 import { logger } from '@/shared/lib/logger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog';
 import { Badge } from '@/shared/components/ui/badge';
 import { EnhancedCalendar } from '@/shared/components/calendar/enhanced-calendar';
-import { CalendarSyncSettings } from '@/shared/components/calendar-sync-settings';
 
 interface CalendarEvent {
   id: string;
@@ -528,11 +527,6 @@ export default function BarberCalendar() {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Calendar Sync Section */}
-        <div className="w-full max-w-4xl mx-auto mb-8">
-          <CalendarSyncSettings />
         </div>
 
         {/* Centered EnhancedCalendar */}

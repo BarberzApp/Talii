@@ -10,13 +10,15 @@ jest.mock('twrnc', () => {
 });
 
 // Mock dependencies
-jest.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({
+// Stable references: SettingsPage re-fetches when `user` changes identity, so a fresh object per render loops forever.
+jest.mock('@/hooks/useAuth', () => {
+  const value = {
     user: { id: 'test-user', email: 'test@example.com' },
     userProfile: { name: 'Test User', role: 'client' },
     logout: jest.fn(),
-  }),
-}));
+  };
+  return { useAuth: () => value };
+});
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
@@ -50,6 +52,11 @@ jest.mock('lucide-react-native', () => ({
   LogOut: 'LogOut',
   CheckCircle: 'CheckCircle',
   RefreshCw: 'RefreshCw',
+  FileText: 'FileText',
+  Shield: 'Shield',
+  Sun: 'Sun',
+  Moon: 'Moon',
+  Smartphone: 'Smartphone',
 }));
 
 // Mock settings components

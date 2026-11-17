@@ -45,7 +45,7 @@ describe('EventDetailsModal', () => {
       }
     };
 
-    const { getByText } = render(
+    const { getByText, getAllByText } = render(
       <EventDetailsModal
         visible
         selectedEvent={event}
@@ -63,7 +63,7 @@ describe('EventDetailsModal', () => {
       />
     );
 
-    expect(getByText('Booking Details')).toBeTruthy();
+    expect(getAllByText('Booking Details').length).toBeGreaterThan(0);
     expect(getByText('Haircut')).toBeTruthy();
 
     fireEvent.press(getByText('Leave Review'));

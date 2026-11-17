@@ -178,7 +178,7 @@ async function checkWebhookConfiguration() {
     console.log('   If bookings are still not being created, check:');
     console.log('   1. Webhook event logs in Stripe Dashboard');
     console.log('   2. Application logs for webhook processing errors');
-    console.log('   3. Database trigger errors (check end_time calculation)');
+    console.log('   3. That the booking metadata on the PaymentIntent is complete');
   }
   
   console.log('\n' + '='.repeat(60));

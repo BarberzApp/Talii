@@ -8,7 +8,7 @@ import { Switch } from '@/shared/components/ui/switch'
 import { Plus, Trash2, Calendar, Clock, AlertCircle, Sparkles, Loader2, Info } from 'lucide-react'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 
 interface SpecialHours {
   id: string

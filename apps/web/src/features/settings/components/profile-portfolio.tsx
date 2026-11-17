@@ -15,12 +15,11 @@ import { useAuth } from '@/shared/hooks/use-auth-zustand';
 import { supabase } from '@/shared/lib/supabase';
 import { useToast } from '@/shared/components/ui/use-toast';
 import { EnhancedBarberProfileSettings } from './enhanced-barber-profile-settings';
-import { useCuts, VideoCut } from '@/shared/hooks/use-cuts';
 import Cropper, { Area } from 'react-easy-crop';
 import getCroppedImg from '@/shared/lib/crop-image';
 import { useData } from '@/shared/hooks/use-data';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/components/ui/tabs';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { BookingForm } from '@/shared/components/booking/booking-form';
 import { Progress } from '@/shared/components/ui/progress';
 import { logger } from '@/shared/lib/logger';
@@ -98,15 +97,6 @@ interface Addon {
   created_at?: string;
 }
 
-interface Comment {
-  id: string;
-  cut_id: string;
-  user_id: string;
-  user_name?: string;
-  comment: string;
-  created_at: string;
-}
-
 
 export default function ProfilePortfolio() {
   const { user } = useAuth();
@@ -114,20 +104,10 @@ export default function ProfilePortfolio() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [barberProfile, setBarberProfile] = useState<BarberProfile | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [openDialog, setOpenDialog] = useState<null | 'profile' | 'portfolio' | 'video' | 'upload' | 'edit-cut' | 'portfolio-upload' | 'services' | 'addons'>(null);
-  const [selectedCut, setSelectedCut] = useState<VideoCut | null>(null);
-  const [editingCut, setEditingCut] = useState<VideoCut | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [openDialog, setOpenDialog] = useState<null | 'profile' | 'portfolio' | 'video' | 'portfolio-upload' | 'services' | 'addons'>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
-  const [uploadForm, setUploadForm] = useState({
-    title: '',
-    description: '',
-    tags: ''
-  });
-  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<{
     type: 'video' | 'image';
     url: string;
@@ -142,54 +122,7 @@ export default function ProfilePortfolio() {
   const editPortfolioButtonRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
-  // Remove duplicate cuts state - use only useCuts hook
-  const [showLocationFilter, setShowLocationFilter] = useState(false);
-  const [locationFilter, setLocationFilter] = useState({
-    city: '',
-    state: '',
-    range: 50,
-    useCurrentLocation: false
-  });
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
-  // Only use useCuts hook if user is a barber
-  const cutsHook = useCuts();
-  const cuts = barberProfile ? cutsHook.cuts : [];
-  const analytics = barberProfile ? cutsHook.analytics : null;
-  const refreshCuts = barberProfile ? cutsHook.refreshCuts : () => {};
-  const cutsLoading = barberProfile ? cutsHook.loading : false;
-  const createCut = barberProfile ? cutsHook.createCut : null;
   
-  // Debug logging
-  useEffect(() => {
-    logger.debug('Profile Portfolio - State', { 
-      cutsCount: cuts?.length, 
-      cutsLoading, 
-      userId: user?.id, 
-      barberProfileId: barberProfile?.id 
-    })
-  }, [cuts, cutsLoading, user, barberProfile])
-
-  // Test database connection
-  useEffect(() => {
-    const testConnection = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('cuts')
-          .select('count')
-          .limit(1)
-        
-        if (error) {
-          logger.error('Database connection test failed', error)
-        } else {
-          logger.debug('Database connection test successful')
-        }
-      } catch (error) {
-        logger.error('Database connection test error', error)
-      }
-    }
-
-    testConnection()
-  }, [])
 
   // Fetch services
   const fetchServices = useCallback(async () => {
@@ -287,10 +220,6 @@ export default function ProfilePortfolio() {
       description: 'Your appointment has been scheduled successfully.',
     })
   }
-  const [statsDialogOpen, setStatsDialogOpen] = useState(false);
-  const [statsDialogCut, setStatsDialogCut] = useState<VideoCut | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -324,28 +253,6 @@ export default function ProfilePortfolio() {
     setCoverCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  // Get user's current location
-  const getCurrentLocation = useCallback(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          logger.error('Error getting location', error)
-          toast({
-            title: 'Location Error',
-            description: 'Could not get your current location.',
-            variant: 'destructive',
-          });
-        }
-      );
-    }
-  }, [toast]);
-
   // Calculate distance between two points
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 3959; // Earth's radius in miles
@@ -358,7 +265,6 @@ export default function ProfilePortfolio() {
     return R * c;
   };
 
-  // Remove fetchUserCuts function - no longer needed
 
   // Remove handleLocationFilter and clearLocationFilter functions - no longer needed
 
@@ -412,7 +318,6 @@ export default function ProfilePortfolio() {
             }));
             setPortfolio(portfolioItems);
           }
-          // Remove fetchUserCuts call - useCuts hook handles this
         } else {
           // User is not a barber - they are a client
           logger.debug('User is a client (no barber profile found)', { userId: user.id })
@@ -433,11 +338,7 @@ export default function ProfilePortfolio() {
     fetchProfileData();
   }, [user, toast]);
 
-  // Stats and socials based on real data
-  const profileStats = [
-    { label: 'Posts', value: cuts.length },
-  ];
-
+  // Socials based on real data
   const socials = [
     { icon: Instagram, href: barberProfile?.instagram, color: 'text-[#E1306C]' },
     { icon: Twitter, href: barberProfile?.twitter, color: 'text-[#1DA1F2]' },
@@ -612,252 +513,6 @@ export default function ProfilePortfolio() {
     }
   };
 
-  const handleVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
-
-    const file = files[0]
-    
-    // Validate file type
-    if (!file.type.startsWith('video/')) {
-      toast({
-        title: 'Invalid file type',
-        description: 'Please select a video file.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    // Validate file size (270MB limit for videos)
-    if (file.size > 270 * 1024 * 1024) {
-      toast({
-        title: 'File too large',
-        description: 'Please select a video smaller than 270MB.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setSelectedVideoFile(file);
-    setVideoPreviewUrl(URL.createObjectURL(file));
-  };
-
-  const handlePostCut = async () => {
-    if (!selectedVideoFile || !barberProfile) return;
-
-    setUploading(true);
-
-    try {
-      // Upload to Supabase Storage
-      const fileExt = selectedVideoFile.name.split('.').pop()
-      const fileName = `${user?.id}/cuts/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('portfolio')
-        .upload(fileName, selectedVideoFile)
-
-      if (uploadError) throw uploadError
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('portfolio')
-        .getPublicUrl(fileName)
-
-      // Insert into cuts table
-      const { error: insertError } = await supabase
-        .from('cuts')
-        .insert({
-          barber_id: barberProfile.id,
-          title: uploadForm.title || selectedVideoFile.name.replace(/\.[^/.]+$/, ''),
-          description: uploadForm.description,
-          url: publicUrl,
-          category: 'hair-styling',
-          tags: uploadForm.tags.split(',').map(t => t.trim()).filter(Boolean),
-          location_name: profile?.location || '',
-          city: profile?.location?.split(',')[1]?.trim() || '',
-          state: profile?.location?.split(',')[2]?.trim() || '',
-          latitude: null,
-          longitude: null,
-          is_featured: false,
-          is_public: true
-        })
-
-      if (insertError) throw insertError
-      
-      toast({
-        title: 'Success',
-        description: 'Cut posted successfully!',
-      })
-      
-      // Refresh cuts
-      refreshCuts(); // Use refreshCuts from useCuts
-      
-      // Reset form and close dialog
-      setOpenDialog(null)
-      setUploadForm({
-        title: '',
-        description: '',
-        tags: ''
-      })
-      setSelectedVideoFile(null);
-      setVideoPreviewUrl(null);
-
-    } catch (error) {
-      logger.error('Error posting cut', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to post cut. Please try again.',
-        variant: 'destructive',
-      })
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const handleEditCut = (cut: VideoCut) => {
-    setEditingCut(cut);
-    setUploadForm({
-      title: cut.title || '',
-      description: cut.description || '',
-      tags: cut.tags?.join(', ') || ''
-    });
-    setOpenDialog('edit-cut');
-  };
-
-  const handleUpdateCut = async () => {
-    if (!editingCut || !barberProfile) return;
-
-    try {
-      setUploading(true);
-      
-      const { error: updateError } = await supabase
-        .from('cuts')
-        .update({
-          title: uploadForm.title,
-          description: uploadForm.description,
-          category: 'hair-styling',
-          tags: uploadForm.tags.split(',').map(t => t.trim()).filter(Boolean),
-          location_name: profile?.location || '',
-          city: profile?.location?.split(',')[1]?.trim() || '',
-          state: profile?.location?.split(',')[2]?.trim() || '',
-          latitude: null,
-          longitude: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', editingCut.id);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: 'Success',
-        description: 'Cut updated successfully!',
-      });
-
-      // Refresh cuts
-      refreshCuts(); // Use refreshCuts from useCuts
-      setOpenDialog(null);
-      setEditingCut(null);
-      setUploadForm({
-        title: '',
-        description: '',
-        tags: ''
-      });
-    } catch (error) {
-      logger.error('Error updating cut', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update cut. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeleteCut = async (cutId: string) => {
-    if (!barberProfile) return;
-
-    try {
-      const { error: deleteError } = await supabase
-        .from('cuts')
-        .delete()
-        .eq('id', cutId);
-
-      if (deleteError) throw deleteError;
-
-      toast({
-        title: 'Success',
-        description: 'Cut deleted successfully!',
-      });
-
-      // Refresh cuts
-      refreshCuts(); // Use refreshCuts from useCuts
-    } catch (error) {
-      logger.error('Error deleting cut', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to delete cut. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleToggleCutVisibility = async (cutId: string, isPublic: boolean) => {
-    if (!barberProfile) return;
-
-    try {
-      const { error: updateError } = await supabase
-        .from('cuts')
-        .update({ is_public: !isPublic })
-        .eq('id', cutId);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: 'Success',
-        description: `Cut ${!isPublic ? 'published' : 'made private'} successfully!`,
-      });
-
-      // Refresh cuts
-      refreshCuts(); // Use refreshCuts from useCuts
-    } catch (error) {
-      logger.error('Error updating cut visibility', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update cut visibility. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleToggleFeatured = async (cutId: string, isFeatured: boolean) => {
-    if (!barberProfile) return;
-
-    try {
-      const { error: updateError } = await supabase
-        .from('cuts')
-        .update({ is_featured: !isFeatured })
-        .eq('id', cutId);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: 'Success',
-        description: `Cut ${!isFeatured ? 'featured' : 'unfeatured'} successfully!`,
-      });
-
-      // Refresh cuts
-      refreshCuts(); // Use refreshCuts from useCuts
-    } catch (error) {
-      logger.error('Error updating cut featured status', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update cut featured status. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const handleProfileUpdate = async (updatedData: Partial<UserProfile>) => {
     try {
       // Update profile data
@@ -919,26 +574,6 @@ export default function ProfilePortfolio() {
         variant: 'destructive',
       });
     }
-  };
-
-  const openStatsDialog = async (cut: VideoCut) => {
-    setStatsDialogCut(cut);
-    setStatsDialogOpen(true);
-    setCommentsLoading(true);
-    // Fetch comments for this cut
-    const { data, error } = await supabase
-      .from('cut_comments')
-      .select('*')
-      .eq('cut_id', cut.id)
-      .order('created_at', { ascending: false });
-    setComments(data || []);
-    setCommentsLoading(false);
-  };
-
-  const closeStatsDialog = () => {
-    setStatsDialogOpen(false);
-    setStatsDialogCut(null);
-    setComments([]);
   };
 
   // Starred/featured portfolio logic
@@ -1093,12 +728,6 @@ export default function ProfilePortfolio() {
       <div className="w-full max-w-4xl mx-auto grid grid-cols-3 gap-4 sm:gap-8 mb-12 mt-12">
         <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
           <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
-            {cuts.length}
-          </span>
-          <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Cuts</span>
-        </div>
-        <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
-          <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
             {portfolio.length}
           </span>
           <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Gallery</span>
@@ -1127,13 +756,6 @@ export default function ProfilePortfolio() {
                 Gallery
               </TabsTrigger>
               <TabsTrigger 
-                value="reels" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
-              >
-                <VideoIcon className="h-4 w-4" />
-                Cuts
-              </TabsTrigger>
-              <TabsTrigger 
                 value="services" 
                 className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
               >
@@ -1149,240 +771,6 @@ export default function ProfilePortfolio() {
               </TabsTrigger>
             </TabsList>
           </div>
-
-          {/* Reels Tab */}
-          <TabsContent value="reels">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-foreground font-bebas font-bold text-xl">Your Cuts ({cuts.length})</h3>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={refreshCuts}
-                  disabled={cutsLoading}
-                  className="text-foreground/60 hover:text-foreground"
-                >
-                  <Loader2 className={cn("h-4 w-4", cutsLoading && "animate-spin")} />
-                </Button>
-                {isOwner && (
-                  <Button
-                    onClick={() => setOpenDialog('upload')}
-                    size="sm"
-                    className="bg-secondary text-primary-foreground hover:bg-secondary/90"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload Cut
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            {cutsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-secondary mx-auto mb-4" />
-                  <p className="text-foreground/60">Loading your cuts...</p>
-                </div>
-              </div>
-            ) : cuts.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-8 max-w-md mx-auto">
-                  <VideoIcon className="h-12 w-12 text-foreground/40 mx-auto mb-4" />
-                  <h3 className="text-foreground font-bebas font-bold text-xl mb-2">No cuts yet</h3>
-                  <p className="text-foreground/60 text-sm mb-6">
-                    Start sharing your work by uploading your first cut
-                  </p>
-                  {isOwner && (
-                    <div className="space-y-3">
-                      <Button
-                        onClick={() => setOpenDialog('upload')}
-                        className="bg-secondary text-primary-foreground hover:bg-secondary/90 w-full"
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload First Cut
-                      </Button>
-                      <Button
-                        onClick={async () => {
-                          if (!createCut) return;
-                          try {
-                            const testCut = await createCut({
-                              title: 'Test Cut',
-                              description: 'This is a test cut',
-                              url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-                              category: 'hair-styling',
-                              duration: 30,
-                              tags: ['test', 'demo'],
-                              is_public: true
-                            })
-                            if (testCut) {
-                              toast({
-                                title: 'Success',
-                                description: 'Test cut created successfully!',
-                              })
-                            }
-                          } catch (error) {
-                            logger.error('Error creating test cut', error)
-                            toast({
-                              title: 'Error',
-                              description: 'Failed to create test cut.',
-                              variant: 'destructive',
-                            })
-                          }
-                        }}
-                        variant="outline"
-                        className="w-full border-black/10 dark:border-white/20 text-foreground hover:bg-black/5 dark:bg-white/10"
-                      >
-                        Create Test Cut
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-                {cuts.map((cut) => (
-                  <div 
-                    key={cut.id} 
-                    className="relative aspect-[4/5] bg-gray-800 rounded-lg overflow-hidden group cursor-pointer"
-                    onMouseEnter={(e) => {
-                      const video = e.currentTarget.querySelector('video') as HTMLVideoElement;
-                      if (video) {
-                        video.play().catch(() => {
-                          // Auto-play might be blocked
-                        });
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      const video = e.currentTarget.querySelector('video') as HTMLVideoElement;
-                      if (video) {
-                        video.pause();
-                      }
-                    }}
-                    onClick={() => {
-                      setSelectedMedia({
-                        type: 'video',
-                        url: cut.url,
-                        title: cut.title,
-                        description: cut.description,
-                        likes: cut.likes,
-                        views: cut.views,
-                        created_at: cut.created_at,
-                        id: cut.id
-                      });
-                      setOpenDialog('video');
-                    }}
-                  >
-                    {cut.thumbnail ? (
-                      <img 
-                        src={cut.thumbnail} 
-                        alt={cut.title} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <video 
-                        src={cut.url} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        muted 
-                        playsInline 
-                        preload="metadata"
-                      />
-                    )}
-                    {/* Glassmorphic Badge for Video */}
-                    <div className="absolute top-3 left-3 z-10">
-                      <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-full p-2">
-                        <Play className="h-3 w-3 text-white fill-white" />
-                      </div>
-                    </div>
-                    {/* Overlay with stats */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-4">
-                      <p className="text-white font-bebas text-lg mb-1 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">{cut.title || 'Classic Cut'}</p>
-                      <div className="flex items-center gap-4 text-white/80 text-xs translate-y-2 group-hover:translate-y-0 transition-transform duration-300 delay-75">
-                        <div className="flex items-center gap-1.5">
-                          <Eye className="h-3.5 w-3.5 text-secondary" />
-                          <span>{cut.views || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Heart className="h-3.5 w-3.5 text-red-400" />
-                          <span>{cut.likes || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Owner controls */}
-                    {isOwner && (
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 bg-black/50 hover:bg-black/70 text-foreground"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-black/90 border-black/10 dark:border-white/20">
-                            <DropdownMenuItem
-                              onClick={() => handleEditCut(cut)}
-                              className="text-foreground hover:bg-black/5 dark:bg-white/10"
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleToggleCutVisibility(cut.id, !cut.is_public)}
-                              className="text-foreground hover:bg-black/5 dark:bg-white/10"
-                            >
-                              {cut.is_public ? (
-                                <>
-                                  <EyeOff className="h-4 w-4 mr-2" />
-                                  Make Private
-                                </>
-                              ) : (
-                                <>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  Make Public
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleToggleFeatured(cut.id, !cut.is_featured)}
-                              className="text-foreground hover:bg-black/5 dark:bg-white/10"
-                            >
-                              {cut.is_featured ? (
-                                <>
-                                  <Star className="h-4 w-4 mr-2" />
-                                  Remove from Featured
-                                </>
-                              ) : (
-                                <>
-                                  <Star className="h-4 w-4 mr-2" />
-                                  Add to Featured
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => openStatsDialog(cut)}
-                              className="text-foreground hover:bg-black/5 dark:bg-white/10"
-                            >
-                              <Award className="h-4 w-4 mr-2" />
-                              View Stats
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteCut(cut.id)}
-                              className="text-red-400 hover:bg-red-400/10"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
 
           {/* Portfolio Tab */}
           <TabsContent value="portfolio">
@@ -1635,265 +1023,6 @@ export default function ProfilePortfolio() {
 
         </Tabs>
       </div>
-      <Dialog open={openDialog === 'upload'} onOpenChange={open => {
-        setOpenDialog(open ? 'upload' : null);
-        if (!open) {
-          setUploadForm({
-            title: '',
-            description: '',
-            tags: ''
-          });
-          setSelectedVideoFile(null);
-          setVideoPreviewUrl(null);
-        }
-      }}>
-        <DialogContent className="max-w-2xl w-full bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[40px] shadow-2xl p-0 overflow-hidden">
-          <div className="flex flex-col h-[85vh]">
-            <DialogHeader className="p-8 lg:p-12 pb-4">
-              <DialogTitle className="text-4xl lg:text-5xl font-bebas font-bold text-foreground">Share Your Craft</DialogTitle>
-              <DialogDescription className="text-foreground/60 text-lg">
-                Show the world what you're capable of.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-y-auto p-8 lg:p-12 pt-4 space-y-8">
-              {/* Media Upload Area */}
-              {!selectedVideoFile ? (
-                <div 
-                  className="group relative border-2 border-dashed border-white/10 rounded-[32px] p-16 text-center hover:border-secondary/50 transition-all duration-500 bg-white/5 hover:bg-secondary/5 cursor-pointer"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    id="video-upload"
-                    type="file"
-                    accept="video/*"
-                    onChange={handleVideoSelect}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                  <div className="w-20 h-20 bg-secondary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
-                    <Upload className="h-10 w-10 text-secondary" />
-                  </div>
-                  <h4 className="text-2xl font-bebas font-bold text-foreground mb-2">Click to Upload Video</h4>
-                  <p className="text-foreground/40 text-sm max-w-xs mx-auto">
-                    MP4, MOV, or AVI works best. Maintain a high quality for the best engagement.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  {/* Video Preview */}
-                  <div className="relative aspect-video rounded-[32px] overflow-hidden bg-black/40 ring-1 ring-white/10 shadow-2xl">
-                    <video src={videoPreviewUrl || ''} className="w-full h-full object-cover" controls playsInline />
-                    <button 
-                      onClick={() => setSelectedVideoFile(null)}
-                      className="absolute top-4 right-4 bg-black/40 hover:bg-red-500/80 text-white backdrop-blur-xl rounded-2xl p-2 border border-white/10 transition-all"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  {/* Form Fields */}
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="title" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Cut Title</Label>
-                      <Input
-                        id="title"
-                        placeholder="e.g., Mid-Fade Masterclass"
-                        value={uploadForm.title}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
-                        className="h-14 bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6 focus:ring-secondary/50 focus:border-secondary/50"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="description" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Details & Inspiration</Label>
-                      <Textarea
-                        id="description"
-                        placeholder="Tell the community about the technique, products, or the vibe..."
-                        value={uploadForm.description}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
-                        className="bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6 py-4 min-h-[120px] focus:ring-secondary/50 focus:border-secondary/50"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="tags" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Tags (Comma Separated)</Label>
-                      <Input
-                        id="tags"
-                        placeholder="fade, lifestyle, luxury"
-                        value={uploadForm.tags}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUploadForm(prev => ({ ...prev, tags: e.target.value }))}
-                        className="h-14 bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6 focus:ring-secondary/50 focus:border-secondary/50"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Footer Actions */}
-            <div className="p-8 lg:p-12 pt-6 border-t border-white/5 flex gap-4">
-              <Button
-                variant="outline"
-                className="flex-1 h-16 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 text-foreground font-bold"
-                onClick={() => setOpenDialog(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handlePostCut}
-                disabled={uploading || !selectedVideoFile}
-                className="flex-[2] h-16 rounded-2xl bg-secondary text-[#1A1A1A] font-bold text-lg shadow-[0_10px_30px_rgba(var(--secondary),0.2)] hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-                    Publishing...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-5 w-5 mr-3" />
-                    Share Your Cut
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Cut Dialog */}
-      <Dialog open={openDialog === 'edit-cut'} onOpenChange={open => {
-        setOpenDialog(open ? 'edit-cut' : null);
-        if (!open) {
-          setEditingCut(null);
-          setUploadForm({
-            title: '',
-            description: '',
-            tags: ''
-          });
-        }
-      }}>
-        <DialogContent className="max-w-2xl w-full bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[40px] shadow-2xl p-0 overflow-hidden">
-          <div className="flex flex-col h-[85vh]">
-            <DialogHeader className="p-8 lg:p-12 pb-4">
-              <DialogTitle className="text-4xl lg:text-5xl font-bebas font-bold text-foreground">Refine Your Cut</DialogTitle>
-              <DialogDescription className="text-foreground/60 text-lg">
-                Update the story behind this work.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-y-auto p-8 lg:p-12 pt-4 space-y-8">
-              {/* Media Preview */}
-              {editingCut && (
-                <div className="relative aspect-video rounded-[32px] overflow-hidden bg-black/40 ring-1 ring-white/10 shadow-2xl">
-                  <video src={editingCut.url} className="w-full h-full object-cover" controls />
-                </div>
-              )}
-
-              {/* Form Fields */}
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-title" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Cut Title</Label>
-                  <Input
-                    id="edit-title"
-                    placeholder="Enter video title"
-                    value={uploadForm.title}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUploadForm(prev => ({ ...prev, title: e.target.value }))}
-                    className="h-14 bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-description" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Details & Inspiration</Label>
-                  <Textarea
-                    id="edit-description"
-                    placeholder="Describe your video content..."
-                    value={uploadForm.description}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setUploadForm(prev => ({ ...prev, description: e.target.value }))}
-                    className="bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6 py-4 min-h-[120px]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-tags" className="text-[10px] uppercase font-bold tracking-[0.2em] text-secondary ml-1">Tags</Label>
-                  <Input
-                    id="edit-tags"
-                    placeholder="fade, tutorial, classic"
-                    value={uploadForm.tags}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUploadForm(prev => ({ ...prev, tags: e.target.value }))}
-                    className="h-14 bg-white/5 border-white/10 rounded-2xl text-foreground placeholder:text-foreground/20 px-6"
-                  />
-                </div>
-
-                {/* Visibility & Featured Controls */}
-                <div className="p-6 bg-white/5 rounded-3xl border border-white/10 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-secondary/10 rounded-2xl flex items-center justify-center">
-                        <Star className="h-5 w-5 text-secondary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">Feature this cut</p>
-                        <p className="text-xs text-muted-foreground">Highlight this on your main profile feed</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={editingCut?.is_featured || false}
-                      onCheckedChange={async (checked: boolean) => {
-                        if (!editingCut) return;
-                        try {
-                          const { error } = await supabase
-                            .from('cuts')
-                            .update({ is_featured: checked })
-                            .eq('id', editingCut.id);
-                          if (error) throw error;
-                          setEditingCut((prev: VideoCut | null) => prev ? { ...prev, is_featured: checked } : prev);
-                          refreshCuts();
-                          toast({ title: 'Success', description: `Cut ${checked ? 'featured' : 'unfeatured'} successfully!` });
-                        } catch (error) {
-                          logger.error('Error updating featured status', error)
-                          toast({ title: 'Error', description: 'Failed to update status.', variant: 'destructive' });
-                        }
-                      }}
-                      className="data-[state=checked]:bg-secondary"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="p-8 lg:p-12 pt-6 border-t border-white/5 flex gap-4">
-              <Button
-                variant="outline"
-                className="flex-1 h-16 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 text-foreground font-bold"
-                onClick={() => setOpenDialog(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUpdateCut}
-                disabled={uploading}
-                className="flex-[2] h-16 rounded-2xl bg-secondary text-[#1A1A1A] font-bold text-lg"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Edit className="h-5 w-5 mr-3" />
-                    Update Cut
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Premium Media Viewer Modal */}
       <Dialog open={openDialog === 'video'} onOpenChange={open => {
@@ -1940,7 +1069,7 @@ export default function ProfilePortfolio() {
               {/* Header Info */}
               <div className="mb-10">
                 <Badge className="bg-secondary/20 text-secondary border-secondary/30 font-bebas tracking-widest text-[10px] mb-4">
-                  {selectedMedia?.type === 'video' ? 'Video Cut' : 'Gallery Image'}
+                  {selectedMedia?.type === 'video' ? 'Video' : 'Gallery Image'}
                 </Badge>
                 <h2 className="text-4xl lg:text-5xl font-bebas font-bold text-foreground leading-tight tracking-tight mb-4">
                   {selectedMedia?.title || 'Unnamed Work'}
@@ -1990,28 +1119,6 @@ export default function ProfilePortfolio() {
                 <Share2 className="h-5 w-5 mr-3" />
                 Share Talent
               </Button>
-              {isOwner && (
-                <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="h-14 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10" onClick={() => {
-                    if (selectedMedia?.id) {
-                      const cut = cuts.find(c => c.id === selectedMedia.id);
-                      if (cut) handleEditCut(cut);
-                    }
-                  }}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button variant="outline" className="h-14 rounded-2xl border-red-500/20 bg-red-500/5 text-red-400 hover:bg-red-500/10 hover:text-red-400" onClick={() => {
-                    if (selectedMedia?.id) {
-                      // Logic for delete would go here, currently using existing handlers
-                      setOpenDialog(null);
-                    }
-                  }}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Drop
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
         </DialogContent>
@@ -2082,190 +1189,6 @@ export default function ProfilePortfolio() {
           }
         }}
       />
-      {/* Location Filter Dialog */}
-      <Dialog open={showLocationFilter} onOpenChange={setShowLocationFilter}>
-        <DialogContent className="max-w-md w-full bg-darkpurple/90 border border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bebas text-white">Filter My Cuts</DialogTitle>
-            <DialogDescription className="text-white/80">
-              Filter your cuts by location
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-200px)] pr-2">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="city" className="text-white font-medium mb-2 block">
-                  City
-                </Label>
-                <Input
-                  id="city"
-                  placeholder="Enter city name"
-                  value={locationFilter.city}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, city: e.target.value }))}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="state" className="text-white font-medium mb-2 block">
-                  State/Province
-                </Label>
-                <Input
-                  id="state"
-                  placeholder="Enter state or province"
-                  value={locationFilter.state}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationFilter(prev => ({ ...prev, state: e.target.value }))}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-                />
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="useCurrentLocation"
-                    checked={locationFilter.useCurrentLocation}
-                    onChange={(e) => setLocationFilter(prev => ({ ...prev, useCurrentLocation: e.target.checked }))}
-                    className="rounded border-white/20 bg-white/10 text-secondary focus:ring-secondary"
-                  />
-                  <Label htmlFor="useCurrentLocation" className="text-white font-medium">
-                    Use my current location
-                  </Label>
-                </div>
-                
-                {locationFilter.useCurrentLocation && (
-                  <div>
-                    <Label htmlFor="range" className="text-white font-medium mb-2 block">
-                      Range (miles)
-                    </Label>
-                    <Select 
-                      value={locationFilter.range.toString()} 
-                      onValueChange={(value: string) => setLocationFilter(prev => ({ ...prev, range: parseInt(value) }))}
-                    >
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-darkpurple border-white/20">
-                        <SelectItem value="10" className="text-white">10 miles</SelectItem>
-                        <SelectItem value="25" className="text-white">25 miles</SelectItem>
-                        <SelectItem value="50" className="text-white">50 miles</SelectItem>
-                        <SelectItem value="100" className="text-white">100 miles</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex gap-3 pt-4 border-t border-white/10">
-              <Button
-                onClick={() => {
-                  setShowLocationFilter(false);
-                }}
-                className="bg-secondary text-primary-foreground font-bold rounded-xl px-6 py-3 flex-1"
-              >
-                Apply Filter
-              </Button>
-              <Button
-                onClick={() => {
-                  setLocationFilter({
-                    city: '',
-                    state: '',
-                    range: 50,
-                    useCurrentLocation: false
-                  });
-                  setUserLocation(null);
-                  setShowLocationFilter(false);
-                }}
-                variant="outline"
-                className="border-white/20 text-white rounded-xl px-6 py-3"
-              >
-                Clear
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      {/* Stats Dialog */}
-      <Dialog open={statsDialogOpen} onOpenChange={closeStatsDialog}>
-        <DialogContent className="max-w-md w-full bg-darkpurple/90 border border-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-0 overflow-hidden">
-          {statsDialogCut && (
-            <>
-              <DialogHeader>
-                <div className="flex flex-col items-center justify-center text-center py-2">
-                  <span className="text-2xl font-extrabold text-white tracking-wide mb-1">{statsDialogCut.title || 'Cut Stats'}</span>
-                  {statsDialogCut.id && (
-                    <span className="text-xs text-white/40">ID: {statsDialogCut.id}</span>
-                  )}
-                </div>
-                <div className="w-full h-px bg-white/10 my-2" />
-              </DialogHeader>
-              <div className="p-6 space-y-4">
-                {/* Video Preview */}
-                <div className="rounded-xl overflow-hidden aspect-video bg-black/40 mb-2">
-                  <video
-                    src={statsDialogCut.url}
-                    className="w-full h-full object-cover"
-                    controls
-                    poster=""
-                    onPlay={async () => {
-                      // Increment view count in DB and update UI
-                      await supabase
-                        .from('cuts')
-                        .update({ views: (statsDialogCut.views || 0) + 1 })
-                        .eq('id', statsDialogCut.id);
-                      setStatsDialogCut((prev: VideoCut | null) => prev ? { ...prev, views: (prev.views || 0) + 1 } : prev);
-                    }}
-                  />
-                </div>
-                {/* Posted Date */}
-                <div className="text-xs text-white/60 mb-2">
-                  Posted: {statsDialogCut.created_at ? new Date(statsDialogCut.created_at).toLocaleDateString() : 'Unknown'}
-                </div>
-                {/* Stats Row */}
-                <div className="flex items-center justify-between gap-4 mb-4">
-                                      <span className="flex flex-col items-center text-white"><Eye className="h-6 w-6 text-secondary mb-1" /><span className="text-lg font-bold">{statsDialogCut.views}</span><span className="text-xs text-white/60">Views</span></span>
-                  <button
-                    className="flex flex-col items-center text-white focus:outline-none"
-                    onClick={async () => {
-                      await supabase
-                        .from('cuts')
-                        .update({ likes: (statsDialogCut.likes || 0) + 1 })
-                        .eq('id', statsDialogCut.id);
-                      setStatsDialogCut((prev: VideoCut | null) => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : prev);
-                    }}
-                  >
-                    <Heart className="h-6 w-6 text-red-400 mb-1" />
-                    <span className="text-lg font-bold">{statsDialogCut.likes}</span>
-                    <span className="text-xs text-white/60">Likes</span>
-                  </button>
-                  <span className="flex flex-col items-center text-white"><MessageCircle className="h-6 w-6 text-blue-400 mb-1" /><span className="text-lg font-bold">{statsDialogCut.comments_count || 0}</span><span className="text-xs text-white/60">Comments</span></span>
-                </div>
-                {/* Comments Section */}
-                <div className="bg-white/5 rounded-xl p-4 max-h-60 overflow-y-auto">
-                  <h4 className="text-white font-semibold mb-2 text-sm">Comments</h4>
-                  {commentsLoading ? (
-                    <div className="flex items-center gap-2 text-white/60 text-sm"><Loader2 className="h-4 w-4 animate-spin" /> Loading comments...</div>
-                  ) : comments.length === 0 ? (
-                    <div className="text-white/60 text-sm">No comments yet.</div>
-                  ) : (
-                    <ul className="space-y-3">
-                      {comments.map((c) => (
-                        <li key={c.id} className="text-white/90 text-sm border-b border-white/10 pb-2">
-                          <span className="font-semibold text-secondary">{c.user_name || 'User'}</span>
-                          <span className="text-white/50 text-xs ml-2">{c.created_at ? new Date(c.created_at).toLocaleString() : ''}</span>
-                          <div>{c.comment}</div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
       {/* Cropping Dialog */}
       <Dialog open={cropDialogOpen} onOpenChange={setCropDialogOpen}>
         <DialogContent className="max-w-[400px] bg-darkpurple/95 border border-white/10">

@@ -45,12 +45,6 @@ interface UserProfile {
   barber?: {
     id: string
     portfolio?: string[]
-    cuts?: Array<{
-      id: string
-      url: string
-      thumbnail?: string
-      title: string
-    }>
   }
 }
 
@@ -109,17 +103,9 @@ export function UserProfileManager() {
           .single()
 
         if (!barberError && barber) {
-          // Get cuts/reels for this barber
-          const { data: cuts } = await supabase
-            .from('cuts')
-            .select('id, url, thumbnail, title')
-            .eq('barber_id', barber.id)
-            .order('created_at', { ascending: false })
-
           barberData = {
             id: barber.id,
             portfolio: barber.portfolio || [],
-            cuts: cuts || [],
           }
         }
       }
@@ -201,14 +187,6 @@ export function UserProfileManager() {
             portfolio: userProfile.barber.portfolio?.filter(p => p !== photoToDelete.url) || [],
           },
         })
-      } else if (photoToDelete.type === 'cut' && userProfile.barber) {
-        setUserProfile({
-          ...userProfile,
-          barber: {
-            ...userProfile.barber,
-            cuts: userProfile.barber.cuts?.filter(c => c.id !== photoToDelete.id) || [],
-          },
-        })
       }
 
       toast({
@@ -237,8 +215,6 @@ export function UserProfileManager() {
         return 'Cover Photo'
       case 'portfolio':
         return 'Portfolio Image'
-      case 'cut':
-        return 'Cut/Reel'
       default:
         return 'Photo'
     }
@@ -424,45 +400,8 @@ export function UserProfileManager() {
                     </div>
                   )}
 
-                  {/* Cuts/Reels (Barbers only) */}
-                  {userProfile.barber && userProfile.barber.cuts && userProfile.barber.cuts.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                        <ImageIcon className="h-4 w-4" />
-                        Cuts/Reels ({userProfile.barber.cuts.length})
-                      </h4>
-                      <div className="grid grid-cols-4 gap-4">
-                        {userProfile.barber.cuts.map((cut) => (
-                          <div key={cut.id} className="relative">
-                            <img
-                              src={cut.thumbnail || cut.url}
-                              alt={cut.title}
-                              className="w-full h-32 object-cover rounded-lg border-2 border-white/20"
-                            />
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-xs text-white truncate">
-                              {cut.title}
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="absolute -top-2 -right-2 h-6 w-6 p-0"
-                              onClick={() => handleDeletePhoto('cut', cut.url, cut.id)}
-                              disabled={deletingPhoto === cut.url}
-                            >
-                              {deletingPhoto === cut.url ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <X className="h-3 w-3" />
-                              )}
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {!userProfile.avatar_url && !userProfile.coverphoto && 
-                   (!userProfile.barber || (userProfile.barber.portfolio?.length === 0 && userProfile.barber.cuts?.length === 0)) && (
+                   (!userProfile.barber || userProfile.barber.portfolio?.length === 0) && (
                     <div className="text-center py-8 text-white/60">
                       <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
                       <p>No photos found for this user</p>

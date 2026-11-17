@@ -1,28 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '@/shared/lib/supabase'
+import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
-
-const SUPER_ADMIN_EMAIL = 'primbocm@gmail.com'
+import { authErrorResponse, requireAdmin } from '@/shared/lib/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authorization header
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      logger.debug('Missing authorization header')
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Verify the token and get user info
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user || user.email !== SUPER_ADMIN_EMAIL) {
-      logger.debug('Access denied for user', { email: user?.email, error: authError })
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 })
-    }
+    await requireAdmin(request)
 
     const { userId, isPublic } = await request.json()
     logger.debug('Processing public status update', { userId, isPublic })
@@ -75,6 +58,8 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
+    const authResponse = authErrorResponse(error)
+    if (authResponse) return authResponse
     logger.error('Error in public status update', error)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }

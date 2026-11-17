@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { supabaseAdmin } from '@/shared/lib/supabase'
-import { sendBookingConfirmationSMS } from "@/shared/utils/sendSMS"
 import { logger } from '@/shared/lib/logger'
 import { ApiAuthError, validateBearerToken } from '@/shared/lib/api-auth'
 
@@ -125,7 +124,7 @@ export async function POST(request: Request) {
     const { data: booking, error: bookingError } = await supabaseAdmin
       .from('bookings')
       .insert(bookingData)
-      .select('*, barber:barber_id(*), service:service_id(*), client:client_id(*)')
+      .select('id, barber_id, service_id, date, status, payment_status, price')
       .single()
 
     if (bookingError) {
@@ -168,15 +167,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Send SMS notifications to both barber and client
-    try {
-      logger.debug('Sending SMS notifications for developer booking', { bookingId: booking.id })
-      const smsResults = await sendBookingConfirmationSMS(booking)
-      logger.debug('SMS notification results', { smsResults })
-    } catch (smsError) {
-      logger.error('Failed to send SMS notifications', smsError)
-      // Don't fail the booking creation if SMS fails
-    }
 
     logger.debug('Developer booking created successfully', {
       bookingId: booking.id,

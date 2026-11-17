@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar"
-import { MapPin, DollarSign, Scissors, TrendingUp, Globe, Heart } from "lucide-react"
+import { MapPin, DollarSign, Scissors, TrendingUp, Globe } from "lucide-react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
@@ -25,7 +25,6 @@ type BarberCardBarber = {
   trending?: boolean
   openToHire?: boolean
   priceRange?: string
-  totalLikes?: number
   distance?: number
   instagram?: string
   twitter?: string
@@ -154,12 +153,6 @@ export function BarberCard({ barber, className }: BarberCardProps) {
                     )}
                   </div>
                 )}
-
-                {/* Total Likes */}
-                <div className="flex items-center justify-center gap-1">
-                  <Heart className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">{barber.totalLikes || 0}</span>
-                </div>
 
                 {/* Price Range */}
                 {barber.priceRange && (

@@ -14,7 +14,7 @@ import {
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../shared/types';
-import { ArrowLeft, Calendar, MapPin, Star, Video as VideoIcon, Heart, Users, History, Camera, Loader2, Eye, Clock, Share2, Flag, Ban, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft, Calendar, MapPin, Star, Heart, Users, History, Camera, Loader2, Eye, Clock, Share2, Flag, Ban, MoreVertical } from 'lucide-react-native';
 import tw from 'twrnc';
 import { useTheme } from '../shared/components/theme';
 import { supabase } from '../shared/lib/supabase';
@@ -22,7 +22,6 @@ import { logger } from '../shared/lib/logger';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useReporting } from '../shared/hooks/useReporting';
 import { ReportContentModal } from '../shared/components/ReportContentModal';
-import VideoPreview from '../shared/components/VideoPreview';
 import {
   Button,
   Card,
@@ -77,25 +76,6 @@ interface BarberProfile {
   }>;
 }
 
-interface Cut {
-  id: string;
-  title: string;
-  description?: string;
-  url: string;
-  thumbnail?: string;
-  views: number;
-  likes: number;
-  shares: number;
-  created_at: string;
-  is_public: boolean;
-  is_featured: boolean;
-  barber: {
-    id: string;
-    name: string;
-    image: string;
-  };
-}
-
 type ProfilePreviewNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ProfilePreview'>;
 type ProfilePreviewRouteProp = RouteProp<RootStackParamList, 'ProfilePreview'>;
 
@@ -112,18 +92,14 @@ export default function ProfilePreview() {
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const isOwnProfile = user?.id === profile?.id;
   const [barberProfile, setBarberProfile] = useState<BarberProfile | null>(null);
-  const [allCuts, setAllCuts] = useState<Cut[]>([]);
-  const [cuts, setCuts] = useState<Cut[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [openDialog, setOpenDialog] = useState<null | 'video'>(null);
-  const [activeTab, setActiveTab] = useState('cuts');
-  const [selectedVideo, setSelectedVideo] = useState<Cut | null>(null);
+  const [activeTab, setActiveTab] = useState('portfolio');
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string } | null>(null);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
-  const [cutsPage, setCutsPage] = useState(0);
-  const CUTS_PER_PAGE = 12;
 
   useEffect(() => {
     fetchProfileData();
@@ -238,38 +214,6 @@ export default function ProfilePreview() {
       if (barberData) {
         setBarberProfile(barberData);
 
-        // Fetch cuts with barber info
-        const { data: cutsData, error: cutsError } = await supabase
-          .from('cuts')
-          .select(`
-            *,
-            barbers:barber_id(
-              id,
-              user_id,
-              profiles:user_id(name, avatar_url)
-            )
-          `)
-          .eq('barber_id', barberData.id)
-          .eq('is_public', true)
-          .order('created_at', { ascending: false });
-
-        if (cutsError) {
-          logger.error('Error fetching cuts:', cutsError);
-        } else if (cutsData) {
-          const formattedCuts = (cutsData || []).map((cut: any) => ({
-            ...cut,
-            barber: {
-              id: cut.barbers?.id,
-              name: cut.barbers?.profiles?.name || 'Unknown',
-              image: cut.barbers?.profiles?.avatar_url
-            }
-          }));
-          setAllCuts(formattedCuts);
-          // Load first page
-          setCutsPage(0);
-          setCuts(formattedCuts.slice(0, CUTS_PER_PAGE));
-        }
-
         // Fetch services
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
@@ -298,8 +242,6 @@ export default function ProfilePreview() {
 
       // If no barber data, set empty arrays for barber-specific content
       if (!barberData) {
-        setAllCuts([]);
-        setCuts([]);
         setServices([]);
         setPosts([]);
       }
@@ -318,22 +260,8 @@ export default function ProfilePreview() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setCutsPage(0);
     await fetchProfileData();
     setRefreshing(false);
-  };
-
-  // Load more cuts when scrolling
-  const loadMoreCuts = () => {
-    const nextPage = cutsPage + 1;
-    const startIndex = nextPage * CUTS_PER_PAGE;
-    const endIndex = startIndex + CUTS_PER_PAGE;
-    
-    if (startIndex < allCuts.length) {
-      const newCuts = allCuts.slice(startIndex, endIndex);
-      setCuts(prev => [...prev, ...newCuts]);
-      setCutsPage(nextPage);
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -354,62 +282,6 @@ export default function ProfilePreview() {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'cuts':
-        return (
-          <View style={tw`flex-1 px-4`}>
-            {cuts.length === 0 ? (
-              <View style={tw`flex-1 justify-center items-center py-8`}>
-                <VideoIcon size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
-                <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: colors.foreground }]}>
-                  No cuts yet
-                </Text>
-                <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
-                  Check back later for new content
-                </Text>
-              </View>
-            ) : (
-              <ScrollView
-                style={tw`py-4`}
-                onScroll={(event) => {
-                  const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-                  const paddingToBottom = 20;
-                  if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
-                    loadMoreCuts();
-                  }
-                }}
-                scrollEventThrottle={400}
-              >
-                {/* Grid Layout for Cuts */}
-                <View style={tw`flex-row flex-wrap justify-between`}>
-                  {cuts.map((cut) => (
-                    <VideoPreview
-                      key={cut.id}
-                      videoUrl={cut.url}
-                      barberName={cut.barber?.name || 'Unknown'}
-                      barberAvatar={cut.barber?.image || undefined}
-                      onPress={() => {
-                        // Navigate to cuts page for this specific video from this barber
-                        if (barberProfile?.id) {
-                          if (isGuest) {
-                            promptAuth('view cuts');
-                            return;
-                          }
-                          navigation.navigate('Cuts', { cutId: cut.id, barberId: barberProfile.id });
-                        }
-                      }}
-                    />
-                  ))}
-                </View>
-                {cuts.length < allCuts.length && (
-                  <View style={tw`py-4 items-center`}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  </View>
-                )}
-              </ScrollView>
-            )}
-          </View>
-        );
-
       case 'portfolio':
         return (
           <View style={tw`flex-1 px-4`}>
@@ -755,22 +627,6 @@ export default function ProfilePreview() {
 
         {/* Tabs Under Avatar */}
         <View style={[tw`flex-row border-b`, { borderColor: colors.glassBorder, backgroundColor: colors.background }]}>
-          <TouchableOpacity
-            style={tw`flex-1 py-3 items-center`}
-            onPress={() => setActiveTab('cuts')}
-          >
-            <VideoIcon 
-              size={20} 
-              color={activeTab === 'cuts' ? colors.primary : colors.mutedForeground} 
-            />
-            <Text style={[
-              tw`text-xs mt-1`, 
-              { color: activeTab === 'cuts' ? colors.primary : colors.mutedForeground }
-            ]}>
-              Cuts
-            </Text>
-          </TouchableOpacity>
-          
           <TouchableOpacity
             style={tw`flex-1 py-3 items-center`}
             onPress={() => setActiveTab('portfolio')}

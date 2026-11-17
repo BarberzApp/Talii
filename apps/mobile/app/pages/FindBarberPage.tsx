@@ -15,9 +15,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
 import { RootStackParamList } from '../shared/types';
-import { supabase } from '../shared/lib';
+import { supabase } from '../shared/lib/supabase';
 import { useTheme } from '../shared/components/theme';
-import { useAuth } from '../shared/hooks';
+import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
 const Icon = require('react-native-vector-icons/Feather').default;
 

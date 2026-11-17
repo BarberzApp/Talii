@@ -1,27 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '@/shared/lib/supabase'
+import { supabaseAdmin } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
+import { authErrorResponse, requireAdmin } from '@/shared/lib/api-auth'
 
 export async function GET(request: Request) {
   try {
-    // Verify super admin access
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.split(' ')[1]
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user || user.email !== 'primbocm@gmail.com') {
-      return NextResponse.json(
-        { error: 'Super admin access required' },
-        { status: 403 }
-      )
-    }
+    await requireAdmin(request)
 
     // Fetch barbers with comprehensive data using admin client
     const { data: barbers, error } = await supabaseAdmin
@@ -67,6 +51,8 @@ export async function GET(request: Request) {
       barbers: normalizedBarbers
     })
   } catch (error) {
+    const authResponse = authErrorResponse(error)
+    if (authResponse) return authResponse
     logger.error('Super admin barbers error', error)
     return NextResponse.json(
       { error: 'Internal server error' },

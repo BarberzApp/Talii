@@ -28,18 +28,15 @@ import {
   Facebook,
   Music,
   Sparkles,
-  Check,
   Info,
   Camera
 } from 'lucide-react-native';
 import { ProfileFormData } from '../../types/settings.types';
 import { 
-  CARRIER_OPTIONS, 
   PRICE_RANGES, 
   BARBER_SPECIALTIES, 
   extractHandle 
 } from '../../utils/settings.utils';
-import { notificationService } from '../../lib/notifications';
 import { logger } from '../../lib/logger';
 
 
@@ -71,7 +68,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       tiktok: '',
       facebook: ''
     },
-    sms_notifications: false,
   });
 
   useEffect(() => {
@@ -119,7 +115,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               tiktok: barber.tiktok || '',
               facebook: barber.facebook || ''
             },
-            sms_notifications: profile.sms_notifications || false,
           });
         }
       } else {
@@ -140,7 +135,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
             tiktok: '',
             facebook: ''
           },
-          sms_notifications: profile.sms_notifications || false,
         });
       }
     } catch (error) {
@@ -196,7 +190,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
           location: formData.location,
           description: formData.description,
           is_public: formData.isPublic,
-          sms_notifications: formData.sms_notifications,
         })
         .eq('id', user?.id);
 
@@ -261,46 +254,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       ? currentSpecialties.filter(s => s !== specialty)
       : [...currentSpecialties, specialty];
     setFormData({ ...formData, specialties: newSpecialties });
-  };
-
-  const handlePushNotificationToggle = async () => {
-    try {
-      if (!formData.sms_notifications) {
-        // Enable push notifications
-        logger.log('🔔 Requesting push notification permissions...');
-        
-        // Initialize notifications and request permissions
-        await notificationService.initialize();
-        
-        // Update local state
-        setFormData({ ...formData, sms_notifications: true });
-        
-        Alert.alert(
-          'Push Notifications Enabled',
-          'You will now receive notifications for bookings, payments, and other important updates.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        // Disable push notifications
-        logger.log('🔕 Disabling push notifications...');
-        
-        // Update local state
-        setFormData({ ...formData, sms_notifications: false });
-        
-        Alert.alert(
-          'Push Notifications Disabled',
-          'You will no longer receive push notifications. You can re-enable them anytime.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      logger.error('Error toggling push notifications:', error);
-      Alert.alert(
-        'Error',
-        'Failed to update push notification settings. Please try again.',
-        [{ text: 'OK' }]
-      );
-    }
   };
 
   return (
@@ -496,35 +449,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
             </CardContent>
           </Card>
         )}
-
-        {/* Notifications */}
-        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
-          <CardContent style={tw`p-4`}>
-            <View style={tw`flex-row items-center mb-4`}>
-              <AlertCircle size={20} color={colors.primary} style={tw`mr-2`} />
-              <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
-                Push Notifications
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={handlePushNotificationToggle}
-              style={[
-                tw`px-4 py-2 rounded-xl flex-row items-center justify-center`,
-                { backgroundColor: formData.sms_notifications ? colors.primary : colors.input }
-              ]}
-            >
-              {formData.sms_notifications ? (
-                <>
-                  <Check size={16} color={colors.primaryForeground} style={tw`mr-2`} />
-                  <Text style={[tw`font-medium`, { color: colors.primaryForeground }]}>Push Notifications Enabled</Text>
-                </>
-              ) : (
-                <Text style={[tw`font-medium`, { color: colors.foreground }]}>Enable Push Notifications</Text>
-              )}
-            </TouchableOpacity>
-          </CardContent>
-        </Card>
 
         {/* Visibility Settings */}
         <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>

@@ -1,242 +1,102 @@
+// Stripe Express dashboard link (or onboarding link if setup is incomplete) for
+// the calling barber.
+//
+// Still called by the mobile app (EarningsDashboard) until Phase 4 moves it to the
+// Next.js API. The caller's JWT is verified with auth.getUser and the barber row is
+// resolved from the authenticated user id; any barberId in the body is ignored.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
-interface DashboardRequest {
-  barberId: string
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
+}
+
+const APP_URL = Deno.env.get('APP_URL') || 'https://www.bocmstyle.com'
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+  })
 }
 
 Deno.serve(async (req: Request) => {
-  console.log('=== STRIPE DASHBOARD FUNCTION STARTED ===');
-  
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: CORS_HEADERS })
+  }
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, 405)
+  }
+
   try {
-    // Handle CORS
-    if (req.method === 'OPTIONS') {
-      console.log('Handling CORS preflight request');
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      })
+    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!stripeKey || !supabaseUrl || !serviceKey) {
+      console.error('stripe-dashboard: missing environment configuration')
+      return json({ error: 'Server not configured' }, 500)
     }
 
-    console.log('Function called with method:', req.method);
-    
-    // Check environment variables
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    console.log('Environment variables check:');
-    console.log('- Stripe key present:', stripeKey ? 'yes' : 'no');
-    console.log('- Supabase URL present:', supabaseUrl ? 'yes' : 'no');
-    console.log('- Supabase key present:', supabaseKey ? 'yes' : 'no');
-
-    // Initialize Stripe and Supabase clients
-    if (!stripeKey || !supabaseUrl || !supabaseKey) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Missing environment variables',
-          envCheck: {
-            stripeKey: stripeKey ? 'present' : 'missing',
-            supabaseUrl: supabaseUrl ? 'present' : 'missing',
-            supabaseKey: supabaseKey ? 'present' : 'missing'
-          }
-        }),
-        { 
-          status: 500,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
-    }
-
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: '2025-05-28.basil' as any,
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
     })
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
-
-    // Parse request body
-    console.log('Parsing request body...');
-    const body: DashboardRequest = await req.json()
-    console.log('Request body parsed:', body);
-    const { barberId } = body
-
-    // Input validation
-    if (!barberId || typeof barberId !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Barber ID is required and must be a string' }),
-        { 
-          status: 400,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
+    const authHeader = req.headers.get('Authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
+    if (!token) {
+      return json({ error: 'Unauthorized' }, 401)
+    }
+    const { data: userData, error: userError } = await supabase.auth.getUser(token)
+    const user = userData?.user
+    if (userError || !user) {
+      return json({ error: 'Unauthorized' }, 401)
     }
 
-    // Get barber details
-    console.log('Fetching barber details...');
     const { data: barber, error: barberError } = await supabase
       .from('barbers')
-      .select('stripe_account_id, stripe_account_status')
-      .eq('id', barberId)
-      .single()
-
-    if (barberError || !barber) {
-      console.error('Barber not found:', barberError);
-      return new Response(
-        JSON.stringify({ error: 'Barber not found' }),
-        { 
-          status: 404,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
+      .select('id, stripe_account_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (barberError) {
+      console.error('stripe-dashboard: barber lookup failed', barberError.message)
+      return json({ error: 'Failed to load barber' }, 500)
     }
-
-    console.log('Barber found:', barber);
-
-    // Check if barber has a Stripe account
+    if (!barber) {
+      return json({ error: 'Barber not found' }, 404)
+    }
     if (!barber.stripe_account_id) {
-      return new Response(
-        JSON.stringify({ error: 'No Stripe account found for this barber' }),
-        { 
-          status: 400,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
+      return json({ error: 'No Stripe account found for this barber' }, 400)
     }
 
-    // Try to create Stripe Express dashboard link
-    console.log('Creating Stripe Express dashboard link for account:', barber.stripe_account_id);
-    
+    const stripe = new Stripe(stripeKey, { apiVersion: '2025-05-28.basil' as any })
+
     try {
-      const loginLink = await stripe.accounts.createLoginLink(barber.stripe_account_id);
-      console.log('Dashboard link created successfully:', loginLink.url);
-
-      return new Response(
-        JSON.stringify({
-          url: loginLink.url,
-          accountId: barber.stripe_account_id,
-          type: 'dashboard'
-        }),
-        { 
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
+      const loginLink = await stripe.accounts.createLoginLink(barber.stripe_account_id)
+      return json({ url: loginLink.url, accountId: barber.stripe_account_id, type: 'dashboard' })
     } catch (dashboardError: any) {
-      console.log('Dashboard link creation failed:', dashboardError.message);
-      
-      // If onboarding is incomplete, create an onboarding link instead
-      if (dashboardError.message && dashboardError.message.includes('onboarding')) {
-        console.log('Account onboarding incomplete, creating onboarding link instead...');
-        
-        try {
-          const accountLink = await stripe.accountLinks.create({
-            account: barber.stripe_account_id,
-            refresh_url: 'https://www.bocmstyle.com/barber/connect/refresh',
-            return_url: 'https://www.bocmstyle.com/barber/connect/return',
-            type: 'account_onboarding',
-          })
-          
-          console.log('Onboarding link created:', accountLink.url);
-          
-          return new Response(
-            JSON.stringify({
-              url: accountLink.url,
-              accountId: barber.stripe_account_id,
-              type: 'onboarding',
-              message: 'Please complete your Stripe account setup to access the dashboard'
-            }),
-            { 
-              headers: { 
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-              }
-            }
-          )
-        } catch (onboardingError) {
-          console.error('Error creating onboarding link:', onboardingError);
-          return new Response(
-            JSON.stringify({ 
-              error: 'Failed to create onboarding link',
-              details: onboardingError instanceof Error ? onboardingError.message : 'Unknown error'
-            }),
-            { 
-              status: 500,
-              headers: { 
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-              }
-            }
-          )
-        }
-      } else {
-        // For other errors, return the original error
-        console.error('Unexpected error creating dashboard link:', dashboardError);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to create dashboard link',
-            details: dashboardError instanceof Error ? dashboardError.message : 'Unknown error'
-          }),
-          { 
-            status: 500,
-            headers: { 
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'POST, OPTIONS',
-              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            }
-          }
-        )
+      // Login links fail until onboarding is complete; send an onboarding link instead.
+      if (typeof dashboardError?.message === 'string' && dashboardError.message.includes('onboarding')) {
+        const accountLink = await stripe.accountLinks.create({
+          account: barber.stripe_account_id,
+          refresh_url: `${APP_URL}/barber/connect/refresh`,
+          return_url: `${APP_URL}/barber/connect/return`,
+          type: 'account_onboarding',
+        })
+        return json({
+          url: accountLink.url,
+          accountId: barber.stripe_account_id,
+          type: 'onboarding',
+          message: 'Please complete your Stripe account setup to access the dashboard',
+        })
       }
+      console.error('stripe-dashboard: failed to create login link', dashboardError?.message)
+      return json({ error: 'Failed to create dashboard link' }, 500)
     }
-    
   } catch (error) {
-    console.error('Stripe dashboard function error:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Stripe dashboard function failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { 
-        status: 500,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        }
-      }
-    )
+    console.error('stripe-dashboard: unexpected error', error instanceof Error ? error.message : error)
+    return json({ error: 'Stripe dashboard function failed' }, 500)
   }
 })

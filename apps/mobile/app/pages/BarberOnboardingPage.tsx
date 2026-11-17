@@ -50,7 +50,7 @@ import { SocialMediaLinks } from '../shared/components/ui/SocialMediaLinks';
 import { LocationInput } from '../shared/components/ui/LocationInput';
 import { BARBER_SPECIALTIES } from '../shared/utils/settings.utils';
 import { runBarberPrefillOnce } from '../shared/helpers/barberPrefillHelper';
-import { handleStripeConnect, checkStripeStatusOnce } from '../shared/helpers/barberStripeHelper';
+import { checkStripeStatusOnce } from '../shared/helpers/barberStripeHelper';
 import { addService as addServiceHelper, removeService as removeServiceHelper, updateService as updateServiceHelper, validateServices } from '../shared/helpers/barberServicesHelper';
 import { validateStep as validateStepHelper } from '../shared/helpers/barberValidationHelper';
 import { extractHandle } from '../shared/helpers/socialHandleHelper';

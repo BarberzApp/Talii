@@ -36,7 +36,6 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../components/theme';
 import { supabase } from '../lib/supabase';
 import { apiFetch } from '../lib/api-client';
-import { notificationService, formatAppointmentTime } from '../lib/notifications';
 import { logger } from '../lib/logger';
 
 type BookingFormNavigationProp = NativeStackNavigationProp<RootStackParamList, 'BookingCalendar'>;

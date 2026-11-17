@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import * as Font from 'expo-font';
 import * as Linking from 'expo-linking';
-import { notificationService } from './app/shared/lib/notifications';
 import { initSentry } from './app/shared/lib/sentry';
 import { logger } from './app/shared/lib/logger';
 import tw from 'twrnc';
@@ -17,7 +16,6 @@ initSentry();
 
 const App = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadFonts() {
@@ -33,20 +31,6 @@ const App = () => {
     }
 
     loadFonts();
-  }, []);
-
-  useEffect(() => {
-    // Initialize notifications with error handling
-    (async () => {
-      try {
-        await notificationService.initialize();
-      } catch (error) {
-        logger.error('Error initializing notifications:', error);
-        // Don't crash the app - notifications are not critical for startup
-      } finally {
-        setIsLoading(false);
-      }
-    })();
   }, []);
 
   // Handle deep links
@@ -168,7 +152,7 @@ const App = () => {
 
   return (
     <ThemeProvider>
-      {!fontsLoaded || isLoading ? (
+      {!fontsLoaded ? (
         <AppLoadingScreen />
       ) : !stripePublishableKey ? (
         <AppConfigErrorScreen />

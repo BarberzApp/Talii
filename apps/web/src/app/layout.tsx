@@ -7,8 +7,6 @@ import { TooltipProvider } from "@/shared/components/ui/tooltip"
 
 import { EnhancedErrorBoundary } from "@/shared/components/ui/enhanced-error-boundary"
 import { LoadingProvider } from "@/shared/components/ui/loading-provider"
-import { SMSPopupWrapper } from "@/shared/components/ui/sms-popup-wrapper"
-import { ErrorReportingProvider } from "@/shared/components/error-reporting-provider"
 import { cn } from "@/shared/lib/utils"
 import React from 'react'
 
@@ -48,7 +46,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className={cn(inter.className, "bg-background min-h-screen")}> 
-        <ErrorReportingProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <TooltipProvider>
             <EnhancedErrorBoundary>
@@ -57,12 +54,10 @@ export default function RootLayout({
                 <ClientNavWrapper>{children}</ClientNavWrapper>
               </React.Suspense>
               <Toaster />
-              <SMSPopupWrapper />
               </LoadingProvider>
             </EnhancedErrorBoundary>
             </TooltipProvider>
           </ThemeProvider>
-        </ErrorReportingProvider>
       </body>
     </html>
   )

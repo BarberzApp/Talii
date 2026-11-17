@@ -1,337 +1,144 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
-// Setup type definitions for built-in Supabase Runtime APIs
+// Stripe Connect onboarding for the calling barber.
+//
+// Still called by the mobile app (BarberOnboardingPage, barberStripeHelper) until
+// Phase 4 moves it to the Next.js API. Security rules:
+// - The caller's Supabase JWT is verified with auth.getUser (the platform's
+//   verify_jwt only checks the signature, and the anon key passes that).
+// - The barber row is resolved from the authenticated user id. Any barberId or
+//   email in the body is ignored.
+// - An existing Stripe account is never adopted by matching an email, and the
+//   account status is never set to active/ready here; the account.updated webhook
+//   and /api/connect/refresh-account-status derive it from Stripe.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
-interface CreateAccountRequest {
-  barberId: string
-  email: string
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-client-info',
+}
+
+const APP_URL = Deno.env.get('APP_URL') || 'https://www.bocmstyle.com'
+const RETURN_URL = `${APP_URL}/barber/connect/return`
+const REFRESH_URL = `${APP_URL}/barber/connect/refresh`
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+  })
 }
 
 Deno.serve(async (req: Request) => {
-  console.log('=== STRIPE CONNECT FUNCTION STARTED ===');
-  
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: CORS_HEADERS })
+  }
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, 405)
+  }
+
   try {
-    // Handle CORS
-    if (req.method === 'OPTIONS') {
-      console.log('Handling CORS preflight request');
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      })
+    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!stripeKey || !supabaseUrl || !serviceKey) {
+      console.error('stripe-connect: missing environment configuration')
+      return json({ error: 'Server not configured' }, 500)
     }
 
-    console.log('Function called with method:', req.method);
-    
-    // Check environment variables
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    console.log('Environment variables check:');
-    console.log('- Stripe key present:', stripeKey ? 'yes' : 'no');
-    console.log('- Supabase URL present:', supabaseUrl ? 'yes' : 'no');
-    console.log('- Supabase key present:', supabaseKey ? 'yes' : 'no');
-
-    // Initialize Stripe and Supabase clients
-    if (!stripeKey || !supabaseUrl || !supabaseKey) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Missing environment variables',
-          envCheck: {
-            stripeKey: stripeKey ? 'present' : 'missing',
-            supabaseUrl: supabaseUrl ? 'present' : 'missing',
-            supabaseKey: supabaseKey ? 'present' : 'missing'
-          }
-        }),
-        { 
-          status: 500,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
-    }
-
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: '2025-05-28.basil' as any,
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
     })
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
-
-    // Parse request body
-    console.log('Parsing request body...');
-    const body: CreateAccountRequest = await req.json()
-    console.log('Request body parsed:', body);
-    const { barberId, email } = body
-
-    // Input validation
-    if (!barberId || typeof barberId !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Barber ID is required and must be a string' }),
-        { 
-          status: 400,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
+    // 1) Authenticate the caller.
+    const authHeader = req.headers.get('Authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
+    if (!token) {
+      return json({ error: 'Unauthorized' }, 401)
+    }
+    const { data: userData, error: userError } = await supabase.auth.getUser(token)
+    const user = userData?.user
+    if (userError || !user) {
+      return json({ error: 'Unauthorized' }, 401)
+    }
+    if (!user.email) {
+      return json({ error: 'Your account has no email address' }, 400)
     }
 
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
-      return new Response(
-        JSON.stringify({ error: 'Valid email is required' }),
-        { 
-          status: 400,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
-    }
-
-    // Get barber details
-    console.log('Fetching barber details...');
+    // 2) Resolve the caller's own barber row.
     const { data: barber, error: barberError } = await supabase
       .from('barbers')
-      .select('*')
-      .eq('id', barberId)
-      .single()
-
-    if (barberError || !barber) {
-      console.error('Barber not found:', barberError);
-      return new Response(
-        JSON.stringify({ error: 'Barber not found' }),
-        { 
-          status: 404,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
+      .select('id, stripe_account_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (barberError) {
+      console.error('stripe-connect: barber lookup failed', barberError.message)
+      return json({ error: 'Failed to load barber' }, 500)
+    }
+    if (!barber) {
+      return json({ error: 'Barber not found' }, 404)
     }
 
-    console.log('Barber found:', barber.id);
+    const stripe = new Stripe(stripeKey, { apiVersion: '2025-05-28.basil' as any })
 
-    // Check for existing Stripe accounts with this email
-    console.log('Checking for existing Stripe accounts...');
-    try {
-      const existingAccounts = await stripe.accounts.list({
-        limit: 10,
-      })
-
-      const matchingAccount = existingAccounts.data.find((account: any) => 
-        account.email === email && account.type === 'express'
-      )
-
-      if (matchingAccount) {
-        console.log('Found existing Stripe account with email:', matchingAccount.id);
-        
-        // Update the Stripe account's business profile URL if it's incorrect
-        try {
-          const correctBusinessUrl = `https://bocmstyle.com/barber/${barberId}`;
-          console.log('Updating Stripe account business profile URL to:', correctBusinessUrl);
-          
-          await stripe.accounts.update(matchingAccount.id, {
-            business_profile: {
-              url: correctBusinessUrl
-            }
-          });
-          
-          console.log('Successfully updated Stripe account business profile URL');
-        } catch (updateError) {
-          console.log('Error updating Stripe account business profile URL:', updateError);
-          // Continue with the flow even if URL update fails
-        }
-        
-        // Update barber record with existing Stripe account ID
-        console.log('Updating barber record with existing Stripe account ID:', matchingAccount.id);
-        const { error: updateError } = await supabase
-          .from('barbers')
-          .update({
-            stripe_account_id: matchingAccount.id,
-            stripe_account_status: 'active',
-            stripe_account_ready: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', barberId)
-
-        if (updateError) {
-          console.error('Error updating barber with existing account:', updateError);
-          return new Response(
-            JSON.stringify({ error: 'Failed to update barber record with existing account' }),
-            { 
-              status: 500,
-              headers: { 
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-              }
-            }
-          )
-        }
-
-        console.log('Successfully updated barber record with existing Stripe account ID');
-
-        // Create an account link for the existing account
-        console.log('Creating account link for existing account...');
-        const accountLink = await stripe.accountLinks.create({
-          account: matchingAccount.id,
-          refresh_url: 'https://www.bocmstyle.com/barber/connect/refresh',
-          return_url: 'https://www.bocmstyle.com/barber/connect/return',
+    // 3) Resume onboarding for the account already saved on this barber.
+    if (barber.stripe_account_id) {
+      try {
+        const existing = await stripe.accounts.retrieve(barber.stripe_account_id)
+        const link = await stripe.accountLinks.create({
+          account: existing.id,
+          refresh_url: REFRESH_URL,
+          return_url: RETURN_URL,
           type: 'account_onboarding',
         })
-
-        console.log('Account link created:', accountLink.url);
-
-        return new Response(
-          JSON.stringify({
-            url: accountLink.url,
-            accountId: matchingAccount.id,
-            existing: true,
-          }),
-          { 
-            headers: { 
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'POST, OPTIONS',
-              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            }
-          }
-        )
+        return json({ url: link.url, accountId: existing.id, existing: true })
+      } catch (_err) {
+        console.log('stripe-connect: saved account invalid, creating a new one')
       }
-    } catch (searchError) {
-      console.log('Error searching for existing accounts, will create new one:', searchError);
     }
 
-    // Create a new Stripe Connect Express account
-    console.log('Creating new Stripe account...');
-    const businessProfileUrl = `https://bocmstyle.com/barber/${barber.id}`;
-    console.log('Business profile URL:', businessProfileUrl);
-
-    const account = await stripe.accounts.create({
-      type: 'express',
-      email,
-      business_profile: {
-        url: businessProfileUrl
+    // 4) Create a new Express account. The idempotency key makes retries and
+    //    double taps return the same account instead of creating another.
+    const account = await stripe.accounts.create(
+      {
+        type: 'express',
+        email: user.email,
+        business_profile: { url: `${APP_URL}/barber/${barber.id}` },
+        metadata: { barber_id: barber.id, user_id: user.id },
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
       },
-      metadata: {
-        barber_id: barberId,
-      },
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-    })
+      { idempotencyKey: `connect-account-${barber.id}-${barber.stripe_account_id ?? 'none'}` }
+    )
 
-    console.log('New Stripe account created:', account.id);
-
-    // Create an account link for onboarding
-    console.log('Creating account link for new account...');
-    const accountLink = await stripe.accountLinks.create({
-      account: account.id,
-      refresh_url: 'https://www.bocmstyle.com/barber/connect/refresh',
-      return_url: 'https://www.bocmstyle.com/barber/connect/return',
-      type: 'account_onboarding',
-    })
-
-    console.log('Account link created:', accountLink.url);
-
-    // Update barber record with Stripe account ID
-    console.log('Saving Stripe account ID to database:', account.id, 'for barber:', barberId);
-    
     const { error: updateError } = await supabase
       .from('barbers')
       .update({
         stripe_account_id: account.id,
         stripe_account_status: 'pending',
+        stripe_account_ready: false,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', barberId)
-
+      .eq('id', barber.id)
     if (updateError) {
-      console.error('Error updating barber:', updateError);
-      // Attempt to delete the Stripe account since we couldn't save the ID
-      await stripe.accounts.del(account.id);
-      return new Response(
-        JSON.stringify({ error: 'Failed to update barber record' }),
-        { 
-          status: 500,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          }
-        }
-      )
+      // Keep the Stripe account: a retry with the same idempotency key returns it.
+      console.error('stripe-connect: failed to save account id', updateError.message)
+      return json({ error: 'Failed to update barber record' }, 500)
     }
 
-    console.log('Successfully saved Stripe account ID to database');
+    const link = await stripe.accountLinks.create({
+      account: account.id,
+      refresh_url: REFRESH_URL,
+      return_url: RETURN_URL,
+      type: 'account_onboarding',
+    })
 
-    return new Response(
-      JSON.stringify({
-        url: accountLink.url,
-        accountId: account.id,
-      }),
-      { 
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        }
-      }
-    )
-    
+    return json({ url: link.url, accountId: account.id })
   } catch (error) {
-    console.error('Stripe connect function error:', error);
-  return new Response(
-      JSON.stringify({ 
-        error: 'Stripe connect function failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { 
-        status: 500,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        }
-      }
-    )
+    console.error('stripe-connect: unexpected error', error instanceof Error ? error.message : error)
+    return json({ error: 'Stripe connect function failed' }, 500)
   }
 })
-
-/* To invoke locally:
-
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
-
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/stripe-connect' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-    --header 'Content-Type: application/json' \
-    --data '{"name":"Functions"}'
-
-*/

@@ -1,3 +1,6 @@
+/**
+ * @jest-environment node
+ */
 import { buildStripeBookingMetadata, parseStripeBookingMetadata } from '@/shared/lib/stripe-booking-metadata'
 
 describe('Stripe booking metadata contract', () => {

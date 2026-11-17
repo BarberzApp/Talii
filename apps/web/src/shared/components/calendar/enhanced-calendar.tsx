@@ -8,11 +8,10 @@ import {
   Clock, 
   Plus
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import { supabase } from '@/shared/lib/supabase'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
-import { addToGoogleCalendar, addMultipleToGoogleCalendar, downloadICalFile } from '@/shared/lib/google-calendar-utils'
 import { EnhancedCalendarHeader } from './enhanced-calendar-header'
 import { EnhancedCalendarGrid } from './enhanced-calendar-grid'
 import { EnhancedCalendarEventsPanel } from './enhanced-calendar-events-panel'

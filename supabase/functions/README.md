@@ -1,46 +1,42 @@
 # Supabase Edge Functions
 
-This directory contains Edge Functions for the BOCM App (Barber On Call Mobile). Edge Functions are serverless functions that run on Supabase's infrastructure.
+These functions are being retired. The agreed architecture (see
+`docs/BACKEND_REBUILD_PLAN.md`) puts all server logic in the Next.js API routes
+under `apps/web/src/app/api`. The three functions below stay only because the
+mobile app still calls them; they are removed in Phase 4 once the mobile app
+calls the API instead.
 
-## Available Functions
+## Remaining functions
 
-- `stripe-connect`: Creates and manages Stripe Connect accounts for barbers (used in BarberOnboardingPage)
-- `stripe-dashboard`: Generates Stripe dashboard login links for barbers (used in EarningsDashboard)
-- `create-developer-booking`: Creates bookings for developer accounts without payment processing (used in BookingForm)
-- `create-payment-intent`: Creates Stripe payment intents for regular bookings in the mobile app (used in BookingForm)
+| Function | Caller | Replacement (Phase 3/4) |
+|---|---|---|
+| `stripe-connect` | mobile `BarberOnboardingPage`, `barberStripeHelper` | `POST /api/stripe/connect/onboarding` |
+| `stripe-dashboard` | mobile `EarningsDashboard` | `POST /api/stripe/connect/dashboard` |
+| `get-nearby-barbers` | mobile `BrowsePage` | `GET /api/barbers` |
 
-## Development
+`stripe-connect` and `stripe-dashboard` verify the caller's Supabase JWT with
+`auth.getUser`, look up the caller's own barber row by user id, and ignore any
+`barberId` or `email` in the request body. `stripe-connect` never adopts an
+existing Stripe account by email and never marks an account active; the
+`account.updated` webhook and `/api/connect/refresh-account-status` set the
+status from Stripe.
 
-To develop Edge Functions locally:
+Removed in Phase 1 (no callers): `create-payment-intent`,
+`create-developer-booking`, `booking-reminders`.
 
-1. Install Supabase CLI:
-   ```bash
-   npm install -g supabase
-   ```
+## Environment
 
-2. Start the local development environment:
-   ```bash
-   supabase start
-   ```
+Set in the Supabase dashboard under Settings > Functions:
 
-3. Create a new function:
-   ```bash
-   supabase functions new my-function
-   ```
+- `STRIPE_SECRET_KEY`
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (provided by the platform)
+- `APP_URL` (optional; base URL for Stripe return/refresh links)
 
-4. Deploy a function:
-   ```bash
-   supabase functions deploy my-function
-   ```
-
-## Testing
-
-To test functions locally:
+## Local development
 
 ```bash
-supabase functions serve my-function
+supabase start
+supabase functions serve stripe-connect
 ```
 
-## Environment Variables
-
-Functions can access environment variables set in the Supabase dashboard under Settings > Functions. 
+Do not add new functions here; add an API route instead.

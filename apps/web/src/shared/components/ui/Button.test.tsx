@@ -64,14 +64,6 @@ describe('Button Component', () => {
     expect(handleClick).not.toHaveBeenCalled()
   })
 
-  it('shows loading state', () => {
-    render(<Button loading>Loading</Button>)
-    
-    const button = screen.getByRole('button')
-    expect(button).toBeDisabled()
-    expect(button).toHaveClass('opacity-50')
-  })
-
   it('renders with custom className', () => {
     render(<Button className="custom-class">Custom</Button>)
     

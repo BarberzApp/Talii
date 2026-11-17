@@ -33,7 +33,7 @@ import {
 } from 'lucide-react'
 import { PastStylistCard } from './PastStylistCard'
 import { supabase } from '@/shared/lib/supabase'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 
 interface UserProfile {
   id: string
@@ -47,33 +47,12 @@ interface UserProfile {
   coverphoto?: string
 }
 
-interface Cut {
-  id: string
-  title: string
-  description?: string
-  url: string
-  thumbnail?: string
-  views: number
-  likes: number
-  shares: number
-  created_at: string
-  barber: {
-    id: string
-    name: string
-    image: string
-  }
-}
-
 export default function ClientPortfolio() {
   const { user } = useAuth()
   const { toast } = useToast()
   const { bookings, loading, error } = useData()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
-  const [openDialog, setOpenDialog] = useState<null | 'video'>(null)
-  const [selectedVideo, setSelectedVideo] = useState<Cut | null>(null)
-  const [likedVideos, setLikedVideos] = useState<Cut[]>([])
-  const [videosLoading, setVideosLoading] = useState(true)
   const [avatarLoading, setAvatarLoading] = useState(false)
   const avatarFileInputRef = useRef<HTMLInputElement>(null)
   const coverFileInputRef = useRef<HTMLInputElement>(null)
@@ -204,99 +183,6 @@ export default function ClientPortfolio() {
     fetchUserReviews();
   }, [user]);
 
-  // Fetch liked videos
-  useEffect(() => {
-    const fetchLikedVideos = async () => {
-      if (!user) return
-
-      try {
-        setVideosLoading(true)
-        const { data: likedData, error: likedError } = await supabase
-          .from('cut_analytics')
-          .select(`
-            cut_id,
-            cuts (
-              id,
-              title,
-              description,
-              url,
-              thumbnail,
-              views,
-              likes,
-              shares,
-              created_at,
-              barber_id,
-              barbers (
-                id,
-                user_id,
-                profiles:user_id (
-                name,
-                  avatar_url
-                )
-              )
-            )
-          `)
-          .eq('user_id', user.id)
-          .eq('action_type', 'like')
-
-        if (likedError) {
-          logger.error('Error fetching liked videos', likedError)
-          return
-        }
-
-        const videos: Cut[] = []
-        
-        // Get actual like counts for each cut
-        const cutIds = likedData?.map(item => item.cut_id).filter(Boolean) || []
-        let likeCounts: {[key: string]: number} = {}
-        
-        if (cutIds.length > 0) {
-          const { data: likeCountData } = await supabase
-            .from('cut_analytics')
-            .select('cut_id')
-            .in('cut_id', cutIds)
-            .eq('action_type', 'like')
-          
-          // Count likes per cut
-          likeCountData?.forEach(item => {
-            likeCounts[item.cut_id] = (likeCounts[item.cut_id] || 0) + 1
-          })
-          
-          logger.debug('Like counts for liked videos', { likeCounts })
-        }
-        
-        likedData?.forEach(item => {
-          const cutData = item.cuts as any
-          if (cutData && cutData.barbers && cutData.barbers.profiles) {
-            videos.push({
-              id: cutData.id,
-              title: cutData.title,
-              description: cutData.description,
-              url: cutData.url,
-              thumbnail: cutData.thumbnail,
-              views: cutData.views,
-              likes: likeCounts[cutData.id] || cutData.likes || 0, // Use actual count or fallback
-              shares: cutData.shares,
-              created_at: cutData.created_at,
-              barber: {
-                id: cutData.barbers.id,
-                name: cutData.barbers.profiles.name,
-                image: cutData.barbers.profiles.avatar_url
-              }
-            })
-          }
-        })
-
-        setLikedVideos(videos)
-      } catch (error) {
-        logger.error('Error fetching liked videos', error)
-      } finally {
-        setVideosLoading(false)
-      }
-    }
-
-    fetchLikedVideos()
-  }, [user])
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -791,74 +677,6 @@ export default function ClientPortfolio() {
         </Tabs>
       </div>
 
-      {/* Video Dialog - Modernized */}
-      <Dialog open={openDialog === 'video'} onOpenChange={open => setOpenDialog(open ? 'video' : null)}>
-        <DialogContent className="max-w-4xl w-full bg-background/80 border border-white/10 backdrop-blur-[40px] rounded-3xl shadow-2xl p-0 overflow-hidden outline-none [&>button]:left-4 [&>button]:right-auto">
-          {selectedVideo && (
-            <div className="flex flex-col">
-              <div className="relative aspect-video bg-black group/video">
-                <video 
-                  src={selectedVideo.url} 
-                  className="w-full h-full object-contain"
-                  controls
-                  autoPlay
-                />
-              </div>
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-14 w-14 border-2 border-secondary/20">
-                      <AvatarImage src={selectedVideo.barber.image} alt={selectedVideo.barber.name} />
-                      <AvatarFallback className="text-xl bg-secondary text-primary-foreground font-bebas">
-                        {selectedVideo.barber.name?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="text-foreground font-bebas font-bold text-3xl tracking-tight leading-none mb-1">
-                        {selectedVideo.title}
-                      </h3>
-                      <p className="text-secondary font-medium tracking-wide">
-                        {selectedVideo.barber.name}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="border-white/10 bg-white/5 hover:bg-secondary/10 hover:text-secondary h-10 px-4 rounded-xl gap-2"
-                    >
-                      <Share2 className="h-4 w-4" />
-                      Share
-                    </Button>
-                    <Button 
-                      className="bg-secondary text-primary-foreground hover:bg-secondary/90 h-10 px-6 rounded-xl font-bold"
-                    >
-                      Book This Style
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl text-center">
-                    <p className="text-xs uppercase tracking-widest text-muted-foreground/60 mb-1">Views</p>
-                    <p className="text-xl font-bebas text-foreground">{selectedVideo.views.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl text-center">
-                    <p className="text-xs uppercase tracking-widest text-muted-foreground/60 mb-1">Likes</p>
-                    <p className="text-xl font-bebas text-secondary">{selectedVideo.likes.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl text-center">
-                    <p className="text-xs uppercase tracking-widest text-muted-foreground/60 mb-1">Shares</p>
-                    <p className="text-xl font-bebas text-foreground">{selectedVideo.shares.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 } 

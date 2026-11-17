@@ -10,7 +10,7 @@ import { supabase } from '@/shared/lib/supabase'
 import { logger } from '@/shared/lib/logger'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 
 interface Availability {
   id?: string

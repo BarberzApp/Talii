@@ -1,5 +1,4 @@
 // lib/bookingService.ts
-import { supabase } from './supabase';
 import { logger } from './logger';
 import { apiFetch } from './api-client';
 
@@ -10,28 +9,6 @@ export interface TimeSlot {
   date: string;
   time: string;
   available: boolean;
-}
-
-export interface Booking {
-  id: string;
-  barber_id: string;
-  client_id: string;
-  service_id: string;
-  date: string;
-  price: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  payment_status: 'pending' | 'succeeded' | 'failed' | 'refunded' | 'partially_refunded';
-  payment_intent_id?: string;
-  platform_fee?: number;
-  barber_payout?: number;
-  addon_total?: number;
-  service_price?: number; // Historical service price at time of booking
-  guest_name?: string;
-  guest_email?: string;
-  guest_phone?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface CreateBookingData {
@@ -100,33 +77,6 @@ class BookingService {
       });
       
       throw err;
-    }
-  }
-
-  // Get user's bookings
-  async getUserBookings(userId: string): Promise<Booking[]> {
-    // userId is kept for backwards compatibility, but the gateway derives it from the access token.
-    void userId;
-    const res = await apiFetch<{ bookings: Booking[] }>('/api/mobile/bookings', {
-      method: 'GET',
-      auth: true,
-    });
-    return res.bookings || [];
-  }
-
-  // Cancel a booking
-  async cancelBooking(bookingId: string): Promise<void> {
-    const { error } = await supabase
-      .from('bookings')
-      .update({ 
-        status: 'cancelled',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', bookingId);
-
-    if (error) {
-      logger.error('Error cancelling booking:', error);
-      throw error;
     }
   }
 }

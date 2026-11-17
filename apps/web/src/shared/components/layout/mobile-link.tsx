@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { cn } from "../../lib/utils"
+import { cn } from "@/shared/lib/utils"
 
 interface MobileLinkProps extends React.ComponentPropsWithoutRef<typeof Link> {
   onOpenChange?: (open: boolean) => void
