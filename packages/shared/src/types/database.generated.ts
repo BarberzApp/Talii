@@ -98,6 +98,7 @@ export type Database = {
           instagram: string | null
           is_public: boolean
           latitude: number | null
+          listing_suspended: boolean
           longitude: number | null
           onboarding_complete: boolean
           portfolio: string[]
@@ -117,6 +118,7 @@ export type Database = {
           instagram?: string | null
           is_public?: boolean
           latitude?: number | null
+          listing_suspended?: boolean
           longitude?: number | null
           onboarding_complete?: boolean
           portfolio?: string[]
@@ -136,6 +138,7 @@ export type Database = {
           instagram?: string | null
           is_public?: boolean
           latitude?: number | null
+          listing_suspended?: boolean
           longitude?: number | null
           onboarding_complete?: boolean
           portfolio?: string[]
@@ -414,6 +417,7 @@ export type Database = {
           avatar_url: string | null
           cover_photo_url: string | null
           created_at: string
+          deleted_at: string | null
           email: string | null
           id: string
           is_disabled: boolean
@@ -427,6 +431,7 @@ export type Database = {
           avatar_url?: string | null
           cover_photo_url?: string | null
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           id: string
           is_disabled?: boolean
@@ -440,6 +445,7 @@ export type Database = {
           avatar_url?: string | null
           cover_photo_url?: string | null
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           id?: string
           is_disabled?: boolean
@@ -831,6 +837,38 @@ export type Database = {
       }
     }
     Functions: {
+      admin_platform_stats: {
+        Args: { p_since?: string }
+        Returns: {
+          barbers_charges_enabled: number
+          barbers_fee_exempt: number
+          barbers_listed: number
+          barbers_suspended: number
+          barbers_total: number
+          bookings_cancelled: number
+          bookings_completed: number
+          bookings_confirmed: number
+          bookings_new_since: number
+          bookings_no_show: number
+          bookings_pending: number
+          bookings_total: number
+          bookings_upcoming: number
+          clients_total: number
+          disabled_total: number
+          fees_charged_cents: number
+          fees_charged_since_cents: number
+          platform_fees_cents: number
+          platform_fees_refunded_cents: number
+          platform_fees_since_cents: number
+          refunded_cents: number
+          reports_pending: number
+          reviews_hidden: number
+          reviews_total: number
+          users_new_since: number
+          users_total: number
+          waitlist_total: number
+        }[]
+      }
       barber_earnings_bookings: {
         Args: {
           p_barber_id: string
@@ -937,6 +975,46 @@ export type Database = {
         }[]
       }
       owns_barber: { Args: { p_barber_id: string }; Returns: boolean }
+      replace_availability: {
+        Args: { p_barber_id: string; p_windows: Json }
+        Returns: {
+          barber_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          start_time: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "availability"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      search_barbers: {
+        Args: {
+          p_exclude_user_ids?: string[]
+          p_limit?: number
+          p_offset?: number
+          p_query?: string
+        }
+        Returns: {
+          avatar_url: string
+          bio: string
+          business_name: string
+          city: string
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          specialties: string[]
+          state: string
+          user_id: string
+          username: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

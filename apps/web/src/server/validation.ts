@@ -41,3 +41,24 @@ export const queryInt = (min: number, max: number, fallback: number) =>
   z.coerce.number().int().min(min).max(max).default(fallback)
 
 export const idParams = z.object({ id: uuid })
+
+/**
+ * For PATCH bodies: omitted → undefined (no change); null or blank → null
+ * (clear); otherwise the trimmed text.
+ */
+export const nullableText = (max: number) =>
+  z
+    .string()
+    .max(max)
+    .transform((v) => v.trim())
+    .transform((v) => (v.length > 0 ? v : null))
+    .nullable()
+    .optional()
+
+/** Local wall-clock time "HH:MM" (00:00-23:59), or "24:00" for end of day. */
+export const clockTime = z
+  .string()
+  .regex(/^(?:([01]\d|2[0-3]):[0-5]\d|24:00)$/, 'must be a time written HH:MM')
+
+/** Query param "true" / "false" → boolean. */
+export const queryBool = z.enum(['true', 'false']).transform((v) => v === 'true')

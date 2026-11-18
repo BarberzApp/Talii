@@ -69,6 +69,9 @@ create table public.profiles (
   avatar_url      text,
   cover_photo_url text,
   is_disabled     boolean not null default false,
+  -- Set when the user deleted their account (DELETE /api/me); the row is kept,
+  -- scrubbed, because bookings reference it. Never re-enabled.
+  deleted_at      timestamptz,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
@@ -90,7 +93,8 @@ create table public.barbers (
   longitude           double precision check (longitude between -180 and 180),
   timezone            text not null default 'America/New_York',
   portfolio           text[] not null default '{}',
-  is_public           boolean not null default true,
+  is_public           boolean not null default true,   -- the barber's own choice
+  listing_suspended   boolean not null default false,  -- set by an admin only; hides the listing regardless of is_public
   onboarding_complete boolean not null default false,
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
@@ -395,7 +399,8 @@ as $$
   );
 $$;
 
--- True when the barber is publicly listed: is_public and its profile is not disabled.
+-- True when the barber is publicly listed: is_public, not suspended by an admin,
+-- and its profile is not disabled.
 create function public.barber_is_listed(p_barber_id uuid)
 returns boolean
 language sql
@@ -407,7 +412,7 @@ as $$
     select 1
     from public.barbers b
     join public.profiles p on p.id = b.user_id
-    where b.id = p_barber_id and b.is_public and not p.is_disabled
+    where b.id = p_barber_id and b.is_public and not b.listing_suspended and not p.is_disabled
   );
 $$;
 
@@ -525,7 +530,7 @@ as
   select p.id, p.name, p.username, p.avatar_url, p.cover_photo_url, p.role
   from public.profiles p
   where not p.is_disabled
-    and exists (select 1 from public.barbers b where b.user_id = p.id and b.is_public);
+    and exists (select 1 from public.barbers b where b.user_id = p.id and b.is_public and not b.listing_suspended);
 
 -- Visible reviews with a minimal reviewer identity: first name (or username)
 -- and avatar, never the client id. Owner rights so it can read profiles; it
@@ -605,6 +610,7 @@ as $$
     from public.barbers b
     join public.public_profiles pp on pp.id = b.user_id
     where b.is_public
+      and not b.listing_suspended
       and b.latitude is not null
       and b.longitude is not null
   ) d
@@ -811,6 +817,201 @@ as $$
 $$;
 
 
+-- Replaces a barber's whole weekly schedule in one transaction.
+-- p_windows: JSON array of {"day_of_week": 0-6, "start_time": "HH:MM", "end_time": "HH:MM"}.
+-- An empty array clears the schedule. The barber row is locked so concurrent
+-- replaces serialise.
+--
+-- Errors the API should map (nothing is changed when one is raised):
+--   22023 invalid_parameter_value: p_windows is not an array, unknown barber, or
+--         two windows on the same day overlap (touching is fine).
+--   23514 check_violation (availability_time_order / day_of_week): bad window.
+create function public.replace_availability(
+  p_barber_id uuid,
+  p_windows   jsonb
+)
+returns setof public.availability
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if p_windows is null or jsonb_typeof(p_windows) <> 'array' then
+    raise exception 'p_windows must be a JSON array' using errcode = '22023';
+  end if;
+
+  perform 1 from public.barbers b where b.id = p_barber_id for update;
+  if not found then
+    raise exception 'barber % not found', p_barber_id using errcode = '22023';
+  end if;
+
+  delete from public.availability where barber_id = p_barber_id;
+
+  insert into public.availability (barber_id, day_of_week, start_time, end_time)
+  select p_barber_id, w.day_of_week, w.start_time, w.end_time
+  from jsonb_to_recordset(p_windows) as w (day_of_week smallint, start_time time, end_time time);
+
+  if exists (
+    select 1
+    from public.availability a
+    join public.availability o
+      on o.barber_id = a.barber_id
+     and o.day_of_week = a.day_of_week
+     and o.id <> a.id
+     and a.start_time < o.end_time
+     and o.start_time < a.end_time
+    where a.barber_id = p_barber_id
+  ) then
+    raise exception 'availability windows overlap' using errcode = '22023';
+  end if;
+
+  return query
+    select a.* from public.availability a
+    where a.barber_id = p_barber_id
+    order by a.day_of_week, a.start_time;
+end;
+$$;
+
+
+-- Listed barbers whose business name, name, username, city or state contains
+-- p_query (case-insensitive substring; no pattern characters), or all listed
+-- barbers when p_query is empty. p_exclude_user_ids drops barbers by owner id
+-- (the API passes the caller's blocks). Ordered by display name.
+create function public.search_barbers(
+  p_query            text default null,
+  p_exclude_user_ids uuid[] default '{}',
+  p_limit            integer default 20,
+  p_offset           integer default 0
+)
+returns table (
+  id            uuid,
+  user_id       uuid,
+  business_name text,
+  bio           text,
+  specialties   text[],
+  city          text,
+  state         text,
+  latitude      double precision,
+  longitude     double precision,
+  name          text,
+  username      text,
+  avatar_url    text
+)
+language sql
+stable
+set search_path = ''
+as $$
+  with q as (select nullif(lower(trim(coalesce(p_query, ''))), '') as term)
+  select
+    b.id, b.user_id, b.business_name, b.bio, b.specialties, b.city, b.state,
+    b.latitude, b.longitude, p.name, p.username, p.avatar_url
+  from public.barbers b
+  join public.profiles p on p.id = b.user_id
+  cross join q
+  where b.is_public
+    and not b.listing_suspended
+    and not p.is_disabled
+    and not (b.user_id = any (coalesce(p_exclude_user_ids, '{}')))
+    and (
+      q.term is null
+      or strpos(lower(coalesce(b.business_name, '')), q.term) > 0
+      or strpos(lower(coalesce(p.name, '')), q.term) > 0
+      or strpos(lower(p.username), q.term) > 0
+      or strpos(lower(coalesce(b.city, '')), q.term) > 0
+      or strpos(lower(coalesce(b.state, '')), q.term) > 0
+    )
+  order by lower(coalesce(nullif(trim(b.business_name), ''), nullif(trim(p.name), ''), p.username)), b.id
+  limit least(greatest(coalesce(p_limit, 20), 1), 101)
+  offset greatest(coalesce(p_offset, 0), 0);
+$$;
+
+
+-- Platform counts and fee totals for the admin dashboard. Fees are integer
+-- cents over Stripe charges (payments rows): booking fees charged, the
+-- platform's application fee, refunds, and the share of the application fee
+-- returned by refunds (refund_application_fee is proportional). The *_since
+-- columns cover rows created at or after p_since.
+create function public.admin_platform_stats(
+  p_since timestamptz default now() - interval '30 days'
+)
+returns table (
+  users_total                  bigint,
+  clients_total                bigint,
+  barbers_total                bigint,
+  disabled_total               bigint,
+  users_new_since              bigint,
+  barbers_listed               bigint,
+  barbers_suspended            bigint,
+  barbers_charges_enabled      bigint,
+  barbers_fee_exempt           bigint,
+  bookings_total               bigint,
+  bookings_pending             bigint,
+  bookings_confirmed           bigint,
+  bookings_upcoming            bigint,
+  bookings_completed           bigint,
+  bookings_cancelled           bigint,
+  bookings_no_show             bigint,
+  bookings_new_since           bigint,
+  fees_charged_cents           bigint,
+  platform_fees_cents          bigint,
+  refunded_cents               bigint,
+  platform_fees_refunded_cents bigint,
+  fees_charged_since_cents     bigint,
+  platform_fees_since_cents    bigint,
+  reviews_total                bigint,
+  reviews_hidden               bigint,
+  reports_pending              bigint,
+  waitlist_total               bigint
+)
+language sql
+stable
+set search_path = ''
+as $$
+  with charges as (
+    select p.amount_cents, p.application_fee_cents, p.created_at
+    from public.payments p
+    where p.type = 'charge' and p.status = 'succeeded'
+  ),
+  refunds as (
+    select r.amount_cents,
+           coalesce(round(r.amount_cents::numeric * c.application_fee_cents / nullif(c.amount_cents, 0)), 0) as fee_share
+    from public.payments r
+    left join public.payments c
+      on c.booking_id = r.booking_id and c.type = 'charge' and c.status = 'succeeded'
+     and c.payment_intent_id = r.payment_intent_id
+    where r.type = 'refund' and r.status in ('succeeded', 'pending')
+  )
+  select
+    (select count(*) from public.profiles),
+    (select count(*) from public.profiles where role = 'client'),
+    (select count(*) from public.profiles where role = 'barber'),
+    (select count(*) from public.profiles where is_disabled),
+    (select count(*) from public.profiles where created_at >= p_since),
+    (select count(*) from public.barbers b join public.profiles p on p.id = b.user_id
+      where b.is_public and not b.listing_suspended and not p.is_disabled),
+    (select count(*) from public.barbers where listing_suspended),
+    (select count(*) from public.barber_billing where charges_enabled),
+    (select count(*) from public.barber_billing where fee_exempt),
+    (select count(*) from public.bookings),
+    (select count(*) from public.bookings where status = 'pending'),
+    (select count(*) from public.bookings where status = 'confirmed'),
+    (select count(*) from public.bookings where status = 'confirmed' and starts_at > now()),
+    (select count(*) from public.bookings where status = 'completed'),
+    (select count(*) from public.bookings where status = 'cancelled'),
+    (select count(*) from public.bookings where status = 'no_show'),
+    (select count(*) from public.bookings where created_at >= p_since),
+    coalesce((select sum(amount_cents) from charges), 0)::bigint,
+    coalesce((select sum(application_fee_cents) from charges), 0)::bigint,
+    coalesce((select sum(amount_cents) from refunds), 0)::bigint,
+    coalesce((select sum(fee_share) from refunds), 0)::bigint,
+    coalesce((select sum(amount_cents) from charges where created_at >= p_since), 0)::bigint,
+    coalesce((select sum(application_fee_cents) from charges where created_at >= p_since), 0)::bigint,
+    (select count(*) from public.reviews),
+    (select count(*) from public.reviews where is_hidden),
+    (select count(*) from public.reports where status = 'pending'),
+    (select count(*) from public.waitlist);
+$$;
+
+
 -- -----------------------------------------------------------------------------
 -- Auth hooks: profile creation and email sync
 -- -----------------------------------------------------------------------------
@@ -924,8 +1125,12 @@ grant select (id, barber_id, date, is_closed, start_time, end_time, created_at, 
 grant select (id, barber_id, rating, comment, is_hidden, created_at, updated_at)
   on public.reviews to anon, authenticated;
 grant select on public.profiles, public.bookings, public.booking_addons,
-                public.payments, public.reports, public.blocked_users
+                public.payments, public.blocked_users
   to authenticated;
+-- reports.reported_user_id is not granted: a reporter must not learn who wrote
+-- a review they reported (public_reviews hides reviewer ids).
+grant select (id, reporter_id, content_type, content_id, reason, details, status, created_at, updated_at)
+  on public.reports to authenticated;
 grant select on public.public_profiles, public.public_reviews, public.barber_rating_stats to anon, authenticated;
 
 -- Policy helpers and the public search function.

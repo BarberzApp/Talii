@@ -21,7 +21,8 @@ import { ApiError, errorResponse, INTERNAL_ERROR_MESSAGE } from './errors'
  * Auth (`Authorization: Bearer <Supabase access token>`; no cookies):
  *   public  no token needed (any token is ignored); user/profile/barber are null.
  *   user    a valid token whose profile exists and is not disabled.
- *   barber  as user, plus the caller's `barbers` row (403 NOT_A_BARBER if none).
+ *   barber  as user, plus profiles.role 'barber' and the caller's `barbers` row
+ *           (403 NOT_A_BARBER otherwise).
  *   admin   as user, plus `app_metadata.role === 'admin'` (server-controlled).
  *
  * Inputs: `body` (JSON), `query` (URL search params, one string per key; use
@@ -75,7 +76,16 @@ export interface NextRouteContext {
   params: Promise<Record<string, string | string[] | undefined>>
 }
 
-export type RouteHandler = (req: Request, ctx?: NextRouteContext) => Promise<Response>
+/**
+ * Callable with or without the context (tests pass only the request). Written
+ * as overloads with the two-argument form last: Next.js's generated route type
+ * check reads the last signature and rejects an optional (`| undefined`)
+ * second parameter.
+ */
+export type RouteHandler = {
+  (req: Request): Promise<Response>
+  (req: Request, ctx: NextRouteContext): Promise<Response>
+}
 
 const PROFILE_COLUMNS = 'id, role, name, username, is_disabled'
 
@@ -88,7 +98,7 @@ export function defineRoute<
   config: RouteConfig<A, B, Q, P>,
   handler: (ctx: HandlerContext<A, B, Q, P>) => Promise<unknown>
 ): RouteHandler {
-  return async (req, nextCtx) => {
+  const run = async (req: Request, nextCtx?: NextRouteContext): Promise<Response> => {
     try {
       const auth = await authenticate(req, config.auth)
 
@@ -114,6 +124,7 @@ export function defineRoute<
       return toErrorResponse(error, req)
     }
   }
+  return run as RouteHandler
 }
 
 /** Turns anything thrown into the standard error response. */
@@ -170,6 +181,9 @@ async function authenticate(req: Request, mode: AuthMode): Promise<AuthContexts[
   }
 
   if (mode === 'barber') {
+    // Both the role and the row: an admin demotes a barber by setting role 'client'
+    // and the barbers row stays (bookings reference it).
+    if (profile.role !== 'barber') throw new ApiError(403, 'NOT_A_BARBER', 'This action needs a barber account.')
     const { data: barber, error: barberError } = await db
       .from('barbers')
       .select('*')

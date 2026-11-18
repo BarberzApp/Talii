@@ -7,7 +7,7 @@ import { MessageSquare, Loader2, AlertTriangle, Shield, CheckCircle, XCircle } f
 import { useToast } from "@/shared/components/ui/use-toast";
 import { useAuth } from "@/shared/hooks/use-auth-zustand";
 import { supabase } from "@/shared/lib/supabase";
-import { validateContent, getModerationStatus } from "@/shared/lib/contentModeration";
+import { validateContent, getModerationStatus } from "@barber-app/shared";
 import { logger } from "@/shared/lib/logger";
 
 interface WriteReviewModalProps {

@@ -2,8 +2,11 @@
  * In-memory stand-in for the service-role Supabase client, for unit tests.
  *
  * Supports the query-builder subset the API uses: select / insert / update /
- * upsert / delete, eq / neq / in / is / gt / gte / lt / lte filters, order,
- * range, limit, single, maybeSingle, count + head, rpc and auth.getUser.
+ * upsert / delete, eq / neq / in / is / gt / gte / lt / lte / ilike /
+ * contains filters, not(col, 'in' | 'is' | 'eq', v), or('a.eq.x,b.ilike.%y%'),
+ * order, range, limit, single, maybeSingle, count + head, rpc, auth.getUser,
+ * auth.admin.updateUserById / deleteUser and a small in-memory storage
+ * (createSignedUploadUrl / list / remove / getPublicUrl).
  * Embedded selects ("service:services(...)") are ignored: rows come back with
  * their own columns only. Filters on embedded paths ("booking.barber_id") are
  * ignored too. Unique columns and custom constraints can be declared per table.
@@ -25,6 +28,11 @@ export interface FakeUser {
   email?: string
   app_metadata?: Record<string, unknown>
   user_metadata?: Record<string, unknown>
+}
+
+export interface StoredObject {
+  bucket: string
+  path: string
 }
 
 export interface LoggedCall {
@@ -51,6 +59,14 @@ export class FakeDb {
   log: LoggedCall[] = []
   private failures: Array<{ table: string; op: Op; error: FakeError }> = []
 
+  /** Calls made to auth.admin.updateUserById, in order. */
+  adminUserUpdates: Array<{ id: string; attributes: Record<string, unknown> }> = []
+  /** Calls made to auth.admin.deleteUser, in order. */
+  adminUserDeletes: Array<{ id: string; soft: boolean }> = []
+  /** Stored objects per bucket: path -> metadata. */
+  objects: Record<string, Map<string, Record<string, unknown>>> = {}
+  storageUrl = 'http://localhost:54321'
+
   auth = {
     getUser: async (token: string) => {
       const user = this.users.get(token)
@@ -59,6 +75,80 @@ export class FakeDb {
       }
       return { data: { user: { app_metadata: {}, user_metadata: {}, ...user } }, error: null }
     },
+    admin: {
+      /** Soft delete (GoTrue): the token stops working; the profile row is untouched. */
+      deleteUser: async (id: string, shouldSoftDelete = false) => {
+        const failure = this.takeFailure('auth.users', 'delete')
+        if (failure) return { data: { user: null }, error: failure }
+        this.adminUserDeletes.push({ id, soft: shouldSoftDelete })
+        for (const [token, user] of this.users) if (user.id === id) this.users.delete(token)
+        return { data: { user: { id } }, error: null }
+      },
+      updateUserById: async (id: string, attributes: Record<string, unknown>) => {
+        const failure = this.takeFailure('auth.users', 'update')
+        if (failure) return { data: { user: null }, error: failure }
+        this.adminUserUpdates.push({ id, attributes })
+        const user = [...this.users.values()].find((u) => u.id === id)
+        if (user && typeof attributes.email === 'string') user.email = attributes.email
+        return { data: { user: user ? { ...user } : { id } }, error: null }
+      },
+    },
+  }
+
+  storage = {
+    from: (bucket: string) => {
+      const files = () => {
+        if (!this.objects[bucket]) this.objects[bucket] = new Map()
+        return this.objects[bucket]
+      }
+      return {
+        createSignedUploadUrl: async (path: string) => {
+          const failure = this.takeFailure(`storage.${bucket}`, 'insert')
+          if (failure) return { data: null, error: failure }
+          const token = `upload-token-${fakeUuid()}`
+          return {
+            data: { path, token, signedUrl: `${this.storageUrl}/storage/v1/object/upload/sign/${bucket}/${path}?token=${token}` },
+            error: null,
+          }
+        },
+        getPublicUrl: (path: string) => ({
+          data: { publicUrl: `${this.storageUrl}/storage/v1/object/public/${bucket}/${path}` },
+        }),
+        /** Lists one folder level like Storage: files, plus folders as entries with id null. */
+        list: async (prefix = '', options: { limit?: number; offset?: number } = {}) => {
+          const failure = this.takeFailure(`storage.${bucket}`, 'select')
+          if (failure) return { data: null, error: failure }
+          const base = prefix ? `${prefix.replace(/\/+$/, '')}/` : ''
+          const entries = new Map<string, Record<string, unknown>>()
+          for (const path of [...files().keys()].sort()) {
+            if (!path.startsWith(base)) continue
+            const rest = path.slice(base.length)
+            const [head, ...tail] = rest.split('/')
+            if (tail.length > 0) entries.set(head, { name: head, id: null })
+            else entries.set(head, { name: head, id: `obj-${path}` })
+          }
+          const offset = options.offset ?? 0
+          const limit = options.limit ?? 100
+          return { data: [...entries.values()].slice(offset, offset + limit), error: null }
+        },
+        remove: async (paths: string[]) => {
+          const failure = this.takeFailure(`storage.${bucket}`, 'delete')
+          if (failure) return { data: null, error: failure }
+          const removed = paths.filter((p) => files().delete(p)).map((name) => ({ name, bucket_id: bucket }))
+          return { data: removed, error: null }
+        },
+      }
+    },
+  }
+
+  /** Puts an object into the fake storage. */
+  putObject(bucket: string, path: string, meta: Record<string, unknown> = {}): void {
+    if (!this.objects[bucket]) this.objects[bucket] = new Map()
+    this.objects[bucket].set(path, meta)
+  }
+
+  storedObjects(): StoredObject[] {
+    return Object.entries(this.objects).flatMap(([bucket, files]) => [...files.keys()].map((path) => ({ bucket, path })))
   }
 
   constructor(seed: Record<string, Row[]> = {}) {
@@ -213,6 +303,41 @@ export class FakeQuery implements PromiseLike<Result> {
     return this.where(col, (v) => v !== null && v !== undefined && compareValues(v, value) <= 0)
   }
 
+  ilike(col: string, pattern: string) {
+    const re = likeToRegExp(pattern)
+    return this.where(col, (v) => typeof v === 'string' && re.test(v))
+  }
+  contains(col: string, values: unknown[]) {
+    return this.where(col, (v) => Array.isArray(v) && values.every((x) => v.includes(x)))
+  }
+  not(col: string, op: 'in' | 'is' | 'eq', value: unknown) {
+    if (col.includes('.')) return this
+    if (op === 'in') {
+      const list = parseInList(String(value))
+      this.filters.push((row) => !list.includes(String(row[col])))
+    } else if (op === 'is') {
+      this.filters.push((row) => (value === null || value === 'null' ? row[col] !== null && row[col] !== undefined : row[col] !== value))
+    } else {
+      this.filters.push((row) => row[col] !== value)
+    }
+    return this
+  }
+  /** PostgREST logic tree subset: comma-separated `col.op.value` with eq / ilike / in; values may be "quoted". */
+  or(expression: string) {
+    const parts = splitOr(expression).map((part) => {
+      const m = /^([a-z_]+)\.(eq|ilike|in)\.(.*)$/.exec(part)
+      if (!m) throw new Error(`FakeQuery.or: unsupported expression ${part}`)
+      const [, col, op, raw] = m
+      const value = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw
+      if (op === 'eq') return (row: Row) => String(row[col]) === value
+      if (op === 'in') return (row: Row) => parseInList(value).includes(String(row[col]))
+      const re = likeToRegExp(value)
+      return (row: Row) => typeof row[col] === 'string' && re.test(String(row[col]))
+    })
+    this.filters.push((row) => parts.some((test) => test(row)))
+    return this
+  }
+
   order(col: string, options: { ascending?: boolean } = {}): this {
     this.orders.push({ col, ascending: options.ascending !== false })
     return this
@@ -294,10 +419,10 @@ export class FakeQuery implements PromiseLike<Result> {
       }
       case 'upsert': {
         const inputs = Array.isArray(this.payload) ? (this.payload as Row[]) : [this.payload as Row]
-        const key = this.upsertOptions.onConflict ?? 'id'
+        const keys = (this.upsertOptions.onConflict ?? 'id').split(',').map((k) => k.trim())
         const written: Row[] = []
         for (const input of inputs) {
-          const existing = this.db.table(this.tableName).find((r) => r[key] === input[key])
+          const existing = this.db.table(this.tableName).find((r) => keys.every((k) => r[k] === input[k]))
           if (existing) {
             if (this.upsertOptions.ignoreDuplicates) continue
             Object.assign(existing, input, { updated_at: new Date().toISOString() })
@@ -329,6 +454,48 @@ export class FakeQuery implements PromiseLike<Result> {
     }
     return { data: rows[0], error: null }
   }
+}
+
+function likeToRegExp(pattern: string): RegExp {
+  const literal = (ch: string) => ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let body = ''
+  for (let i = 0; i < pattern.length; i++) {
+    const ch = pattern[i]
+    if (ch === '\\' && i + 1 < pattern.length) body += literal(pattern[++i]) // LIKE escape
+    else if (ch === '%' || ch === '*') body += '.*'
+    else if (ch === '_') body += '.'
+    else body += literal(ch)
+  }
+  return new RegExp(`^${body}$`, 'is')
+}
+
+function parseInList(value: string): string[] {
+  return value
+    .replace(/^\(/, '')
+    .replace(/\)$/, '')
+    .split(',')
+    .map((v) => v.trim().replace(/^"|"$/g, ''))
+    .filter(Boolean)
+}
+
+function splitOr(expression: string): string[] {
+  const parts: string[] = []
+  let current = ''
+  let depth = 0
+  let quoted = false
+  for (const ch of expression) {
+    if (ch === '"') quoted = !quoted
+    if (!quoted && ch === '(') depth++
+    if (!quoted && ch === ')') depth--
+    if (ch === ',' && depth === 0 && !quoted) {
+      parts.push(current)
+      current = ''
+    } else {
+      current += ch
+    }
+  }
+  if (current) parts.push(current)
+  return parts
 }
 
 function compareValues(a: unknown, b: unknown): number {

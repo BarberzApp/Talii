@@ -24,6 +24,10 @@ const schema = z.object({
     .optional(),
   /** Public base URL of the web app, used for Stripe return/refresh links. */
   NEXT_PUBLIC_APP_URL: z.string().url(),
+  /** Google Maps Platform key (Geocoding + Places). Optional: without it geocoding is unavailable. */
+  GOOGLE_MAPS_API_KEY: z.string().min(1).optional(),
+  /** Slack incoming webhook for support requests. Optional: without it /api/support returns 503. */
+  SLACK_WEBHOOK_URL: z.string().url().optional(),
 })
 
 export type ServerEnv = z.infer<typeof schema>

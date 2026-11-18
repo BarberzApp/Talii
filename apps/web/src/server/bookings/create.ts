@@ -9,6 +9,7 @@ import {
 } from '@barber-app/shared'
 import { getStripe, getSupabaseAdmin, type Db } from '../clients'
 import { ApiError, PG, pgCode } from '../errors'
+import { assertBarberVisibleTo } from '../safety'
 import { callStripe } from '../stripe/errors'
 import { computeDaySlots, loadBarberForBooking } from './availability'
 import { cancelPaymentIntentQuietly, releaseExpiredHolds } from './holds'
@@ -59,6 +60,8 @@ export async function createBooking(
     throw new ApiError(400, 'CANNOT_BOOK_SELF', 'You cannot book an appointment with yourself.')
   }
   if (!barber.listed) throw new ApiError(404, 'BARBER_NOT_FOUND', 'Barber not found.')
+  // Suspended by an admin, or blocked either way with this client: as if the barber did not exist.
+  await assertBarberVisibleTo(db, barber, clientId)
 
   const { data: service, error: serviceError } = await db
     .from('services')

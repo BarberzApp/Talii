@@ -1,18 +1,11 @@
-import { NextResponse } from 'next/server';
-import { logger } from '@/shared/lib/logger';
+import { defineRoute } from '@/server/route'
 
-export async function GET() {
-  try {
-    // Add any health checks here (e.g., database connection, Redis connection)
-    return NextResponse.json(
-      { status: 'healthy', timestamp: new Date().toISOString() },
-      { status: 200 }
-    );
-  } catch (error) {
-    logger.error('Health check failed', error);
-    return NextResponse.json(
-      { status: 'unhealthy', error: 'Service check failed' },
-      { status: 503 }
-    );
-  }
-} 
+/**
+ * GET /api/health   (public)   Liveness only (no database call). Kept because the Cypress smoke
+ * test (cypress/e2e/booking-flow.cy.ts) calls it.
+ * 200 { status: "healthy", timestamp }
+ */
+export const GET = defineRoute({ auth: 'public' }, async () => ({
+  status: 'healthy',
+  timestamp: new Date().toISOString(),
+}))

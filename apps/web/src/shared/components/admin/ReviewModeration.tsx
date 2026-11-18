@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/shared/components/ui/use-toast";
 import { supabase } from "@/shared/lib/supabase";
-import { sanitizeContent } from "@/shared/lib/contentModeration";
+import { sanitizeContent } from "@barber-app/shared";
 import { logger } from "@/shared/lib/logger";
 
 interface Review {

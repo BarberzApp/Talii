@@ -32,7 +32,7 @@ Update the status column as phases land.
 | 0 | Safety net: make the test suites run | done 2026-11-17 |
 | 1 | Delete dead code and cut features | done 2026-11-17 |
 | 2 | Database baseline | done locally 2026-11-17; live reset pending |
-| 3 | API rebuild | 3a (foundation, bookings, money, Stripe) done 2026-11-17; 3b (remaining routes) not started |
+| 3 | API rebuild | 3a (foundation, bookings, money, Stripe) done 2026-11-17; 3b (remaining routes) done 2026-11-18 |
 | 4 | Clients go through the API | not started |
 | 5 | Front end | not started |
 
@@ -99,7 +99,23 @@ Booking flow: validate the slot in the barber's timezone, insert a pending booki
 - Earnings totals come from the service-role-only SQL functions `barber_earnings_totals` / `barber_earnings_bookings` (no 1000-row cap); the list is paged (`limit`, `offset`) and `truncated` means more rows follow.
 - Database privacy fixes made in the baseline after review: `public_profiles` lists only listed barbers; `reviews.client_id`/`booking_id` and `special_hours.reason` are not granted to clients, and reviewer names come from the `public_reviews` view; availability and special hours are readable only for listed barbers (or by the owner); disabled accounts cannot write to storage.
 - Stripe dashboard setup: the webhook endpoint must send `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed`, `charge.refund.updated`, and, from connected accounts, `account.updated` and `account.application.deauthorized`. If connected-account events come from a separate Connect endpoint, set its secret as `STRIPE_CONNECT_WEBHOOK_SECRET`. Set the endpoint API version to `2025-08-27.basil`.
-- Left for Phase 3b: `GET /api/me`, `GET /api/barbers`, `/api/barbers/:id`, `/api/barbers/:id/services`, `GET /api/geocode`, `POST /api/support`, `POST /api/waitlist`, `/api/admin/users`, and the `cut` branch in `super-admin/delete-photo`. `shared/lib/api-auth.ts` (with its `SUPER_ADMIN_EMAIL` fallback) remains only for the routes not yet moved to `defineRoute`.
+- Left for Phase 3b (done, see below): `GET /api/me`, `GET /api/barbers`, `/api/barbers/:id`, `/api/barbers/:id/services`, `GET /api/geocode`, `POST /api/support`, `POST /api/waitlist`, `/api/admin/users`, and the `cut` branch in `super-admin/delete-photo`.
+
+### Phase 3b: what landed (2026-11-18)
+
+Every route uses `defineRoute`; each route file's header comment documents auth, request and response.
+
+- Account: `GET|PATCH|DELETE /api/me`, `POST /api/me/barber`, `POST /api/uploads` (signed upload URL into `<user_id>/`).
+- Barber self-management: `GET|POST /api/me/services`, `PATCH|DELETE /api/me/services/:id`, the same for `/api/me/addons`, `GET|PUT /api/me/availability`, `GET|PUT|DELETE /api/me/special-hours`.
+- Discovery: `GET /api/barbers`, `GET /api/barbers/:id`, `GET /api/barbers/by-username/:username`, `GET /api/barbers/:id/reviews` (services and add-ons are part of `/api/barbers/:id`; there is no separate `/services` route).
+- Reviews and safety: `GET|POST /api/reviews`, `PATCH|DELETE /api/reviews/:id`, `POST /api/reports`, `GET|POST /api/blocks`, `DELETE /api/blocks/:userId`. Blocks hide users from each other (both directions) in discovery and reviews.
+- Public: `GET /api/geocode` (was `/api/nominatim`; signed-in users only since the review, because every call costs money and no public page needs it), `POST /api/support`, `POST /api/waitlist` (now stored in the `waitlist` table), `GET /api/health` (kept: the Cypress smoke test calls it).
+- Admin (`app_metadata.role === 'admin'`): `GET /api/admin/users`, `PATCH /api/admin/users/:id`, `GET /api/admin/stats`, `GET /api/admin/reports`, `PATCH /api/admin/reports/:id`, `GET /api/admin/reviews`, `PATCH /api/admin/reviews/:id`, `DELETE /api/admin/media`.
+- Removed: `api/super-admin/*`, `api/mobile/*`, `api/nominatim`, `shared/lib/api-auth.ts` (and its `SUPER_ADMIN_EMAIL` fallback), `api-errors.ts`, `cors.ts`, `contentModeration.ts` (moved to `packages/shared`), and the `supabaseAdmin` export of `shared/lib/supabase.ts`.
+- Database (baseline edited in place): service-role functions `replace_availability`, `search_barbers`, `admin_platform_stats`; pgTAP `07_api_functions.test.sql`.
+- Account deletion keeps booking and payment history and the barber row (bookings reference them with `ON DELETE RESTRICT`); everything personal is scrubbed, `profiles.deleted_at` is set, the username is kept (reserved; the old `/book/<username>` link 404s), and the auth user is soft-deleted (`auth.admin.deleteUser(id, true)`: email/phone hashed, metadata and identity data emptied, sign-in blocked, the email free to sign up again; verified on the local stack). Details on `deleteAccount` in `apps/web/src/server/account.ts`.
+- Review fixes (2026-11-18): bookings and slot lookups refuse barbers hidden by blocks (either way) or an admin suspension; `barber` routes need `profiles.role = 'barber'` as well as the row, and only an admin can restore a demoted barber (`403 BARBER_ACCESS_REMOVED`); admin listing control is `barbers.listing_suspended` (`listingSuspended` in `PATCH /api/admin/users/:id`), separate from the barber's own `is_public`; hidden reviews cannot be edited or deleted by their author (`409 REVIEW_HIDDEN`); reporters never see `reported_user_id` (API and column grant); own-image URLs must have the exact `/api/uploads` shape; admins cannot re-enable a self-deleted account (`409 ACCOUNT_DELETED`), and a failed ban when disabling reports `signInBlocked: false` instead of a 500.
+- Owner admin: `scripts/set-admin.ts` (see `docs/development/LOCAL_DEVELOPMENT.md`).
 
 ### Phase 4: clients
 
@@ -118,9 +134,9 @@ These were found by the independent review of Phase 1 and are requirements for t
 - **Phase 3:** Connect onboarding must only create a replacement account when Stripe says the old one is missing, never on a transient error.
 - **Phase 3:** a paid PaymentIntent whose booking cannot be created must leave a durable record (`stripe_events`) and a Sentry alert.
 - **Phase 3:** refund events must be de-duplicated; `amount_refunded` is a running total.
-- **Phase 3:** remove the last guest-checkout handling (`payments/session`, webhook guest branch) and the `cut` branch in `super-admin/delete-photo`.
+- **Phase 3:** remove the last guest-checkout handling (`payments/session`, webhook guest branch) and the `cut` branch in `super-admin/delete-photo`. (Done: both removed.)
 - **Phase 4:** rewrite `middleware.ts` (security headers only) and drop `@supabase/auth-helpers-nextjs`. Send Bearer tokens from the twelve web call sites that now return 401.
-- **Phase 4:** set `app_metadata.role = 'admin'` on the owner's account, then remove the `SUPER_ADMIN_EMAIL` fallback.
+- **Phase 4:** set `app_metadata.role = 'admin'` on the owner's account with `scripts/set-admin.ts` (the `SUPER_ADMIN_EMAIL` fallback is already gone with `api-auth.ts`).
 - **Phase 5:** remove wording that promises a confirmation text (`booking/success`, `support`), the Cuts entries in `updates-badge.tsx`, and the one-button toggle on the mobile Browse page.
 - **Phase 5:** fix the three remaining mobile type errors; the mobile CI workflow fails on them. Remove native packages for cut features (`expo-notifications`, `expo-av`, `expo-media-library`) and verify with a build.
 - **To verify with Stripe:** that the webhook endpoint receives connected-account events (`account.updated`); mobile barbers only become `active` through it.
@@ -138,3 +154,7 @@ Removed in Phase 1. Notes for rebuilding it later:
 
 - `bocmstyle.com` no longer serves this app (it redirects to an unrelated site), yet it is the mobile app's default API host and the web app URL. Choose the new domain.
 - Change the Apple reviewer test account's password; it was committed in a migration.
+- Stripe (test and live): remove the old webhook endpoints (an ngrok tunnel and `barber-app-five.vercel.app`, which now serves a different app) and add the new deployment's `/api/webhooks/stripe` with the events listed in Phase 3a.
+- Google Cloud: restrict the Maps key to the Geocoding and Places APIs and your domains, and set a daily quota.
+- Align Stripe keys: the mobile app's publishable key is live while the server keys are test. Use test everywhere until launch.
+- Before the live database reset: run `scripts/set-admin.ts` against the new project for the owner's account.

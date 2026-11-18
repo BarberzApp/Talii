@@ -16,7 +16,19 @@ Server-only code behind the API routes in `src/app/api`. Every module imports
 | `bookings/` | `policy.ts` (hold length, refund policy, slot grid), `availability.ts`, `create.ts`, `update.ts`, `list.ts`, `manual.ts`. |
 | `stripe/` | `webhook.ts`, `connect.ts`, `errors.ts` (`callStripe` turns Stripe errors into 502). |
 | `earnings.ts` | Barber earnings totals. |
-| `testing/` | Test-only fakes: in-memory Supabase (`fake-supabase.ts`), Stripe mocks with real offline webhook signing (`fake-stripe.ts`), seed data (`fixtures.ts`). |
+| `account.ts` | `GET/PATCH/DELETE /api/me`, `POST /api/me/barber`. Account deletion (what is kept and why) is documented on `deleteAccount`. |
+| `catalog.ts` | A barber's own services and add-ons; delete deactivates when bookings reference the row. |
+| `schedule.ts` | Weekly availability (atomic replace via `replace_availability`) and special hours. |
+| `discovery.ts` | Public search (`nearby_barbers` / `search_barbers`), public profiles, reviews; leaves out users blocked either way. |
+| `reviews.ts` | Reviews by the client of a completed booking; comments pass the shared word filter. |
+| `safety.ts` | Blocks and reports; `hiddenUserIds()` for discovery filtering. |
+| `admin.ts` | `/api/admin/*`: users, stats, reports, review moderation, media removal. |
+| `storage.ts` | Bucket rules, own-folder URL checks (`assertOwnImageUrl`), signed uploads, folder removal. |
+| `geocode.ts` | Google Geocoding / Places (US); `geocodeCityState` never throws. |
+| `caller.ts` | `optionalCallerId(req)` for public routes that personalise when a token is present. |
+| `rate-limit.ts` | In-memory per-IP limiter for public routes (per instance; not a hard limit). |
+| `slack.ts` | Support webhook with mrkdwn escaping. |
+| `testing/` | Test-only fakes: in-memory Supabase with storage and `auth.admin` (`fake-supabase.ts`), Stripe mocks with real offline webhook signing (`fake-stripe.ts`), seed data (`fixtures.ts`), fakes of the search/schedule/stats functions and review views (`api-fakes.ts`). |
 
 ## Writing a route
 

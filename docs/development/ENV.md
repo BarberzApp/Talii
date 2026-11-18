@@ -52,7 +52,8 @@ This document details the environment variables required to run the Talii platfo
 
 | Variable Name | Read By | Purpose / Context |
 | :--- | :--- | :--- |
-| `SLACK_WEBHOOK_URL` | Next.js API | Posts critical platform errors to Slack |
+| `SLACK_WEBHOOK_URL` | Next.js API | Optional. Incoming webhook `POST /api/support` posts support requests to; without it that route returns 503 |
+| `GOOGLE_MAPS_API_KEY` | Next.js API | Optional. Google Geocoding + Places for `GET /api/geocode` (signed-in users only) and the server-side geocoding of a barber's city/state in `PATCH /api/me`; without it `/api/geocode` returns 503 and listings are saved without coordinates. **In Google Cloud, restrict the key** to the Geocoding API and Places API (API restrictions; it is a server key, so no HTTP-referrer restriction) **and set a daily quota** on both APIs so a bug or abuse cannot run up an unbounded bill. |
 | `GMAIL_USER` | Next.js API | SMTP mail username for transactional emails |
 | `GMAIL_PASS` | Next.js API | SMTP app password |
 
