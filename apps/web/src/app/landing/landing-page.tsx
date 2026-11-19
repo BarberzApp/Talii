@@ -112,7 +112,6 @@ export default function LandingPage() {
       role: "Barber",
       location: "Princeton, NJ",
       revenue: "$50K/year",
-      image: "/api/placeholder/60/60",
       quote:
         "Talii made running my business so much easier. My clients love the booking experience, and I've seen my revenue grow every month.",
       rating: 5,
@@ -123,7 +122,6 @@ export default function LandingPage() {
       role: "Barber",
       location: "Blacksburg, VA",
       revenue: "$65K/year",
-      image: "/api/placeholder/60/60",
       quote:
         "Since switching to Talii, I spend less time on admin and more time with my clients. The reminders and scheduling are a game changer!",
       rating: 5,

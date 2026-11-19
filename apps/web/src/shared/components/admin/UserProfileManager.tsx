@@ -30,7 +30,7 @@ import {
   Phone,
   Calendar,
 } from 'lucide-react'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
 import { logger } from '@/shared/lib/logger'
 
 interface UserProfile {
@@ -40,8 +40,8 @@ interface UserProfile {
   phone?: string | null
   role: string
   avatar_url?: string | null
-  coverphoto?: string | null
-  join_date?: string
+  cover_photo_url?: string | null
+  created_at?: string
   barber?: {
     id: string
     portfolio?: string[]
@@ -61,7 +61,7 @@ export function UserProfileManager() {
     if (!searchTerm.trim()) {
       toast({
         title: 'Search Required',
-        description: 'Please enter an email or user ID to search',
+        description: 'Please enter a name, username or email to search',
         variant: 'destructive',
       })
       return
@@ -69,68 +69,55 @@ export function UserProfileManager() {
 
     setSearching(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No session token available')
-      }
+      // GET /api/admin/users?q= matches name, username or email.
+      const { users } = await api.admin.listUsers({ q: searchTerm.trim(), limit: 1 })
+      const profile = users[0]
 
-      // Search by email or ID
-      const isEmail = searchTerm.includes('@')
-      const searchQuery = isEmail 
-        ? supabase.from('profiles').select('*').eq('email', searchTerm).single()
-        : supabase.from('profiles').select('*').eq('id', searchTerm).single()
-
-      const { data: profile, error: profileError } = await searchQuery
-
-      if (profileError || !profile) {
+      if (!profile) {
         toast({
           title: 'User Not Found',
-          description: 'No user found with that email or ID',
+          description: 'No user found with that name, username or email',
           variant: 'destructive',
         })
         setUserProfile(null)
         return
       }
 
-      // Get barber data if user is a barber
+      // Portfolio and cover photo come from the public barber profile (listed barbers only).
       let barberData: UserProfile['barber'] = undefined
-      if (profile.role === 'barber') {
-        const { data: barber, error: barberError } = await supabase
-          .from('barbers')
-          .select('id, portfolio')
-          .eq('user_id', profile.id)
-          .single()
-
-        if (!barberError && barber) {
-          barberData = {
-            id: barber.id,
-            portfolio: barber.portfolio || [],
-          }
+      let coverPhoto: string | null = null
+      if (profile.barber) {
+        barberData = { id: profile.barber.id, portfolio: [] }
+        try {
+          const pub = await api.barbers.get(profile.barber.id)
+          barberData.portfolio = pub.barber.portfolio
+          coverPhoto = pub.profile.cover_photo_url
+        } catch {
+          // Unlisted or suspended: not readable through the public route.
         }
       }
 
       setUserProfile({
         id: profile.id,
-        name: profile.name || 'Unknown',
-        email: profile.email,
+        name: profile.name || profile.username,
+        email: profile.email ?? '',
         phone: profile.phone,
         role: profile.role,
         avatar_url: profile.avatar_url,
-        coverphoto: profile.coverphoto,
-        join_date: profile.join_date,
+        cover_photo_url: coverPhoto,
+        created_at: profile.created_at,
         barber: barberData,
       })
 
       toast({
         title: 'User Found',
-        description: `Found profile for ${profile.name || profile.email}`,
+        description: `Found profile for ${profile.name || profile.username}`,
       })
     } catch (error) {
       logger.error('Error searching user', error)
       toast({
         title: 'Search Failed',
-        description: error instanceof Error ? error.message : 'Failed to search user',
+        description: errorMessage(error, 'Failed to search user'),
         variant: 'destructive',
       })
     } finally {
@@ -148,37 +135,14 @@ export function UserProfileManager() {
 
     setDeletingPhoto(photoToDelete.url)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No session token available')
-      }
-
-      const response = await fetch('/api/super-admin/delete-photo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          userId: userProfile.id,
-          photoType: photoToDelete.type,
-          photoUrl: photoToDelete.url,
-          photoId: photoToDelete.id,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to delete photo')
-      }
+      // DELETE /api/admin/media removes the file and clears it from the profile/portfolio.
+      await api.admin.deleteMedia(photoToDelete.url)
 
       // Update local state
       if (photoToDelete.type === 'avatar') {
         setUserProfile({ ...userProfile, avatar_url: null })
       } else if (photoToDelete.type === 'cover') {
-        setUserProfile({ ...userProfile, coverphoto: null })
+        setUserProfile({ ...userProfile, cover_photo_url: null })
       } else if (photoToDelete.type === 'portfolio' && userProfile.barber) {
         setUserProfile({
           ...userProfile,
@@ -197,7 +161,7 @@ export function UserProfileManager() {
       logger.error('Error deleting photo', error)
       toast({
         title: 'Delete Failed',
-        description: error instanceof Error ? error.message : 'Failed to delete photo',
+        description: errorMessage(error, 'Failed to delete photo'),
         variant: 'destructive',
       })
     } finally {
@@ -239,7 +203,7 @@ export function UserProfileManager() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
               <Input
                 type="text"
-                placeholder="Search by email or user ID..."
+                placeholder="Search by name, username or email..."
                 value={searchTerm}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && searchUser()}
@@ -296,10 +260,10 @@ export function UserProfileManager() {
                             <span>{userProfile.phone}</span>
                           </div>
                         )}
-                        {userProfile.join_date && (
+                        {userProfile.created_at && (
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
-                            <span>Joined: {new Date(userProfile.join_date).toLocaleDateString()}</span>
+                            <span>Joined: {new Date(userProfile.created_at).toLocaleDateString()}</span>
                           </div>
                         )}
                       </div>
@@ -337,7 +301,7 @@ export function UserProfileManager() {
                   )}
 
                   {/* Cover Photo */}
-                  {userProfile.coverphoto && (
+                  {userProfile.cover_photo_url && (
                     <div>
                       <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
                         <ImageIcon className="h-4 w-4" />
@@ -345,7 +309,7 @@ export function UserProfileManager() {
                       </h4>
                       <div className="relative inline-block">
                         <img
-                          src={userProfile.coverphoto}
+                          src={userProfile.cover_photo_url}
                           alt="Cover"
                           className="w-48 h-32 object-cover rounded-lg border-2 border-white/20"
                         />
@@ -353,10 +317,10 @@ export function UserProfileManager() {
                           size="sm"
                           variant="destructive"
                           className="absolute -top-2 -right-2 h-6 w-6 p-0"
-                          onClick={() => handleDeletePhoto('cover', userProfile.coverphoto!)}
-                          disabled={deletingPhoto === userProfile.coverphoto}
+                          onClick={() => handleDeletePhoto('cover', userProfile.cover_photo_url!)}
+                          disabled={deletingPhoto === userProfile.cover_photo_url}
                         >
-                          {deletingPhoto === userProfile.coverphoto ? (
+                          {deletingPhoto === userProfile.cover_photo_url ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
                             <X className="h-3 w-3" />
@@ -400,7 +364,7 @@ export function UserProfileManager() {
                     </div>
                   )}
 
-                  {!userProfile.avatar_url && !userProfile.coverphoto && 
+                  {!userProfile.avatar_url && !userProfile.cover_photo_url && 
                    (!userProfile.barber || userProfile.barber.portfolio?.length === 0) && (
                     <div className="text-center py-8 text-white/60">
                       <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />

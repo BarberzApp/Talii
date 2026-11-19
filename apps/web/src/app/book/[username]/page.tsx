@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage, hasErrorCode } from '@/shared/lib/api'
+import { formatCents, type PublicService } from '@barber-app/shared'
 import { logger } from '@/shared/lib/logger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
 import { Button } from '@/shared/components/ui/button'
 import { BookingForm } from '@/shared/components/booking/booking-form'
-import { Service } from '@/shared/types/service'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Badge } from '@/shared/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
@@ -47,17 +47,15 @@ type Barber = {
   name: string
   username?: string
   location?: string
-  phone?: string
   bio?: string
   avatar_url?: string
-  coverphoto?: string
+  cover_photo_url?: string
+  timezone: string
   specialties: string[]
-  services: Service[]
+  services: PublicService[]
   portfolio: string[]
   instagram?: string
-  twitter?: string
-  facebook?: string
-  email?: string
+  tiktok?: string
   review_count?: number
   average_rating?: number
 }
@@ -73,33 +71,7 @@ type Review = {
   }
 }
 
-type BarberFromDB = {
-  id: string
-  user_id: string
-  bio: string | null
-  specialties: string[]
-  profiles: Array<{
-    name: string
-    username?: string
-    location: string | null
-    phone: string | null
-    avatar_url?: string
-    coverphoto?: string
-    instagram?: string
-    twitter?: string
-    facebook?: string
-    email?: string
-  }>
-  services: Array<{
-    id: string
-    name: string
-    description: string | null
-    duration: number
-    price: number
-    barber_id: string
-  }>
-  portfolio: string[]
-}
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // Error boundary component
 class ErrorBoundary extends React.Component<
@@ -276,123 +248,40 @@ function BookPageContent() {
     }
 
     try {
-      let profileData: any = null;
-      let barberData: any = null;
+      // /book/<username> (or a barber id from older links)
+      const data = UUID_RE.test(identifier)
+        ? await api.barbers.get(identifier)
+        : await api.barbers.getByUsername(identifier)
 
-      // First, try to find the profile by username
-      const { data: profileResult, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('username', identifier)
-        .eq('role', 'barber')
-        .single()
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        logger.error('Error fetching profile by username', profileError)
-        // Continue to try other methods
-      }
-
-      if (profileResult) {
-        // If we found a profile by username, this is a username
-        profileData = profileResult;
-        
-        // Then, get the barber's details using the user_id
-        const { data: barberResult, error: barberError } = await supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', profileData.id)
-          .single()
-
-        if (barberError) {
-          logger.error('Error fetching barber', barberError)
-          throw barberError
-        }
-
-        if (!barberResult) {
-          throw new Error('Barber not found')
-        }
-
-        barberData = barberResult;
-      } else {
-        // If no profile found by username, try to find a profile with this ID
-        const { data: profileResult, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', identifier)
-          .eq('role', 'barber')
-          .single()
-
-        if (profileError) {
-          logger.error('Error fetching profile by ID', profileError)
-          throw new Error('Profile not found')
-        }
-
-        if (!profileResult) {
-          throw new Error('Profile not found')
-        }
-
-        // If we found a profile, this is a user ID
-        profileData = profileResult;
-        
-        // Then, get the barber's details using the user_id
-        const { data: barberResult, error: barberError } = await supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', profileData.id)
-          .single()
-
-        if (barberError) {
-          logger.error('Error fetching barber', barberError)
-          throw barberError
-        }
-
-        if (!barberResult) {
-          throw new Error('Barber not found')
-        }
-
-        barberData = barberResult;
-      }
-
-      // Fetch services for this barber
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*')
-        .eq('barber_id', barberData.id)
-
-      if (servicesError) {
-        logger.error('Error fetching services', servicesError)
-      }
-
-      // Construct the barber object
       const barberObject: Barber = {
-        id: barberData.id,
-        userId: profileData.id,
-        name: profileData.name || 'Unknown Barber',
-        username: profileData.username,
-        location: profileData.location,
-        phone: profileData.phone,
-        bio: barberData.bio,
-        avatar_url: profileData.avatar_url,
-        coverphoto: profileData.coverphoto,
-        specialties: barberData.specialties || [],
-        services: servicesData || [],
-        portfolio: barberData.portfolio || [],
-        instagram: barberData.instagram,
-        twitter: barberData.twitter,
-        facebook: barberData.facebook,
-        email: profileData.email,
-        review_count: barberData.review_count || 0,
-        average_rating: barberData.average_rating || 0
+        id: data.barber.id,
+        userId: data.barber.user_id,
+        name: data.profile.name || data.barber.business_name || 'Unknown Barber',
+        username: data.profile.username,
+        location: [data.barber.city, data.barber.state].filter(Boolean).join(', ') || undefined,
+        bio: data.barber.bio || undefined,
+        avatar_url: data.profile.avatar_url || undefined,
+        cover_photo_url: data.profile.cover_photo_url || undefined,
+        timezone: data.barber.timezone,
+        specialties: data.barber.specialties || [],
+        services: data.services,
+        portfolio: data.barber.portfolio || [],
+        instagram: data.barber.instagram || undefined,
+        tiktok: data.barber.tiktok || undefined,
+        review_count: data.rating.review_count,
+        average_rating: data.rating.average_rating ?? 0,
       }
 
       setBarber(barberObject)
 
-      // Fetch reviews
-      await fetchReviews(barberData.id)
-
+      await fetchReviews(data.barber.id)
     } catch (error) {
       logger.error('Error fetching barber details', error)
-      setError(error instanceof Error ? error.message : 'Failed to load barber details')
+      setError(
+        hasErrorCode(error, 'BARBER_NOT_FOUND', 'VALIDATION_ERROR')
+          ? 'Barber not found'
+          : errorMessage(error, 'Failed to load barber details')
+      )
     } finally {
       setLoading(false)
     }
@@ -401,43 +290,19 @@ function BookPageContent() {
   const fetchReviews = async (barberId: string) => {
     try {
       setLoadingReviews(true)
-      
-      const { data, error } = await supabase
-        .from('reviews')
-        .select(`
-          id,
-          rating,
-          comment,
-          created_at,
-          client:client_id(
-            name,
-            avatar_url
-          )
-        `)
-        .eq('barber_id', barberId)
-        .eq('is_public', true)
-        .eq('is_moderated', true)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (error) {
-        logger.error('Error fetching reviews', error)
-        return
-      }
-
-      // Transform the data to match the Review type
-      const transformedReviews: Review[] = (data || []).map((review: any) => ({
-        id: review.id,
-        rating: review.rating,
-        comment: review.comment,
-        created_at: review.created_at,
-        client: {
-          name: review.client?.name || 'Anonymous',
-          avatar_url: review.client?.avatar_url
-        }
-      }))
-
-      setReviews(transformedReviews)
+      const { reviews: rows } = await api.barbers.reviews(barberId, { limit: 10 })
+      setReviews(
+        rows.map((review) => ({
+          id: review.id,
+          rating: review.rating,
+          comment: review.comment || undefined,
+          created_at: review.created_at,
+          client: {
+            name: review.reviewer_name || 'Anonymous',
+            avatar_url: review.reviewer_avatar_url || undefined,
+          },
+        }))
+      )
     } catch (error) {
       logger.error('Error fetching reviews', error)
     } finally {
@@ -570,9 +435,9 @@ function BookPageContent() {
       </div>
 
       <div className="relative h-48 md:h-64 overflow-hidden">
-        {barber.coverphoto ? (
+        {barber.cover_photo_url ? (
           <img
-            src={barber.coverphoto}
+            src={barber.cover_photo_url}
             alt="Cover photo"
             className="w-full h-full object-cover"
           />
@@ -692,7 +557,7 @@ function BookPageContent() {
           </div>
 
           {/* Social Links */}
-          {(barber.instagram || barber.twitter || barber.facebook) && (
+          {(barber.instagram || barber.tiktok) && (
             <div className="flex justify-center gap-4 mb-6">
               {barber.instagram && (
                 <a
@@ -704,24 +569,14 @@ function BookPageContent() {
                   <Instagram className="h-5 w-5" />
                 </a>
               )}
-              {barber.twitter && (
+              {barber.tiktok && (
                 <a
-                  href={`https://twitter.com/${barber.twitter.replace(/^@/, '')}`}
+                  href={`https://www.tiktok.com/@${barber.tiktok.replace(/^@/, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
+                  className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
                 >
-                  <Twitter className="h-5 w-5" />
-                </a>
-              )}
-              {barber.facebook && (
-                <a
-                  href={`https://facebook.com/${barber.facebook.replace(/^@/, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
-                >
-                  <Facebook className="h-5 w-5" />
+                  <Video className="h-5 w-5" />
                 </a>
               )}
             </div>
@@ -771,11 +626,11 @@ function BookPageContent() {
                       )}
                       <div className="flex items-center gap-2 text-muted-foreground dark:text-white/60 text-sm">
                         <Clock className="h-4 w-4" />
-                        <span>{service.duration} minutes</span>
+                        <span>{service.duration_minutes} minutes</span>
                       </div>
                     </div>
                     <div className="text-right ml-4 flex-shrink-0">
-                      <p className="font-bold text-secondary text-xl">${service.price}</p>
+                      <p className="font-bold text-secondary text-xl">{formatCents(service.price_cents, { compact: true })}</p>
                     </div>
                   </div>
                 ))}

@@ -10,10 +10,21 @@ import { Card, CardContent } from '@/shared/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { Booking } from '@/shared/types/booking'
-import { Service } from '@/shared/types/service'
-import { ServiceAddon } from '@/shared/types/addon'
-import { supabase } from '@/shared/lib/supabase'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import {
+  formatCents,
+  formatInTimeZone,
+  timeZoneAbbreviation,
+  TOTAL_PRICE_CENTS,
+  type AvailabilitySlot,
+  type BookingRow,
+  type PublicAddon,
+  type PublicService,
+} from '@barber-app/shared'
+import { api, bookingErrorMessage, errorMessage, hasErrorCode } from '@/shared/lib/api'
+import { storeRedirectUrl } from '@/shared/lib/redirect-utils'
+import { BookingPayment } from '@/shared/components/payment/booking-payment'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
 import { CalendarIcon, Clock, User, CreditCard, Loader2, MapPin, Scissors, Star, ChevronLeft, ChevronRight, X, CheckCircle, ArrowRight, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
@@ -31,27 +42,32 @@ interface BookingFormProps {
   onClose: () => void
   selectedDate: Date
   barberId: string
-  onBookingCreated: (booking: Booking) => void
+  onBookingCreated: (booking: BookingRow) => void
 }
+
+/** A pending booking waiting for the booking fee (POST /api/bookings returned a clientSecret). */
+type PendingPayment = { bookingId: string; clientSecret: string; amountCents: number }
 
 export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBookingCreated }: BookingFormProps) {
   const { user } = useAuth()
+  const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [services, setServices] = useState<Service[]>([])
-  const [addons, setAddons] = useState<ServiceAddon[]>([])
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([])
+  const [services, setServices] = useState<PublicService[]>([])
+  const [addons, setAddons] = useState<PublicAddon[]>([])
+  const [timezone, setTimezone] = useState<string>('America/New_York')
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
   const [formData, setFormData] = useState({
     serviceId: '',
-    time: '',
+    /** The chosen slot's startsAt (ISO instant). */
+    startsAt: '',
     notes: '',
-    guestName: '',
-    guestEmail: '',
-    guestPhone: '',
   })
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([])
   const [date, setDate] = useState<Date>(selectedDate)
   const [currentMonth, setCurrentMonth] = useState<Date>(selectedDate ? new Date(selectedDate) : new Date())
+  const [payment, setPayment] = useState<PendingPayment | null>(null)
   
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -61,18 +77,17 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
     const end = endOfWeek(endOfMonth(currentMonth))
     return eachDayOfInterval({ start, end })
   }
-  const [bookedTimes, setBookedTimes] = useState<Set<string>>(new Set())
-  const [paymentType] = useState<'fee'>('fee')
-  const [selectedService, setSelectedService] = useState<Service | null>(null)
+  const [selectedService, setSelectedService] = useState<PublicService | null>(null)
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 4
-  const [isDeveloperAccount, setIsDeveloperAccount] = useState(false)
+
+  const selectedSlot = slots.find((s) => s.startsAt === formData.startsAt) || null
 
   useEffect(() => {
     if (isOpen) {
       fetchServices()
-      fetchBarberStatus()
       setCurrentStep(1)
+      setPayment(null)
     }
   }, [isOpen, barberId])
 
@@ -84,75 +99,41 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
 
   const fetchServices = async () => {
     try {
-      const [servicesResponse, addonsResponse] = await Promise.all([
-        supabase
-          .from('services')
-          .select('*')
-          .eq('barber_id', barberId),
-        supabase
-          .from('service_addons')
-          .select('*')
-          .eq('barber_id', barberId)
-          .eq('is_active', true)
-      ])
-
-      if (servicesResponse.error) throw servicesResponse.error
-      if (addonsResponse.error) throw addonsResponse.error
-      
-      setServices(servicesResponse.data || [])
-      setAddons(addonsResponse.data || [])
+      const profile = await api.barbers.get(barberId)
+      setServices(profile.services)
+      setAddons(profile.addons)
+      setTimezone(profile.barber.timezone)
     } catch (error) {
       logger.error('Error fetching services and add-ons', error)
       toast({
         title: "Error",
-        description: "Failed to load services. Please try again.",
+        description: errorMessage(error, "Failed to load services. Please try again."),
         variant: "destructive",
       })
-    }
-  }
-
-  const fetchBarberStatus = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('is_developer')
-        .eq('id', barberId)
-        .single()
-
-      if (error) throw error
-      setIsDeveloperAccount(data?.is_developer || false)
-    } catch (error) {
-      logger.error('Error fetching barber status', error)
-      setIsDeveloperAccount(false)
     }
   }
 
   const fetchAvailability = async () => {
     if (!selectedService) return
 
+    setSlotsLoading(true)
     try {
-      const selectedDate = date.toISOString().split('T')[0]
-      const apiUrl = `/api/mobile/availability/slots?barberId=${encodeURIComponent(barberId)}&date=${encodeURIComponent(selectedDate)}&duration=${encodeURIComponent(String(selectedService.duration))}`
-      const res = await fetch(apiUrl, { method: 'GET' })
-      const payload = await res.json()
-
-      if (!res.ok) {
-        throw new Error(payload?.error || 'Failed to load slots')
-      }
-
-      const slots = (payload?.slots || []) as Array<{ time: string; available: boolean }>
-      const availableTimes = slots.filter(s => s.available).map(s => s.time)
-      const bookedTimesSet = new Set(slots.filter(s => !s.available).map(s => s.time))
-
-      setBookedTimes(bookedTimesSet)
-      setAvailableTimeSlots(availableTimes)
+      // The calendar day is the barber's local date; slots come back in their time zone.
+      const { slots: daySlots } = await api.barbers.availability(barberId, {
+        date: format(date, 'yyyy-MM-dd'),
+        serviceId: selectedService.id,
+      })
+      setSlots(daySlots)
     } catch (error) {
       logger.error('Error fetching availability', error)
+      setSlots([])
       toast({
         title: "Error",
-        description: "Failed to load available time slots. Please try again.",
+        description: errorMessage(error, "Failed to load available time slots. Please try again."),
         variant: "destructive",
       })
+    } finally {
+      setSlotsLoading(false)
     }
   }
 
@@ -161,124 +142,79 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
 
     const service = services.find(s => s.id === formData.serviceId)
     if (!service) {
-      toast({
-        title: "Error",
-        description: "Please select a service.",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "Please select a service.", variant: "destructive" })
       return
     }
 
-    if (!formData.time) {
-      toast({
-        title: "Error",
-        description: "Please select a time.",
-        variant: "destructive",
-      })
+    if (!formData.startsAt) {
+      toast({ title: "Error", description: "Please select a time.", variant: "destructive" })
       return
     }
 
-    // If user is not authenticated, validate guest information
-    if (!user && (!formData.guestName || !formData.guestEmail || !formData.guestPhone)) {
-      toast({
-        title: "Error",
-        description: "Please fill in all guest information.",
-        variant: "destructive",
-      })
+    if (!user) {
+      toast({ title: "Sign in required", description: "Please sign in to book.", variant: "destructive" })
       return
     }
 
     setLoading(true)
 
     try {
-      const bookingDate = new Date(date)
-      bookingDate.setHours(parseInt(formData.time.split(':')[0]), parseInt(formData.time.split(':')[1]), 0, 0)
-
-      // Check if this is a developer account
-      if (isDeveloperAccount) {
-        // Use developer booking API for developer accounts
-        const response = await fetch('/api/create-developer-booking', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+      const { booking, clientSecret } = await api.bookings.create({
         barberId,
         serviceId: formData.serviceId,
-        date: bookingDate.toISOString(),
-        notes: formData.notes,
-            guestName: user ? undefined : formData.guestName,
-            guestEmail: user ? undefined : formData.guestEmail,
-            guestPhone: user ? undefined : formData.guestPhone,
-        clientId: user?.id || null,
-            paymentType: 'fee',
-            addonIds: selectedAddonIds
-          })
-        })
+        startsAt: formData.startsAt,
+        addonIds: selectedAddonIds,
+        notes: formData.notes.trim() || undefined,
+      })
 
-        const data = await response.json()
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to create developer booking')
-        }
-
-        toast({
-          title: "Success!",
-          description: "Your booking has been created successfully (developer mode - no payment required).",
-        })
-
-        onBookingCreated(data.booking)
-      } else {
-        // For regular accounts, create Stripe Checkout session
-        if (!user) {
-          toast({
-            title: "Error",
-            description: "Please sign in to book with this barber.",
-            variant: "destructive",
-          })
-          return
-        }
-
-        logger.debug('Creating Stripe Checkout session for web booking...')
-        
-        // Create Stripe Checkout session
-        const response = await fetch('/api/create-checkout-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            barberId,
-            serviceId: formData.serviceId,
-            date: bookingDate.toISOString(),
-            notes: formData.notes,
-            clientId: user.id,
-            paymentType: 'fee',
-            addonIds: selectedAddonIds
-          })
-        })
-
-        const data = await response.json()
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to create checkout session')
-        }
-
-        logger.debug('Checkout session created', { data })
-
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
+      if (!clientSecret) {
+        // Fee-exempt barber: the booking is already confirmed.
+        toast({ title: "Booked!", description: "Your appointment is confirmed." })
+        onBookingCreated(booking)
+        router.push(`/booking/success?booking_id=${encodeURIComponent(booking.id)}`)
+        return
       }
+
+      // Pay the booking fee with the Payment Element; the slot is held meanwhile.
+      setPayment({ bookingId: booking.id, clientSecret, amountCents: booking.booking_fee_cents })
     } catch (error) {
       logger.error('Error creating booking', error)
       toast({
-        title: "Error",
-        description: "Failed to create booking. Please try again.",
+        title: "Could not book",
+        description: bookingErrorMessage(error, "Failed to create booking. Please try again."),
         variant: "destructive",
       })
+      if (hasErrorCode(error, 'SLOT_TAKEN', 'OUTSIDE_HOURS', 'SLOT_IN_PAST')) {
+        setFormData((prev) => ({ ...prev, startsAt: '' }))
+        setCurrentStep(2)
+        fetchAvailability()
+      }
     } finally {
       setLoading(false)
     }
   }
 
+  /** Leaving the payment step releases the held slot (an unpaid hold is cancelled without a charge). */
+  const abandonPayment = async () => {
+    const pending = payment
+    setPayment(null)
+    if (!pending) return
+    try {
+      await api.bookings.cancel(pending.bookingId, 'Payment abandoned')
+    } catch (error) {
+      // The hold expires on its own; nothing to show.
+      logger.warn('Could not release the booking hold', error)
+    }
+  }
+
+  const handleClose = () => {
+    if (payment) void abandonPayment()
+    onClose()
+  }
+
   const handleServiceChange = (serviceId: string) => {
-    setFormData({ ...formData, serviceId })
     setSelectedService(services.find(s => s.id === serviceId) || null)
-    setFormData({ ...formData, serviceId, time: '' }) // Reset time when service changes
+    setFormData({ ...formData, serviceId, startsAt: '' }) // Reset time when service changes
   }
 
   const formatTime = (time: string) => {
@@ -301,8 +237,8 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
   const canProceed = () => {
     switch (currentStep) {
       case 1: return !!formData.serviceId
-      case 2: return !!formData.time
-      case 3: return user || (isDeveloperAccount && formData.guestName && formData.guestEmail && formData.guestPhone)
+      case 2: return !!formData.startsAt
+      case 3: return !!user
       case 4: return true
       default: return false
     }
@@ -335,7 +271,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose() }}>
       <DialogContent className="max-w-2xl w-full bg-white/95 dark:bg-[#111110]/95 border border-black/10 dark:border-white/10 backdrop-blur-2xl rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-0 overflow-hidden mb-[200px] md:mb-0 max-h-[95vh] md:max-h-[90vh] sm:max-h-[85vh]">
         {/* Header */}
         <div className="relative p-6 border-b border-black/5 dark:border-white/10">
@@ -418,7 +354,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                         <div className="flex items-center gap-4 text-sm">
                           <div className="flex items-center gap-1 text-muted-foreground">
                             <Clock className="h-4 w-4" />
-                            <span>{service.duration} min</span>
+                            <span>{service.duration_minutes} min</span>
                           </div>
                           <Badge className="bg-secondary/20 text-secondary border-secondary/30">
                             Popular
@@ -426,7 +362,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                         </div>
                       </div>
                       <div className="text-right ml-4">
-                        <div className="text-3xl font-bold text-secondary">${service.price}</div>
+                        <div className="text-3xl font-bold text-secondary">{formatCents(service.price_cents, { compact: true })}</div>
                         <div className="text-muted-foreground text-sm">per service</div>
                       </div>
                     </div>
@@ -442,7 +378,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                     Enhance Your Service (Optional)
                   </h4>
                   <AddonSelector
-                    barberId={barberId}
+                    addons={addons}
                     selectedAddonIds={selectedAddonIds}
                     onAddonChange={setSelectedAddonIds}
                   />
@@ -539,19 +475,21 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                   Select Time
                 </h4>
                 
-                {availableTimeSlots.length > 0 ? (
+                <p className="text-xs text-muted-foreground mb-3">
+                  Times are in the barber&apos;s time zone ({timeZoneAbbreviation(timezone, date)}).
+                </p>
+                {slotsLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+                  </div>
+                ) : slots.length > 0 ? (
                   <div className="grid grid-cols-3 gap-3">
-                    {availableTimeSlots.map((time) => {
-                      const [hours, minutes] = time.split(':').map((t) => parseInt(t))
-                      const slotDateTime = new Date(date)
-                      slotDateTime.setHours(hours, minutes, 0, 0)
-                      const isPast = slotDateTime <= new Date()
-                      const isBooked = bookedTimes.has(time)
-                      const isDisabled = isPast || isBooked
+                    {slots.map((slot) => {
+                      const isDisabled = !slot.available
 
                       return (
                         <Button
-                          key={time}
+                          key={slot.startsAt}
                           type="button"
                           variant="ghost"
                           disabled={isDisabled}
@@ -559,15 +497,15 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                             "h-16 text-sm font-medium transition-all duration-300 relative overflow-hidden group",
                             isDisabled
                               ? "bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-black/5 dark:border-white/10 text-foreground/40 opacity-50 cursor-not-allowed"
-                              : formData.time === time
+                              : formData.startsAt === slot.startsAt
                                 ? "bg-gradient-to-br from-secondary to-orange-500 text-foreground border-2 border-secondary/50 shadow-lg scale-105 transform"
                                 : "bg-transparent dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground hover:border-secondary/50 hover:bg-secondary/5 hover:scale-105 hover:shadow-sm"
                           )}
                           onClick={() => {
-                            if (!isDisabled) setFormData({ ...formData, time })
+                            if (!isDisabled) setFormData({ ...formData, startsAt: slot.startsAt })
                           }}
                         >
-                          <div className="font-semibold">{formatTime(time)}</div>
+                          <div className="font-semibold">{formatTime(slot.time)}</div>
                         </Button>
                       )
                     })}
@@ -595,49 +533,16 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                   </div>
                   
                {!user ? (
-                 isDeveloperAccount ? (
-                  <div className="space-y-4">
-                    <div>
-                       <Label htmlFor="guestName" className="text-foreground font-medium mb-2 block">Full Name *</Label>
-                      <Input
-                        id="guestName"
-                        value={formData.guestName}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, guestName: e.target.value })}
-                        placeholder="Enter your full name"
-                        className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary focus:ring-2 focus:ring-secondary/20 ring-offset-background transition-all duration-300 rounded-xl"
-                      />
-                    </div>
-                    <div>
-                       <Label htmlFor="guestEmail" className="text-foreground font-medium mb-2 block">Email Address *</Label>
-                      <Input
-                        id="guestEmail"
-                        type="email"
-                        value={formData.guestEmail}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, guestEmail: e.target.value })}
-                        placeholder="Enter your email"
-                        className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary focus:ring-2 focus:ring-secondary/20 ring-offset-background transition-all duration-300 rounded-xl"
-                      />
-                    </div>
-                    <div>
-                       <Label htmlFor="guestPhone" className="text-foreground font-medium mb-2 block">Phone Number *</Label>
-                      <Input
-                        id="guestPhone"
-                        value={formData.guestPhone}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, guestPhone: e.target.value })}
-                        placeholder="Enter your phone number"
-                        className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary focus:ring-2 focus:ring-secondary/20 ring-offset-background transition-all duration-300 rounded-xl"
-                      />
-                    </div>
-                  </div>
-                 ) : (
                    <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
                      <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                        <X className="h-6 w-6 text-red-400" />
                      </div>
                      <h4 className="text-lg font-semibold text-foreground mb-2">Sign In Required</h4>
-                     <p className="text-muted-foreground">Please sign in to book with this barber</p>
+                     <p className="text-muted-foreground mb-4">Please sign in to book with this barber</p>
+                     <Button asChild className="rounded-xl bg-secondary text-primary-foreground">
+                       <Link href="/login" onClick={() => storeRedirectUrl(window.location.pathname)}>Sign in</Link>
+                     </Button>
                    </div>
-                 )
                ) : (
                  <div className="bg-secondary/10 border border-secondary/20 rounded-2xl p-6 text-center">
                    <div className="w-12 h-12 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -663,7 +568,25 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                       )}
                       
                      {/* Step 4: Review & Payment */}
-           {currentStep === 4 && (
+           {currentStep === 4 && payment && (
+             <div className="space-y-6 pb-8">
+               <div className="text-center mb-2">
+                 <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <CreditCard className="h-8 w-8 text-secondary" />
+                 </div>
+                 <h3 className="text-xl font-bold text-foreground mb-2">Pay the booking fee</h3>
+                 <p className="text-muted-foreground">Your slot is held for 10 minutes while you pay.</p>
+               </div>
+               <BookingPayment
+                 bookingId={payment.bookingId}
+                 clientSecret={payment.clientSecret}
+                 amountCents={payment.amountCents}
+                 onCancel={() => void abandonPayment()}
+               />
+             </div>
+           )}
+
+           {currentStep === 4 && !payment && (
              <form onSubmit={handleSubmit} className="space-y-6 pb-8">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -684,10 +607,14 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                   <div className="flex items-center justify-between p-4 bg-white/70 dark:bg-white/5 backdrop-blur-xl rounded-xl">
                           <div>
                       <p className="text-foreground font-semibold">{selectedService.name}</p>
-                      <p className="text-muted-foreground text-sm">{formatTime(formData.time)} • {date.toLocaleDateString()}</p>
+                      <p className="text-muted-foreground text-sm">
+                        {selectedSlot
+                          ? `${formatInTimeZone(selectedSlot.startsAt, timezone, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })}`
+                          : ''}
+                      </p>
                           </div>
                           <div className="text-right">
-                      <p className="text-xl font-bold text-secondary">${selectedService.price}</p>
+                      <p className="text-xl font-bold text-secondary">{formatCents(selectedService.price_cents)}</p>
                           </div>
                         </div>
                       )}
@@ -704,7 +631,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                             <p className="text-muted-foreground text-sm">Add-on service</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-secondary font-semibold">+${addon.price}</p>
+                            <p className="text-secondary font-semibold">+{formatCents(addon.price_cents)}</p>
                           </div>
                         </div>
                       ) : null
@@ -717,20 +644,18 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                         <div>
                           <p className="text-foreground font-medium">Platform Fee</p>
                      <p className="text-muted-foreground text-sm">
-                       {isDeveloperAccount ? 'Developer account - no charge' : 'Secure payment processing'}
+                       Secure payment processing (waived by some barbers)
                      </p>
                         </div>
                         <div className="text-right">
                      <p className="text-lg font-bold text-secondary">
-                       {isDeveloperAccount ? '$0.00' : '$3.38'}
+                       {formatCents(TOTAL_PRICE_CENTS)}
                      </p>
                      <Badge className={cn(
                        "text-xs",
-                       isDeveloperAccount 
-                         ? "bg-green-500/20 text-green-400 border-green-500/30"
-                         : "bg-green-500/20 text-green-400 border-green-500/30"
+                       "bg-green-500/20 text-green-400 border-green-500/30"
                      )}>
-                       {isDeveloperAccount ? 'Developer' : 'Secure'}
+                       Secure
                           </Badge>
                         </div>
                       </div>
@@ -743,17 +668,14 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold text-secondary">
-                       {isDeveloperAccount ? '$0.00' : '$3.38'}
+                       {formatCents(TOTAL_PRICE_CENTS)}
                           </p>
                         </div>
                       </div>
 
                                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
                    <p className="text-blue-400 text-sm">
-                     {isDeveloperAccount 
-                       ? 'Developer account - no platform fees charged. Service cost and any add-ons will be paid directly to the barber at your appointment.'
-                       : 'You will be redirected to Stripe to complete your payment securely. Your booking will be confirmed automatically after payment.'
-                     }
+                     You pay the booking fee now to hold your slot; the service and any add-ons are paid to the barber at your appointment. If the barber waives the fee, your booking is confirmed straight away.
                    </p>
                                  </div>
                </div>
@@ -778,12 +700,12 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                    {loading ? (
                      <>
                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                       Redirecting to Payment...
+                       Booking...
                      </>
                    ) : (
                      <>
                        <CreditCard className="mr-2 h-4 w-4" />
-                       {isDeveloperAccount ? 'Complete Booking' : 'Proceed to Payment'}
+                       Book Appointment
                      </>
                    )}
                  </Button>

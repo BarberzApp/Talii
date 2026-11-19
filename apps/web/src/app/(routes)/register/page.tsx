@@ -16,6 +16,7 @@ import { supabase } from '@/shared/lib/supabase'
 import React from "react"
 import { Loader2 } from "lucide-react"
 import { logger } from '@/shared/lib/logger'
+import { PENDING_ROLE_KEY } from '@/shared/lib/redirect-utils'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -77,14 +78,17 @@ export default function RegisterPage() {
 
     try {
       logger.debug('Calling register', { email: formData.email, role })
-      const success = await register(formData.name, formData.email, formData.password, role)
-      logger.debug('Register result', { success })
-      if (success) {
+      const outcome = await register(formData.name, formData.email, formData.password, role)
+      logger.debug('Register result', { ok: outcome.ok })
+      if (outcome.ok && outcome.needsConfirmation) {
         toast({
           title: "Registration successful",
           description: "Please check your email to verify your account.",
         })
         router.push(`/confirm?email=${encodeURIComponent(formData.email)}`)
+      } else if (outcome.ok) {
+        // Signed in straight away (email confirmation off).
+        router.push(role === 'barber' ? '/barber/onboarding' : '/browse')
       }
     } catch (err) {
       setError('Failed to create account')
@@ -111,6 +115,14 @@ export default function RegisterPage() {
     // Use NEXT_PUBLIC_APP_URL for redirects
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3002');
     const redirectUrl = `${baseUrl}/auth/callback`;
+    // The callback turns the new account into a barber when that role was chosen
+    // (the profile itself is created by the database on first sign-in). Kept out
+    // of the redirect URL so it still matches Supabase's allow-list exactly.
+    try {
+      window.localStorage.setItem(PENDING_ROLE_KEY, role)
+    } catch {
+      // storage unavailable: the account stays a client and can switch in onboarding
+    }
     
     logger.debug('Using redirect URL for Google signup', { redirectUrl })
     

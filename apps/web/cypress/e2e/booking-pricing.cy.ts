@@ -1,72 +1,75 @@
+// Money is integer cents. Env: TEST_ACCESS_TOKEN, TEST_BARBER_ID (fee-exempt preferred, or
+// TEST_DEVELOPER_BARBER_ID), TEST_SERVICE_ID, optional TEST_ADDON_IDS (array of add-on ids).
+
 describe('Booking Pricing and Addons Integration', () => {
   const getEnvVars = () => {
     const accessToken = Cypress.env('TEST_ACCESS_TOKEN') as string | undefined
-    const barberId = Cypress.env('TEST_DEVELOPER_BARBER_ID') || Cypress.env('TEST_BARBER_ID') as string | undefined
+    const barberId = (Cypress.env('TEST_DEVELOPER_BARBER_ID') || Cypress.env('TEST_BARBER_ID')) as string | undefined
     const serviceId = Cypress.env('TEST_SERVICE_ID') as string | undefined
     const addonIds = Cypress.env('TEST_ADDON_IDS') as string[] | undefined
-
     return { accessToken, barberId, serviceId, addonIds }
   }
 
-  it('calculates correct pricing including addons for a developer booking', () => {
+  it('snapshots service and add-on prices in cents', () => {
     const { accessToken, barberId, serviceId, addonIds } = getEnvVars()
 
     if (!accessToken || !barberId || !serviceId) {
       cy.log('Skipping pricing test: missing required Cypress env vars')
       return
     }
-
-    const testDate = new Date().toISOString()
+    const auth = { Authorization: `Bearer ${accessToken}` }
     const testNotes = 'E2E Testing - Pricing Calculation'
+    const date = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
 
-    // 1. Create the booking
-    cy.request({
-      method: 'POST',
-      url: '/api/mobile/bookings',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: {
-        barberId,
-        serviceId,
-        date: testDate,
-        notes: testNotes,
-        addonIds: addonIds || []
-      },
-    }).then((postResponse) => {
-      expect(postResponse.status).to.eq(200)
-      
-      // If it's a developer barber, the booking is created immediately.
-      if (postResponse.body.booking) {
-        const booking = postResponse.body.booking
-        
-        expect(booking.service_price).to.be.a('number')
-        expect(booking.price).to.be.a('number')
-        
-        // 2. Fetch the client's bookings to verify the database state
+    cy.request(`/api/barbers/${barberId}`).then((profile) => {
+      const service = profile.body.services.find((s: { id: string }) => s.id === serviceId)
+      expect(service, 'service is active and listed').to.exist
+      const addons = (profile.body.addons as Array<{ id: string; price_cents: number }>).filter((a) =>
+        (addonIds || []).includes(a.id)
+      )
+      const expectedAddonTotal = addons.reduce((sum, a) => sum + a.price_cents, 0)
+
+      cy.request(`/api/barbers/${barberId}/availability?date=${date}&serviceId=${serviceId}`).then((slots) => {
+        const slot = slots.body.slots.find((s: { available: boolean }) => s.available)
+        if (!slot) {
+          cy.log(`No free slot on ${date}; skipping`)
+          return
+        }
+
         cy.request({
-          method: 'GET',
-          url: '/api/mobile/bookings',
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }).then((getResponse) => {
-          expect(getResponse.status).to.eq(200)
-          
-          const bookings = getResponse.body.bookings
-          const createdBooking = bookings.find((b: any) => b.id === booking.id)
-          
-          expect(createdBooking).to.exist
-          expect(createdBooking.notes).to.eq(testNotes)
-          expect(createdBooking.service_price).to.eq(booking.service_price)
-          // Addons might trigger a database function or trigger that updates addon_total.
-          // Wait briefly if it's an async database trigger, but in Supabase it's usually instant.
-          expect(createdBooking.price).to.be.gte(createdBooking.service_price)
+          method: 'POST',
+          url: '/api/bookings',
+          headers: auth,
+          body: { barberId, serviceId, startsAt: slot.startsAt, notes: testNotes, addonIds: addons.map((a) => a.id) },
+        }).then((postResponse) => {
+          expect(postResponse.status).to.eq(201)
+          const booking = postResponse.body.booking
+          expect(booking.service_price_cents).to.eq(service.price_cents)
+          expect(booking.addon_total_cents).to.eq(expectedAddonTotal)
+          expect(booking.booking_fee_cents).to.be.oneOf([0, 340])
+
+          cy.request({
+            method: 'GET',
+            url: `/api/bookings?as=client&from=${encodeURIComponent(new Date().toISOString())}&order=asc&limit=100`,
+            headers: auth,
+          }).then((getResponse) => {
+            expect(getResponse.status).to.eq(200)
+            const created = getResponse.body.bookings.find((b: { id: string }) => b.id === booking.id)
+            expect(created).to.exist
+            expect(created.notes).to.eq(testNotes)
+            expect(created.addons.map((a: { addon_id: string }) => a.addon_id).sort()).to.deep.eq(
+              addons.map((a) => a.id).sort()
+            )
+          })
+
+          cy.request({
+            method: 'PATCH',
+            url: `/api/bookings/${booking.id}`,
+            headers: auth,
+            body: { action: 'cancel' },
+          })
         })
-      } else {
-        // If it's a regular barber, a payment intent is returned.
-        expect(postResponse.body).to.have.property('paymentIntentId')
-        expect(postResponse.body).to.have.property('amount')
-        // Amount returned is the platform fee (in cents), we can verify it's a valid number.
-        expect(postResponse.body.amount).to.be.a('number')
-        expect(postResponse.body.amount).to.be.greaterThan(0)
-      }
+      })
     })
   })
 })

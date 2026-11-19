@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { supabase } from '@/shared/lib/supabase'
+import { getBarberProfile } from '@/server/discovery'
 import { logger } from '@/shared/lib/logger'
 
 const DEFAULT_OG_IMAGE = `${process.env.NEXT_PUBLIC_APP_URL || ''}/brand/talii-logo.png`
@@ -13,24 +13,18 @@ export async function generateMetadata({
   try {
     const resolvedParams = await params
     username = resolvedParams.username
-    // Fetch barber details
-    const { data: barberData, error } = await supabase
-      .from('barbers')
-      .select(`
-        id,
-        bio,
-        specialties,
-        profiles (
-          name,
-          username,
-          location,
-          avatar_url,
-          coverphoto
-        )
-      `)
-      .eq('profiles.username', username)
-      .single()
-
+    // Server component: read the public profile with the same code as
+    // GET /api/barbers/by-username/:username (no caller, so no block filtering).
+    let found: Awaited<ReturnType<typeof getBarberProfile>> | null = null
+    let error: unknown = null
+    if (/^[A-Za-z0-9_]{3,30}$/.test(username)) {
+      try {
+        found = await getBarberProfile({ username }, null)
+      } catch (e) {
+        error = e
+      }
+    }
+    const barberData = found
     const atUsername = username ? `@${username}` : 'Barber'
 
     if (error || !barberData) {
@@ -60,12 +54,12 @@ export async function generateMetadata({
       }
     }
 
-    const barber = barberData
-    const profile = barber.profiles?.[0]
-    const barberName = profile?.name || atUsername
+    const barber = barberData.barber
+    const profile = barberData.profile
+    const barberName = profile.name || barber.business_name || atUsername
     const barberBio = barber.bio || 'Professional barber offering quality haircuts and styling services.'
-    const barberLocation = profile?.location || ''
-    const barberImage = profile?.avatar_url || profile?.coverphoto || DEFAULT_OG_IMAGE
+    const barberLocation = [barber.city, barber.state].filter(Boolean).join(', ')
+    const barberImage = profile.avatar_url || profile.cover_photo_url || DEFAULT_OG_IMAGE
     
     // Create specialties text
     const specialtiesText = barber.specialties && barber.specialties.length > 0 

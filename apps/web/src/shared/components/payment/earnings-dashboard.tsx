@@ -15,7 +15,7 @@ import { Button as ButtonBase } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
 import { LoadingSpinner } from "@/shared/components/ui/loading-spinner"
 import { cn } from "@/shared/lib/utils"
-import { supabase } from "@/shared/lib/supabase"
+import { api, errorMessage } from "@/shared/lib/api"
 import { logger } from "@/shared/lib/logger"
 
 // React 19 JSX compatibility: cast to valid component types
@@ -34,14 +34,6 @@ interface MonthlyEarnings {
     serviceFees: number
     platformFees: number
     totalEarnings: number
-  }
-}
-
-interface BarberProfile {
-  id: string
-  profiles: {
-    email: string
-    name: string
   }
 }
 
@@ -81,88 +73,53 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
     checkStripeAccount()
   }, [barberId, preview])
 
+  /** GET /api/stripe/connect/status (refreshes the flags from Stripe). */
   const checkStripeAccount = async () => {
     if (preview) return
-    logger.debug('Checking Stripe account for barber', { barberId })
     try {
-      // First, try to refresh the account status from Stripe
-      const refreshResponse = await fetch('/api/connect/refresh-account-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: barberId }),
-      });
-
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json();
-        logger.debug('Stripe account refresh result', { 
-          hasAccount: refreshData.success && refreshData.data.hasStripeAccount,
-          needsReconnect: refreshData.data?.needsReconnect
-        });
-        
-        if (refreshData.success && refreshData.data.hasStripeAccount) {
-          setHasStripeAccount(true);
-          return;
-        }
-
-        // If the account needs re-connecting (e.g. invalid key/account deleted)
-        // explicitly set hasStripeAccount to false to show the setup button
-        if (refreshData.data?.needsReconnect) {
-          logger.warn('Stripe account needs re-connect', { barberId });
-          setHasStripeAccount(false);
-          return;
-        }
-      }
-
-      // Fallback to checking the database directly
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('stripe_account_id')
-        .eq('id', barberId)
-        .single()
-
-      if (error) {
-        logger.error('Error fetching Stripe account', error)
-        throw error
-      }
-
-      logger.debug('Stripe account check result', {
-        hasAccount: !!data?.stripe_account_id,
-        accountId: data?.stripe_account_id
-      })
-      setHasStripeAccount(!!data?.stripe_account_id)
+      const status = await api.connect.status()
+      setHasStripeAccount(status.hasAccount && status.detailsSubmitted)
     } catch (error) {
       logger.error('Error checking Stripe account', error)
     }
   }
 
+  /**
+   * This month vs last month from GET /api/earnings. "Service" is what clients
+   * paid in person for completed appointments; "booking fees" is the barber's
+   * net share of the online booking fee.
+   */
   const loadEarnings = async () => {
     if (preview || !barberId) return
-    logger.debug('Loading earnings for barber', { barberId })
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/earnings/monthly?barberId=${barberId}`)
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch earnings')
-      }
-      
-      const data = await response.json()
-      logger.debug('Earnings data loaded', { hasData: !!data })
-      
-      // Validate the data structure
-      if (!data || typeof data.current !== 'number') {
-        throw new Error('Invalid earnings data received')
-      }
-      
-      setEarnings(data)
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const [thisMonth, lastMonth] = await Promise.all([
+        api.earnings.get({ from: monthStart.toISOString(), to: now.toISOString(), limit: 1 }),
+        api.earnings.get({ from: prevStart.toISOString(), to: monthStart.toISOString(), limit: 1 }),
+      ])
+      const total = (t: typeof thisMonth.totals) => t.serviceRevenueCents + t.netFeeShareCents
+      const current = total(thisMonth.totals)
+      const previous = total(lastMonth.totals)
+      const change = previous > 0 ? Math.round(((current - previous) / previous) * 100) : current > 0 ? 100 : 0
+      setEarnings({
+        current,
+        previous,
+        trend: change >= 0 ? 'up' : 'down',
+        percentage: Math.abs(change),
+        breakdown: {
+          serviceFees: thisMonth.totals.serviceRevenueCents,
+          platformFees: thisMonth.totals.netFeeShareCents,
+          totalEarnings: current,
+        },
+      })
     } catch (error) {
       logger.error("Error loading earnings", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load earnings data. Please try again.",
+        description: errorMessage(error, "Failed to load earnings data. Please try again."),
         variant: "destructive",
       })
     } finally {
@@ -170,116 +127,17 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
     }
   }
 
+  /** POST /api/stripe/connect/onboarding: creates the Express account if needed and returns the link. */
   const handleSetupPayments = async () => {
-    logger.debug('Starting payment setup for barber', { barberId })
     setIsSettingUp(true)
     try {
-      // First, check if there's already a Stripe account and refresh its status
-      const refreshResponse = await fetch('/api/connect/refresh-account-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: barberId }),
-      });
-
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json();
-        
-        if (refreshData.success && refreshData.data.hasStripeAccount) {
-          // Update the local state to reflect the refreshed status
-          setHasStripeAccount(true);
-          
-          if (refreshData.data.currentStatus === 'active') {
-            toast({
-              title: 'Stripe Account Active',
-              description: 'Your Stripe account is already active and ready to accept payments!',
-            });
-            return;
-          } else if (refreshData.data.currentStatus === 'pending') {
-            toast({
-              title: 'Account Pending',
-              description: 'Your Stripe account is being reviewed. This usually takes 1-2 business days.',
-            });
-            return;
-          }
-        }
-      }
-
-      // Get barber's email and name
-      logger.debug('Fetching barber details')
-      const { data: barber, error: barberError } = await supabase
-        .from('barbers')
-        .select(`
-          id,
-          profiles (
-            email,
-            name
-          )
-        `)
-        .eq('id', barberId)
-        .single() as { data: BarberProfile | null, error: any }
-
-      if (barberError) {
-        logger.error('Error fetching barber details', barberError)
-        throw new Error(`Failed to fetch barber details: ${barberError.message}`)
-      }
-
-      if (!barber?.profiles?.email || !barber?.profiles?.name) {
-        throw new Error('Barber email or name is missing')
-      }
-
-      logger.debug('Barber details fetched', {
-        email: barber.profiles.email,
-        name: barber.profiles.name
-      })
-
-      // Create Stripe Connect account
-      logger.debug('Creating Stripe Connect account')
-      const response = await fetch('/api/connect/create-account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          barberId,
-          email: barber.profiles.email,
-          name: barber.profiles.name,
-        }),
-      }).catch(error => {
-        logger.error('Network error during fetch', error)
-        throw new Error(`Network error: ${error.message}`)
-      })
-
-      if (!response) {
-        throw new Error('No response received from server')
-      }
-
-      let responseData
-      try {
-        responseData = await response.json()
-      } catch (error) {
-        logger.error('Error parsing response', error)
-        throw new Error('Invalid response from server')
-      }
-
-      if (!response.ok) {
-        logger.error('Failed to create Stripe account', { error: responseData.error })
-        throw new Error(responseData.error || 'Failed to create Stripe account')
-      }
-
-      const redirectUrl = responseData.url || responseData.accountLink
-      if (!redirectUrl) {
-        throw new Error('No redirect URL received from Stripe')
-      }
-
-      logger.debug('Stripe account created, redirecting', { redirectUrl })
-      window.location.href = redirectUrl
+      const { url } = await api.connect.onboarding()
+      window.location.href = url
     } catch (error) {
       logger.error('Error setting up payments', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to set up payments. Please try again.",
+        description: errorMessage(error, "Failed to set up payments. Please try again."),
         variant: "destructive",
       })
     } finally {
@@ -287,33 +145,16 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
     }
   }
 
+  /** POST /api/stripe/connect/dashboard: Express dashboard (or onboarding when details are missing). */
   const handleAccessDashboard = async () => {
-    logger.debug('Accessing Stripe dashboard for barber', { barberId })
     try {
-      const response = await fetch('/api/connect/create-dashboard-link', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ barberId }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to access Stripe dashboard')
-      }
-
-      if (!data.url) {
-        throw new Error('No dashboard URL received')
-      }
-
-      window.location.href = data.url
+      const { url } = await api.connect.dashboard()
+      window.location.href = url
     } catch (error) {
       logger.error('Error accessing Stripe dashboard', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to access Stripe dashboard. Please try again.",
+        description: errorMessage(error, "Failed to access Stripe dashboard. Please try again."),
         variant: "destructive",
       })
     }
@@ -404,18 +245,18 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className={smallCardCls}>
-                <div className={smallLabelCls}>Service Fees</div>
+                <div className={smallLabelCls}>Services</div>
                 <div className={smallValueCls}>
                   ${earnings?.breakdown?.serviceFees ? (earnings.breakdown.serviceFees / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                 </div>
-                <div className={smallHintCls}>From haircut services</div>
+                <div className={smallHintCls}>Completed appointments (paid in person)</div>
               </div>
               <div className={smallCardCls}>
-                <div className={smallLabelCls}>Platform Fees</div>
+                <div className={smallLabelCls}>Booking Fees</div>
                 <div className={smallValueCls}>
                   ${earnings?.breakdown?.platformFees ? (earnings.breakdown.platformFees / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                 </div>
-                <div className={smallHintCls}>Processing fees</div>
+                <div className={smallHintCls}>Your share of online booking fees</div>
               </div>
             </div>
           </div>

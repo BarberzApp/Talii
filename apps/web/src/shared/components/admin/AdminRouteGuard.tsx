@@ -131,7 +131,7 @@ export function AdminRouteGuard({
               <div>
                 <h1 className="text-white font-bold text-lg">Admin Dashboard</h1>
                 <p className="text-white/60 text-sm">
-                  {adminUser?.name} ({adminUser?.role === 'super_admin' ? 'Super Admin' : 'Admin'})
+                  {adminUser?.name} (Admin)
                 </p>
               </div>
             </div>

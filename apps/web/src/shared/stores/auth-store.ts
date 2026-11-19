@@ -16,21 +16,25 @@ export type User = {
   id: string
   name: string
   email: string
-  role?: "client" | "barber" // Make role optional to handle OAuth users without roles
+  role?: "client" | "barber"
   username?: string
   phone?: string
-  location?: string
-  description?: string
-  bio?: string
-  favorites?: string[]
-  joinDate?: string
   createdAt?: string
   updatedAt?: string
-  barberId?: string
-  specialties?: string[]
-  priceRange?: string
-  nextAvailable?: string
   avatar_url?: string
+  cover_photo_url?: string
+  /** From GET /api/me isAdmin (auth app_metadata). */
+  isAdmin: boolean
+  /** Barbers only: the barber row. */
+  barberId?: string
+  businessName?: string
+  onboardingComplete?: boolean
+  /** @deprecated Kept for older components; profiles have no location. */
+  location?: string
+  /** @deprecated Kept for older components; the barber bio lives on the barber row. */
+  bio?: string
+  /** @deprecated Use createdAt. */
+  joinDate?: string
 }
 
 interface AuthState {
@@ -45,11 +49,16 @@ interface AuthState {
 interface AuthActions {
   // Actions
   login: (email: string, password: string) => Promise<boolean>
-  register: (name: string, email: string, password: string, role: UserRole, businessName?: string) => Promise<boolean>
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    role: UserRole,
+    businessName?: string,
+    username?: string
+  ) => Promise<RegisterOutcome>
   logout: () => Promise<void>
   updateProfile: (data: Partial<User>) => Promise<void>
-  addToFavorites: (barberId: string) => Promise<void>
-  removeFromFavorites: (barberId: string) => Promise<void>
   
   // Internal state setters
   setUser: (user: User | null) => void
@@ -63,9 +72,17 @@ interface AuthActions {
   fetchUserProfile: (userId: string) => Promise<void>
 }
 
+export type RegisterOutcome = {
+  ok: boolean
+  needsConfirmation?: boolean
+  alreadyExists?: boolean
+  errorMessage?: string
+}
+
 type AuthStore = AuthState & AuthActions
 
 const authAdapter = createWebAuthAdapter()
+let authSubscribed = false
 const authController = new AuthController(authAdapter)
 
 function mapProfileToUser(profile: AuthProfile): User {
@@ -76,14 +93,15 @@ function mapProfileToUser(profile: AuthProfile): User {
     role: (profile.role as UserRole) || undefined,
     username: profile.username || undefined,
     phone: profile.phone || undefined,
-    location: profile.location || undefined,
-    description: profile.bio || undefined,
-    bio: profile.bio || undefined,
-    favorites: profile.favorites || undefined,
-    joinDate: profile.join_date || undefined,
     createdAt: profile.created_at || undefined,
+    joinDate: profile.created_at || undefined,
     updatedAt: profile.updated_at || undefined,
     avatar_url: profile.avatar_url || undefined,
+    cover_photo_url: profile.cover_photo_url || undefined,
+    isAdmin: !!profile.is_admin,
+    barberId: profile.barber_id || undefined,
+    businessName: profile.business_name || undefined,
+    onboardingComplete: profile.onboarding_complete ?? undefined,
   }
 }
 
@@ -91,10 +109,7 @@ function syncSentryUser(profile: AuthProfile | null) {
   if (typeof window === 'undefined') return
 
   if (profile?.id) {
-    Sentry.setUser({
-      id: profile.id,
-      email: profile.email || undefined,
-    })
+    Sentry.setUser({ id: profile.id })
   } else {
     Sentry.setUser(null)
   }
@@ -149,10 +164,16 @@ export const useAuthStore = create<AuthStore>()(
         const state = await authController.initialize()
         applySharedState(set, state)
 
-        authAdapter.onAuthStateChange(async (user) => {
-          const next = await authController.handleAuthChange(user)
-          applySharedState(set, next)
-        })
+        if (!authSubscribed) {
+          authSubscribed = true
+          authAdapter.onAuthStateChange(async (user) => {
+            // Same user as before (e.g. USER_UPDATED): keep the loaded profile.
+            const current = get().profile
+            if (user && current && current.id === user.id && get().status === 'authenticated') return
+            const next = await authController.handleAuthChange(user)
+            applySharedState(set, next)
+          })
+        }
       } catch (error) {
         logger.error('[AUTH] initialize: error', error)
         set({ 
@@ -196,7 +217,7 @@ export const useAuthStore = create<AuthStore>()(
     },
 
     // Register
-    register: async (name: string, email: string, password: string, role: UserRole, businessName?: string): Promise<boolean> => {
+    register: async (name, email, password, role, businessName, username): Promise<RegisterOutcome> => {
       try {
         const { state, result } = await authController.register({
           name,
@@ -204,12 +225,18 @@ export const useAuthStore = create<AuthStore>()(
           password,
           role,
           businessName,
+          username,
         })
         applySharedState(set, state)
-        return result.ok || !!result.needsConfirmation
+        return {
+          ok: result.ok,
+          needsConfirmation: result.needsConfirmation,
+          alreadyExists: result.alreadyExists,
+          errorMessage: result.errorMessage,
+        }
       } catch (error) {
         logger.error('Registration Process Failed', error)
-        return false;
+        return { ok: false }
       }
     },
 
@@ -223,47 +250,16 @@ export const useAuthStore = create<AuthStore>()(
       }
     },
 
-    // Update profile
+    // Update profile (PATCH /api/me: name, phone, username, avatar, cover photo)
     updateProfile: async (data: Partial<User>) => {
-      try {
-        const profilePatch: Partial<AuthProfile> = {
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          location: data.location,
-          bio: data.bio ?? data.description,
-          favorites: data.favorites,
-          avatar_url: data.avatar_url,
-        }
-
-        const next = await authController.updateProfile(buildSharedState(get), profilePatch)
-        applySharedState(set, next)
-      } catch (error) {
-        logger.error('Profile update error', error)
-        throw error;
-      }
-    },
-
-    // Add to favorites
-    addToFavorites: async (barberId: string) => {
-      try {
-        const next = await authController.addToFavorites(buildSharedState(get), barberId)
-        applySharedState(set, next)
-      } catch (error) {
-        logger.error('Add to favorites error', error)
-        throw error;
-      }
-    },
-
-    // Remove from favorites
-    removeFromFavorites: async (barberId: string) => {
-      try {
-        const next = await authController.removeFromFavorites(buildSharedState(get), barberId)
-        applySharedState(set, next)
-      } catch (error) {
-        logger.error('Remove from favorites error', error)
-        throw error;
-      }
+      const next = await authController.updateProfile(buildSharedState(get), {
+        name: data.name,
+        phone: data.phone,
+        username: data.username,
+        avatar_url: data.avatar_url,
+        cover_photo_url: data.cover_photo_url,
+      })
+      applySharedState(set, next)
     },
   }))
 )
@@ -274,4 +270,4 @@ export const useIsAuthenticated = () => useAuthStore((state) => state.status ===
 export const useIsLoading = () => useAuthStore((state) => state.isLoading)
 export const useAuthStatus = () => useAuthStore((state) => state.status)
 export const useIsInitialized = () => useAuthStore((state) => state.isInitialized) 
-export const useShowLoginModal = () => useAuthStore((state) => state.showLoginModal) 
+export const useShowLoginModal = () => useAuthStore((state) => state.showLoginModal)

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { useData } from '@/shared/hooks/use-data'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { logger } from '@/shared/lib/logger'
 import { Button } from '@/shared/components/ui/button'
@@ -32,8 +31,11 @@ import {
   X
 } from 'lucide-react'
 import { PastStylistCard } from './PastStylistCard'
-import { supabase } from '@/shared/lib/supabase'
 import { cn } from '@/shared/lib/utils'
+import { api, errorMessage } from '@/shared/lib/api'
+import { uploadImage } from '@/shared/lib/uploads'
+import { BookingDetails } from '@/shared/components/booking/booking-details'
+import { formatBookingDate, formatBookingTime, type BookingListItem, type OwnReview } from '@barber-app/shared'
 
 interface UserProfile {
   id: string
@@ -41,16 +43,16 @@ interface UserProfile {
   email: string
   username?: string
   avatar_url?: string
-  bio?: string
-  location?: string
   phone?: string
-  coverphoto?: string
+  cover_photo_url?: string
 }
+
+/** The caller's own review, with the barber and service taken from the matching booking. */
+type ReviewView = OwnReview & { booking?: BookingListItem }
 
 export default function ClientPortfolio() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const { bookings, loading, error } = useData()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [avatarLoading, setAvatarLoading] = useState(false)
@@ -58,53 +60,49 @@ export default function ClientPortfolio() {
   const coverFileInputRef = useRef<HTMLInputElement>(null)
   const [coverLoading, setCoverLoading] = useState(false)
 
-  // Client-specific state for bookings from database
-  const [clientBookings, setClientBookings] = useState<any[]>([]);
-  const [userReviews, setUserReviews] = useState<any[]>([]);
+  const [clientBookings, setClientBookings] = useState<BookingListItem[]>([]);
+  const [userReviews, setUserReviews] = useState<ReviewView[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [editingReview, setEditingReview] = useState<string | null>(null);
   const [editReviewData, setEditReviewData] = useState<{rating: number, comment: string}>({rating: 5, comment: ''});
   const [updatingReview, setUpdatingReview] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<BookingListItem | null>(null);
 
-  // Get user's bookings from useData hook
-  const userBookings = bookings.filter(b => b.clientId === user?.id)
-  
-  // Create past barbers from clientBookings (direct database data)
+  const upcomingBookings = clientBookings
+    .filter(b => (b.status === 'pending' || b.status === 'confirmed') && new Date(b.ends_at) > new Date())
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+
+  // Past barbers from the client's bookings
   const pastBarbers = [...new Set(clientBookings.map(b => b.barber_id))].map(barberId => {
     const booking = clientBookings.find(b => b.barber_id === barberId)
-    if (booking?.barbers?.profiles) {
+    if (booking?.barber) {
       return {
         id: booking.barber_id,
-        name: booking.barbers.profiles.name,
-        image: booking.barbers.profiles.avatar_url || undefined,
-        username: booking.barbers.profiles.username || undefined
+        name: booking.barber.profile?.name || booking.barber.business_name || 'Barber',
+        image: booking.barber.profile?.avatar_url || undefined,
+        username: booking.barber.profile?.username || undefined
       }
     }
     return null
   }).filter(Boolean)
 
-  // Debug logging for past barbers
-  logger.debug('Past barbers calculated', { pastBarbers, count: clientBookings.length });
-
-  // Fetch user profile
+  // Own profile (GET /api/me)
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return
 
       try {
         setProfileLoading(true)
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-
-        if (profileError) {
-          logger.error('Error fetching profile', profileError)
-          return
-        }
-
-        setProfile(profileData)
+        const me = await api.me.get()
+        setProfile({
+          id: me.profile.id,
+          name: me.profile.name || '',
+          email: me.profile.email || '',
+          username: me.profile.username,
+          avatar_url: me.profile.avatar_url || undefined,
+          phone: me.profile.phone || undefined,
+          cover_photo_url: me.profile.cover_photo_url || undefined,
+        })
       } catch (error) {
         logger.error('Error fetching profile', error)
       } finally {
@@ -113,76 +111,30 @@ export default function ClientPortfolio() {
     }
 
     fetchProfile()
-  }, [user])
+  }, [user?.id])
 
-  // Fetch client bookings from database
+  // Bookings (GET /api/bookings) and own reviews (GET /api/reviews)
+  const loadBookingsAndReviews = async () => {
+    if (!user) return;
+    try {
+      setReviewsLoading(true);
+      const [{ bookings }, { reviews }] = await Promise.all([
+        api.bookings.list({ as: 'client', limit: 100 }),
+        api.reviews.listOwn(),
+      ]);
+      setClientBookings(bookings);
+      const byId = new Map(bookings.map(b => [b.id, b]));
+      setUserReviews(reviews.map(r => ({ ...r, booking: byId.get(r.booking_id) })));
+    } catch (error) {
+      logger.error('Error fetching bookings and reviews', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchClientBookings = async () => {
-      if (!user) return;
-      try {
-        logger.debug('Fetching client bookings for user', { userId: user.id });
-        const { data, error } = await supabase
-          .from('bookings')
-          .select(`*, barbers:barber_id(user_id, profiles:user_id(name, avatar_url, username)), services:service_id(name, price)`) // join barber and service info
-          .eq('client_id', user.id)
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        logger.debug('Client bookings data', { count: data?.length });
-        setClientBookings(data || []);
-      } catch (error) {
-        logger.error('Error fetching client bookings', error);
-      }
-    };
-    fetchClientBookings();
-  }, [user]);
-
-  // Fetch user reviews
-  useEffect(() => {
-    const fetchUserReviews = async () => {
-      if (!user) return;
-      try {
-        setReviewsLoading(true);
-        logger.debug('Fetching user reviews for', { userId: user.id });
-        const { data, error } = await supabase
-          .from('reviews')
-          .select(`
-            id,
-            rating,
-            comment,
-            created_at,
-            barber:barber_id(
-              id,
-              user_id,
-              profiles:user_id(
-                name,
-                avatar_url,
-                username
-              )
-            ),
-            booking:booking_id(
-              id,
-              date,
-              service:service_id(
-                name
-              )
-            )
-          `)
-          .eq('client_id', user.id)
-          .eq('is_public', true)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        logger.debug('User reviews data', { count: data?.length });
-        setUserReviews(data || []);
-      } catch (error) {
-        logger.error('Error fetching user reviews', error);
-      } finally {
-        setReviewsLoading(false);
-      }
-    };
-    fetchUserReviews();
-  }, [user]);
-
+    loadBookingsAndReviews();
+  }, [user?.id]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -191,27 +143,8 @@ export default function ClientPortfolio() {
     try {
       setAvatarLoading(true)
       
-      // Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file)
-
-      if (error) throw error
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName)
-
-      // Update profile
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id)
-
-      if (updateError) throw updateError
+      const publicUrl = await uploadImage(file, 'avatars')
+      await api.me.update({ avatarUrl: publicUrl })
 
       // Update local state
       setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null)
@@ -224,7 +157,7 @@ export default function ClientPortfolio() {
       logger.error('Error uploading avatar', error)
       toast({
         title: 'Error',
-        description: 'Failed to update profile picture.',
+        description: errorMessage(error, 'Failed to update profile picture.'),
         variant: 'destructive',
       })
     } finally {
@@ -237,25 +170,10 @@ export default function ClientPortfolio() {
     if (!file || !user) return
     try {
       setCoverLoading(true)
-      // Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}-cover-${Date.now()}.${fileExt}`
-      const { data, error } = await supabase.storage
-        .from('covers')
-        .upload(fileName, file)
-      if (error) throw error
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('covers')
-        .getPublicUrl(fileName)
-      // Update profile
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ coverphoto: publicUrl })
-        .eq('id', user.id)
-      if (updateError) throw updateError
+      const publicUrl = await uploadImage(file, 'media')
+      await api.me.update({ coverPhotoUrl: publicUrl })
       // Update local state
-      setProfile(prev => prev ? { ...prev, coverphoto: publicUrl } : null)
+      setProfile(prev => prev ? { ...prev, cover_photo_url: publicUrl } : null)
       toast({
         title: 'Success',
         description: 'Cover photo updated successfully!',
@@ -264,7 +182,7 @@ export default function ClientPortfolio() {
       logger.error('Error uploading cover photo', error)
       toast({
         title: 'Error',
-        description: 'Failed to update cover photo.',
+        description: errorMessage(error, 'Failed to update cover photo.'),
         variant: 'destructive',
       })
     } finally {
@@ -289,7 +207,7 @@ export default function ClientPortfolio() {
   }
 
   // Handle review editing
-  const handleEditReview = (review: any) => {
+  const handleEditReview = (review: ReviewView) => {
     setEditingReview(review.id)
     setEditReviewData({
       rating: review.rating,
@@ -303,28 +221,13 @@ export default function ClientPortfolio() {
     try {
       setUpdatingReview(true)
 
-      const { error } = await supabase
-        .from('reviews')
-        .update({
-          rating: editReviewData.rating,
-          comment: editReviewData.comment.trim() || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', reviewId)
-        .eq('client_id', user.id) // Ensure user can only edit their own reviews
+      const { review: updated } = await api.reviews.update(reviewId, {
+        rating: editReviewData.rating,
+        comment: editReviewData.comment.trim() || null,
+      })
 
-      if (error) throw error
-
-      // Update local state
-      setUserReviews(prev => prev.map(review => 
-        review.id === reviewId 
-          ? { 
-              ...review, 
-              rating: editReviewData.rating, 
-              comment: editReviewData.comment.trim() || null,
-              updated_at: new Date().toISOString()
-            }
-          : review
+      setUserReviews(prev => prev.map(review =>
+        review.id === reviewId ? { ...review, ...updated } : review
       ))
 
       setEditingReview(null)
@@ -336,7 +239,7 @@ export default function ClientPortfolio() {
       logger.error('Error updating review', error)
       toast({
         title: "Error",
-        description: "Failed to update review. Please try again.",
+        description: errorMessage(error, "Failed to update review. Please try again."),
         variant: "destructive",
       })
     } finally {
@@ -371,9 +274,9 @@ export default function ClientPortfolio() {
       <div className="relative w-full max-w-5xl mx-auto mb-20 border border-white/5 shadow-2xl">
         {/* Cover Photo */}
         <div className="h-48 sm:h-72 w-full bg-gradient-to-br from-secondary/20 via-background to-secondary/10 flex items-end justify-center relative group rounded-3xl overflow-hidden">
-          {profile?.coverphoto ? (
+          {profile?.cover_photo_url ? (
             <img
-              src={profile.coverphoto}
+              src={profile.cover_photo_url}
               alt="Cover"
               className="absolute inset-0 w-full h-full object-cover object-center z-0 transition-transform duration-700 group-hover:scale-105"
             />
@@ -452,12 +355,6 @@ export default function ClientPortfolio() {
             @{profile.username}
           </div>
         )}
-        {profile?.location && (
-          <div className="flex items-center gap-2 text-muted-foreground font-medium mb-2">
-            <MapPin className="h-4 w-4 text-secondary/60" />
-            <span>{profile.location}</span>
-          </div>
-        )}
       </div>
 
       {/* Stats Row - Premium Visuals */}
@@ -477,9 +374,16 @@ export default function ClientPortfolio() {
       </div>
       {/* Tabs */}
       <div className="w-full max-w-5xl mx-auto mb-16">
-        <Tabs defaultValue="past-barbers" className="w-full">
+        <Tabs defaultValue="appointments" className="w-full">
           <div className="flex justify-center mb-8">
             <TabsList className="inline-flex h-14 items-center justify-center rounded-2xl bg-white/5 border border-white/10 p-1.5 backdrop-blur-2xl shadow-2xl">
+              <TabsTrigger
+                value="appointments"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                <span className="uppercase">Appointments</span>
+              </TabsTrigger>
               <TabsTrigger 
                 value="past-barbers" 
                 className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
@@ -498,6 +402,60 @@ export default function ClientPortfolio() {
           </div>
 
 
+
+          <TabsContent value="appointments" className="mt-0 outline-none">
+            {upcomingBookings.length === 0 ? (
+              <div className="text-center py-20 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl max-w-2xl mx-auto shadow-2xl">
+                <div className="p-4 bg-secondary/10 rounded-full w-fit mx-auto mb-6">
+                  <Calendar className="h-10 w-10 text-secondary/60" />
+                </div>
+                <h3 className="text-foreground font-bebas font-bold text-3xl mb-4 tracking-tight">No Upcoming Appointments</h3>
+                <Button
+                  onClick={() => window.location.href = '/browse'}
+                  className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
+                >
+                  Find a Stylist
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {upcomingBookings.map((booking) => {
+                  const tz = booking.barber?.timezone ?? 'America/New_York'
+                  return (
+                    <Card
+                      key={booking.id}
+                      data-testid="client-booking"
+                      className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl cursor-pointer hover:border-secondary/20 transition-all"
+                      onClick={() => setSelectedBooking(booking)}
+                    >
+                      <CardContent className="p-6 flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-bold text-foreground">{booking.service?.name ?? 'Appointment'}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {booking.barber?.business_name || booking.barber?.profile?.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                            <Clock className="h-3.5 w-3.5" />
+                            {formatBookingDate(booking.starts_at, tz)} · {formatBookingTime(booking.starts_at, tz)}
+                          </p>
+                        </div>
+                        <Badge className="capitalize">{booking.status === 'pending' ? 'awaiting payment' : booking.status}</Badge>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+            <BookingDetails
+              booking={selectedBooking}
+              isOpen={!!selectedBooking}
+              onClose={() => setSelectedBooking(null)}
+              onBookingCancelled={() => {
+                setSelectedBooking(null)
+                loadBookingsAndReviews()
+              }}
+            />
+          </TabsContent>
 
           <TabsContent value="past-barbers" className="mt-0 outline-none">
             {pastBarbers.length === 0 ? (
@@ -572,18 +530,18 @@ export default function ClientPortfolio() {
                       <div className="flex items-start gap-4">
                         <Avatar className="h-12 w-12 border border-white/10">
                           <AvatarImage 
-                            src={review.barber?.profiles?.avatar_url} 
-                            alt={review.barber?.profiles?.name} 
+                            src={review.booking?.barber?.profile?.avatar_url || undefined} 
+                            alt={review.booking?.barber?.profile?.name || review.booking?.barber?.business_name} 
                           />
                           <AvatarFallback className="bg-secondary text-primary-foreground font-bebas text-xl">
-                            {review.barber?.profiles?.name?.charAt(0)}
+                            {review.booking?.barber?.profile?.name || review.booking?.barber?.business_name?.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                             <div>
                               <h4 className="font-bold text-foreground text-lg mb-0.5">
-                                {review.barber?.profiles?.name}
+                                {review.booking?.barber?.profile?.name || review.booking?.barber?.business_name}
                               </h4>
                               <div className="flex items-center gap-2">
                                 <span className="px-1.5 py-0.5 bg-secondary/10 text-secondary rounded text-[10px] font-bold uppercase tracking-wider">Verified Booking</span>

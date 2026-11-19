@@ -3,7 +3,6 @@
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { ClientProfile } from '@/shared/components/profile/client-profile'
 import { Loader2 } from 'lucide-react'
 import ProfilePortfolio from '@/features/settings/components/profile-portfolio'
 import ClientPortfolio from '@/shared/components/profile/client-portfolio'

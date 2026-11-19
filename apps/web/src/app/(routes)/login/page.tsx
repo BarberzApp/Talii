@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, type ChangeEvent } from 'react'
+import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import Link from 'next/link'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
@@ -26,8 +26,12 @@ export default function LoginPage() {
   const { login, user, status, isInitialized } = useAuth()
   const { toast } = useToast()
 
+  const redirectStarted = useRef(false)
+
   // Function to handle redirect with proper error handling
   const handleRedirect = async (userId: string) => {
+    if (redirectStarted.current) return
+    redirectStarted.current = true
     setRedirecting(true)
     setError(null)
     
@@ -79,15 +83,8 @@ export default function LoginPage() {
       const success = await login(email, password)
       
       if (success) {
-        logger.debug('Login successful, getting session')
-        // Use global auth state for redirect
-        if (user) {
-          logger.debug('Session confirmed, redirecting')
-          await handleRedirect(user.id)
-        } else {
-          logger.error('No user after successful login')
-          setError('Login successful but user not found. Please try again.')
-        }
+        // The auth store now holds the user; the effect above redirects.
+        logger.debug('Login successful')
       } else {
         logger.debug('Login failed')
         setError('Invalid email or password')

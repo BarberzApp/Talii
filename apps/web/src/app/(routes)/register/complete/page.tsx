@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/shared/hooks/use-auth-zustand"
-import { supabase } from "@/shared/lib/supabase"
+import { api, errorMessage } from "@/shared/lib/api"
+import { useAuthStore } from "@/shared/stores/auth-store"
 import { Card, CardContent } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
@@ -15,6 +16,7 @@ import { logger } from '@/shared/lib/logger'
 export default function RegisterCompletePage() {
   const router = useRouter()
   const { user } = useAuth()
+  const fetchUserProfile = useAuthStore((s) => s.fetchUserProfile)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
@@ -22,32 +24,14 @@ export default function RegisterCompletePage() {
     username: ""
   })
 
+  // The database gives every account a role and username at sign-up; this page
+  // lets the user pick a different username and, for a client, switch to barber.
   useEffect(() => {
     if (!user) return
-    const fetchProfile = async () => {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("role, username")
-        .eq("id", user.id)
-        .single()
-      setProfile(data)
-      setLoading(false)
-      // Autofill username if present and not already set in form
-      if (data && data.username && !form.username) {
-        setForm((prev) => ({ ...prev, username: data.username }))
-      }
-      // If profile is complete, redirect to correct onboarding
-      if (data && data.role && data.username) {
-        if (data.role === 'barber') {
-          router.replace('/barber/onboarding')
-        } else {
-          router.replace('/client/onboarding')
-        }
-      }
-    }
-    fetchProfile()
-  }, [user, router])
+    setProfile({ role: user.role, username: user.username })
+    if (user.username) setForm((prev) => (prev.username ? prev : { ...prev, username: user.username || '' }))
+    if (user.role) setForm((prev) => (prev.role ? prev : { ...prev, role: user.role || '' }))
+  }, [user])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
@@ -64,70 +48,22 @@ export default function RegisterCompletePage() {
       return
     }
     setLoading(true)
-    // Save role and username
-    const { error } = await supabase.from("profiles").update({
-      role: form.role,
-      username: form.username,
-    }).eq("id", user.id)
-
-    if (error) {
+    try {
+      if (form.username && form.username !== user.username) {
+        await api.me.update({ username: form.username })
+      }
+      if (form.role === 'barber' && user.role !== 'barber') {
+        await api.me.becomeBarber({})
+      }
+      await fetchUserProfile(user.id)
+    } catch (error) {
+      logger.error('Failed to complete registration', error)
       setLoading(false)
-      toast({ title: "Error", description: "Failed to update profile. Please try again.", variant: "destructive" })
+      toast({ title: "Error", description: errorMessage(error, "Failed to update profile. Please try again."), variant: "destructive" })
       return
     }
-
-    // If barber, ensure a barbers row exists
-    if (form.role === 'barber') {
-      logger.debug('Checking for existing barber row', { userId: user.id })
-      const { data: existingBarber, error: barberCheckError } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      
-      if (barberCheckError) {
-        logger.error('Error checking barber row', barberCheckError)
-        throw barberCheckError
-      }
-      
-      if (!existingBarber) {
-        logger.debug('Creating new barber row', { userId: user.id })
-        const { error: insertError } = await supabase
-          .from('barbers')
-          .insert({
-            user_id: user.id,
-            business_name: '',
-            status: 'pending',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-        
-        if (insertError) {
-          logger.error('Failed to create barber row', insertError)
-          throw insertError
-        }
-        logger.debug('Barber row created successfully')
-      } else {
-        logger.debug('Barber row already exists')
-      }
-    }
-
-    // Fetch the updated profile to confirm
-    const { data: updatedProfile, error: fetchError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single()
     setLoading(false)
-    if (fetchError || !updatedProfile) {
-      toast({ title: "Error", description: "Could not confirm profile update.", variant: "destructive" })
-      return
-    }
-    if (updatedProfile.role === 'barber') {
-      router.replace('/barber/onboarding')
-    } else {
-      router.replace('/client/onboarding')
-    }
+    router.replace(form.role === 'barber' ? '/barber/onboarding' : '/browse')
   }
 
   return (
@@ -160,6 +96,7 @@ export default function RegisterCompletePage() {
                 <button
                   type="button"
                   onClick={() => handleRoleSelect('client')}
+                  disabled={user?.role === 'barber'}
                   className={`w-1/2 py-2 rounded-full text-base font-semibold transition-all duration-150
                     ${form.role === 'client' ? 'bg-saffron text-primary shadow-md' : 'bg-transparent text-white hover:bg-white/5'}`}
                   aria-pressed={form.role === 'client'}

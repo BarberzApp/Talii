@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/shared/lib/supabase';
 import { logger } from '@/shared/lib/logger';
+import { api, isApiError } from '@/shared/lib/api';
 
 /**
  * Asks the API to re-read the Stripe account and store its status. Only works
@@ -13,17 +14,10 @@ import { logger } from '@/shared/lib/logger';
 async function refreshConnectStatus() {
   try {
     const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return;
-    const response = await fetch('/api/stripe/connect/status', {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    });
-    if (!response.ok) {
-      logger.warn('Stripe status refresh failed', { status: response.status });
-    }
+    if (!data.session) return;
+    await api.connect.status();
   } catch (error) {
-    logger.error('Stripe status refresh error', error);
+    logger.warn('Stripe status refresh failed', { code: isApiError(error) ? error.code : 'UNKNOWN' });
   }
 }
 

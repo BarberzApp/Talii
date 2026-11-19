@@ -1,122 +1,163 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/shared/components/ui/use-toast"
+import React, { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { Loader2 } from "lucide-react"
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
-import { supabase } from "@/shared/lib/supabase"
+import { useAuth } from '@/shared/hooks/use-auth-zustand'
+import { api, errorMessage } from "@/shared/lib/api"
 import { logger } from "@/shared/lib/logger"
+import { formatBookingDate, formatBookingTime, formatCents, type BookingListItem } from '@barber-app/shared'
 
-export default function BookingSuccessPage({
-  searchParams,
-}: {
-  searchParams: { session_id?: string }
-}) {
-  const router = useRouter()
-  const { toast } = useToast()
-  const sessionId = searchParams.session_id
-  const { push: safePush } = useSafeNavigation();
+const POLL_INTERVAL_MS = 2000
+const POLL_ATTEMPTS = 15
+
+type View =
+  | { kind: 'loading' }
+  | { kind: 'confirmed'; booking: BookingListItem }
+  | { kind: 'processing'; booking: BookingListItem | null }
+  | { kind: 'failed'; message: string }
+
+/**
+ * Landing page after booking. Stripe's Payment Element returns here with
+ * ?booking_id=…&payment_intent=…&redirect_status=…; fee-exempt bookings come
+ * here directly. The booking is read with GET /api/bookings and polled briefly
+ * until the Stripe webhook has confirmed it.
+ */
+function BookingSuccessContent() {
+  const searchParams = useSearchParams()
+  const bookingId = searchParams.get('booking_id')
+  const redirectStatus = searchParams.get('redirect_status')
+  const { push: safePush } = useSafeNavigation()
+  const { status } = useAuth()
+  const [view, setView] = useState<View>({ kind: 'loading' })
 
   useEffect(() => {
-    const handleSuccess = async () => {
-      if (!sessionId) {
-        toast({
-          title: "Error",
-          description: "No session ID provided",
-          variant: "destructive",
-        })
-        safePush('/')
-        return
-      }
+    if (status === 'loading') return
+    if (!bookingId) {
+      setView({ kind: 'failed', message: 'No booking was given.' })
+      return
+    }
+    if (redirectStatus === 'failed') {
+      setView({ kind: 'failed', message: 'Your payment did not go through. Please try booking again.' })
+      return
+    }
 
-      try {
-        logger.debug('Payment successful', { sessionId })
-        
-        // Verify the session was successful
-        const response = await fetch(`/api/payments/session?session_id=${sessionId}`)
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(`Failed to verify payment: ${errorData.error || response.statusText}`)
+    let cancelled = false
+    const findBooking = async (): Promise<BookingListItem | null> => {
+      // The booking starts in the future; a client has at most a handful of upcoming ones.
+      const { bookings } = await api.bookings.list({
+        as: 'client',
+        from: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        order: 'asc',
+        limit: 100,
+      })
+      return bookings.find((b) => b.id === bookingId) ?? null
+    }
+
+    const poll = async () => {
+      for (let attempt = 0; attempt < POLL_ATTEMPTS && !cancelled; attempt++) {
+        try {
+          const booking = await findBooking()
+          if (cancelled) return
+          if (booking?.status === 'confirmed' || booking?.status === 'completed') {
+            setView({ kind: 'confirmed', booking })
+            return
+          }
+          if (booking?.status === 'cancelled') {
+            setView({
+              kind: 'failed',
+              message:
+                booking.cancellation_reason === 'hold_expired'
+                  ? 'The time you picked was released before payment finished. Any charge will be refunded.'
+                  : 'This booking was cancelled.',
+            })
+            return
+          }
+          setView({ kind: 'processing', booking })
+        } catch (error) {
+          logger.error('Error loading booking', error)
+          if (!cancelled) setView({ kind: 'failed', message: errorMessage(error, 'Could not load your booking.') })
+          return
         }
-        
-        const session = await response.json()
-        logger.debug('Payment verified', {
-          id: session.id,
-          payment_status: session.payment_status,
-          amount_total: session.amount_total
-        })
-
-        // Check if booking was created by webhook
-        const { data: existingBooking } = await supabase
-          .from('bookings')
-          .select('id, status, payment_status')
-          .eq('payment_intent_id', session.payment_intent)
-          .maybeSingle()
-
-        if (existingBooking) {
-          logger.debug('Booking created by webhook', { bookingId: existingBooking.id })
-          toast({
-            title: "Payment Successful!",
-            description: "Your booking has been confirmed and you'll receive a confirmation shortly.",
-          })
-        } else {
-          logger.debug('Booking being created by webhook')
-          toast({
-            title: "Payment Successful!",
-            description: "Your payment was processed successfully. Your booking will be confirmed shortly.",
-          })
-        }
-
-      } catch (error) {
-        logger.error('Error verifying payment', error)
-        // Don't show error to user since payment was successful
-        // The webhook will handle booking creation
-        toast({
-          title: "Payment Successful!",
-          description: "Your payment was processed successfully. Your booking will be confirmed shortly.",
-        })
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
       }
     }
 
-    handleSuccess()
-  }, [sessionId, router, toast])
+    poll()
+    return () => {
+      cancelled = true
+    }
+  }, [bookingId, redirectStatus, status])
+
+  const booking = view.kind === 'confirmed' || view.kind === 'processing' ? view.booking : null
+  const timeZone = booking?.barber?.timezone ?? 'America/New_York'
 
   return (
     <div className="container max-w-2xl py-10">
       <Card>
         <CardHeader>
-          <CardTitle>Payment Successful! 🎉</CardTitle>
+          <CardTitle>
+            {view.kind === 'confirmed' && 'Booking confirmed'}
+            {view.kind === 'processing' && 'Confirming your booking…'}
+            {view.kind === 'loading' && 'Loading your booking…'}
+            {view.kind === 'failed' && 'Booking not completed'}
+          </CardTitle>
           <CardDescription>
-            Your payment has been processed and your booking will be confirmed shortly.
+            {view.kind === 'confirmed' && 'You are all set. See your bookings on your profile.'}
+            {view.kind === 'processing' &&
+              'Your payment was received. We are waiting for the confirmation, which usually takes a few seconds.'}
+            {view.kind === 'failed' && view.message}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-800">
-              ✅ Your payment was successful! 
-            </p>
-            <p className="text-green-700 text-sm mt-2">
-              Your booking is being processed automatically. You'll receive a confirmation email and SMS shortly.
-            </p>
+          {(view.kind === 'loading' || (view.kind === 'processing' && !booking)) && (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+            </div>
+          )}
+
+          {booking && (
+            <div className="rounded-lg border p-4 space-y-1 text-sm">
+              <p className="font-medium">{booking.service?.name}</p>
+              <p>
+                {booking.barber?.business_name || booking.barber?.profile?.name}
+              </p>
+              <p>
+                {formatBookingDate(booking.starts_at, timeZone)} at {formatBookingTime(booking.starts_at, timeZone)}
+              </p>
+              <p>
+                Service {formatCents(booking.service_price_cents + booking.addon_total_cents)} (paid at the appointment)
+                {booking.booking_fee_cents > 0 && ` · booking fee ${formatCents(booking.booking_fee_cents)}`}
+              </p>
+              {view.kind === 'processing' && (
+                <p className="text-muted-foreground flex items-center gap-2 pt-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Waiting for payment confirmation
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button onClick={() => safePush('/profile')} className="flex-1">
+              My bookings
+            </Button>
+            <Button variant="outline" onClick={() => safePush('/browse')} className="flex-1">
+              Browse barbers
+            </Button>
           </div>
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800 font-medium">What happens next?</p>
-            <ul className="text-blue-700 text-sm mt-2 space-y-1">
-              <li>• Your booking will be created automatically</li>
-              <li>• You'll receive a confirmation email</li>
-              <li>• You'll get an SMS notification</li>
-              <li>• The barber will be notified of your appointment</li>
-            </ul>
-          </div>
-          
-          <Button onClick={() => safePush('/')} className="w-full">
-            Return to Home
-          </Button>
         </CardContent>
       </Card>
     </div>
   )
-} 
+}
+
+export default function BookingSuccessPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <BookingSuccessContent />
+    </React.Suspense>
+  )
+}

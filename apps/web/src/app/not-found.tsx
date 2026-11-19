@@ -92,7 +92,7 @@ export default function NotFound() {
     }
 
     if (pathname?.includes('admin')) {
-      if (user?.email === 'primbocm@gmail.com') {
+      if (user?.isAdmin) {
         suggestions.push({
           title: 'Admin Dashboard',
           description: 'Access admin features',

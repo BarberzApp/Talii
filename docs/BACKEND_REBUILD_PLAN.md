@@ -33,7 +33,7 @@ Update the status column as phases land.
 | 1 | Delete dead code and cut features | done 2026-11-17 |
 | 2 | Database baseline | done locally 2026-11-17; live reset pending |
 | 3 | API rebuild | 3a (foundation, bookings, money, Stripe) done 2026-11-17; 3b (remaining routes) done 2026-11-18 |
-| 4 | Clients go through the API | not started |
+| 4 | Clients go through the API | 4a (web + shared client) done 2026-11-19; 4b (mobile) next |
 | 5 | Front end | not started |
 
 ### Phase 0: safety net
@@ -120,6 +120,14 @@ Every route uses `defineRoute`; each route file's header comment documents auth,
 ### Phase 4: clients
 
 One shared `apiFetch` used by web and mobile. Move direct database writes behind the API first (bookings, Stripe fields, roles, reviews, account deletion), then reads.
+
+### Phase 4a: what landed (2026-11-19)
+
+- `packages/shared/src/api`: `createApiClient({ baseUrl, getAccessToken, fetch?, timeoutMs? })` with typed methods for every route the apps use, `ApiError` (`status`, `code`, `details`), `bookingErrorMessage`, and contract types that mirror each route header (rows from the generated `Tables<>`). `domain/format.ts`: cents and barber-time-zone formatting. Tests run with `npm run test:shared`.
+- Shared auth: `AuthController` never creates rows; sign-up passes `role`, `name`, `username`, `business_name` as metadata (the `handle_new_user` trigger creates the rows); profile from `GET /api/me` via `profileFromMe` (`is_admin`, `barber_id`, `business_name`, `onboarding_complete`). The adapter's `createProfile` / `getBarberRow` / `createBarberRow` are optional and ignored; favorites are no-ops.
+- Web: `shared/lib/api.ts` (token from the Supabase browser session), `shared/lib/uploads.ts` (`POST /api/uploads` + `uploadToSignedUrl`). Every page and component reads and writes through the API; no `.from(...)` calls remain in client code. `middleware.ts` only sets security headers (CSRF check removed: the API uses Bearer tokens, not cookies); `@supabase/auth-helpers-nextjs` removed. `/auth/callback` does the PKCE exchange in the browser.
+- Checkout: Payment Element (`shared/components/payment/booking-payment.tsx`) on the `clientSecret` from `POST /api/bookings`; `/booking/success` polls `GET /api/bookings` until confirmed. Clients see and cancel upcoming bookings on `/profile` (Appointments tab).
+- Removed: time off (closed special-hours days replace it), data context, old hooks/types, addon service, CSRF helper, dead settings components.
 
 ### Phase 5: front end
 

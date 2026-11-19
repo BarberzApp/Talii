@@ -9,7 +9,8 @@ import {
   Plus
 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
-import { supabase } from '@/shared/lib/supabase'
+import { api, bookingErrorMessage } from '@/shared/lib/api'
+import { useToast } from '@/shared/components/ui/use-toast'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
 import { EnhancedCalendarHeader } from './enhanced-calendar-header'
@@ -292,6 +293,7 @@ export interface CalendarEvent {
     guestEmail: string
     guestPhone: string
     isBarberView: boolean
+    startsAt?: string
   }
 }
 
@@ -313,6 +315,7 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
   const [isMarkingMissed, setIsMarkingMissed] = useState(false)
   const [isBarber, setIsBarber] = useState(false)
   const { user } = useAuth()
+  const { toast } = useToast()
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
@@ -351,179 +354,50 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     }
   }
 
+  /** GET /api/bookings as barber or client: booked appointments (no unpaid holds). */
   const fetchBookings = async () => {
     try {
-      logger.debug('EnhancedCalendar: Starting fetchBookings for user', { userId: user?.id })
-      
-      // Check if user is a barber or client
-      const { data: barberData, error: barberError } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single()
+      const barberView = user?.role === 'barber'
+      setIsBarber(barberView)
+      const { bookings } = await api.bookings.list({
+        as: barberView ? 'barber' : 'client',
+        status: ['confirmed', 'completed', 'no_show', 'cancelled'],
+        order: 'asc',
+        limit: 100,
+      })
 
-      logger.debug('EnhancedCalendar: Barber data', { barberData, error: barberError })
-      
-      // Update isBarber state based on barberData
-      setIsBarber(!!barberData)
-      
-      let bookingsQuery;
-      
-      if (barberData) {
-        // User is a barber - fetch their bookings
-        logger.debug('EnhancedCalendar: User is a barber, fetching barber bookings')
-        bookingsQuery = supabase
-          .from('bookings')
-          .select(`
-            *,
-            booking_addons (
-              id,
-              price,
-              service_addons (
-                id,
-                name,
-                price
-              )
-            )
-          `)
-          .eq('barber_id', barberData.id)
-          .eq('payment_status', 'succeeded') // Only show successful payments
-          .order('date', { ascending: true })
-      } else {
-        // User is a client - fetch their bookings
-        logger.debug('EnhancedCalendar: User is a client, fetching client bookings')
-        bookingsQuery = supabase
-          .from('bookings')
-          .select(`
-            *,
-            barbers:barber_id(
-              id,
-              user_id,
-              profiles:user_id(name, avatar_url)
-            ),
-            services:service_id(name, duration, price),
-            booking_addons (
-              id,
-              price,
-              service_addons (
-                id,
-                name,
-                price
-              )
-            )
-          `)
-          .eq('client_id', user?.id)
-          .eq('payment_status', 'succeeded') // Only show successful payments
-          .order('date', { ascending: true })
-      }
-
-      const { data: bookings, error } = await bookingsQuery
-
-      logger.debug('EnhancedCalendar: Bookings data', { bookings, error })
-      
-      if (error || !bookings) {
-        logger.debug('EnhancedCalendar: No bookings found or error', { error })
-        return
-      }
-
-      const events = await Promise.all(bookings.map(async (booking) => {
-        logger.debug('EnhancedCalendar: Processing booking', { bookingId: booking.id })
-        
-        // For barber view, we need to fetch service and client separately
-        // For client view, service and barber info are already included in the query
-        let service = booking.services
-        let client = null
-        let barber = null
-        
-        if (barberData) {
-          // Barber view - fetch service and client info
-          if (!service) {
-            const { data: serviceData } = await supabase
-              .from('services')
-              .select('name, duration, price')
-              .eq('id', booking.service_id)
-              .single()
-            service = serviceData
+      setEvents(
+        bookings.map((booking): CalendarEvent => {
+          const serviceName = booking.service?.name || 'Service'
+          const clientName = booking.client?.name || booking.customer_name || 'Walk-in'
+          const barberName = booking.barber?.profile?.name || booking.barber?.business_name || 'Barber'
+          return {
+            id: booking.id,
+            title: barberView ? `${serviceName} - ${clientName}` : `${serviceName} with ${barberName}`,
+            start: booking.starts_at,
+            end: booking.ends_at,
+            backgroundColor: barberView ? '#ffc107' : '#3b82f6',
+            borderColor: barberView ? '#ff8c00' : '#1d4ed8',
+            textColor: '#FFFFFF',
+            extendedProps: {
+              status: booking.status,
+              serviceName,
+              clientName,
+              barberName,
+              // Dollars for display; paid in person (the booking fee is separate).
+              price: (booking.service_price_cents + booking.addon_total_cents) / 100,
+              basePrice: booking.service_price_cents / 100,
+              addonTotal: booking.addon_total_cents / 100,
+              addonNames: booking.addons.map((a) => a.name),
+              isGuest: !booking.client_id,
+              guestEmail: '',
+              guestPhone: '',
+              isBarberView: barberView,
+              startsAt: booking.starts_at,
+            },
           }
-          
-          if (booking.client_id) {
-            const { data: clientData } = await supabase
-              .from('profiles')
-              .select('name')
-              .eq('id', booking.client_id)
-              .single()
-            client = clientData
-          }
-        } else {
-          // Client view - barber info is already included
-          barber = booking.barbers
-        }
-
-        const startDate = new Date(booking.date)
-        const endDate = new Date(startDate.getTime() + (service?.duration || 60) * 60000)
-
-        // Calculate values in dollars
-        const basePrice = service?.price || 0
-        const addonTotal = booking.addon_total || 0
-        const platformFee = booking.platform_fee || 0
-        const barberPayout = typeof booking.barber_payout === 'number'
-          ? booking.barber_payout
-          : basePrice + addonTotal + (platformFee * 0.40)
-        
-        logger.debug('EnhancedCalendar: Price calculation for booking', {
-          bookingId: booking.id,
-          servicePrice: service?.price,
-          bookingPrice: booking.price,
-          basePrice,
-          addonTotal,
-          platformFee,
-          barberPayout,
-          addonNames: booking.booking_addons?.map((addon: any) => addon.service_addons?.name)
         })
-
-        // Get add-on names for display
-        const addonNames = booking.booking_addons?.map((addon: any) => 
-          addon.service_addons?.name || 'Unknown Add-on'
-        ) || []
-
-        // Create title based on user role
-        let title
-        if (barberData) {
-          // Barber view: "Service - Client Name"
-          title = `${service?.name || 'Service'} - ${client?.name || booking.guest_name || 'Guest'}`
-        } else {
-          // Client view: "Service with Barber Name"
-          title = `${service?.name || 'Service'} with ${barber?.profiles?.name || 'Barber'}`
-        }
-
-        return {
-          id: booking.id,
-          title,
-          start: startDate.toISOString(),
-          end: endDate.toISOString(),
-          backgroundColor: barberData ? '#ffc107' : '#3b82f6', // Yellow for barber, blue for client
-          borderColor: barberData ? '#ff8c00' : '#1d4ed8',
-          textColor: '#FFFFFF',
-          extendedProps: {
-            status: booking.status,
-            serviceName: service?.name || '',
-            clientName: client?.name || booking.guest_name || 'Guest',
-            barberName: barber?.profiles?.name || 'Barber',
-            price: barberPayout,
-            basePrice: basePrice,
-            addonTotal: addonTotal,
-            addonNames: addonNames,
-            isGuest: !client,
-            guestEmail: booking.guest_email,
-            guestPhone: booking.guest_phone,
-            isBarberView: !!barberData
-          }
-        }
-      }))
-
-        logger.debug('EnhancedCalendar: Final events', { eventCount: events.length })
-        logger.debug('EnhancedCalendar: Sample booking with addons', { booking: bookings[0] })
-        setEvents(events)
+      )
     } catch (error) {
       logger.error('EnhancedCalendar: Error fetching bookings', error)
     }
@@ -588,40 +462,18 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     onEventClick?.(event)
   }
 
+  /** PATCH /api/bookings/:id { action: 'no_show' }: confirmed bookings, after the start time. */
   const handleMarkAsMissed = async () => {
     if (!selectedEvent) return
-    
+
     setIsMarkingMissed(true)
     try {
-      // Update the booking status in the database
-      const { error } = await supabase
-        .from('bookings')
-        .update({ 
-          status: 'cancelled', // Using 'cancelled' instead of 'missed' due to DB constraint
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedEvent.id)
-
-      if (error) {
-        logger.error('Error marking booking as missed', error)
-        throw error
-      }
-
-      // Update the local event state
-      setSelectedEvent(prev => prev ? {
-        ...prev,
-        extendedProps: {
-          ...prev.extendedProps,
-          status: 'cancelled'
-        }
-      } : null)
-
-      // Refresh the events to update the calendar
+      await api.bookings.noShow(selectedEvent.id)
+      setSelectedEvent(prev => prev ? { ...prev, extendedProps: { ...prev.extendedProps, status: 'no_show' } } : null)
       await fetchBookings()
-
-      logger.debug('Booking marked as missed successfully')
     } catch (error) {
       logger.error('Failed to mark booking as missed', error)
+      toast({ title: 'Could not mark as missed', description: bookingErrorMessage(error), variant: 'destructive' })
     } finally {
       setIsMarkingMissed(false)
     }

@@ -131,7 +131,7 @@ export function EnhancedCalendarEventDialog({
                 </div>
                 <div className="text-right">
                   <div className="text-4xl font-bold text-secondary tracking-tighter drop-shadow-sm">
-                    ${selectedEvent.extendedProps.price}
+                    ${selectedEvent.extendedProps.price.toFixed(2)}
                   </div>
                   <div className="text-foreground/40 text-[9px] font-bold uppercase tracking-widest leading-none">Total Value</div>
                 </div>
@@ -191,15 +191,15 @@ export function EnhancedCalendarEventDialog({
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-foreground/40 font-medium italic">Base Service</span>
-                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.basePrice}</span>
+                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.basePrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-foreground/40 font-medium italic">Enhancements</span>
-                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.addonTotal}</span>
+                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.addonTotal.toFixed(2)}</span>
                   </div>
                   <div className="pt-4 border-t border-foreground/5 flex justify-between items-center">
                     <span className="text-foreground font-bebas text-3xl tracking-wide uppercase opacity-70">Total</span>
-                    <span className="text-secondary font-bold text-4xl tracking-tighter">${selectedEvent.extendedProps.price}</span>
+                    <span className="text-secondary font-bold text-4xl tracking-tighter">${selectedEvent.extendedProps.price.toFixed(2)}</span>
                   </div>
                 </div>
                 
@@ -215,7 +215,7 @@ export function EnhancedCalendarEventDialog({
 
             {/* Actions */}
             <div className="space-y-4">
-              {selectedEvent.extendedProps.isBarberView && selectedEvent.extendedProps.status !== 'cancelled' && (
+              {selectedEvent.extendedProps.isBarberView && selectedEvent.extendedProps.status === 'confirmed' && new Date(selectedEvent.start) <= new Date() && (
                 <Button
                   onClick={onMarkAsMissed}
                   disabled={isMarkingMissed}

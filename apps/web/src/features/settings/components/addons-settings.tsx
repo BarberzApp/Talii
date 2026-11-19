@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
+import { formatCents, type AddonRow } from '@barber-app/shared'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { Button } from '@/shared/components/ui/button'
@@ -11,7 +12,6 @@ import { Switch } from '@/shared/components/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Loader2, Plus, Edit, Trash2, Package, AlertCircle, CheckCircle, DollarSign, Sparkles, ToggleLeft } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
-import { ServiceAddon, CreateServiceAddonInput, UpdateServiceAddonInput } from '@/shared/types/addon'
 import { logger } from '@/shared/lib/logger'
 
 interface AddonsSettingsProps {
@@ -28,9 +28,9 @@ interface AddonFormData {
 export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [addons, setAddons] = useState<ServiceAddon[]>([])
+  const [addons, setAddons] = useState<AddonRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [editingAddon, setEditingAddon] = useState<ServiceAddon | null>(null)
+  const [editingAddon, setEditingAddon] = useState<AddonRow | null>(null)
   const [barberId, setBarberId] = useState<string | null>(null)
 
   const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<AddonFormData>({
@@ -46,51 +46,20 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
 
   useEffect(() => {
     if (user) {
-      loadBarberId()
+      setBarberId(user.barberId ?? null)
+      loadAddons()
     }
-  }, [user])
+  }, [user?.id])
 
-  useEffect(() => {
-    if (barberId) {
-      loadAddons(barberId)
-    }
-  }, [barberId])
-
-  const loadBarberId = async () => {
+  const loadAddons = async (_barberId?: string) => {
     try {
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single()
-
-      if (error) throw error
-      setBarberId(data.id)
-    } catch (error) {
-      logger.error('Error loading barber ID', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load barber information.',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const loadAddons = async (barberId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('service_addons')
-        .select('*')
-        .eq('barber_id', barberId)
-        .order('name')
-
-      if (error) throw error
-      setAddons(data || [])
+      const { addons: rows } = await api.addons.list()
+      setAddons([...rows].sort((a, b) => a.name.localeCompare(b.name)))
     } catch (error) {
       logger.error('Error loading add-ons', error)
       toast({
         title: 'Error',
-        description: 'Failed to load add-ons. Please try again.',
+        description: errorMessage(error, 'Failed to load add-ons. Please try again.'),
         variant: 'destructive',
       })
     }
@@ -108,58 +77,27 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
 
     try {
       setIsLoading(true)
+      const body = {
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
+        priceCents: Math.round(Number(data.price) * 100),
+        isActive: data.is_active,
+      }
       if (editingAddon) {
-        const { error: updateError } = await supabase
-          .from('service_addons')
-          .update({
-            name: data.name,
-            description: data.description,
-            price: data.price,
-            is_active: data.is_active,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingAddon.id)
-
-        if (updateError) {
-          logger.error('Error updating add-on', updateError)
-          toast({
-            title: 'Error',
-            description: 'Failed to update add-on. Please try again.',
-            variant: 'destructive',
-          })
-          return
-        }
+        await api.addons.update(editingAddon.id, body)
         toast({
           title: 'Success',
           description: 'Add-on updated successfully',
         })
       } else {
-        const { error: insertError } = await supabase
-          .from('service_addons')
-          .insert({
-            barber_id: barberId,
-            name: data.name,
-            description: data.description,
-            price: data.price,
-            is_active: data.is_active,
-          })
-
-        if (insertError) {
-          logger.error('Error creating add-on', insertError)
-          toast({
-            title: 'Error',
-            description: 'Failed to create add-on. Please try again.',
-            variant: 'destructive',
-          })
-          return
-        }
+        await api.addons.create(body)
         toast({
           title: 'Success',
           description: 'Add-on added successfully',
         })
       }
 
-      await loadAddons(barberId)
+      await loadAddons()
       reset()
       setEditingAddon(null)
       onUpdate?.()
@@ -167,7 +105,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
       logger.error('Error saving add-on', error)
       toast({
         title: 'Error',
-        description: 'Failed to save add-on. Please try again.',
+        description: errorMessage(error, 'Failed to save add-on. Please try again.'),
         variant: 'destructive',
       })
     } finally {
@@ -175,11 +113,11 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     }
   }
 
-  const handleEdit = (addon: ServiceAddon) => {
+  const handleEdit = (addon: AddonRow) => {
     setEditingAddon(addon)
     setValue('name', addon.name)
     setValue('description', addon.description || '')
-    setValue('price', addon.price)
+    setValue('price', addon.price_cents / 100)
     setValue('is_active', addon.is_active)
   }
 
@@ -187,24 +125,21 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     if (!confirm('Are you sure you want to delete this add-on?')) return
 
     try {
-      const { error } = await supabase
-        .from('service_addons')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
+      const result = await api.addons.remove(id)
 
       toast({
         title: 'Success',
-        description: 'Add-on deleted successfully',
+        description: result.deactivated
+          ? 'This add-on has bookings, so it was turned off instead of deleted.'
+          : 'Add-on deleted successfully',
       })
 
-      await loadAddons(barberId!)
+      await loadAddons()
     } catch (error) {
       logger.error('Error deleting add-on', error)
       toast({
         title: 'Error',
-        description: 'Failed to delete add-on. Please try again.',
+        description: errorMessage(error, 'Failed to delete add-on. Please try again.'),
         variant: 'destructive',
       })
     }
@@ -421,7 +356,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                           variant="secondary"
                           className="text-sm px-3 py-1 bg-secondary/20 text-secondary border-secondary/30"
                         >
-                          ${addon.price.toFixed(2)}
+                          {formatCents(addon.price_cents)}
                         </Badge>
                         <Badge
                           variant={addon.is_active ? 'default' : 'secondary'}

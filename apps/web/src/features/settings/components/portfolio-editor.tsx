@@ -4,7 +4,8 @@ import { X, Plus, GripVertical, Video, Image as ImageIcon, Loader2 } from 'lucid
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/shared/components/ui/dialog'
 import { Badge } from '@/shared/components/ui/badge'
 import { cn } from '@/shared/lib/utils'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
+import { uploadImage } from '@/shared/lib/uploads'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { logger } from '@/shared/lib/logger'
@@ -77,8 +78,8 @@ export function PortfolioEditor({ initialItems, open, onClose, onSave }: Portfol
     try {
       for (const file of files) {
         // Validate file type
-        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-          setError('Please select only image or video files.')
+        if (!file.type.startsWith('image/')) {
+          setError('Please select image files (JPEG, PNG, WebP, HEIC or GIF).')
           continue
         }
         // Validate file size (10MB limit)
@@ -86,20 +87,13 @@ export function PortfolioEditor({ initialItems, open, onClose, onSave }: Portfol
           setError('File size must be less than 10MB.')
           continue
         }
-        // Upload to Supabase Storage
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${user.id}/portfolio/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('portfolio')
-          .upload(fileName, file)
-        if (uploadError) {
-          setError(`Failed to upload ${file.name}: ${uploadError.message}`)
+        let publicUrl: string
+        try {
+          publicUrl = await uploadImage(file, 'media')
+        } catch (uploadError) {
+          setError(`Failed to upload ${file.name}: ${errorMessage(uploadError, 'upload failed')}`)
           continue
         }
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('portfolio')
-          .getPublicUrl(fileName)
         const type = file.type.startsWith('video/') ? 'video' : 'image'
         setItems(prev => ([
           ...prev,
@@ -133,18 +127,7 @@ export function PortfolioEditor({ initialItems, open, onClose, onSave }: Portfol
     try {
       // Only update the barber profile with the current order/remaining items
       const uploadedUrls = items.map(item => item.url)
-      const { error: updateError } = await supabase
-        .from('barbers')
-        .upsert({
-          user_id: user.id,
-          portfolio: uploadedUrls,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        })
-      if (updateError) {
-        throw new Error(`Failed to update portfolio: ${updateError.message}`)
-      }
+      await api.me.update({ portfolio: uploadedUrls })
       onSave(items)
       toast({
         title: 'Success',
@@ -156,7 +139,7 @@ export function PortfolioEditor({ initialItems, open, onClose, onSave }: Portfol
       setError(error instanceof Error ? error.message : 'Failed to save portfolio. Please try again.')
       toast({
         title: 'Error',
-        description: 'Failed to save portfolio. Please try again.',
+        description: errorMessage(error, 'Failed to save portfolio. Please try again.'),
         variant: 'destructive',
       })
     } finally {
@@ -179,7 +162,7 @@ export function PortfolioEditor({ initialItems, open, onClose, onSave }: Portfol
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*"
                 multiple
                 className="hidden"
                 onChange={handleAddMedia}

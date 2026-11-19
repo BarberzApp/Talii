@@ -7,11 +7,11 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {
-    "test": "npx --yes tsx --test src/domain/*.test.ts"
+    "test": "npx --yes tsx --test src/domain/*.test.ts src/domain/auth/__tests__/*.test.ts src/api/*.test.ts"
   }
 }
-

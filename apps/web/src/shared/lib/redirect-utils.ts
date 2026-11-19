@@ -69,3 +69,5 @@ export const storeCurrentPageAsRedirect = () => {
     logger.error('Failed to store current page as redirect', error)
   }
 } 
+/** Role picked on the sign-up page before a Google OAuth redirect (read once by /auth/callback). */
+export const PENDING_ROLE_KEY = 'talii:pending-signup-role'

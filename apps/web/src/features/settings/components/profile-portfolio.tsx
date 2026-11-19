@@ -12,12 +12,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Switch } from '@/shared/components/ui/switch';
 import { Play, Instagram, Twitter, Facebook, Edit3, Upload, Video, Plus, X, Loader2, Sparkles, MapPin, Filter, Camera, MoreVertical, Star, Trash2, Edit, Eye, EyeOff, GripVertical, Heart, MessageCircle, Image as ImageIcon, Video as VideoIcon, ArrowLeft, ArrowRight, User, Calendar, Building, Share2, Award, Phone, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/shared/hooks/use-auth-zustand';
-import { supabase } from '@/shared/lib/supabase';
+import { api, errorMessage } from '@/shared/lib/api';
+import { uploadImage } from '@/shared/lib/uploads';
+import { formatCents, type AddonRow, type MeResponse, type ServiceRow } from '@barber-app/shared';
 import { useToast } from '@/shared/components/ui/use-toast';
 import { EnhancedBarberProfileSettings } from './enhanced-barber-profile-settings';
 import Cropper, { Area } from 'react-easy-crop';
 import getCroppedImg from '@/shared/lib/crop-image';
-import { useData } from '@/shared/hooks/use-data';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/components/ui/tabs';
 import { cn } from '@/shared/lib/utils';
 import { BookingForm } from '@/shared/components/booking/booking-form';
@@ -31,12 +32,12 @@ interface UserProfile {
   username?: string;
   avatar_url?: string;
   bio?: string;
+  /** "City, ST" from the barber row. */
   location?: string;
   phone?: string;
-  coverphoto?: string; // Fix: match database column name
+  cover_photo_url?: string;
   instagram?: string;
-  twitter?: string;
-  facebook?: string;
+  tiktok?: string;
 }
 
 // Update PortfolioItem type
@@ -48,7 +49,6 @@ type PortfolioItem = {
   likes?: number;
   comments?: number;
 };
-// Update BarberProfile type
 interface BarberProfile {
   id: string;
   user_id: string;
@@ -56,47 +56,51 @@ interface BarberProfile {
   business_name?: string;
   specialties?: string[];
   instagram?: string;
-  twitter?: string;
-  facebook?: string;
+  tiktok?: string;
   portfolio?: string[];
-  featured_portfolio?: string;
-  services?: Array<{
-    id: string;
-    name: string;
-    price: number;
-    duration: string;
-    description: string;
-  }>;
-  reviews?: Array<{
-    id: string;
-    user: string;
-    avatar: string;
-    rating: number;
-    comment: string;
-    date: string;
-  }>;
+  reviewCount?: number;
 }
 
-interface Service {
-  id: string;
-  barber_id: string;
-  name: string;
-  price: number;
-  duration: string;
-  description: string;
-  created_at?: string;
+type Service = ServiceRow;
+type Addon = AddonRow;
+
+function toPortfolioItems(urls: string[] | null | undefined): PortfolioItem[] {
+  return (urls ?? []).map((url, index) => ({
+    id: `item-${index}`,
+    type: /\.(mp4|mov|avi)$/i.test(url) ? 'video' : 'image',
+    url,
+  }));
 }
 
-interface Addon {
-  id: string;
-  barber_id: string;
-  name: string;
-  price: number;
-  duration: string | null;
-  description: string | null;
-  created_at?: string;
+function profileFromMe(me: MeResponse): UserProfile {
+  return {
+    id: me.profile.id,
+    name: me.profile.name || '',
+    email: me.profile.email || '',
+    username: me.profile.username,
+    avatar_url: me.profile.avatar_url || undefined,
+    phone: me.profile.phone || undefined,
+    cover_photo_url: me.profile.cover_photo_url || undefined,
+    bio: me.barber?.bio || undefined,
+    location: [me.barber?.city, me.barber?.state].filter(Boolean).join(', ') || undefined,
+    instagram: me.barber?.instagram || undefined,
+    tiktok: me.barber?.tiktok || undefined,
+  };
 }
 
+function barberFromMe(me: MeResponse): BarberProfile | null {
+  if (!me.barber) return null;
+  return {
+    id: me.barber.id,
+    user_id: me.barber.user_id,
+    bio: me.barber.bio || undefined,
+    business_name: me.barber.business_name || undefined,
+    specialties: me.barber.specialties,
+    instagram: me.barber.instagram || undefined,
+    tiktok: me.barber.tiktok || undefined,
+    portfolio: me.barber.portfolio,
+  };
+}
 
 export default function ProfilePortfolio() {
   const { user } = useAuth();
@@ -132,19 +136,8 @@ export default function ProfilePortfolio() {
       setServicesLoading(true)
       logger.debug('Fetching services for barber', { barberId: barberProfile.id })
       
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*')
-        .eq('barber_id', barberProfile.id)
-        .order('created_at', { ascending: false })
-
-      if (servicesError) {
-        logger.error('Error fetching services', servicesError)
-        throw servicesError
-      }
-
-      logger.debug('Found services data', { count: servicesData?.length })
-      setServices(servicesData || [])
+      const { services: servicesData } = await api.services.list()
+      setServices(servicesData)
 
     } catch (error) {
       logger.error('Error fetching services', error)
@@ -166,19 +159,8 @@ export default function ProfilePortfolio() {
       setAddonsLoading(true)
       logger.debug('Fetching add-ons for barber', { barberId: barberProfile.id })
       
-      const { data: addonsData, error: addonsError } = await supabase
-        .from('service_addons')
-        .select('*')
-        .eq('barber_id', barberProfile.id)
-        .order('created_at', { ascending: false })
-
-      if (addonsError) {
-        logger.error('Error fetching add-ons', addonsError)
-        throw addonsError
-      }
-
-      logger.debug('Found add-ons data', { count: addonsData?.length })
-      setAddons(addonsData || [])
+      const { addons: addonsData } = await api.addons.list()
+      setAddons(addonsData)
 
     } catch (error) {
       logger.error('Error fetching add-ons', error)
@@ -234,7 +216,7 @@ export default function ProfilePortfolio() {
   const [coverZoom, setCoverZoom] = useState(1);
   const [coverCroppedAreaPixels, setCoverCroppedAreaPixels] = useState<Area | null>(null);
   // Starred/featured portfolio logic
-  const [featuredId, setFeaturedId] = useState<string | null>(barberProfile?.featured_portfolio || null);
+  const [featuredId, setFeaturedId] = useState<string | null>(null);
   // Services state
   const [services, setServices] = useState<Service[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
@@ -277,51 +259,17 @@ export default function ProfilePortfolio() {
         setLoading(true);
         logger.debug('Fetching profile data for user', { userId: user.id })
         
-        // Fetch profile and barber data in parallel
-        const [profileResult, barberResult] = await Promise.all([
-          supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single(),
-          supabase
-            .from('barbers')
-            .select('*')
-            .eq('user_id', user.id)
-            .single()
-        ]);
-
-        logger.debug('Profile fetch result', { hasData: !!profileResult.data, hasError: !!profileResult.error })
-        logger.debug('Barber fetch result', { hasData: !!barberResult.data, hasError: !!barberResult.error })
-
-        if (profileResult.error) {
-          logger.error('Profile fetch error', profileResult.error)
-        }
-
-        if (barberResult.error) {
-          logger.error('Barber fetch error', barberResult.error)
-        }
-
-        if (profileResult.data) {
-          setProfile(profileResult.data);
-        }
-
-        if (barberResult.data) {
-          setBarberProfile(barberResult.data);
-          
-          // Convert portfolio URLs to PortfolioItem format
-          if (barberResult.data.portfolio) {
-            const portfolioItems: PortfolioItem[] = barberResult.data.portfolio.map((url: string, index: number) => ({
-              id: `item-${index}`,
-              type: url.includes('.mp4') || url.includes('.mov') || url.includes('.avi') ? 'video' : 'image',
-              url
-            }));
-            setPortfolio(portfolioItems);
-          }
-        } else {
-          // User is not a barber - they are a client
-          logger.debug('User is a client (no barber profile found)', { userId: user.id })
-          setBarberProfile(null); // Explicitly set to null to ensure client interface
+        const me = await api.me.get();
+        setProfile(profileFromMe(me));
+        const barber = barberFromMe(me);
+        setBarberProfile(barber);
+        setPortfolio(toPortfolioItems(barber?.portfolio));
+        if (barber) {
+          // Public stats; 404 while the listing is hidden, which just means no count.
+          api.barbers
+            .reviews(barber.id, { limit: 1 })
+            .then(({ rating }) => setBarberProfile(prev => prev ? { ...prev, reviewCount: rating.review_count } : prev))
+            .catch(() => undefined);
         }
       } catch (error) {
         logger.error('Error fetching profile data', error)
@@ -341,8 +289,7 @@ export default function ProfilePortfolio() {
   // Socials based on real data
   const socials = [
     { icon: Instagram, href: barberProfile?.instagram, color: 'text-[#E1306C]' },
-    { icon: Twitter, href: barberProfile?.twitter, color: 'text-[#1DA1F2]' },
-    { icon: Facebook, href: barberProfile?.facebook, color: 'text-[#1877F3]' },
+    { icon: Video, href: barberProfile?.tiktok, color: 'text-foreground' },
   ].filter(social => social.href); // Only show socials that have URLs
 
   const handleEditProfile = () => {
@@ -415,19 +362,14 @@ export default function ProfilePortfolio() {
     setLoading(true);
     try {
       const croppedBlob = await getCroppedImg(selectedCoverImage, coverCroppedAreaPixels);
-      const fileExt = 'jpeg';
-      const fileName = `${user?.id}/cover/${Date.now()}.${fileExt}`;
-      const { data, error } = await supabase.storage.from('portfolio').upload(fileName, croppedBlob, { contentType: 'image/jpeg' });
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from('portfolio').getPublicUrl(fileName);
-      const { error: updateError } = await supabase.from('profiles').update({ coverphoto: publicUrl }).eq('id', user?.id);
-      if (updateError) throw updateError;
-      setProfile(prev => prev ? { ...prev, coverphoto: publicUrl } : null);
+      const publicUrl = await uploadImage(croppedBlob, 'media', 'cover.jpg');
+      await api.me.update({ coverPhotoUrl: publicUrl });
+      setProfile(prev => prev ? { ...prev, cover_photo_url: publicUrl } : null);
       toast({ title: 'Success', description: 'Cover photo updated successfully!' });
       setCoverCropDialogOpen(false);
       setSelectedCoverImage(null);
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to upload cropped cover image.', variant: 'destructive' });
+      toast({ title: 'Error', description: errorMessage(error, 'Failed to upload cropped cover image.'), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -439,19 +381,8 @@ export default function ProfilePortfolio() {
       
       setLoading(true);
       
-      // Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}/portfolio/${Date.now()}.${fileExt}`;
-      const { data, error } = await supabase.storage
-        .from('portfolio')
-        .upload(fileName, file);
-
-      if (error) throw error;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('portfolio')
-        .getPublicUrl(fileName);
+      // Images only: the media bucket accepts JPEG/PNG/WebP/HEIC/GIF.
+      const publicUrl = await uploadImage(file, 'media');
 
       // Add to portfolio array
       const newPortfolioItem: PortfolioItem = {
@@ -465,14 +396,9 @@ export default function ProfilePortfolio() {
 
       setPortfolio(prev => [newPortfolioItem, ...prev]);
       
-      // Update barber profile
       const updatedPortfolio = [publicUrl, ...(barberProfile.portfolio || [])];
-      const { error: updateError } = await supabase
-        .from('barbers')
-        .update({ portfolio: updatedPortfolio })
-        .eq('id', barberProfile.id);
-
-      if (updateError) throw updateError;
+      await api.me.update({ portfolio: updatedPortfolio });
+      setBarberProfile(prev => prev ? { ...prev, portfolio: updatedPortfolio } : prev);
 
       toast({
         title: 'Success',
@@ -482,7 +408,7 @@ export default function ProfilePortfolio() {
       logger.error('Error uploading portfolio item', error)
       toast({
         title: 'Error',
-        description: 'Failed to upload portfolio item. Please try again.',
+        description: errorMessage(error, 'Failed to upload portfolio item. Please try again.'),
         variant: 'destructive',
       });
     } finally {
@@ -495,19 +421,14 @@ export default function ProfilePortfolio() {
       setAvatarLoading(true);
     try {
       const croppedBlob = await getCroppedImg(selectedImage, croppedAreaPixels);
-      const fileExt = 'jpeg';
-      const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
-      const { data, error } = await supabase.storage.from('avatars').upload(fileName, croppedBlob, { contentType: 'image/jpeg' });
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user?.id);
-      if (updateError) throw updateError;
+      const publicUrl = await uploadImage(croppedBlob, 'avatars', 'avatar.jpg');
+      await api.me.update({ avatarUrl: publicUrl });
       setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
       toast({ title: 'Success', description: 'Profile picture updated successfully!' });
       setCropDialogOpen(false);
       setSelectedImage(null);
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to upload cropped image.', variant: 'destructive' });
+      toast({ title: 'Error', description: errorMessage(error, 'Failed to upload cropped image.'), variant: 'destructive' });
     } finally {
       setAvatarLoading(false);
     }
@@ -515,52 +436,15 @@ export default function ProfilePortfolio() {
 
   const handleProfileUpdate = async (updatedData: Partial<UserProfile>) => {
     try {
-      // Update profile data
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          name: updatedData.name,
-          bio: updatedData.bio,
-          location: updatedData.location,
-          phone: updatedData.phone,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user?.id);
-
-      if (profileError) throw profileError;
-
-      // Update barber profile data
-      if (barberProfile) {
-        const { error: barberError } = await supabase
-          .from('barbers')
-          .update({
-            bio: updatedData.bio,
-            instagram: updatedData.instagram,
-            twitter: updatedData.twitter,
-            facebook: updatedData.facebook,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user?.id);
-
-        if (barberError) throw barberError;
-      }
-
-      // Refresh profile data
-      const [profileResult, barberResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user?.id)
-          .single(),
-        supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', user?.id)
-          .single()
-      ]);
-
-      if (profileResult.data) setProfile(profileResult.data);
-      if (barberResult.data) setBarberProfile(barberResult.data);
+      const me = await api.me.update({
+        name: updatedData.name,
+        phone: updatedData.phone ?? null,
+        ...(barberProfile
+          ? { bio: updatedData.bio ?? null, instagram: updatedData.instagram ?? null, tiktok: updatedData.tiktok ?? null }
+          : {}),
+      });
+      setProfile(profileFromMe(me));
+      setBarberProfile(barberFromMe(me));
 
       toast({
         title: 'Success',
@@ -570,7 +454,7 @@ export default function ProfilePortfolio() {
       logger.error('Error updating profile', error)
       toast({
         title: 'Error',
-        description: 'Failed to update profile.',
+        description: errorMessage(error, 'Failed to update profile.'),
         variant: 'destructive',
       });
     }
@@ -579,9 +463,8 @@ export default function ProfilePortfolio() {
   // Starred/featured portfolio logic
   const handleStarPortfolio = async (item: PortfolioItem) => {
     if (!barberProfile) return;
+    // Highlight only; there is no featured column in the schema.
     setFeaturedId(item.id);
-    // Update backend
-    await supabase.from('barbers').update({ featured_portfolio: item.id }).eq('id', barberProfile.id);
   };
   // Delete portfolio item
   const handleDeletePortfolio = async (item: PortfolioItem) => {
@@ -591,12 +474,13 @@ export default function ProfilePortfolio() {
     // Remove from backend
     if (barberProfile) {
       const newUrls = portfolio.filter(i => i.id !== item.id).map(i => i.url);
-      await supabase.from('barbers').update({ portfolio: newUrls }).eq('id', barberProfile.id);
-      // If deleted item was featured, clear featured_portfolio
-      if (featuredId === item.id) {
-        setFeaturedId(null);
-        await supabase.from('barbers').update({ featured_portfolio: null }).eq('id', barberProfile.id);
+      try {
+        await api.me.update({ portfolio: newUrls });
+        setBarberProfile(prev => prev ? { ...prev, portfolio: newUrls } : prev);
+      } catch (error) {
+        toast({ title: 'Error', description: errorMessage(error, 'Failed to delete the item.'), variant: 'destructive' });
       }
+      if (featuredId === item.id) setFeaturedId(null);
     }
     setPortfolioModalOpen(false);
   };
@@ -618,9 +502,9 @@ export default function ProfilePortfolio() {
       <div className="relative w-full max-w-5xl mx-auto mb-20 border border-white/5 shadow-2xl">
         {/* Cover Photo */}
         <div className="h-48 sm:h-72 w-full bg-gradient-to-br from-secondary/20 via-background to-secondary/10 flex items-end justify-center relative group rounded-3xl overflow-hidden">
-          {profile?.coverphoto ? (
+          {profile?.cover_photo_url ? (
             <img
-              src={profile.coverphoto}
+              src={profile.cover_photo_url}
               alt="Cover"
               className="absolute inset-0 w-full h-full object-cover object-center z-0 transition-transform duration-700 group-hover:scale-105"
             />
@@ -734,7 +618,7 @@ export default function ProfilePortfolio() {
         </div>
         <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl p-4 sm:p-6 text-center group hover:border-secondary/30 transition-all duration-300 shadow-xl">
           <span className="block text-3xl sm:text-4xl font-bebas text-secondary group-hover:scale-110 transition-transform duration-300">
-            {barberProfile?.reviews?.length || 0}
+            {barberProfile?.reviewCount || 0}
           </span>
           <span className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mt-1 font-bold">Reviews</span>
         </div>
@@ -941,12 +825,12 @@ export default function ProfilePortfolio() {
                           <div className="flex items-center justify-between mb-3">
                             <h3 className="font-bebas text-2xl text-foreground tracking-tight group-hover:text-secondary transition-colors">{service.name}</h3>
                             <div className="text-right">
-                              <div className="font-bebas text-3xl text-foreground leading-none">${service.price}</div>
+                              <div className="font-bebas text-3xl text-foreground leading-none">{formatCents(service.price_cents, { compact: true })}</div>
                             </div>
                           </div>
                           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5 mb-4">
                             <div className="w-1.5 h-1.5 bg-secondary rounded-full animate-pulse" />
-                            <span className="text-foreground/60 text-[10px] font-bold uppercase tracking-widest">{service.duration} Session</span>
+                            <span className="text-foreground/60 text-[10px] font-bold uppercase tracking-widest">{service.duration_minutes} min Session</span>
                           </div>
                           {service.description && (
                             <p className="text-foreground/50 text-sm leading-relaxed line-clamp-2 italic">“{service.description}”</p>
@@ -999,8 +883,8 @@ export default function ProfilePortfolio() {
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-semibold text-foreground">{addon.name}</h3>
                           <div className="text-right">
-                            <div className="font-bold text-foreground">${addon.price}</div>
-                            <div className="text-foreground/70 text-sm">{addon.duration || 'Quick add-on'}</div>
+                            <div className="font-bold text-foreground">{formatCents(addon.price_cents)}</div>
+                            <div className="text-foreground/70 text-sm">{addon.description || 'Quick add-on'}</div>
                           </div>
                         </div>
                         {addon.description && (
@@ -1133,26 +1017,7 @@ export default function ProfilePortfolio() {
         }}
         onSave={async (items) => {
           setPortfolio(items);
-          // Refresh profile data to get updated portfolio
-          if (user) {
-            try {
-              const { data: barberResult } = await supabase
-                .from('barbers')
-                .select('portfolio')
-                .eq('user_id', user.id)
-                .single();
-              if (barberResult?.portfolio) {
-                const portfolioItems: PortfolioItem[] = barberResult.portfolio.map((url: string, index: number) => ({
-                  id: `item-${index}`,
-                  type: url.includes('.mp4') || url.includes('.mov') || url.includes('.avi') ? 'video' : 'image',
-                  url
-                }));
-                setPortfolio(portfolioItems);
-              }
-            } catch (error) {
-              logger.error('Error refreshing portfolio', error)
-            }
-          }
+          setBarberProfile(prev => prev ? { ...prev, portfolio: items.map(i => i.url) } : prev);
         }}
       />
       {/* Profile Editor Modal */}
@@ -1164,28 +1029,17 @@ export default function ProfilePortfolio() {
         }}
         onProfileUpdated={async () => {
           // Refresh profile data after save
-          if (user) {
-            try {
-              setLoading(true);
-              const [profileResult, barberResult] = await Promise.all([
-                supabase
-                  .from('profiles')
-                  .select('*')
-                  .eq('id', user.id)
-                  .single(),
-                supabase
-                  .from('barbers')
-                  .select('*')
-                  .eq('user_id', user.id)
-                  .single()
-              ]);
-              if (profileResult.data) setProfile(profileResult.data);
-              if (barberResult.data) setBarberProfile(barberResult.data);
-            } catch (error) {
-              logger.error('Error refreshing profile', error)
-            } finally {
-              setLoading(false);
-            }
+          try {
+            setLoading(true);
+            const me = await api.me.get();
+            setProfile(profileFromMe(me));
+            const barber = barberFromMe(me);
+            setBarberProfile(barber);
+            setPortfolio(toPortfolioItems(barber?.portfolio));
+          } catch (error) {
+            logger.error('Error refreshing profile', error)
+          } finally {
+            setLoading(false);
           }
         }}
       />

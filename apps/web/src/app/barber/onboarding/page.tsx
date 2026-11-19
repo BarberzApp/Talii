@@ -13,7 +13,7 @@ import { useToast } from '@/shared/components/ui/use-toast'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { Progress } from '@/shared/components/ui/progress'
 import { CheckCircle, AlertCircle, Loader2, CreditCard, Building, Scissors, X, Instagram, Twitter, Music, Facebook } from 'lucide-react'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
 import { logger } from '@/shared/lib/logger'
 import Link from 'next/link'
 import { SpecialtyAutocomplete } from '@/shared/components/ui/specialty-autocomplete'
@@ -28,7 +28,7 @@ const steps = [
     title: 'Business Information',
     description: 'Tell us about your business',
     icon: Building,
-    required: ['businessName', 'phone', 'address', 'city', 'state', 'zipCode', 'bio']
+    required: ['businessName', 'phone', 'city', 'state', 'bio']
   },
   {
     id: 'services',
@@ -55,7 +55,8 @@ interface FormData {
   zipCode: string
   bio: string
   specialties: string[]
-  services: Array<{ name: string; price: number; duration: number }>
+  /** price in dollars (form input); sent as cents. id is set for services that already exist. */
+  services: Array<{ id?: string; name: string; price: number; duration: number }>
   stripeConnected: boolean
   socialMedia: {
     instagram: string
@@ -67,19 +68,6 @@ interface FormData {
 
 interface ValidationErrors {
   [key: string]: string
-}
-
-// Address validation via Google Maps Geocoding API
-async function validateAddress(address: string, city: string, state: string, zip: string): Promise<boolean> {
-  const query = encodeURIComponent(`${address}, ${city}, ${state} ${zip}`)
-  const url = `/api/nominatim?type=geocode&q=${query}`
-  try {
-    const res = await fetch(url)
-    const data = await res.json()
-    return Array.isArray(data) && data.length > 0
-  } catch (e) {
-    return false
-  }
 }
 
 // Utility function to extract handle from URL or return as-is if already a handle
@@ -128,156 +116,45 @@ export default function BarberOnboardingPage() {
 
   // Prefill form with existing data
   useEffect(() => {
+    // GET /api/me (+ own services and Stripe status). Barbers keep city/state on
+    // the barber row; there is no street address in the schema.
     const fetchProfileData = async () => {
       if (!user) return;
-      
       try {
-        logger.debug('Fetching profile data for user', { userId: user.id });
-        
-        // Fetch barber profile data
-        const { data: barberData, error: barberError } = await supabase
-          .from('barbers')
-          .select('*, profiles!user_id(location, phone)')
-          .eq('user_id', user.id)
-          .single()
+        const me = await api.me.get();
+        const barber = me.barber;
+        const { services: rows } = barber ? await api.services.list() : { services: [] };
+        const services = rows
+          .filter((s) => s.is_active)
+          .map((s) => ({ id: s.id, name: s.name, price: s.price_cents / 100, duration: s.duration_minutes }));
 
-        logger.debug('Barber data fetched', { hasData: !!barberData, error: barberError });
-        logger.debug('Profile data from join', { hasProfile: !!barberData?.profiles });
-
-        if (barberData) {
-          logger.debug('Setting barber data in form');
-          setFormData(prev => ({
-            ...prev,
-            businessName: barberData.business_name || '',
-            bio: barberData.bio || '',
-            specialties: barberData.specialties || [],
-            socialMedia: {
-              instagram: barberData.instagram || '',
-              twitter: barberData.twitter || '',
-              tiktok: barberData.tiktok || '',
-              facebook: barberData.facebook || '',
-            }
-          }))
-        }
-
-        // Get profile data from the joined query
-        let profile = barberData?.profiles;
-        
-        // Fallback: if profile data not available through join, fetch separately
-        if (!profile) {
-          logger.debug('Profile data not available through join, fetching separately');
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('phone, location')
-            .eq('id', user.id)
-            .single();
-          
-          if (profileError && profileError.code !== 'PGRST116') {
-            logger.error('Error fetching profile data', profileError);
-          } else {
-            profile = profileData;
-          }
-        }
-
-        // Parse location with improved regex patterns
-        let address = '', city = '', state = '', zipCode = '';
-        logger.debug('Available location data', {
-          profileLocation: profile?.location,
-          barberCity: barberData?.city,
-          barberState: barberData?.state
-        });
-        
-        if (profile?.location) {
-          logger.debug('Parsing location', { location: profile.location });
-          
-          // Try different location formats
-          const location = profile.location.trim();
-          
-          // Format: "Address, City, State ZIP" or "Address, City, State"
-          const fullMatch = location.match(/^(.+?),\s*([^,]+?),\s*([A-Za-z]{2,})\s*(\d{5})?$/);
-          if (fullMatch) {
-            address = fullMatch[1].trim();
-            city = fullMatch[2].trim();
-            state = fullMatch[3].trim();
-            zipCode = fullMatch[4] || '';
-          } else {
-            // Format: "Address, City State ZIP" or "Address, City State"
-            const cityStateMatch = location.match(/^(.+?),\s*([^,]+?)\s+([A-Za-z]{2,})\s*(\d{5})?$/);
-            if (cityStateMatch) {
-              address = cityStateMatch[1].trim();
-              city = cityStateMatch[2].trim();
-              state = cityStateMatch[3].trim();
-              zipCode = cityStateMatch[4] || '';
-            } else {
-              // Fallback: split by comma and try to extract
-              const parts = location.split(',').map((part: string) => part.trim());
-              if (parts.length >= 2) {
-                address = parts[0];
-                city = parts[1];
-                
-                // Try to extract state and zip from the last part
-                if (parts.length >= 3) {
-                  const lastPart = parts[2];
-                  const stateZipMatch = lastPart.match(/([A-Za-z]{2,})\s*(\d{5})?/);
-                  if (stateZipMatch) {
-                    state = stateZipMatch[1];
-                    zipCode = stateZipMatch[2] || '';
-                  } else {
-                    state = lastPart;
-                  }
-                }
-              }
-            }
-          }
-          
-          logger.debug('Parsed location', { address, city, state, zipCode });
-        }
-
-        // Fetch services for this barber
-        let services: Array<{ name: string; price: number; duration: number }> = [];
-        if (barberData?.id) {
-          const { data: existingServices, error: servicesError } = await supabase
-            .from('services')
-            .select('name, price, duration')
-            .eq('barber_id', barberData.id);
-
-          if (servicesError) {
-            logger.error('Error fetching services', servicesError);
-          } else if (Array.isArray(existingServices)) {
-            services = existingServices.map(s => ({
-              name: s.name || '',
-              price: typeof s.price === 'number' ? s.price : 0,
-              duration: typeof s.duration === 'number' ? s.duration : 30,
-            }));
-          }
-        }
-
-        // Create the full location string for the input field
-        // Prioritize barber table location data over parsed profile location
-        const finalCity = barberData?.city || city;
-        const finalState = barberData?.state || state;
-        const fullLocation = [address, finalCity, finalState, zipCode].filter(Boolean).join(', ');
-        
         setFormData(prev => ({
           ...prev,
-          phone: profile?.phone || '',
-          address,
-          city: finalCity, // Use barber table city if available
-          state: finalState, // Use barber table state if available
-          zipCode,
+          businessName: barber?.business_name || '',
+          bio: barber?.bio || '',
+          specialties: barber?.specialties || [],
+          socialMedia: {
+            ...prev.socialMedia,
+            instagram: barber?.instagram || '',
+            tiktok: barber?.tiktok || '',
+          },
+          phone: me.profile.phone || '',
+          address: '',
+          city: barber?.city || '',
+          state: barber?.state || '',
+          zipCode: '',
           services,
-          stripeConnected: barberData?.stripe_account_status === 'active'
+          stripeConnected: !!(me.billing?.charges_enabled || me.billing?.fee_exempt),
         }));
 
-        // Set the location input to show the full address
+        const fullLocation = [barber?.city, barber?.state].filter(Boolean).join(', ');
         if (fullLocation) {
           setLocationInput(fullLocation);
-          setIsLocationAutofilled(true); // Mark as autofilled
+          setIsLocationAutofilled(true);
         }
 
-        // Only set Stripe status if they have actually started the Stripe Connect process
-        if (barberData?.stripe_account_id) {
-          setStripeStatus(barberData?.stripe_account_status || null);
+        if (me.billing?.details_submitted || me.billing?.charges_enabled) {
+          setStripeStatus(me.billing.charges_enabled ? 'active' : 'pending');
         } else {
           setStripeStatus(null);
         }
@@ -302,99 +179,14 @@ export default function BarberOnboardingPage() {
         return;
       }
 
-      // Check if onboarding is already complete
+      // Complete once business info and contact info are in (Stripe can come later).
       const checkOnboarding = async () => {
         try {
-          logger.debug('Onboarding page: Checking onboarding status for user', { userId: user.id });
-          
-          const { data: barber, error: barberError } = await supabase
-            .from('barbers')
-            .select('id, business_name, bio, specialties, stripe_account_status, stripe_account_id')
-            .eq('user_id', user.id)
-            .single();
-
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('phone, location')
-            .eq('id', user.id)
-            .single();
-
-          logger.debug('Onboarding page: Barber data', { hasBarber: !!barber });
-          logger.debug('Onboarding page: Profile data', { hasProfile: !!profile });
-
-          if (barberError && barberError.code !== 'PGRST116') {
-            logger.error('Error fetching barber profile', barberError);
-            return; // Stay on onboarding
-          }
-
-          if (profileError && profileError.code !== 'PGRST116') {
-            logger.error('Error fetching user profile', profileError);
-            return; // Stay on onboarding
-          }
-
-          // Check if all required fields are complete
-          const hasBusinessInfo = barber?.business_name && barber?.bio && barber?.specialties && barber.specialties.length > 0;
-          const hasContactInfo = profile?.phone && profile?.location;
-          // Don't require Stripe to be fully active to show onboarding
-          // const hasStripeAccount = barber?.stripe_account_status === 'active' && barber?.stripe_account_ready;
-
-          logger.debug('Onboarding page: Completion check', { 
-            hasBusinessInfo, 
-            hasContactInfo, 
-            businessName: barber?.business_name,
-            bio: barber?.bio,
-            specialties: barber?.specialties,
-            specialtiesLength: barber?.specialties?.length,
-            phone: profile?.phone,
-            location: profile?.location
-          });
-
-          // Calculate completion percentage
-          const totalFields = 6; // business_name, bio, specialties, phone, location, services
-          let completedFields = 0;
-          
-          if (barber?.business_name) completedFields++;
-          if (barber?.bio) completedFields++;
-          if (barber?.specialties && barber.specialties.length > 0) completedFields++;
-          if (profile?.phone) completedFields++;
-          if (profile?.location) completedFields++;
-          
-          // Check for services
-          if (barber?.id) {
-            const { data: services } = await supabase
-              .from('services')
-              .select('id')
-              .eq('barber_id', barber.id);
-            if (services && services.length > 0) completedFields++;
-          }
-          
-          const completionPercentage = (completedFields / totalFields) * 100;
-          
-          logger.debug('Onboarding page: Completion percentage', { 
-            completedFields, 
-            totalFields, 
-            completionPercentage 
-          });
-
-
-
-          // Only redirect if they have basic business and contact info
-          // Stripe setup can be done later
-          if (hasBusinessInfo && hasContactInfo) {
-            logger.debug('Onboarding page: Onboarding complete, but not auto-redirecting');
-            setOnboardingComplete(true);
-            // Don't auto-redirect - let user click button instead
-          } else {
-            logger.debug('Onboarding page: Onboarding incomplete, staying on page');
-            setOnboardingComplete(false);
-            logger.debug('Onboarding page: Missing fields', {
-              missingBusinessName: !barber?.business_name,
-              missingBio: !barber?.bio,
-              missingSpecialties: !barber?.specialties || barber?.specialties?.length === 0,
-              missingPhone: !profile?.phone,
-              missingLocation: !profile?.location
-            });
-          }
+          const me = await api.me.get();
+          const barber = me.barber;
+          const hasBusinessInfo = !!(barber?.business_name && barber?.bio && barber?.specialties?.length);
+          const hasContactInfo = !!(me.profile.phone && barber?.city && barber?.state);
+          setOnboardingComplete(!!barber?.onboarding_complete || (hasBusinessInfo && hasContactInfo));
         } catch (error) {
           logger.error('Error checking onboarding status', error);
         }
@@ -431,10 +223,8 @@ export default function BarberOnboardingPage() {
       // Business Information validation
       if (!formData.businessName.trim()) errors.businessName = 'Business name is required';
       if (!formData.phone.trim()) errors.phone = 'Phone number is required';
-      if (!formData.address.trim()) errors.address = 'Address is required';
-      if (!formData.city.trim()) errors.city = 'City is required';
-      if (!formData.state.trim()) errors.state = 'State is required';
-      if (!formData.zipCode.trim()) errors.zipCode = 'ZIP code is required';
+      // Only city and state are stored (the listing shows "City, ST"); pick a suggestion to fill them.
+      if (!formData.city.trim() || !formData.state.trim()) errors.address = 'Please choose your location from the suggestions';
       if (!formData.bio.trim()) errors.bio = 'Bio is required';
 
       // Phone validation (US default)
@@ -476,8 +266,8 @@ export default function BarberOnboardingPage() {
           if (!service.price || service.price <= 0) {
             errors[`service-${index}-price`] = 'Valid price is required';
           }
-          if (!service.duration || service.duration < 1) {
-            errors[`service-${index}-duration`] = 'Duration must be at least 1 minute';
+          if (!service.duration || service.duration < 5 || service.duration > 480) {
+            errors[`service-${index}-duration`] = 'Duration must be between 5 and 480 minutes';
           }
         });
       }
@@ -573,109 +363,46 @@ export default function BarberOnboardingPage() {
 
     setLoading(true)
     try {
-      logger.debug('Starting business profile update', { formData });
-
-      // Single upsert operation for barber profile
-      if (user?.role === 'barber') {
-        const { data: sessionData } = await supabase.auth.getSession();
-        logger.debug('Current session user id', { sessionUserId: sessionData?.session?.user?.id });
-        logger.debug('user_id to upsert', { userId: user.id });
-        
-        // Check if barber row exists
-        const { data: existingBarber, error: checkError } = await supabase
-          .from('barbers')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (existingBarber) {
-          logger.debug('Barber row already exists for user_id, updating', { userId: user.id });
-        } else {
-          logger.debug('Creating new barber row for user_id', { userId: user.id });
-        }
-
-        const { error: upsertError } = await supabase
-          .from('barbers')
-          .upsert({
-            user_id: user.id,
-            business_name: formData.businessName,
-            bio: formData.bio,
-            specialties: formData.specialties,
-            city: formData.city,
-            state: formData.state,
-            instagram: extractHandle(formData.socialMedia.instagram),
-            twitter: extractHandle(formData.socialMedia.twitter),
-            tiktok: extractHandle(formData.socialMedia.tiktok),
-            facebook: extractHandle(formData.socialMedia.facebook),
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id' });
-
-        if (upsertError) {
-          logger.error('Failed to upsert barber profile during onboarding', upsertError);
-          throw upsertError;
-        }
+      const handle = (v: string) => (v ? extractHandle(v).replace(/^@/, '') : null)
+      const isLastStep = currentStep >= steps.length - 1
+      let browserTimeZone: string | undefined
+      try {
+        browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+      } catch {
+        browserTimeZone = undefined
       }
 
-      // Update phone and location in profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          phone: formData.phone,
-          location: `${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user?.id)
+      // PATCH /api/me: profile + barber listing (the server geocodes city/state).
+      await api.me.update({
+        phone: formData.phone || null,
+        businessName: formData.businessName || null,
+        bio: formData.bio || null,
+        specialties: formData.specialties,
+        city: formData.city || null,
+        state: formData.state || null,
+        instagram: handle(formData.socialMedia.instagram),
+        tiktok: handle(formData.socialMedia.tiktok),
+        ...(browserTimeZone ? { timezone: browserTimeZone } : {}),
+        ...(isLastStep ? { onboardingComplete: true } : {}),
+      })
 
-      if (profileError) {
-        logger.error('Profile update error', profileError);
-        throw profileError;
-      }
-
-      // Add services
-      if (formData.services.length > 0 && user) {
-        // Fetch the correct barber_id for this user
-        const { data: barberRow, error: barberIdError } = await supabase
-          .from('barbers')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (barberIdError || !barberRow) {
-          logger.error('Could not fetch barber id for service insert', barberIdError);
-          throw barberIdError || new Error('No barber row found');
+      // Sync services: update existing, create new, remove dropped (removal
+      // deactivates a service that bookings reference).
+      if (user) {
+        const { services: existing } = await api.services.list()
+        const keep = new Set(formData.services.map((s) => s.id).filter(Boolean))
+        for (const service of formData.services) {
+          const body = {
+            name: service.name.trim(),
+            priceCents: Math.round(service.price * 100),
+            durationMinutes: Math.round(service.duration),
+          }
+          if (service.id) await api.services.update(service.id, { ...body, isActive: true })
+          else await api.services.create(body)
         }
-        
-        const barberId = barberRow.id;
-        logger.debug('Adding services', { count: formData.services.length });
-        
-        // Delete all existing services for this barber before inserting new ones
-        const { error: deleteError } = await supabase
-          .from('services')
-          .delete()
-          .eq('barber_id', barberId);
-        
-        if (deleteError) {
-          logger.error('Error deleting existing services', deleteError);
-          throw deleteError;
+        for (const old of existing) {
+          if (old.is_active && !keep.has(old.id)) await api.services.remove(old.id)
         }
-        
-        // Now insert the new/updated services
-        const { error: servicesError } = await supabase
-          .from('services')
-          .insert(
-            formData.services.map(service => ({
-              barber_id: barberId,
-              name: service.name,
-              price: service.price,
-              duration: service.duration,
-            }))
-          );
-        
-        if (servicesError) {
-          logger.error('Services creation error', servicesError);
-          throw servicesError;
-        }
-        logger.debug('Services added successfully');
       }
 
       toast({
@@ -695,7 +422,7 @@ export default function BarberOnboardingPage() {
       logger.error('Error updating profile', error)
       toast({
         title: 'Error',
-        description: 'Failed to update profile. Please try again.',
+        description: errorMessage(error, 'Failed to update profile. Please try again.'),
         variant: 'destructive',
       })
     } finally {
@@ -707,96 +434,26 @@ export default function BarberOnboardingPage() {
     try {
       setLoading(true);
       
-      // Fetch the correct barber.id for this user
-      const { data: barber, error: barberError } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
-        
-      if (barberError || !barber?.id) {
+      // GET /api/stripe/connect/status refreshes the flags from Stripe.
+      const status = await api.connect.status();
+      if (status.feeExempt || status.chargesEnabled) {
+        setFormData(prev => ({ ...prev, stripeConnected: true }));
+        setStripeStatus('active');
         toast({
-          title: 'Error',
-          description: 'Could not find your barber profile. Please complete your business info first.',
-          variant: 'destructive',
+          title: 'Stripe Account Active',
+          description: 'Your Stripe account is already active and ready to accept payments!',
         });
         return;
       }
 
-      // First, check if there's already a Stripe account and refresh its status
-      const refreshResponse = await fetch('/api/connect/refresh-account-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: user?.id }),
-      });
-
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json();
-        
-        if (refreshData.success && refreshData.data.hasStripeAccount) {
-          setFormData(prev => ({ ...prev, stripeConnected: true }));
-          setStripeStatus(refreshData.data.currentStatus);
-          
-          if (refreshData.data.currentStatus === 'active') {
-            toast({
-              title: 'Stripe Account Active',
-              description: 'Your Stripe account is already active and ready to accept payments!',
-            });
-            return;
-          } else if (refreshData.data.currentStatus === 'pending') {
-            toast({
-              title: 'Account Pending',
-              description: 'Your Stripe account is being reviewed. This usually takes 1-2 business days.',
-            });
-            return;
-          }
-        }
-      }
-
-      // Get barber's email and name
-      if (!user?.email || !user?.name) {
-        toast({
-          title: 'Error',
-          description: 'Could not fetch your profile information. Please try again.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Create Stripe Connect account
-      const response = await fetch('/api/connect/create-account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          barberId: barber.id,
-          email: user.email,
-          name: user.name,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create Stripe account');
-      }
-
-      const data = await response.json();
-      const redirectUrl = data.url || data.accountLink;
-      
-      if (!redirectUrl) {
-        throw new Error('No redirect URL received from Stripe');
-      }
-
-      // Redirect to Stripe
-      window.location.href = redirectUrl;
+      // POST /api/stripe/connect/onboarding creates the Express account if needed.
+      const { url } = await api.connect.onboarding();
+      window.location.href = url;
     } catch (error) {
       logger.error('Error connecting Stripe', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to connect Stripe account. Please try again.',
+        description: errorMessage(error, 'Failed to connect Stripe account. Please try again.'),
         variant: 'destructive',
       });
     } finally {

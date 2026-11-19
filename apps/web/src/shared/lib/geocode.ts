@@ -1,86 +1,70 @@
-// Geocoding helpers — backed by Google Maps Platform (Places API + Geocoding API)
-// All requests go through the /api/nominatim server-side proxy to keep the API key safe.
-import { logger } from './logger';
+// Geocoding helpers backed by GET /api/geocode (Google Maps, US only, signed-in
+// users only; the API key stays on the server). Each helper returns an empty
+// result instead of throwing (signed out, rate limited, or not configured).
+import type { GeocodeResult } from '@barber-app/shared'
+import { api } from './api'
+import { logger } from './logger'
 
-export async function geocodeAddress(address: string): Promise<{ lat: number, lon: number } | null> {
-  if (typeof window === 'undefined') return null;
-  const url = `/api/nominatim?type=geocode&q=${encodeURIComponent(address)}`;
+export type { GeocodeResult }
+
+export async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
+  if (typeof window === 'undefined' || !address.trim()) return null
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-    if (Array.isArray(data) && data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-    }
-    return null;
+    const results = await api.geocode.search({ q: address })
+    return results.length > 0 ? { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) } : null
   } catch (error) {
-    logger.error('Error geocoding address', error);
-    return null;
+    logger.error('Error geocoding address', error)
+    return null
   }
 }
 
-/** Address autocomplete suggestions (Google Places Autocomplete) */
+/** Address autocomplete suggestions. */
 export async function getAddressSuggestions(
   query: string
 ): Promise<Array<{ name: string; city?: string; country?: string; lat: number; lon: number }>> {
-  if (typeof window === 'undefined') return [];
-  if (!query || query.length < 3) return [];
-  const url = `/api/nominatim?q=${encodeURIComponent(query)}`;
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    return (data || []).map((item: any) => ({
-      name: item.display_name,
-      city: item.address?.city,
-      country: item.address?.country,
-      lat: parseFloat(item.lat),
-      lon: parseFloat(item.lon),
-    }));
-  } catch (error) {
-    logger.error('Error fetching address suggestions', error);
-    return [];
-  }
+  const results = await getAddressSuggestionsDetailed(query)
+  return results.map((item) => ({
+    name: item.display_name,
+    city: item.address?.city,
+    country: item.address?.country,
+    lat: parseFloat(item.lat),
+    lon: parseFloat(item.lon),
+  }))
 }
 
-/**
- * Address autocomplete suggestions — returns raw normalized objects including
- * the full `address` component map (house_number, road, city, state, etc.)
- * from Google Places / Geocoding API.
- */
-export async function getAddressSuggestionsDetailed(query: string): Promise<Array<any>> {
-  if (typeof window === 'undefined') return [];
-  if (!query || query.length < 3) return [];
-  const url = `/api/nominatim?q=${encodeURIComponent(query)}`;
+/** Autocomplete results with the full address map (house_number, road, city, state, postcode, country). */
+export async function getAddressSuggestionsDetailed(query: string): Promise<GeocodeResult[]> {
+  if (typeof window === 'undefined') return []
+  if (!query || query.trim().length < 3) return []
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-    return data || [];
+    return await api.geocode.autocomplete(query.trim())
   } catch (error) {
-    logger.error('Error fetching address suggestions', error);
-    return [];
+    logger.error('Error fetching address suggestions', error)
+    return []
   }
 }
-
-/**
- * @deprecated Use `getAddressSuggestionsDetailed` instead.
- * Kept for backward compatibility.
- */
-export const getAddressSuggestionsNominatim = getAddressSuggestionsDetailed;
 
 export async function reverseGeocode(
   lat: number,
   lon: number
-): Promise<{ name: string; city?: string; country?: string } | null> {
-  if (typeof window === 'undefined') return null;
-  const url = `/api/nominatim?type=reverse&latlng=${lat},${lon}`;
+): Promise<{ name: string; city?: string; state?: string; country?: string } | null> {
+  if (typeof window === 'undefined') return null
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-    if (data && data.name) {
-      return { name: data.name, city: data.city, country: data.country };
-    }
-    return null;
+    return await api.geocode.reverse(lat, lon)
   } catch (error) {
-    logger.error('Error reverse geocoding', error);
-    return null;
+    logger.error('Error reverse geocoding', error)
+    return null
   }
+}
+
+/** City and state from a geocoding result, or from a "…, City, ST" string. */
+export function cityStateOf(input: GeocodeResult | string | null | undefined): { city: string | null; state: string | null } {
+  if (!input) return { city: null, state: null }
+  if (typeof input !== 'string') {
+    const a = input.address || {}
+    return { city: a.city || a.town || a.village || null, state: a.state || null }
+  }
+  const parts = input.split(',').map((p) => p.trim()).filter(Boolean)
+  if (parts.length >= 2) return { city: parts[parts.length - 2], state: parts[parts.length - 1] }
+  return { city: parts[0] ?? null, state: null }
 }

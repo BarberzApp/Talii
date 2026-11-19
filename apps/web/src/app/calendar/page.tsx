@@ -10,7 +10,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, DollarSign, Grid, Calendar, Scissors, Mail, Phone } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-import { supabase } from '@/shared/lib/supabase';
+import { api } from '@/shared/lib/api';
+import type { BookingListItem } from '@barber-app/shared';
 import { useAuth } from '@/shared/hooks/use-auth-zustand';
 import { logger } from '@/shared/lib/logger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog';
@@ -40,6 +41,35 @@ interface CalendarEvent {
   };
 }
 
+/** Prices in dollars for display; times are instants (FullCalendar shows them in the browser zone). */
+function toEvent(booking: BookingListItem, isBarberView: boolean): CalendarEvent {
+  const clientName = booking.client?.name || booking.customer_name || 'Walk-in';
+  const barberName = booking.barber?.profile?.name || booking.barber?.business_name || 'Barber';
+  const serviceName = booking.service?.name || 'Service';
+  return {
+    id: booking.id,
+    title: isBarberView ? `${serviceName} - ${clientName}` : `${serviceName} with ${barberName}`,
+    start: booking.starts_at,
+    end: booking.ends_at,
+    backgroundColor: 'hsl(var(--secondary))',
+    borderColor: 'hsl(var(--secondary))',
+    textColor: '#FFFFFF',
+    extendedProps: {
+      status: booking.status,
+      serviceName,
+      clientName: isBarberView ? clientName : undefined,
+      barberName: isBarberView ? undefined : barberName,
+      price: (booking.service_price_cents + booking.addon_total_cents) / 100,
+      basePrice: booking.service_price_cents / 100,
+      addons: booking.addons.map((a) => ({ name: a.name, price: a.price_cents / 100 })),
+      isGuest: !booking.client_id,
+      guestEmail: '',
+      guestPhone: '',
+      isBarberView,
+    },
+  };
+}
+
 export default function BarberCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const calendarRef = useRef<FullCalendar>(null);
@@ -64,181 +94,16 @@ export default function BarberCalendar() {
     const fetchBookings = async () => {
       setLoading(true);
       try {
-        // First, check if user is a barber
-        const { data: barberData, error: barberError } = await supabase
-          .from('barbers')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (barberData && !barberError) {
-          // User is a barber - fetch their appointments
-          setUserRole('barber');
-          logger.debug('User is a barber, fetching barber appointments');
-          
-          const { data: bookings, error } = await supabase
-            .from('bookings')
-            .select('*')
-            .eq('barber_id', barberData.id)
-            .eq('payment_status', 'succeeded') // Only show successful payments
-            .order('date', { ascending: true });
-          
-          if (error || !bookings) {
-            logger.error('Error fetching barber bookings', error);
-            setEvents([]);
-            return;
-          }
-          
-          // For each booking, fetch the related service and client
-          const events = await Promise.all(bookings.map(async (booking) => {
-            // Fetch service
-            const { data: service } = await supabase
-              .from('services')
-              .select('name, duration, price')
-              .eq('id', booking.service_id)
-              .single();
-            
-            // Fetch client
-            let client = null;
-            if (booking.client_id) {
-              const { data: clientData } = await supabase
-                .from('profiles')
-                .select('name')
-                .eq('id', booking.client_id)
-                .single();
-              client = clientData;
-            }
-            
-            // Fetch add-ons for this booking
-            let addonTotal = 0;
-            let addonList: { name: string; price: number }[] = [];
-            const { data: bookingAddons, error: bookingAddonsError } = await supabase
-              .from('booking_addons')
-              .select('addon_id')
-              .eq('booking_id', booking.id);
-            if (!bookingAddonsError && bookingAddons && bookingAddons.length > 0) {
-              const addonIds = bookingAddons.map((ba) => ba.addon_id);
-              const { data: addons, error: addonsError } = await supabase
-                .from('service_addons')
-                .select('id, name, price')
-                .in('id', addonIds);
-              if (!addonsError && addons) {
-                addonTotal = addons.reduce((sum, addon) => sum + (addon.price || 0), 0);
-                addonList = addons.map(a => ({ name: a.name, price: a.price }));
-              }
-            }
-            
-            const startDate = new Date(booking.date);
-            const endDate = new Date(startDate.getTime() + (service?.duration || 60) * 60000);
-            
-            return {
-              id: booking.id,
-              title: `${service?.name || 'Service'} - ${client?.name || booking.guest_name || 'Guest'}`,
-              start: startDate.toISOString(),
-              end: endDate.toISOString(),
-              backgroundColor: 'hsl(var(--secondary))',
-              borderColor: 'hsl(var(--secondary))',
-              textColor: '#FFFFFF',
-              extendedProps: {
-                status: booking.status,
-                serviceName: service?.name || '',
-                clientName: client?.name || booking.guest_name || 'Guest',
-                price: (service?.price || booking.price || 0) + addonTotal,
-                basePrice: service?.price || booking.price || 0,
-                addons: addonList,
-                isGuest: !client,
-                guestEmail: booking.guest_email,
-                guestPhone: booking.guest_phone,
-                isBarberView: true
-              }
-            };
-          }));
-          
-          setEvents(events);
-        } else {
-          // User is a client - fetch their appointments
-          setUserRole('client');
-          logger.debug('User is a client, fetching client appointments', { userId: user.id });
-          
-          const { data: bookings, error } = await supabase
-            .from('bookings')
-            .select(`
-              *,
-              barbers:barber_id(
-                id,
-                user_id,
-                profiles:user_id(name, avatar_url)
-              ),
-              services:service_id(name, duration, price)
-            `)
-            .eq('client_id', user.id)
-            .eq('payment_status', 'succeeded') // Only show successful payments
-            .order('date', { ascending: true });
-          
-          logger.debug('Client bookings query result', { count: bookings?.length, error });
-          
-          if (error || !bookings) {
-            logger.error('Error fetching client bookings', error);
-            setEvents([]);
-            return;
-          }
-          
-          logger.debug(`Found ${bookings.length} bookings for client`);
-          
-          // For each booking, fetch add-ons
-          const events = await Promise.all(bookings.map(async (booking, index) => {
-            logger.debug(`Processing booking ${index + 1}`, { bookingId: booking.id });
-            
-            // Fetch add-ons for this booking
-            let addonTotal = 0;
-            let addonList: { name: string; price: number }[] = [];
-            const { data: bookingAddons, error: bookingAddonsError } = await supabase
-              .from('booking_addons')
-              .select('addon_id')
-              .eq('booking_id', booking.id);
-            if (!bookingAddonsError && bookingAddons && bookingAddons.length > 0) {
-              const addonIds = bookingAddons.map((ba) => ba.addon_id);
-              const { data: addons, error: addonsError } = await supabase
-                .from('service_addons')
-                .select('id, name, price')
-                .in('id', addonIds);
-              if (!addonsError && addons) {
-                addonTotal = addons.reduce((sum, addon) => sum + (addon.price || 0), 0);
-                addonList = addons.map(a => ({ name: a.name, price: a.price }));
-              }
-            }
-            
-            const startDate = new Date(booking.date);
-            const endDate = new Date(startDate.getTime() + (booking.services?.duration || 60) * 60000);
-            
-            const event = {
-              id: booking.id,
-              title: `${booking.services?.name || 'Service'} with ${booking.barbers?.profiles?.name || 'Barber'}`,
-              start: startDate.toISOString(),
-              end: endDate.toISOString(),
-              backgroundColor: 'hsl(var(--secondary))',
-              borderColor: 'hsl(var(--secondary))',
-              textColor: '#FFFFFF',
-              extendedProps: {
-                status: booking.status,
-                serviceName: booking.services?.name || '',
-                barberName: booking.barbers?.profiles?.name || 'Barber',
-                price: (booking.services?.price || booking.price || 0) + addonTotal,
-                basePrice: booking.services?.price || booking.price || 0,
-                addons: addonList,
-                isGuest: false,
-                guestEmail: booking.guest_email,
-                guestPhone: booking.guest_phone,
-                isBarberView: false
-              }
-            };
-            
-            return event;
-          }));
-          
-          logger.debug(`Final events array: ${events.length} events`);
-          setEvents(events);
-        }
+        const isBarber = user.role === 'barber';
+        setUserRole(isBarber ? 'barber' : 'client');
+        // Paid or fee-free bookings that are booked (no unpaid holds).
+        const { bookings } = await api.bookings.list({
+          as: isBarber ? 'barber' : 'client',
+          status: ['confirmed', 'completed', 'no_show'],
+          order: 'asc',
+          limit: 100,
+        });
+        setEvents(bookings.map((booking) => toEvent(booking, isBarber)));
       } catch (error) {
         logger.error('Error fetching bookings', error);
         setEvents([]);

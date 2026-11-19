@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MapPin, Clock, Car, Sparkles, CheckCircle, User } from 'lucide-react';
+import { api, errorMessage } from '@/shared/lib/api';
 
 const deliverySteps = [
   {
@@ -57,19 +58,11 @@ export default function ReachPage() {
       return;
     }
     try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (res.ok) {
-        setSubmitted(true);
-        setEmail('');
-      } else {
-        setError('Failed to join waitlist. Please try again.');
-      }
-    } catch {
-      setError('Failed to join waitlist. Please try again.');
+      await api.waitlist.join(email);
+      setSubmitted(true);
+      setEmail('');
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to join waitlist. Please try again.'));
     }
   };
 

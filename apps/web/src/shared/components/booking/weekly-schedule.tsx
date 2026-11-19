@@ -6,7 +6,7 @@ import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Plus, Trash2, Save, Clock, Calendar, Sparkles, Loader2 } from 'lucide-react'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
 import { logger } from '@/shared/lib/logger'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -14,7 +14,7 @@ import { cn } from '@/shared/lib/utils'
 
 interface Availability {
   id?: string
-  barber_id: string
+  barber_id?: string
   day_of_week: number
   start_time: string
   end_time: string
@@ -43,8 +43,8 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
         return {
           barber_id: barberId,
           day_of_week: index,
-          start_time: existingDay?.start_time || '',
-          end_time: existingDay?.end_time || '',
+          start_time: existingDay?.start_time?.slice(0, 5) || '',
+          end_time: existingDay?.end_time?.slice(0, 5) || '',
           isAvailable: !!(existingDay?.start_time && existingDay?.end_time)
         }
       })
@@ -113,22 +113,14 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
         return;
       }
 
-      // Delete existing availability first
-      await supabase.from('availability').delete().eq('barber_id', barberId)
-
-      // Insert new availability
-      const { error } = await supabase
-        .from('availability')
-        .insert(
-          validSlots.map(slot => ({
-            barber_id: barberId,
-            day_of_week: slot.day_of_week,
-            start_time: slot.start_time,
-            end_time: slot.end_time
-          }))
-        );
-
-      if (error) throw error;
+      // PUT /api/me/availability replaces the whole week in one transaction.
+      await api.schedule.replaceWeek(
+        validSlots.map(slot => ({
+          dayOfWeek: slot.day_of_week,
+          startTime: slot.start_time.slice(0, 5),
+          endTime: slot.end_time.slice(0, 5),
+        }))
+      );
 
       toast({
         title: "Success",
@@ -141,7 +133,7 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
       logger.error('Error saving availability', error);
       toast({
         title: "Error",
-        description: "Failed to save schedule",
+        description: errorMessage(error, "Failed to save schedule"),
         variant: "destructive",
       });
     } finally {

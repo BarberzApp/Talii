@@ -15,7 +15,7 @@ import { Switch } from '@/shared/components/ui/switch'
 import { Separator } from '@/shared/components/ui/separator'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { 
   MapPin, 
@@ -39,7 +39,7 @@ import {
 // import { BrowseIntegrationGuide } from './browse-integration-guide' // Removed
 import { BARBER_SPECIALTIES } from '@/shared/constants/specialties'
 import { SpecialtyAutocomplete } from '@/shared/components/ui/specialty-autocomplete'
-import { geocodeAddress, getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
+import { cityStateOf, getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { logger } from '@/shared/lib/logger'
 
@@ -50,19 +50,14 @@ const barberProfileSchema = z.object({
   businessName: z.string().min(2, 'Business name must be at least 2 characters'),
   bio: z.string().max(500, 'Bio must be less than 500 characters'),
   location: z.string().min(2, 'Location is required'),
-  phone: z.string().min(10, 'Please enter a valid phone number'),
+  phone: z.string().min(7, 'Please enter a valid phone number'),
   
   // Professional Info
   specialties: z.array(z.string()).min(1, 'Select at least one specialty'),
-  priceRange: z.enum(['Budget ($15-$30)', 'Mid-range ($30-$60)', 'Premium ($60+)'], {
-    required_error: 'Please select a price range'
-  }),
   
   // Social Media
   instagram: z.string().optional().or(z.literal('')),
-  twitter: z.string().optional().or(z.literal('')),
   tiktok: z.string().optional().or(z.literal('')),
-  facebook: z.string().optional().or(z.literal('')),
   
   // Visibility
   isPublic: z.boolean(),
@@ -126,11 +121,8 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
       location: '',
       phone: '',
       specialties: [],
-      priceRange: 'Mid-range ($30-$60)',
       instagram: '',
-      twitter: '',
       tiktok: '',
-      facebook: '',
       isPublic: true,
     },
   })
@@ -238,54 +230,28 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
       setLoading(true)
       logger.debug('Loading barber profile for user', { userId: user.id })
 
-      // Fetch profile data
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+      const me = await api.me.get()
+      const profile = me.profile
+      const barber = me.barber
+      if (!barber) throw new Error('No barber profile')
+      const location = [barber.city, barber.state].filter(Boolean).join(', ')
 
-      if (profileError) {
-        logger.error('Profile fetch error', profileError)
-        throw profileError
-      }
-
-      logger.debug('Profile data loaded', { userId: profile?.id })
-
-      // Fetch barber data
-      const { data: barber, error: barberError } = await supabase
-        .from('barbers')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-
-      if (barberError) {
-        logger.error('Barber fetch error', barberError)
-        throw barberError
-      }
-
-      logger.debug('Barber data loaded', { barberId: barber?.id })
-
-      // Update form with fetched data
       const formData = {
         name: profile.name || '',
         username: profile.username || '',
         businessName: barber.business_name || '',
-        bio: barber.bio || profile.bio || '',
-        location: profile.location || '',
+        bio: barber.bio || '',
+        location,
         phone: profile.phone || '',
         specialties: barber.specialties || [],
-        priceRange: barber.price_range || 'Mid-range ($30-$60)',
         instagram: barber.instagram || '',
-        twitter: barber.twitter || '',
         tiktok: barber.tiktok || '',
-        facebook: barber.facebook || '',
-        isPublic: profile.is_public ?? true,
+        isPublic: barber.is_public,
       }
 
       logger.debug('Setting form data', { hasData: !!formData.name })
       form.reset(formData)
-      setLocationInput(profile.location || '');
+      setLocationInput(location);
 
     } catch (error) {
       logger.error('Error loading barber profile', error)
@@ -302,11 +268,11 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
   const onSubmit = async (data: BarberProfileFormData) => {
     if (!user) return
 
-    // Validate location before submit
-    // Validate and geocode via Google Places API
+    // City and state from the chosen suggestion (or the typed "City, ST"); the
+    // API geocodes them for nearby search.
     const geoSuggestions = await getAddressSuggestionsDetailed(data.location);
-    const geo = geoSuggestions && geoSuggestions.length > 0 ? { lat: parseFloat(geoSuggestions[0].lat), lon: parseFloat(geoSuggestions[0].lon) } : null;
-    if (!geo) {
+    const { city, state } = cityStateOf(geoSuggestions[0] ?? data.location)
+    if (!city || !state) {
       toast({
         title: 'Invalid location',
         description: 'Please enter a valid place from the suggestions.',
@@ -314,56 +280,30 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
       })
       return;
     }
-    let lat = geo.lat, lon = geo.lon
 
     try {
       setLoading(true)
 
-      // If the location is not already formatted, reformat it from the geo suggestion
-      let formattedLocation = data.location;
-      if (geoSuggestions && geoSuggestions.length > 0) {
-        const address = geoSuggestions[0].address || {};
-        const house = address.house_number || '';
-        const road = address.road || '';
-        const city = address.city || address.town || address.village || address.hamlet || '';
-        const state = address.state || address.state_code || '';
-        const line1 = [house, road].filter(Boolean).join(' ');
-        const line2 = [city, state].filter(Boolean).join(', ');
-        formattedLocation = [line1, line2].filter(Boolean).join(', ');
+      const result = await api.me.update({
+        name: data.name,
+        username: data.username,
+        phone: data.phone,
+        businessName: data.businessName,
+        bio: data.bio,
+        specialties: data.specialties,
+        instagram: extractHandle(data.instagram || '') || null,
+        tiktok: extractHandle(data.tiktok || '') || null,
+        city,
+        state,
+        isPublic: data.isPublic,
+      })
+      if (result.location && !result.location.geocoded) {
+        toast({
+          title: 'Location not found',
+          description: 'Saved, but we could not place your city on the map, so you will not appear in nearby search yet.',
+          variant: 'destructive',
+        })
       }
-      // Update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          phone: data.phone,
-          is_public: data.isPublic,
-          location: formattedLocation,
-          name: data.name,
-          username: data.username,
-        })
-        .eq('id', user.id)
-
-      if (profileError) throw profileError
-
-      // Update barber profile
-      const { error: barberError } = await supabase
-        .from('barbers')
-        .update({
-          business_name: data.businessName,
-          bio: data.bio,
-          specialties: data.specialties,
-          price_range: data.priceRange,
-          instagram: extractHandle(data.instagram || ''),
-          twitter: extractHandle(data.twitter || ''),
-          tiktok: extractHandle(data.tiktok || ''),
-          facebook: extractHandle(data.facebook || ''),
-          latitude: lat,
-          longitude: lon,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
-
-      if (barberError) throw barberError
 
       toast({
         title: 'Success',
@@ -376,7 +316,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
       logger.error('Error updating profile', error)
       toast({
         title: 'Error',
-        description: 'Failed to update profile',
+        description: errorMessage(error, 'Failed to update profile'),
         variant: 'destructive',
       })
     } finally {
@@ -609,36 +549,6 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="priceRange"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-foreground font-semibold">Price Range *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200">
-                            <SelectValue placeholder="Select your price range" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-gradient-to-br from-white/10 to-white/5 dark:from-white/10 dark:to-white/5 backdrop-blur-2xl border-black/10 dark:border-white/20 rounded-2xl shadow-2xl p-2 text-foreground">
-                          {PRICE_RANGES.map((range) => (
-                            <SelectItem key={range.value} value={range.value} className="flex items-center justify-between px-4 py-3 hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer mb-1 last:mb-0">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-base">{range.label}</span>
-                                <span className="text-xs text-foreground/50 font-medium">Standard pricing for this tier</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        This helps clients understand your pricing tier and appears in search filters.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <Separator className="bg-white/20" />
@@ -677,25 +587,6 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="twitter"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-foreground font-semibold">
-                          <Twitter className="h-4 w-4 text-[#1DA1F2]" />
-                          Twitter/X
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
-                        </FormControl>
-                        <FormDescription className="text-foreground/60">
-                          Only your handle (e.g., @yourusername)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <FormField
                     control={form.control}
@@ -717,25 +608,6 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="facebook"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-foreground font-semibold">
-                          <Facebook className="h-4 w-4 text-[#1877F3]" />
-                          Facebook
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="yourpagename" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
-                        </FormControl>
-                        <FormDescription className="text-foreground/60">
-                          Only your page name (e.g., yourpagename)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
               </div>
 

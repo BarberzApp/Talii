@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
+import { uploadImage } from '@/shared/lib/uploads'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Button } from '@/shared/components/ui/button'
@@ -21,7 +23,7 @@ import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { logger } from '@/shared/lib/logger'
-import { getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
+import { cityStateOf, getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
 
 interface ProfileFormData {
   name: string
@@ -85,7 +87,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
   const router = useRouter()
   const { push: safePush } = useSafeNavigation();
   const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<ProfileFormData>()
-  const [isDeveloper, setIsDeveloper] = useState(false)
 
   // Location autocomplete state
   const [locationInput, setLocationInput] = useState('');
@@ -231,97 +232,40 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     if (!user) return
 
     try {
-      // Fetch profile data
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError) throw profileError
-
-      // Check if user is a barber
-      if (profile?.role === 'barber') {
-        setIsBarber(true)
-        const { data: barber, error: barberError } = await supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-
-        if (barberError) {
-          logger.error('Error fetching barber profile', barberError)
-          safePush('/barber/onboarding');
-          return;
-        }
-        if (barber) {
-          setBarberId(barber.id)
-          // Use barber's bio if available, otherwise use profile's bio
-          // Parse location into separate fields
-          const parsedLocation = parseLocation(profile.location || '');
-          setAddressFields(parsedLocation);
-          
-          reset({
-            name: profile.name || '',
-            username: profile.username || '',
-            email: profile.email || '',
-            phone: profile.phone || '',
-            bio: barber.bio || profile.bio || '',
-            location: profile.location || '',
-            description: profile.description || '',
-            specialties: barber.specialties || [],
-            businessName: barber.business_name || '',
-            isPublic: profile.is_public || false,
-            socialMedia: {
-              instagram: barber.instagram || '',
-              twitter: barber.twitter || '',
-              tiktok: barber.tiktok || '',
-              facebook: barber.facebook || ''
-            },
-          })
-        }
-      } else {
-        // For non-barbers, just use profile data
-        // Parse location into separate fields
-        const parsedLocation = parseLocation(profile.location || '');
-        setAddressFields(parsedLocation);
-        
-          reset({
-            name: profile.name || '',
-            username: profile.username || '',
-            email: profile.email || '',
-            phone: profile.phone || '',
-          bio: profile.bio || '',
-          location: profile.location || '',
-          description: profile.description || '',
-          specialties: [],
-          businessName: '',
-          isPublic: profile.is_public || false,
-          socialMedia: {
-            instagram: '',
-            twitter: '',
-            tiktok: '',
-            facebook: ''
-          },
-        })
+      const me = await api.me.get()
+      const profile = me.profile
+      const barber = profile.role === 'barber' ? me.barber : null
+      if (profile.role === 'barber' && !barber) {
+        safePush('/barber/onboarding')
+        return
       }
+      setIsBarber(!!barber)
+      setBarberId(barber?.id ?? null)
+      // Barbers have a city/state on their listing; profiles have no location.
+      const location = barber ? [barber.city, barber.state].filter(Boolean).join(', ') : ''
+      setAddressFields(parseLocation(location))
 
-      // Set avatar URL if exists
+      reset({
+        name: profile.name || '',
+        username: profile.username || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        bio: barber?.bio || '',
+        location,
+        description: '',
+        specialties: barber?.specialties || [],
+        businessName: barber?.business_name || '',
+        isPublic: barber?.is_public ?? false,
+        socialMedia: {
+          instagram: barber?.instagram || '',
+          twitter: '',
+          tiktok: barber?.tiktok || '',
+          facebook: '',
+        },
+      })
+
       if (profile.avatar_url) {
         setAvatarUrl(profile.avatar_url)
-      }
-
-      // Fetch is_developer from barbers table
-      if (user?.role === 'barber') {
-        const { data } = await supabase
-          .from('barbers')
-          .select('is_developer')
-          .eq('user_id', user.id)
-          .single()
-
-        if (data && typeof data.is_developer === 'boolean') {
-          setIsDeveloper(data.is_developer)
-        }
       }
     } catch (error) {
       logger.error('Error fetching profile', error)
@@ -372,24 +316,9 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       }
 
       setIsLoading(true)
-      // Upload to Supabase Storage with timeout
       await withTimeout((async () => {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${user?.id}-${Date.now()}.${fileExt}`
-        const { data, error } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, file)
-        if (error) throw error
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(fileName)
-        // Update profile with new avatar URL
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ avatar_url: publicUrl })
-          .eq('id', user?.id)
-        if (updateError) throw updateError
+        const publicUrl = await uploadImage(file, 'avatars')
+        await api.me.update({ avatarUrl: publicUrl })
         setAvatarUrl(publicUrl)
         toast({
           title: 'Success',
@@ -425,36 +354,28 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     try {
       setIsLoading(true)
       await withTimeout((async () => {
-        // Update profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            name: data.name,
-            username: data.username,
-            email: data.email,
-            phone: data.phone,
-            bio: data.bio,
-            location: combineAddressFields(addressFields), // Combine address fields
-            description: data.description,
-            is_public: data.isPublic,
-          })
-          .eq('id', user?.id)
-        if (profileError) throw profileError
-        // Update barber data if user is a barber
-        if (isBarber && barberId) {
-          const { error: barberError } = await supabase
-            .from('barbers')
-            .update({
-              business_name: data.businessName,
-              bio: data.bio,
-              specialties: data.specialties,
-              instagram: extractHandle(data.socialMedia.instagram),
-              twitter: extractHandle(data.socialMedia.twitter),
-              tiktok: extractHandle(data.socialMedia.tiktok),
-              facebook: extractHandle(data.socialMedia.facebook),
-            })
-            .eq('id', barberId)
-          if (barberError) throw barberError
+        const handle = (v: string) => (v ? extractHandle(v).replace(/^@/, '') : null)
+        const { city, state } = cityStateOf(locationInput || combineAddressFields(addressFields))
+        await api.me.update({
+          name: data.name,
+          username: data.username,
+          phone: data.phone || null,
+          ...(isBarber && barberId
+            ? {
+                businessName: data.businessName || null,
+                bio: data.bio || null,
+                specialties: data.specialties,
+                instagram: handle(data.socialMedia.instagram),
+                tiktok: handle(data.socialMedia.tiktok),
+                ...(city && state ? { city, state } : {}),
+              }
+            : {}),
+        })
+        // The email is an auth setting: Supabase sends a confirmation link to the new address.
+        if (data.email && user?.email && data.email.trim().toLowerCase() !== user.email.toLowerCase()) {
+          const { error: emailError } = await supabase.auth.updateUser({ email: data.email.trim() })
+          if (emailError) throw emailError
+          toast({ title: 'Check your inbox', description: 'Confirm your new email address with the link we sent.' })
         }
         toast({
           title: 'Success',
@@ -469,22 +390,12 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
         logger.error('Error updating profile', error)
         toast({
           title: 'Error',
-          description: 'Failed to update profile. Please try again.',
+          description: errorMessage(error, 'Failed to update profile. Please try again.'),
           variant: 'destructive',
         })
       }
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const handleDeveloperToggle = async (checked: boolean) => {
-    setIsDeveloper(checked)
-    if (user?.role === 'barber') {
-      await supabase
-        .from('barbers')
-        .update({ is_developer: checked })
-        .eq('user_id', user.id)
     }
   }
 

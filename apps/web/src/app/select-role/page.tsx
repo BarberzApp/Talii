@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/shared/lib/supabase";
+import { api, errorMessage } from "@/shared/lib/api";
 import { useAuth } from "@/shared/hooks/use-auth-zustand";
+import { useAuthStore } from "@/shared/stores/auth-store";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Loader2 } from "lucide-react";
@@ -11,33 +12,22 @@ import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 
 export default function SelectRolePage() {
   const { user, status } = useAuth();
+  const fetchUserProfile = useAuthStore((s) => s.fetchUserProfile);
   const router = useRouter();
   const [role, setRole] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { replace: safeReplace } = useSafeNavigation();
 
+  // Every account gets a role at sign-up (the database defaults to client), so
+  // this page only lets a client switch to barber. Barbers go straight on.
   useEffect(() => {
-    // If user already has a role, redirect them
-    if (user && user.role) {
-      if (user.role === "barber") {
-        safeReplace("/barber/onboarding");
-      } else if (user.role === "client") {
-        if (user.location) {
-          safeReplace("/browse");
-        } else {
-          safeReplace("/client/onboarding");
-        }
-      } else if (user.email === "primbocm@gmail.com") {
-        safeReplace("/super-admin");
-      } else {
-        safeReplace("/");
-      }
-    }
-    // If user exists but has no role, stay on this page to let them select one
-    // If no user, redirect to login
-    else if (status === "unauthenticated") {
+    if (status === "unauthenticated") {
       safeReplace("/login");
+    } else if (user?.isAdmin) {
+      safeReplace("/super-admin");
+    } else if (user?.role === "barber") {
+      safeReplace("/barber/onboarding");
     }
   }, [user, status, router]);
 
@@ -50,16 +40,15 @@ export default function SelectRolePage() {
     setLoading(true);
     setError(null);
     try {
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ role })
-        .eq("id", user?.id);
-      if (updateError) throw updateError;
-      
-      // Refresh the page to trigger auth state update
-      window.location.reload();
-    } catch (err: any) {
-      setError(err.message || "Failed to update role.");
+      if (role === "barber") {
+        await api.me.becomeBarber({});
+        if (user) await fetchUserProfile(user.id);
+        safeReplace("/barber/onboarding");
+      } else {
+        safeReplace("/browse");
+      }
+    } catch (err) {
+      setError(errorMessage(err, "Failed to update role."));
     } finally {
       setLoading(false);
     }

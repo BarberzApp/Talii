@@ -1,53 +1,62 @@
+// Sign-up goes straight to Supabase Auth (no app route): role, name and username travel in the
+// sign-up metadata and the database creates the profile and barber rows. Env: SUPABASE_URL and
+// SUPABASE_ANON_KEY (local stack), optional TEST_ONBOARDING_EMAIL / TEST_ONBOARDING_PASSWORD.
+// Needs email confirmation off (the local stack's default).
+
 describe('User and Barber Onboarding Flow', () => {
-  const getEnvVars = () => {
-    return {
-      testEmail: Cypress.env('TEST_ONBOARDING_EMAIL') || `test_onboarding_${Date.now()}@example.com`,
-      testPassword: Cypress.env('TEST_ONBOARDING_PASSWORD') || 'TestPass123!',
-    }
-  }
+  const getEnvVars = () => ({
+    supabaseUrl: Cypress.env('SUPABASE_URL') as string | undefined,
+    anonKey: Cypress.env('SUPABASE_ANON_KEY') as string | undefined,
+    testEmail: Cypress.env('TEST_ONBOARDING_EMAIL') || `test_onboarding_${Date.now()}@example.com`,
+    testPassword: Cypress.env('TEST_ONBOARDING_PASSWORD') || 'TestPass123!',
+  })
 
-  it('allows a new user to sign up, log in, and begin the onboarding process', () => {
-    const { testEmail, testPassword } = getEnvVars()
+  it('signs a barber up, loads /api/me and gets an upload ticket', () => {
+    const { supabaseUrl, anonKey, testEmail, testPassword } = getEnvVars()
 
-    // 1. Visit the home page and navigate to auth
-    cy.visit('/')
-    
     cy.visit('/register')
 
-    // 2. We can test the API directly to ensure auth creation is successful if UI changes are frequent
+    if (!supabaseUrl || !anonKey) {
+      cy.log('Skipping API part: SUPABASE_URL / SUPABASE_ANON_KEY not set')
+      return
+    }
+
     cy.request({
       method: 'POST',
-      url: '/api/auth/sign-up', // Replace with your actual auth endpoint
-      failOnStatusCode: false,
+      url: `${supabaseUrl}/auth/v1/signup`,
+      headers: { apikey: anonKey, 'Content-Type': 'application/json' },
       body: {
         email: testEmail,
         password: testPassword,
-        name: 'Test Barber User',
-        role: 'barber'
+        data: { name: 'Test Barber User', role: 'barber', username: `e2e_${Date.now()}`, business_name: 'E2E Cuts' },
+      },
+    }).then((signUp) => {
+      expect(signUp.status).to.eq(200)
+      const token = signUp.body.access_token as string | undefined
+      if (!token) {
+        cy.log('Email confirmation is on; stopping after sign-up')
+        return
       }
-    }).then((response) => {
-      // If endpoint doesn't exist or isn't built this way, we just log it.
-      // This serves as an integration scaffolding for the auth/onboarding pipeline.
-      if (response.status !== 404) {
-        expect([200, 201]).to.include(response.status)
-      }
-    })
+      const auth = { Authorization: `Bearer ${token}` }
 
-    // 3. Test photo/video upload endpoint integration
-    // We can simulate an API request to the upload endpoint
-    cy.request({
-      method: 'POST',
-      url: '/api/mobile/barbers/gallery', // Replace with actual upload route
-      failOnStatusCode: false,
-      body: {
-        // Mock payload for testing
-        mediaUrl: 'https://example.com/mock-photo.jpg',
-        mediaType: 'photo'
-      }
-    }).then((response) => {
-      if (response.status !== 404 && response.status !== 401) {
-        expect(response.status).to.be.oneOf([200, 201])
-      }
+      cy.request({ url: '/api/me', headers: auth }).then((me) => {
+        expect(me.status).to.eq(200)
+        expect(me.body.profile.role).to.eq('barber')
+        expect(me.body.barber).to.not.eq(null)
+        expect(me.body.barber.business_name).to.eq('E2E Cuts')
+        expect(me.body.isAdmin).to.eq(false)
+      })
+
+      cy.request({
+        method: 'POST',
+        url: '/api/uploads',
+        headers: auth,
+        body: { bucket: 'media', contentType: 'image/jpeg', fileName: 'photo.jpg', sizeBytes: 1024 },
+      }).then((ticket) => {
+        expect(ticket.status).to.eq(200)
+        expect(ticket.body.path).to.match(/^[0-9a-f-]+\/[0-9a-f-]+\.jpg$/)
+        expect(ticket.body.publicUrl).to.contain('/media/')
+      })
     })
   })
 })

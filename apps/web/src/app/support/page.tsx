@@ -8,6 +8,8 @@ import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { useToast } from '@/shared/components/ui/use-toast'
+import { api, isApiError } from '@/shared/lib/api'
+import type { SupportCategory } from '@barber-app/shared'
 import { logger } from '@/shared/lib/logger'
 import { 
   Mail, 
@@ -35,7 +37,7 @@ const gradientAnimation = `
 const faqData = [
   {
     question: "How do I book an appointment?",
-    answer: "Simply browse our barbers, select your preferred time slot, and complete the booking process. You'll receive a confirmation via SMS and email."
+    answer: "Simply browse our barbers, select your preferred time slot, and complete the booking process. You'll see it under Appointments on your profile."
   },
   {
     question: "Can I cancel or reschedule my appointment?",
@@ -87,19 +89,9 @@ export default function SupportPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/support', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
+      if (!formData.category) throw new Error('Please choose a category.')
+      await api.support.send({ ...formData, category: formData.category as SupportCategory })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to send message')
-      }
-      
       toast({
         title: "Message Sent!",
         description: "We've received your support request and will get back to you within 5 days.",
@@ -117,7 +109,7 @@ export default function SupportPage() {
       logger.error('Support form error', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send your message. Please try again.",
+        description: isApiError(error) || error instanceof Error ? error.message : "Failed to send your message. Please try again.",
         variant: "destructive"
       })
     } finally {

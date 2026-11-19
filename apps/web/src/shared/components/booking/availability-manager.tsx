@@ -3,50 +3,20 @@
 import { useEffect, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
 import { WeeklySchedule } from './weekly-schedule'
-import { TimeOffManager } from './time-off-manager'
-import { SpecialHoursManager } from './special-hours-manager'
+import { SpecialHoursManager, type SpecialHours } from './special-hours-manager'
 
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
+import type { SpecialHoursRow } from '@barber-app/shared'
 import { toast } from 'sonner'
-import { Loader2, Calendar, Clock, Umbrella, Settings, Sparkles } from 'lucide-react'
+import { Loader2, Calendar, Clock, Settings, Sparkles } from 'lucide-react'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { logger } from '@/shared/lib/logger'
 
-interface TimeOff {
-  id: string
-  barber_id: string
-  start_date: string
-  end_date: string
-  reason: string
-  created_at: string
-  updated_at: string
-}
-
-interface SpecialHours {
-  id: string
-  barber_id: string
-  date: string
-  start_time: string
-  end_time: string
-  is_closed: boolean
-  reason: string
-  created_at: string
-  updated_at: string
-}
-
-interface TimeSlot {
-  start: string
-  end: string
-}
-
 interface Availability {
   id: string
-  barber_id: string
   day_of_week: number
   start_time: string
   end_time: string
-  created_at: string
-  updated_at: string
 }
 
 interface AvailabilityManagerProps {
@@ -54,11 +24,26 @@ interface AvailabilityManagerProps {
   onUpdate?: () => void
 }
 
+function toManagerRow(row: SpecialHoursRow): SpecialHours {
+  return {
+    id: row.id,
+    date: row.date,
+    start_time: row.start_time?.slice(0, 5) ?? '',
+    end_time: row.end_time?.slice(0, 5) ?? '',
+    is_closed: row.is_closed,
+    reason: row.reason ?? '',
+  }
+}
+
+/**
+ * Weekly hours (GET/PUT /api/me/availability) and per-date overrides
+ * (GET/PUT/DELETE /api/me/special-hours). A closed special-hours day replaces
+ * the old "time off".
+ */
 export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerProps) {
   const [activeTab, setActiveTab] = useState('weekly')
   const [loading, setLoading] = useState(true)
   const [specialHours, setSpecialHours] = useState<SpecialHours[]>([])
-  const [timeOff, setTimeOff] = useState<TimeOff[]>([])
   const [availability, setAvailability] = useState<Availability[]>([])
 
   useEffect(() => {
@@ -68,117 +53,63 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
   const fetchAvailability = async () => {
     try {
       setLoading(true)
-      const { data: availabilityData, error: availabilityError } = await supabase
-        .from('availability')
-        .select('*')
-        .eq('barber_id', barberId)
-
-      if (availabilityError) throw availabilityError
-
-      const { data: specialHoursData, error: specialHoursError } = await supabase
-        .from('special_hours')
-        .select('*')
-        .eq('barber_id', barberId)
-
-      if (specialHoursError) throw specialHoursError
-
-      const { data: timeOffData, error: timeOffError } = await supabase
-        .from('time_off')
-        .select('*')
-        .eq('barber_id', barberId)
-
-      if (timeOffError) throw timeOffError
-
-      setAvailability(availabilityData || [])
-      setSpecialHours(specialHoursData || [])
-      setTimeOff(timeOffData || [])
+      const today = new Date().toISOString().slice(0, 10)
+      const [{ availability: week }, { specialHours: overrides }] = await Promise.all([
+        api.schedule.getWeek(),
+        api.schedule.listSpecialHours({ from: today }),
+      ])
+      setAvailability(week)
+      setSpecialHours(overrides.map(toManagerRow))
     } catch (error) {
       logger.error('Error fetching availability', error)
-      toast.error('Failed to load availability settings')
+      toast.error(errorMessage(error, 'Failed to load availability settings'))
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddTimeOff = async (timeOffData: Omit<TimeOff, 'id' | 'barber_id' | 'created_at' | 'updated_at'>) => {
+  const handleAddSpecialHours = async (hours: Omit<SpecialHours, 'id'>) => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from('time_off').insert({
-        barber_id: barberId,
-        start_date: timeOffData.start_date,
-        end_date: timeOffData.end_date,
-        reason: timeOffData.reason
-      }).select()
-
-      if (error) throw error
-
-      setTimeOff([...timeOff, data[0]])
-      toast.success('Time off added successfully')
-      onUpdate?.()
-    } catch (error) {
-      logger.error('Error adding time off', error)
-      toast.error('Failed to add time off')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRemoveTimeOff = async (id: string) => {
-    try {
-      setLoading(true)
-      const { error } = await supabase.from('time_off').delete().eq('id', id)
-
-      if (error) throw error
-
-      setTimeOff(timeOff.filter((item) => item.id !== id))
-      toast.success('Time off removed successfully')
-      onUpdate?.()
-    } catch (error) {
-      logger.error('Error removing time off', error)
-      toast.error('Failed to remove time off')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleAddSpecialHours = async (hours: Omit<SpecialHours, 'id' | 'barber_id' | 'created_at' | 'updated_at'>) => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase.from('special_hours').insert({
-        barber_id: barberId,
-        date: hours.date,
-        start_time: hours.start_time,
-        end_time: hours.end_time,
-        is_closed: hours.is_closed,
-        reason: hours.reason
-      }).select()
-
-      if (error) throw error
-
-      setSpecialHours([...specialHours, data[0]])
-      toast.success('Special hours added successfully')
+      const reason = hours.reason?.trim() || null
+      const result = await api.schedule.putSpecialHours(
+        hours.is_closed
+          ? { date: hours.date, isClosed: true, reason }
+          : { date: hours.date, isClosed: false, startTime: hours.start_time, endTime: hours.end_time, reason }
+      )
+      setSpecialHours((prev) =>
+        [...prev.filter((h) => h.date !== hours.date), toManagerRow(result.specialHours)].sort((a, b) =>
+          a.date.localeCompare(b.date)
+        )
+      )
+      if (result.bookingsOutsideHours.length > 0) {
+        toast.warning(
+          `${result.bookingsOutsideHours.length} existing booking(s) fall outside these hours. They were not changed; cancel them from your calendar if needed.`
+        )
+      } else {
+        toast.success('Special hours saved')
+      }
       onUpdate?.()
     } catch (error) {
       logger.error('Error adding special hours', error)
-      toast.error('Failed to add special hours')
+      toast.error(errorMessage(error, 'Failed to add special hours'))
     } finally {
       setLoading(false)
     }
   }
 
   const handleRemoveSpecialHours = async (id: string) => {
+    const entry = specialHours.find((h) => h.id === id)
+    if (!entry) return
     try {
       setLoading(true)
-      const { error } = await supabase.from('special_hours').delete().eq('id', id)
-
-      if (error) throw error
-
-      setSpecialHours(specialHours.filter((hours) => hours.id !== id))
+      await api.schedule.deleteSpecialHours(entry.date)
+      setSpecialHours((prev) => prev.filter((h) => h.id !== id))
       toast.success('Special hours removed successfully')
       onUpdate?.()
     } catch (error) {
       logger.error('Error removing special hours', error)
-      toast.error('Failed to remove special hours')
+      toast.error(errorMessage(error, 'Failed to remove special hours'))
     } finally {
       setLoading(false)
     }
@@ -194,7 +125,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
             </div>
             <div>
               <h2 className="text-3xl sm:text-4xl font-bebas text-foreground tracking-wide">Schedule Management</h2>
-              <p className="text-foreground/70 text-lg mt-2">Manage your availability, special hours, and time off</p>
+              <p className="text-foreground/70 text-lg mt-2">Manage your weekly hours and special hours (mark a date closed for time off)</p>
             </div>
           </div>
         </div>
@@ -224,7 +155,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
           </div>
           <div>
             <h2 className="text-3xl sm:text-4xl font-bebas text-foreground tracking-wide">Schedule Management</h2>
-            <p className="text-foreground/70 text-lg mt-2">Manage your availability, special hours, and time off</p>
+            <p className="text-foreground/70 text-lg mt-2">Manage your weekly hours and special hours (mark a date closed for time off)</p>
           </div>
         </div>
       </div>
@@ -234,7 +165,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="border-b border-black/5 dark:border-white/10 bg-gradient-to-r from-secondary/10 to-transparent backdrop-blur-[40px]">
-              <TabsList className="grid w-full grid-cols-3 bg-transparent border-0 p-2 h-auto gap-2">
+              <TabsList className="grid w-full grid-cols-2 bg-transparent border-0 p-2 h-auto gap-2">
                 <TabsTrigger 
                   value="weekly" 
                   className={`relative flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-200 text-sm font-semibold ${
@@ -257,17 +188,6 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   <Clock className="h-5 w-5" />
                   <span className="hidden sm:inline">Special Hours</span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="time-off" 
-                  className={`relative flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-200 text-sm font-semibold ${
-                    activeTab === 'time-off' 
-                      ? 'bg-secondary text-primary shadow-lg' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10'
-                  }`}
-                >
-                  <Umbrella className="h-5 w-5" />
-                  <span className="hidden sm:inline">Time Off</span>
-                </TabsTrigger>
               </TabsList>
             </div>
             <div className="p-8">
@@ -284,13 +204,6 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   onAdd={handleAddSpecialHours}
                   onRemove={handleRemoveSpecialHours}
                   barberId={barberId}
-                />
-              </TabsContent>
-              <TabsContent value="time-off" className="m-0">
-                <TimeOffManager
-                  timeOff={timeOff}
-                  onAdd={handleAddTimeOff}
-                  onRemove={handleRemoveTimeOff}
                 />
               </TabsContent>
             </div>

@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
 import { logger } from '@/shared/lib/logger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -52,23 +52,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
 
 // Type for the raw data structure from the database
-type BarberFromDB = {
-  id: string
-  user_id: string
-  business_name?: string
-  specialties: string[]
-  price_range?: string
-  stripe_account_status?: string
-  instagram?: string
-  twitter?: string
-  tiktok?: string
-  facebook?: string
-  latitude?: number
-  longitude?: number
-  city?: string
-  state?: string
-}
-
 // Type for the transformed data used in the UI
 type Barber = {
   id: string
@@ -83,14 +66,13 @@ type Barber = {
   isPublic?: boolean
   isStripeReady?: boolean
   instagram?: string
-  twitter?: string
   tiktok?: string
-  facebook?: string
   latitude?: number
   longitude?: number
   city?: string
   state?: string
-  distance?: number // Distance from user's location
+  distance?: number // Distance from user's location (miles, from the API)
+  rating?: number
 }
 
 type SortOption = 'name' | 'rating' | 'location' | 'price' | 'distance'
@@ -253,7 +235,7 @@ export default function BrowsePage() {
 
   useEffect(() => {
     fetchBarbers()
-  }, [])
+  }, [locationFilter.useCurrentLocation, userLocation?.lat, userLocation?.lng, locationFilter.range])
 
   useEffect(() => {
     // Filter and sort barbers
@@ -321,8 +303,8 @@ export default function BrowsePage() {
           bValue = b.name.toLowerCase()
           break
         case 'rating':
-          aValue = 4.5 // Default rating, you can add actual ratings later
-          bValue = 4.5
+          aValue = a.rating ?? 0
+          bValue = b.rating ?? 0
           break
         case 'location':
           aValue = a.location?.toLowerCase() || ''
@@ -349,72 +331,37 @@ export default function BrowsePage() {
     setFilteredBarbers(filtered)
   }, [barbers, searchQuery, sortBy, sortOrder, selectedSpecialties, priceRange, locationFilter, userLocation])
 
+  /**
+   * GET /api/barbers: listed barbers only. With "use current location" the
+   * server returns barbers within the range, nearest first (distance_miles).
+   */
   const fetchBarbers = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      // Fetch barbers with their profiles
-      const { data: barberData, error: barberError } = await supabase
-        .from('barbers')
-        .select(`
-          id,
-          user_id,
-          business_name,
-          specialties,
-          price_range,
-          stripe_account_status,
-          instagram,
-          twitter,
-          tiktok,
-          facebook,
-          latitude,
-          longitude,
-          city,
-          state
-        `)
+      const nearby = locationFilter.useCurrentLocation && userLocation
+      const { barbers: cards } = await api.barbers.list(
+        nearby
+          ? { lat: userLocation.lat, lng: userLocation.lng, radiusMiles: Math.min(locationFilter.range, 100), limit: 100 }
+          : { limit: 100 }
+      )
 
-      if (barberError) throw barberError
-
-      // Fetch profiles for all barbers
-      const userIds = barberData.map(barber => barber.user_id)
-      
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, name, location, bio, avatar_url, is_public, username')
-        .in('id', userIds)
-
-      if (profileError) throw profileError
-
-      // Create a map of profiles by user_id
-      const profileMap = new Map(profileData.map(profile => [profile.id, profile]))
-
-      // Combine barber and profile data
-      const combinedBarbers: Barber[] = barberData.map(barber => {
-        const profile = profileMap.get(barber.user_id)
-        
-        return {
-          id: barber.id,
-          name: profile?.name || 'Unknown',
-          username: profile?.username,
-          businessName: barber.business_name,
-          location: profile?.location,
-          specialties: barber.specialties || [],
-          bio: profile?.bio,
-          priceRange: barber.price_range,
-          avatarUrl: profile?.avatar_url,
-          isPublic: profile?.is_public ?? true,
-          isStripeReady: barber.stripe_account_status === 'active',
-          instagram: barber.instagram,
-          twitter: barber.twitter,
-          tiktok: barber.tiktok,
-          facebook: barber.facebook,
-          latitude: barber.latitude,
-          longitude: barber.longitude,
-          city: barber.city,
-          state: barber.state
-        }
-      })
+      const combinedBarbers: Barber[] = cards.map(card => ({
+        id: card.id,
+        name: card.name || card.business_name || 'Unknown',
+        username: card.username,
+        businessName: card.business_name ?? undefined,
+        location: [card.city, card.state].filter(Boolean).join(', ') || undefined,
+        specialties: card.specialties || [],
+        bio: card.bio ?? undefined,
+        avatarUrl: card.avatar_url ?? undefined,
+        isPublic: true,
+        city: card.city ?? undefined,
+        state: card.state ?? undefined,
+        distance: card.distance_miles ?? undefined,
+        rating: card.rating.average_rating ?? undefined,
+      }))
 
       setBarbers(combinedBarbers)
     } catch (err) {
@@ -422,7 +369,7 @@ export default function BrowsePage() {
       setError('Failed to load barbers. Please try again.')
       toast({
         title: 'Error',
-        description: 'Failed to load barbers.',
+        description: errorMessage(err, 'Failed to load barbers.'),
         variant: 'destructive',
       })
     } finally {
@@ -855,9 +802,7 @@ export default function BrowsePage() {
                     specialties: barber.specialties,
                     priceRange: barber.priceRange,
                     instagram: barber.instagram,
-                    twitter: barber.twitter,
                     tiktok: barber.tiktok,
-                    facebook: barber.facebook,
                     image: barber.avatarUrl,
                     portfolio: [],
                     trending: false,

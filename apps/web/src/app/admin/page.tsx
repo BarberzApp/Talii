@@ -9,6 +9,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { logger } from "@/shared/lib/logger";
+import { api } from "@/shared/lib/api";
 import { 
   MessageSquare, 
   Users, 
@@ -49,24 +50,24 @@ export default function AdminDashboard() {
   const { adminUser, isSuperAdmin } = useAdminAuth();
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    if (adminUser) fetchStats();
+  }, [adminUser?.id]);
 
   const fetchStats = async () => {
     try {
       setLoading(true);
-      // Simulate fetching real stats - replace with actual API calls
-      const mockStats = {
-        totalUsers: 1247,
-        totalBarbers: 89,
-        totalBookings: 3456,
-        totalRevenue: 125000,
-        pendingReviews: 12,
-        activeBookings: 156,
-        newUsersToday: 23,
-        revenueToday: 2456
-      };
-      setStats(mockStats);
+      // GET /api/admin/stats (last 24 hours for "today"); money shown in dollars.
+      const { stats: s } = await api.admin.stats(1);
+      setStats({
+        totalUsers: s.users_total,
+        totalBarbers: s.barbers_total,
+        totalBookings: s.bookings_total,
+        totalRevenue: s.fees_charged_cents / 100,
+        pendingReviews: s.reports_pending,
+        activeBookings: s.bookings_upcoming,
+        newUsersToday: s.users_new_since,
+        revenueToday: s.fees_charged_since_cents / 100,
+      });
     } catch (error) {
       logger.error('Error fetching stats', error);
     } finally {

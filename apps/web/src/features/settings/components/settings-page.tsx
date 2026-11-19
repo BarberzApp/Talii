@@ -16,6 +16,7 @@ import { PaymentHistory } from '@/shared/components/payment/payment-history'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { Progress } from '@/shared/components/ui/progress'
 import { supabase } from '@/shared/lib/supabase'
+import { api } from '@/shared/lib/api'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Button } from '@/shared/components/ui/button'
 import { useRouter } from 'next/navigation'
@@ -87,109 +88,29 @@ export function SettingsPage() {
     try {
       setIsLoading(true)
       
-      // Fetch profile data
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('name, email, phone, location, bio, is_public, email_notifications')
-        .eq('id', user.id)
-        .single()
+      const me = await api.me.get()
+      const profileComplete = !!(me.profile.name && me.profile.email)
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        logger.error('Error fetching profile', profileError)
-      }
-
-      logger.debug('Profile data loaded', { userId: user.id })
-
-      // Check if user is a barber
-      if (user.role === 'barber') {
-        const { data: barber, error: barberError } = await supabase
-          .from('barbers')
-          .select('id, business_name, bio, specialties, stripe_account_status')
-          .eq('user_id', user.id)
-          .single()
-
-        if (barberError && barberError.code !== 'PGRST116') {
-          logger.error('Error fetching barber data', barberError)
-        }
-
-        logger.debug('Barber data loaded', { barberId: barber?.id })
-
-        if (barber) {
-          setBarberId(barber.id)
-          logger.debug('Settings: Barber ID set', { barberId: barber.id })
-          
-          // Check services
-          const { data: services, error: servicesError } = await supabase
-            .from('services')
-            .select('id')
-            .eq('barber_id', barber.id)
-
-          if (servicesError) {
-            logger.error('Error fetching services', servicesError)
-          }
-
-          logger.debug('Services data loaded', { count: services?.length })
-
-          // Check availability
-          const { data: availability, error: availabilityError } = await supabase
-            .from('availability')
-            .select('id')
-            .eq('barber_id', barber.id)
-
-          if (availabilityError && availabilityError.code !== 'PGRST116') {
-            logger.error('Error fetching availability', availabilityError)
-          }
-
-          logger.debug('Availability data loaded', { hasData: !!availability })
-
-          // More realistic completion logic
-          const profileComplete = !!(profile?.name && profile?.email)
-          const servicesComplete = !!(services && services.length > 0)
-          const availabilityComplete = !!(availability && availability.length > 0)
-          const stripeConnected = barber?.stripe_account_status === 'active'
-          const notificationsConfigured = true // Default to true since these are optional
-
-          logger.debug('Completion status', {
-            profileComplete,
-            servicesComplete,
-            availabilityComplete,
-            stripeConnected,
-            notificationsConfigured
-          })
-
-          setSettingsData({
-            profileComplete,
-            servicesComplete,
-            availabilityComplete,
-            stripeConnected,
-            notificationsConfigured
-          })
-        } else {
-          // Barber row doesn't exist yet
-          setSettingsData({
-            profileComplete: !!(profile?.name && profile?.email),
-            servicesComplete: false,
-            availabilityComplete: false,
-            stripeConnected: false,
-            notificationsConfigured: true
-          })
-        }
-      } else {
-        // For non-barbers - simpler requirements
-        const profileComplete = !!(profile?.name && profile?.email)
-        const notificationsConfigured = true // Default to true for non-barbers
-
-        logger.debug('Non-barber completion status', {
+      if (me.profile.role === 'barber' && me.barber) {
+        setBarberId(me.barber.id)
+        const [{ services }, { availability }] = await Promise.all([
+          api.services.list(),
+          api.schedule.getWeek(),
+        ])
+        setSettingsData({
           profileComplete,
-          notificationsConfigured
+          servicesComplete: services.some((s) => s.is_active),
+          availabilityComplete: availability.length > 0,
+          stripeConnected: !!(me.billing?.charges_enabled || me.billing?.fee_exempt),
+          notificationsConfigured: true,
         })
-
+      } else {
         setSettingsData({
           profileComplete,
           servicesComplete: false,
           availabilityComplete: false,
           stripeConnected: false,
-          notificationsConfigured
+          notificationsConfigured: true,
         })
       }
     } catch (error) {

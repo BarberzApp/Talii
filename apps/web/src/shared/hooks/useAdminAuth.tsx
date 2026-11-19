@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useAuth } from './use-auth-zustand';
 import { supabase } from '@/shared/lib/supabase';
 import { logger } from '@/shared/lib/logger';
@@ -7,106 +6,28 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'super_admin';
+  role: 'admin';
   avatar_url?: string;
 }
 
+/**
+ * Admin status comes from GET /api/me `isAdmin` (auth app_metadata.role, set
+ * with scripts/set-admin.ts). There is a single admin level, so isSuperAdmin
+ * equals isAdmin. The API checks the same claim on every /api/admin call.
+ */
 export function useAdminAuth() {
-  const { user } = useAuth();
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const { user, status, isInitialized } = useAuth();
+  const loading = !isInitialized || status === 'loading';
+  const isAdmin = !!user?.isAdmin;
 
-  useEffect(() => {
-    checkAdminStatus();
-  }, [user]);
-
-  const checkAdminStatus = async () => {
-    if (!user) {
-      setAdminUser(null);
-      setIsAdmin(false);
-      setIsSuperAdmin(false);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // Check if user has admin role in profiles
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, name, email, role, avatar_url')
-        .eq('id', user.id)
-        .eq('role', 'admin')
-        .single();
-
-      if (profileData) {
-        setAdminUser({
-          id: profileData.id,
-          name: profileData.name,
-          email: profileData.email,
-          role: 'admin',
-          avatar_url: profileData.avatar_url
-        });
-        setIsAdmin(true);
-        setIsSuperAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      // Check if user is super admin (check barbers table for is_developer)
-      const { data: barberData, error: barberError } = await supabase
-        .from('barbers')
-        .select('id, user_id, is_developer')
-        .eq('user_id', user.id)
-        .eq('is_developer', true)
-        .single();
-
-      if (barberData) {
-        // Get profile data for super admin
-        const { data: superAdminProfile, error: superAdminError } = await supabase
-          .from('profiles')
-          .select('id, name, email, avatar_url')
-          .eq('id', user.id)
-          .single();
-
-        if (superAdminProfile) {
-          setAdminUser({
-            id: superAdminProfile.id,
-            name: superAdminProfile.name,
-            email: superAdminProfile.email,
-            role: 'super_admin',
-            avatar_url: superAdminProfile.avatar_url
-          });
-          setIsAdmin(true);
-          setIsSuperAdmin(true);
-          setLoading(false);
-          return;
-        }
-      }
-
-      // User is not an admin
-      setAdminUser(null);
-      setIsAdmin(false);
-      setIsSuperAdmin(false);
-    } catch (error) {
-      logger.error('Error checking admin status', error);
-      setAdminUser(null);
-      setIsAdmin(false);
-      setIsSuperAdmin(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const adminUser: AdminUser | null =
+    user && isAdmin
+      ? { id: user.id, name: user.name, email: user.email, role: 'admin', avatar_url: user.avatar_url }
+      : null;
 
   const logout = async () => {
     try {
       await supabase.auth.signOut();
-      setAdminUser(null);
-      setIsAdmin(false);
-      setIsSuperAdmin(false);
     } catch (error) {
       logger.error('Error logging out', error);
     }
@@ -115,9 +36,9 @@ export function useAdminAuth() {
   return {
     adminUser,
     isAdmin,
-    isSuperAdmin,
+    isSuperAdmin: isAdmin,
     loading,
     logout,
-    checkAdminStatus
+    checkAdminStatus: async () => undefined,
   };
-} 
+}

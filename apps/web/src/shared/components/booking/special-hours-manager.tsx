@@ -10,21 +10,19 @@ import { useToast } from '@/shared/components/ui/use-toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { cn } from '@/shared/lib/utils'
 
-interface SpecialHours {
+export interface SpecialHours {
   id: string
-  barber_id: string
   date: string
   start_time: string
   end_time: string
   is_closed: boolean
   reason: string
-  created_at: string
-  updated_at: string
 }
 
 interface SpecialHoursManagerProps {
   specialHours: SpecialHours[]
-  onAdd: (hours: Omit<SpecialHours, 'id' | 'barber_id' | 'created_at' | 'updated_at'>) => void
+  /** Creates or replaces the override for that date (PUT /api/me/special-hours). Closed days replace time off. */
+  onAdd: (hours: Omit<SpecialHours, 'id'>) => void | Promise<void>
   onRemove: (id: string) => void
   barberId: string
 }
@@ -32,7 +30,7 @@ interface SpecialHoursManagerProps {
 export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, onRemove, barberId }: SpecialHoursManagerProps) {
   const { toast } = useToast()
   const [isAdding, setIsAdding] = useState(false)
-  const [newHours, setNewHours] = useState<Omit<SpecialHours, 'id' | 'barber_id' | 'created_at' | 'updated_at'>>({
+  const [newHours, setNewHours] = useState<Omit<SpecialHours, 'id'>>({
     date: '',
     start_time: '09:00',
     end_time: '17:00',

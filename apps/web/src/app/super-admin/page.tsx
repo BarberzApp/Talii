@@ -60,13 +60,15 @@ import {
   User
 } from 'lucide-react'
 import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
+import { useAuthStore } from '@/shared/stores/auth-store'
 import { UserProfileManager } from '@/shared/components/admin/UserProfileManager'
 
 interface Barber {
   id: string
   user_id: string
   business_name: string
-  is_developer: boolean
+  fee_exempt: boolean
   created_at: string
   profiles: {
     id: string
@@ -77,7 +79,7 @@ interface Barber {
     location?: string
     bio?: string
     is_disabled?: boolean
-    join_date?: string
+    created_at?: string
     avatar_url?: string
     is_public?: boolean
   }
@@ -115,6 +117,7 @@ export default function SuperAdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [password, setPassword] = useState('')
+  const [adminEmail, setAdminEmail] = useState('')
   const [barbers, setBarbers] = useState<Barber[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [userFilter, setUserFilter] = useState<'all' | 'developers' | 'regular'>('all')
@@ -141,20 +144,27 @@ export default function SuperAdminPage() {
   })
   const router = useRouter()
   const { toast } = useToast()
+  const user = useAuthStore((state) => state.user)
 
-  // Check if user is super admin
+  const loadDashboard = () => {
+    fetchBarbers()
+    fetchStats()
+    checkSystemStatus()
+  }
+
+  // Admin = GET /api/me isAdmin (auth app_metadata.role, set with scripts/set-admin.ts).
   useEffect(() => {
     const checkSuperAdmin = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user?.email === 'primbocm@gmail.com') {
+        if (!session) return
+        const me = await api.me.get()
+        if (me.isAdmin) {
           setIsAuthenticated(true)
-          fetchBarbers()
-          fetchStats()
-          checkSystemStatus()
+          loadDashboard()
         }
       } catch (error) {
-        logger.error('Error checking super admin', error)
+        logger.error('Error checking admin', error)
       } finally {
         setIsLoading(false)
       }
@@ -168,10 +178,7 @@ export default function SuperAdminPage() {
     setIsLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'primbocm@gmail.com',
-        password: password
-      })
+      const { error } = await supabase.auth.signInWithPassword({ email: adminEmail.trim(), password })
 
       if (error) {
         toast({
@@ -182,26 +189,26 @@ export default function SuperAdminPage() {
         return
       }
 
-      if (data.user?.email === 'primbocm@gmail.com') {
+      const me = await api.me.get()
+      if (me.isAdmin) {
         setIsAuthenticated(true)
-        fetchBarbers()
-        fetchStats()
-        checkSystemStatus()
+        loadDashboard()
         toast({
-          title: 'Super Admin Access Granted',
-          description: 'Welcome to the Super Admin Panel',
+          title: 'Admin Access Granted',
+          description: 'Welcome to the Admin Panel',
         })
       } else {
+        await supabase.auth.signOut()
         toast({
           title: 'Access Denied',
-          description: 'Only super admin can access this page',
+          description: 'Only admins can access this page',
           variant: 'destructive',
         })
       }
     } catch (error) {
       toast({
         title: 'Login Failed',
-        description: 'Network error. Please try again.',
+        description: errorMessage(error, 'Network error. Please try again.'),
         variant: 'destructive',
       })
     } finally {
@@ -209,54 +216,56 @@ export default function SuperAdminPage() {
     }
   }
 
+  /** GET /api/admin/users?role=barber, shaped like the old barber rows this page renders. */
   const fetchBarbers = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No session token available')
-      }
-
-      const response = await fetch('/api/super-admin/barbers', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setBarbers(data.barbers)
-      } else {
-        throw new Error(data.error || 'Failed to fetch barbers')
-      }
+      const { users } = await api.admin.listUsers({ role: 'barber', limit: 100 })
+      setBarbers(
+        users.map((u): Barber => ({
+          id: u.barber?.id ?? u.id,
+          user_id: u.id,
+          business_name: u.barber?.business_name ?? '',
+          fee_exempt: !!u.billing?.fee_exempt,
+          created_at: u.created_at,
+          profiles: {
+            id: u.id,
+            name: u.name ?? u.username,
+            email: u.email ?? '',
+            role: u.role,
+            phone: u.phone ?? undefined,
+            is_disabled: u.is_disabled,
+            avatar_url: u.avatar_url ?? undefined,
+            // Admin listing control: listed unless suspended by an admin.
+            is_public: !u.barber?.listing_suspended,
+          },
+        }))
+      )
     } catch (error) {
       logger.error('Error fetching barbers', error)
       toast({
         title: 'Error',
-        description: 'Failed to fetch barbers',
+        description: errorMessage(error, 'Failed to fetch barbers'),
         variant: 'destructive',
       })
     }
   }
 
+  /** GET /api/admin/stats?days=1 ("today" = the last 24 hours). Money in dollars for display. */
   const fetchStats = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No session token available')
-      }
-
-      const response = await fetch('/api/super-admin/stats', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
+      const { stats: s } = await api.admin.stats(1)
+      setStats({
+        totalUsers: s.users_total,
+        totalBarbers: s.barbers_total,
+        totalClients: s.clients_total,
+        disabledAccounts: s.disabled_total,
+        developers: s.barbers_fee_exempt,
+        activeBookings: s.bookings_upcoming,
+        totalRevenue: s.fees_charged_cents / 100,
+        pendingReviews: s.reports_pending,
+        newUsersToday: s.users_new_since,
+        revenueToday: s.fees_charged_since_cents / 100,
       })
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setStats(data.stats)
-      }
     } catch (error) {
       logger.error('Error fetching stats', error)
     }
@@ -272,54 +281,24 @@ export default function SuperAdminPage() {
     })
   }
 
+  /** "Developer" is fee exemption now (barber_billing.fee_exempt). */
   const toggleDeveloperStatus = async (barberId: string, currentStatus: boolean) => {
+    const target = barbers.find(b => b.id === barberId)
+    if (!target) return
     setUpdatingBarber(barberId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No session token available')
-      }
-
-      const response = await fetch('/api/super-admin/developer-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          barberId,
-          isDeveloper: !currentStatus
-        })
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        // Update local state
-        setBarbers(prev => prev.map(barber => 
-          barber.id === barberId 
-            ? { ...barber, is_developer: !currentStatus }
-            : barber
-        ))
-
-        // Refresh stats to reflect changes
-        fetchStats()
-
-        toast({
-          title: 'Developer Status Updated',
-          description: data.message || `Developer mode ${!currentStatus ? 'enabled' : 'disabled'}`,
-        })
-      } else {
-        throw new Error(data.error || 'Failed to update developer status')
-      }
-    } catch (error) {
-      logger.error('Error updating developer status', error)
+      await api.admin.updateUser(target.user_id, { feeExempt: !currentStatus })
+      setBarbers(prev => prev.map(barber =>
+        barber.id === barberId ? { ...barber, fee_exempt: !currentStatus } : barber
+      ))
+      fetchStats()
       toast({
-        title: 'Error',
-        description: 'Failed to update developer status',
-        variant: 'destructive',
+        title: 'Fee Exemption Updated',
+        description: `Booking fee ${!currentStatus ? 'waived' : 'charged'} for this barber`,
       })
+    } catch (error) {
+      logger.error('Error updating fee exemption', error)
+      toast({ title: 'Error', description: errorMessage(error, 'Failed to update fee exemption'), variant: 'destructive' })
     } finally {
       setUpdatingBarber(null)
     }
@@ -328,169 +307,63 @@ export default function SuperAdminPage() {
   const toggleAccountStatus = async (userId: string, currentStatus: boolean) => {
     setUpdatingBarber(userId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No session token available')
-      }
-
-      const response = await fetch('/api/super-admin/account-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          userId,
-          isDisabled: !currentStatus
-        })
+      const result = await api.admin.updateUser(userId, { isDisabled: !currentStatus })
+      setBarbers(prev => prev.map(barber =>
+        barber.user_id === userId
+          ? { ...barber, profiles: { ...barber.profiles, is_disabled: result.user.is_disabled } }
+          : barber
+      ))
+      toast({
+        title: 'Account Status Updated',
+        description: result.signInBlocked === false
+          ? 'Account disabled, but blocking sign-in failed. Try again.'
+          : `Account ${result.user.is_disabled ? 'disabled' : 'enabled'}`,
       })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setBarbers(prev => prev.map(barber => 
-          barber.user_id === userId 
-            ? { 
-                ...barber, 
-                profiles: { 
-                  ...barber.profiles, 
-                  is_disabled: !currentStatus 
-                } 
-              }
-            : barber
-        ))
-
-        toast({
-          title: 'Account Status Updated',
-          description: data.message,
-        })
-      } else {
-        throw new Error(data.error || 'Failed to update account status')
-      }
     } catch (error) {
       logger.error('Error updating account status', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update account status',
-        variant: 'destructive',
-      })
+      toast({ title: 'Error', description: errorMessage(error, 'Failed to update account status'), variant: 'destructive' })
     } finally {
       setUpdatingBarber(null)
     }
   }
 
+  /** Listing visibility (admin suspension); the barber's own is_public is separate. */
   const togglePublicStatus = async (userId: string, currentStatus: boolean) => {
     setUpdatingBarber(userId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No session token available')
-      }
-
       const newStatus = !currentStatus
-      logger.debug(`Toggling public status for user ${userId}`, { currentStatus, newStatus })
-
-      const response = await fetch('/api/super-admin/public-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          userId,
-          isPublic: newStatus
-        })
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        // Update local state
-        setBarbers(prev => prev.map(barber => 
-          barber.user_id === userId 
-            ? { 
-                ...barber, 
-                profiles: { 
-                  ...barber.profiles, 
-                  is_public: newStatus 
-                } 
-              }
-            : barber
-        ))
-
-        logger.debug(`Successfully updated public status to: ${newStatus}`)
-        toast({
-          title: 'Profile Visibility Updated',
-          description: data.message || `Profile is now ${newStatus ? 'public' : 'private'}`,
-        })
-      } else {
-        logger.error('API Error updating public status', { error: data.error, response: data })
-        throw new Error(data.error || 'Failed to update public status')
-      }
-    } catch (error) {
-      logger.error('Error updating public status', error)
+      await api.admin.updateUser(userId, { listingSuspended: !newStatus })
+      setBarbers(prev => prev.map(barber =>
+        barber.user_id === userId
+          ? { ...barber, profiles: { ...barber.profiles, is_public: newStatus } }
+          : barber
+      ))
       toast({
-        title: 'Error',
-        description: 'Failed to update profile visibility. Please try again.',
-        variant: 'destructive',
+        title: 'Profile Visibility Updated',
+        description: `Listing ${newStatus ? 'restored' : 'suspended'}`,
       })
+    } catch (error) {
+      logger.error('Error updating listing status', error)
+      toast({ title: 'Error', description: errorMessage(error, 'Failed to update profile visibility. Please try again.'), variant: 'destructive' })
     } finally {
       setUpdatingBarber(null)
     }
   }
 
   const updateUserRole = async (userId: string, newRole: string) => {
+    if (newRole !== 'client' && newRole !== 'barber') return
     setUpdatingBarber(userId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No session token available')
-      }
-
-      const response = await fetch('/api/super-admin/update-role', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          userId,
-          role: newRole
-        })
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setBarbers(prev => prev.map(barber => 
-          barber.user_id === userId 
-            ? { 
-                ...barber, 
-                profiles: { 
-                  ...barber.profiles, 
-                  role: newRole 
-                } 
-              }
-            : barber
-        ))
-
-        toast({
-          title: 'Role Updated',
-          description: `User role changed to ${newRole}`,
-        })
-      } else {
-        throw new Error(data.error || 'Failed to update role')
-      }
+      await api.admin.updateUser(userId, { role: newRole })
+      setBarbers(prev => prev.map(barber =>
+        barber.user_id === userId
+          ? { ...barber, profiles: { ...barber.profiles, role: newRole } }
+          : barber
+      ))
+      toast({ title: 'Role Updated', description: `User role changed to ${newRole}` })
     } catch (error) {
       logger.error('Error updating role', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to update role',
-        variant: 'destructive',
-      })
+      toast({ title: 'Error', description: errorMessage(error, 'Failed to update role'), variant: 'destructive' })
     } finally {
       setUpdatingBarber(null)
     }
@@ -520,8 +393,8 @@ export default function SuperAdminPage() {
     
     if (!matchesSearch) return false
     
-    if (userFilter === 'developers') return barber.is_developer
-    if (userFilter === 'regular') return !barber.is_developer
+    if (userFilter === 'developers') return barber.fee_exempt
+    if (userFilter === 'regular') return !barber.fee_exempt
     return true
   })
 
@@ -562,8 +435,9 @@ export default function SuperAdminPage() {
                 <Input
                   id="email"
                   type="email"
-                  value="primbocm@gmail.com"
-                  disabled
+                  value={adminEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAdminEmail(e.target.value)}
+                  placeholder="Admin email"
                   className="bg-white/10 border-white/20 text-white"
                 />
               </div>
@@ -615,7 +489,7 @@ export default function SuperAdminPage() {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-white/60 text-sm">Super Admin</p>
-                <p className="text-white font-medium">primbocm@gmail.com</p>
+                <p className="text-white font-medium">{user?.email}</p>
               </div>
               <Button
                 onClick={handleLogout}
@@ -842,14 +716,14 @@ export default function SuperAdminPage() {
                     className={userFilter === 'developers' ? 'bg-green-500/20 text-green-300 border-green-400/50' : 'bg-white/10 border-white/20 text-white/80'}
                   >
                     <Zap className="h-4 w-4 mr-2" />
-                    Developers ({barbers.filter(b => b.is_developer).length})
+                    Developers ({barbers.filter(b => b.fee_exempt).length})
                   </Button>
                   <Button
                     variant={userFilter === 'regular' ? 'default' : 'outline'}
                     onClick={() => setUserFilter('regular')}
                     className={userFilter === 'regular' ? 'bg-blue-500/20 text-blue-300 border-blue-400/50' : 'bg-white/10 border-white/20 text-white/80'}
                   >
-                    Regular ({barbers.filter(b => !b.is_developer).length})
+                    Regular ({barbers.filter(b => !b.fee_exempt).length})
                   </Button>
                 </div>
               </div>
@@ -912,7 +786,7 @@ export default function SuperAdminPage() {
                             }`}>
                               {barber.profiles?.role?.toUpperCase() || 'UNKNOWN'}
                             </Badge>
-                            {barber.is_developer && (
+                            {barber.fee_exempt && (
                               <Badge className="bg-green-500 text-white font-bold px-2 py-1 text-xs shadow-lg shadow-green-500/50">
                                 <Zap className="h-3 w-3 inline mr-1" />
                                 DEVELOPER
@@ -956,7 +830,6 @@ export default function SuperAdminPage() {
                               <SelectContent>
                                 <SelectItem value="client">Client</SelectItem>
                                 <SelectItem value="barber">Barber</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -993,11 +866,11 @@ export default function SuperAdminPage() {
                             <div className="text-center">
                               <p className="text-sm font-semibold text-white mb-2">Developer Mode</p>
                               <Switch
-                                checked={barber.is_developer}
-                                onCheckedChange={() => toggleDeveloperStatus(barber.id, barber.is_developer)}
+                                checked={barber.fee_exempt}
+                                onCheckedChange={() => toggleDeveloperStatus(barber.id, barber.fee_exempt)}
                                 disabled={updatingBarber === barber.id || barber.profiles?.is_disabled}
                                 className={`scale-125 transition-all duration-200 ${
-                                  barber.is_developer 
+                                  barber.fee_exempt 
                                     ? 'bg-green-500 border-green-400 shadow-lg shadow-green-500/50' 
                                     : 'bg-red-500 border-red-400 shadow-lg shadow-red-500/50'
                                 }`}
@@ -1072,7 +945,7 @@ export default function SuperAdminPage() {
                                 <div className="flex items-center gap-4">
                                   <div className="flex items-center gap-2">
                                     <Shield className="h-4 w-4" />
-                                    <span className="text-sm">Developer: {selectedBarber.is_developer ? 'Yes' : 'No'}</span>
+                                    <span className="text-sm">Developer: {selectedBarber.fee_exempt ? 'Yes' : 'No'}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Calendar className="h-4 w-4" />
