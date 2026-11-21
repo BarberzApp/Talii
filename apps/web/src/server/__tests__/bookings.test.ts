@@ -74,12 +74,21 @@ describe('POST /api/bookings', () => {
         application_fee_amount: 220,
         transfer_data: { destination: IDS.stripeAccount },
         metadata: { bookingId: booking.id },
-        automatic_payment_methods: { enabled: true },
+        payment_method_types: ['card', 'link'],
         description: 'Talii booking fee',
       },
       { idempotencyKey: `booking-${booking.id}-payment-intent` }
     )
     expect(mockDb.rows('booking_addons', { booking_id: booking.id })).toHaveLength(1)
+  })
+
+  it('offers only immediate payment methods (card, Link), never delayed ones', async () => {
+    const res = await post(validBody)
+    expect(res.status).toBe(201)
+    const [params] = mockStripe.paymentIntents.create.mock.calls[0]
+    expect(params.payment_method_types).toEqual(['card', 'link'])
+    // automatic_payment_methods would add ACH, Klarna, Cash App, Amazon Pay, which cannot settle within the hold.
+    expect(params).not.toHaveProperty('automatic_payment_methods')
   })
 
   it('confirms immediately without Stripe for a fee-exempt barber', async () => {

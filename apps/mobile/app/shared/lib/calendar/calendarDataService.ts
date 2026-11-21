@@ -8,6 +8,7 @@
  */
 
 import {
+  addDays as addCalendarDays,
   isApiError,
   localDayBounds,
   localTimeInTimeZone,
@@ -79,9 +80,10 @@ export interface CalendarIdentity {
 /** Statuses the calendar shows (unpaid holds are left out). */
 const CALENDAR_STATUSES: BookingStatus[] = ['confirmed', 'completed', 'cancelled', 'no_show'];
 const PAGE_SIZE = 100;
-const MAX_PAGES = 10;
-/** How far back the calendar loads. */
-const HISTORY_DAYS = 180;
+/** Safety stop for paging (10,000 bookings in one range). */
+const MAX_PAGES = 100;
+/** Days added on each side of the month: the grid shows the neighbouring weeks too. */
+const RANGE_PADDING_DAYS = 7;
 /** Grid for walk-in start times, in minutes. */
 const WALK_IN_STEP_MINUTES = 15;
 
@@ -101,7 +103,7 @@ export async function fetchCalendarIdentity(): Promise<CalendarIdentity | null> 
   }
 }
 
-/** All pages of GET /api/bookings for a query (up to MAX_PAGES * PAGE_SIZE rows). */
+/** All pages of GET /api/bookings for a query. Throws ApiError on failure. */
 async function listAllBookings(query: ListBookingsQuery): Promise<BookingListItem[]> {
   const all: BookingListItem[] = [];
   for (let page = 0; page < MAX_PAGES; page += 1) {
@@ -111,24 +113,39 @@ async function listAllBookings(query: ListBookingsQuery): Promise<BookingListIte
       offset: page * PAGE_SIZE,
     });
     all.push(...bookings);
-    if (all.length >= pagination.total || bookings.length < PAGE_SIZE) break;
+    if (bookings.length === 0 || all.length >= pagination.total) break;
   }
   return all;
 }
 
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
 /**
- * Bookings for the calendar.
+ * Instants bounding the calendar month shown for `month` (its year and month
+ * on the device calendar), in `timeZone`, padded by a week on each side.
+ */
+export function calendarMonthRange(month: Date, timeZone: string): { from: string; to: string } {
+  const year = month.getFullYear();
+  const m = month.getMonth() + 1;
+  const first = `${year}-${pad2(m)}-01`;
+  const last = `${year}-${pad2(m)}-${pad2(new Date(year, m, 0).getDate())}`;
+  return {
+    from: localDayBounds(addCalendarDays(first, -RANGE_PADDING_DAYS), timeZone).start.toISOString(),
+    to: localDayBounds(addCalendarDays(last, RANGE_PADDING_DAYS), timeZone).end.toISOString(),
+  };
+}
+
+/**
+ * Bookings for the calendar in [from, to), every page.
  * - as 'barber': appointments clients (and walk-ins) booked with the caller;
  * - as 'client': bookings the caller made (a barber can book other barbers too).
+ * Throws ApiError when the API fails, so the screen can show an error instead of an empty month.
  */
-export async function fetchCalendarBookings(as: 'client' | 'barber'): Promise<BookingListItem[]> {
-  try {
-    const from = new Date(Date.now() - HISTORY_DAYS * 24 * 60 * 60 * 1000).toISOString();
-    return await listAllBookings({ as, status: CALENDAR_STATUSES, from, order: 'asc' });
-  } catch (error) {
-    logger.error('Error fetching calendar bookings', { code: isApiError(error) ? error.code : 'UNKNOWN' });
-    return [];
-  }
+export async function fetchCalendarBookings(
+  as: 'client' | 'barber',
+  range: { from: string; to: string }
+): Promise<BookingListItem[]> {
+  return listAllBookings({ as, status: CALENDAR_STATUSES, from: range.from, to: range.to, order: 'asc' });
 }
 
 /** The caller's active services (barber only). */
@@ -168,7 +185,10 @@ export async function fetchWalkInTimeSlots(
       to: end.toISOString(),
       order: 'asc',
     });
-    busy = bookings.map((b) => ({ start: Date.parse(b.starts_at), end: Date.parse(b.ends_at) }));
+    busy = bookings
+      // An unpaid hold whose expiry has passed no longer blocks the slot (the next booking releases it).
+      .filter((b) => !(b.status === 'pending' && b.hold_expires_at && Date.parse(b.hold_expires_at) <= now.getTime()))
+      .map((b) => ({ start: Date.parse(b.starts_at), end: Date.parse(b.ends_at) }));
   } catch (error) {
     logger.error('Error fetching bookings for walk-in times', { code: isApiError(error) ? error.code : 'UNKNOWN' });
     return [];

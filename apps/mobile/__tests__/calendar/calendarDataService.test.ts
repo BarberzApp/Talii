@@ -4,6 +4,7 @@
 
 import { ApiError } from '@barber-app/shared';
 import {
+  calendarMonthRange,
   fetchCalendarIdentity,
   fetchCalendarBookings,
   fetchBarberServices,
@@ -73,30 +74,49 @@ describe('calendarDataService', () => {
     });
   });
 
+  describe('calendarMonthRange', () => {
+    it('bounds the month in the barber time zone, padded by a week', () => {
+      // November 2026 in Chicago (UTC-6): Oct 25 00:00 local .. Dec 8 00:00 local.
+      expect(calendarMonthRange(new Date(2026, 10, 15), 'America/Chicago')).toEqual({
+        from: '2026-10-25T05:00:00.000Z',
+        to: '2026-12-08T06:00:00.000Z',
+      });
+    });
+  });
+
   describe('fetchCalendarBookings', () => {
-    it('lists bookings for the role, without unpaid holds', async () => {
+    const range = { from: '2026-10-25T05:00:00.000Z', to: '2026-12-08T06:00:00.000Z' };
+
+    it('lists the range for the role, without unpaid holds', async () => {
       mockApi.bookings.list.mockResolvedValue(page([{ id: 'k1' }]));
-      const result = await fetchCalendarBookings('barber');
+      const result = await fetchCalendarBookings('barber', range);
       expect(result).toEqual([{ id: 'k1' }]);
-      const query = mockApi.bookings.list.mock.calls[0][0];
-      expect(query).toMatchObject({ as: 'barber', order: 'asc', limit: 100, offset: 0 });
-      expect(query.status).toEqual(['confirmed', 'completed', 'cancelled', 'no_show']);
-      expect(typeof query.from).toBe('string');
+      expect(mockApi.bookings.list).toHaveBeenCalledWith({
+        as: 'barber',
+        status: ['confirmed', 'completed', 'cancelled', 'no_show'],
+        from: range.from,
+        to: range.to,
+        order: 'asc',
+        limit: 100,
+        offset: 0,
+      });
     });
 
     it('follows pages until the total is reached', async () => {
-      const first = Array.from({ length: 100 }, (_, i) => ({ id: `a${i}` }));
+      const full = (prefix: string) => Array.from({ length: 100 }, (_, i) => ({ id: `${prefix}${i}` }));
       mockApi.bookings.list
-        .mockResolvedValueOnce(page(first, 101))
-        .mockResolvedValueOnce(page([{ id: 'last' }], 101));
-      const result = await fetchCalendarBookings('client');
-      expect(result).toHaveLength(101);
-      expect(mockApi.bookings.list.mock.calls[1][0]).toMatchObject({ as: 'client', offset: 100 });
+        .mockResolvedValueOnce(page(full('a'), 250))
+        .mockResolvedValueOnce(page(full('b'), 250))
+        .mockResolvedValueOnce(page(full('c').slice(0, 50), 250));
+      const result = await fetchCalendarBookings('client', range);
+      expect(result).toHaveLength(250);
+      expect(mockApi.bookings.list).toHaveBeenCalledTimes(3);
+      expect(mockApi.bookings.list.mock.calls[2][0]).toMatchObject({ as: 'client', offset: 200 });
     });
 
-    it('returns an empty list on error', async () => {
+    it('throws on error so the screen can show it', async () => {
       mockApi.bookings.list.mockRejectedValue(new ApiError(500, 'INTERNAL', 'x'));
-      await expect(fetchCalendarBookings('client')).resolves.toEqual([]);
+      await expect(fetchCalendarBookings('client', range)).rejects.toMatchObject({ code: 'INTERNAL' });
     });
   });
 
@@ -133,6 +153,19 @@ describe('calendarDataService', () => {
       expect(at('10:15').available).toBe(false);
       expect(at('10:30').available).toBe(true); // back-to-back is fine
       expect(mockApi.bookings.list.mock.calls[0][0]).toMatchObject({ as: 'barber', status: ['pending', 'confirmed'] });
+    });
+
+    it('ignores pending holds whose expiry has passed', async () => {
+      mockApi.bookings.list.mockResolvedValue(
+        page([
+          { status: 'pending', hold_expires_at: '2026-11-18T11:50:00Z', starts_at: '2026-11-18T15:00:00Z', ends_at: '2026-11-18T15:30:00Z' },
+          { status: 'pending', hold_expires_at: '2026-11-18T12:05:00Z', starts_at: '2026-11-18T17:00:00Z', ends_at: '2026-11-18T17:30:00Z' },
+        ])
+      );
+      const slots = await fetchWalkInTimeSlots('2026-11-18', 30, 'America/New_York', now);
+      const at = (time: string) => slots.find((s) => s.time === time)!;
+      expect(at('10:00').available).toBe(true); // expired hold
+      expect(at('12:00').available).toBe(false); // live hold
     });
 
     it('returns no slots when bookings cannot be loaded', async () => {

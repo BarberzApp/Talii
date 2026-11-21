@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
 import Icon from 'react-native-vector-icons/Feather';
-import { initPaymentSheet, presentPaymentSheet } from '@stripe/stripe-react-native';
+import { initPaymentSheet, presentPaymentSheet, retrievePaymentIntent } from '@stripe/stripe-react-native';
 import {
   TOTAL_PRICE_CENTS,
   addDays as addCalendarDays,
@@ -230,6 +230,18 @@ export default function BookingForm({
     }
   };
 
+  /** True when Stripe already has (or is completing) the payment for this intent. */
+  const paymentWentThrough = async (clientSecret: string): Promise<boolean> => {
+    try {
+      const { paymentIntent } = await retrievePaymentIntent(clientSecret);
+      const status = paymentIntent?.status as string | undefined;
+      return status === 'Succeeded' || status === 'Processing' || status === 'RequiresCapture';
+    } catch (error) {
+      logger.warn('Could not read the PaymentIntent status.');
+      return false;
+    }
+  };
+
   const finish = (booking: BookingRow, title: string, message: string) => {
     Alert.alert(title, message, [{ text: 'OK', onPress: () => onBookingCreated(booking) }]);
     onClose();
@@ -269,6 +281,9 @@ export default function BookingForm({
         paymentIntentClientSecret: clientSecret,
         merchantDisplayName: 'Talii',
         returnURL: STRIPE_RETURN_URL,
+        // The PaymentIntent allows card and Link only (no delayed methods; the hold lasts
+        // 10 minutes). Apple Pay / Google Pay stay off: they need an Apple merchant ID on
+        // StripeProvider and the Stripe Expo config plugin, neither of which is configured.
         defaultBillingDetails: { email: user.email ?? undefined, name: userProfile?.name ?? undefined },
       });
       if (init.error) {
@@ -280,6 +295,13 @@ export default function BookingForm({
 
       const { error: paymentError } = await presentPaymentSheet();
       if (paymentError) {
+        // The sheet can report an error (or be dismissed) after the charge went through,
+        // e.g. on a flaky network. Check the PaymentIntent before releasing the hold, so a
+        // paid booking is never cancelled (a client cancel inside 24 hours is not refunded).
+        if (await paymentWentThrough(clientSecret)) {
+          finish(booking, 'Payment Successful!', 'Your payment went through. Your booking will be confirmed in a moment.');
+          return;
+        }
         await releaseHold(booking.id);
         if (paymentError.code === 'Canceled') {
           Alert.alert('Payment Cancelled', 'Your booking was not completed and the time slot was released.');

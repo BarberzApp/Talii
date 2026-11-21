@@ -25,7 +25,7 @@ import {
   Search
 } from 'lucide-react-native';
 import tw from 'twrnc';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek } from 'date-fns';
 import {
   ApiError,
   bookingErrorMessage,
@@ -33,6 +33,7 @@ import {
   formatCents,
   formatInTimeZone,
   localDateInTimeZone,
+  addDays as addCalendarDays,
 } from '@barber-app/shared';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useTheme } from '../shared/components/theme';
@@ -44,7 +45,12 @@ import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import { useCalendarData } from '../shared/hooks/useCalendarData';
 import { useCalendarState } from '../shared/hooks/useCalendarState';
-import { formatTimeSlot } from '../shared/lib/calendar/calendarUtils';
+import {
+  dateFromDayKey,
+  dayKey,
+  formatTimeSlot,
+  getEventsForDate as eventsOnDay,
+} from '../shared/lib/calendar/calendarUtils';
 import type { CalendarEvent } from '../shared/lib/calendar';
 import CalendarGrid from './calendar/components/CalendarGrid';
 import EventsPanel from './calendar/components/EventsPanel';
@@ -82,6 +88,7 @@ export default function CalendarPage() {
     isSubmitting,
     timeSlots,
     loadingTimeSlots,
+    loadError,
     reviewFormData,
     setShowEventDialog,
     setShowManualAppointmentForm,
@@ -112,10 +119,15 @@ export default function CalendarPage() {
 
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+  // initialize() changes identity whenever loadBookings does (role, month, zone);
+  // run it once per signed-in user, not on every change.
+  const initializeRef = useRef(initialize);
+  initializeRef.current = initialize;
+
   useEffect(() => {
     if (!user) return;
     
-    initialize();
+    initializeRef.current();
     
     // Animate in
     Animated.parallel([
@@ -144,12 +156,14 @@ export default function CalendarPage() {
         ])
       ),
     ]).start();
-  }, [user?.id, initialize]);
+  }, [user?.id]);
 
   // Fetch services when manual appointment modal opens
   useEffect(() => {
     if (showManualAppointmentForm) {
       fetchServices();
+      // Default the walk-in to the selected grid day, else today on the barber's calendar.
+      setManualFormData(prev => ({ ...prev, date: selectedDate || barberDay(0), startsAt: '' }));
     }
   }, [showManualAppointmentForm]);
 
@@ -183,22 +197,34 @@ export default function CalendarPage() {
     // Walk-in times are in the barber's time zone.
     const timeZone = barberTimeZone || 'America/New_York';
     await calendarData.loadTimeSlots(
-      localDateInTimeZone(manualFormData.date, timeZone),
+      dayKey(manualFormData.date),
       selectedService.duration_minutes,
       timeZone
     );
   };
 
-  // Refresh calendar data when page comes into focus
+  // Always call the newest loadBookings (it closes over the visible month and time zone).
+  const loadRef = useRef(loadBookings);
+  loadRef.current = loadBookings;
+  const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+
+  // Reload when the visible month (or the barber's time zone) changes; the first
+  // month is loaded by initialize().
+  const firstMonthLoad = useRef(true);
+  useEffect(() => {
+    if (firstMonthLoad.current) {
+      firstMonthLoad.current = false;
+      return;
+    }
+    if (user && userRole) loadRef.current();
+  }, [monthKey, barberTimeZone]);
+
+  // Refresh calendar data when the page comes back into focus.
   useFocusEffect(
     React.useCallback(() => {
-      if (user && userRole) {
-        logger.log('🔄 [CALENDAR] Page focused - refreshing data...');
-        loadBookings(userRole);
-      }
-    }, [user, userRole, loadBookings])
+      if (user && userRole) loadRef.current(userRole);
+    }, [user, userRole])
   );
-
 
   const handleBarberViewToggle = async (mode: 'appointments' | 'bookings') => {
     setBarberViewMode(mode);
@@ -217,18 +243,12 @@ export default function CalendarPage() {
     return eachDayOfInterval({ start, end });
   };
 
+  // Events are grouped by their day in the barber's time zone, matching the times shown.
   const getEventsForDate = (date: Date) => {
-    let filteredEvents = events;
-    
-    // Apply status filter
-    if (filterStatus !== 'all') {
-      filteredEvents = events.filter(event => event.extendedProps.status === filterStatus);
-    }
-    
-    return filteredEvents.filter(event => {
-      const eventDate = new Date(event.start);
-      return isSameDay(eventDate, date);
-    });
+    const filtered = filterStatus === 'all'
+      ? events
+      : events.filter(event => event.extendedProps.status === filterStatus);
+    return eventsOnDay(filtered, date);
   };
 
   const hasEvents = (date: Date) => {
@@ -458,7 +478,7 @@ export default function CalendarPage() {
         serviceId: '',
         price: '',
         startsAt: '',
-        date: selectedDate || new Date()
+        date: selectedDate || barberDay(0)
       });
     } finally {
       setIsSubmitting(false);
@@ -475,6 +495,10 @@ export default function CalendarPage() {
       startsAt: ''
     }));
   };
+
+  /** Today (+ offset days) on the barber's calendar, as a grid/picker date. */
+  const barberDay = (offset: number) =>
+    dateFromDayKey(addCalendarDays(localDateInTimeZone(new Date(), barberTimeZone || 'America/New_York'), offset));
 
   const handleDateSelect = (date: Date) => {
     setManualFormData(prev => ({
@@ -605,6 +629,19 @@ export default function CalendarPage() {
             </View>
           )}
         </View>
+
+          {/* Load error: keep what was shown and offer a retry instead of an empty month */}
+          {loadError && (
+            <View
+              testID="calendar-load-error"
+              style={[tw`mx-5 mb-4 p-4 rounded-2xl`, { backgroundColor: colors.destructiveSubtle, borderWidth: 1, borderColor: colors.destructive }]}
+            >
+              <Text style={[tw`text-sm mb-2`, { color: colors.destructive }]}>{loadError}</Text>
+              <TouchableOpacity onPress={() => refresh()} accessibilityRole="button">
+                <Text style={[tw`font-semibold`, { color: colors.destructive }]}>Try again</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Single Main Calendar Container - Enhanced with glow */}
           <Animated.View 
@@ -820,21 +857,21 @@ export default function CalendarPage() {
                           text: 'Today',
                           onPress: () => {
                             logger.log('Selected Today');
-                            handleDateSelect(new Date());
+                            handleDateSelect(barberDay(0));
                           }
                         },
                         {
                           text: 'Tomorrow',
                           onPress: () => {
                             logger.log('Selected Tomorrow');
-                            handleDateSelect(new Date(Date.now() + 24 * 60 * 60 * 1000));
+                            handleDateSelect(barberDay(1));
                           }
                         },
                         {
                           text: 'Next Week',
                           onPress: () => {
                             logger.log('Selected Next Week');
-                            handleDateSelect(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+                            handleDateSelect(barberDay(7));
                           }
                         },
                         {

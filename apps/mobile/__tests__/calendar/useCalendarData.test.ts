@@ -55,7 +55,10 @@ function makeState(overrides: Record<string, unknown> = {}) {
     setUserRole: jest.fn(),
     barberViewMode: 'appointments',
     setBarberId: jest.fn(),
+    barberTimeZone: 'America/New_York',
     setBarberTimeZone: jest.fn(),
+    currentDate: new Date(2026, 11, 10),
+    setLoadError: jest.fn(),
     setServices: jest.fn(),
     setTimeSlots: jest.fn(),
     setLoadingTimeSlots: jest.fn(),
@@ -67,6 +70,10 @@ describe('useCalendarData', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     svc.fetchCalendarBookings.mockResolvedValue([booking]);
+    // The month-range math is pure; use the real one.
+    svc.calendarMonthRange.mockImplementation(
+      jest.requireActual('@/lib/calendar/calendarDataService').calendarMonthRange
+    );
   });
 
   describe('initialize', () => {
@@ -87,7 +94,7 @@ describe('useCalendarData', () => {
       expect(state.setUserRole).toHaveBeenCalledWith('barber');
       expect(state.setBarberId).toHaveBeenCalledWith('barber-123');
       expect(state.setBarberTimeZone).toHaveBeenCalledWith('America/New_York');
-      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('barber');
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('barber', expect.objectContaining({ from: expect.any(String) }));
       expect(state.setLoading).toHaveBeenCalledWith(true);
       expect(state.setLoading).toHaveBeenLastCalledWith(false);
     });
@@ -121,7 +128,11 @@ describe('useCalendarData', () => {
         await result.current.loadBookings('barber');
       });
 
-      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('barber');
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('barber', {
+        from: '2026-11-24T05:00:00.000Z',
+        to: '2027-01-08T05:00:00.000Z',
+      });
+      expect(state.setLoadError).toHaveBeenCalledWith(null);
       const [events] = state.setEvents.mock.calls[0];
       expect(events[0]).toMatchObject({
         id: 'booking-1',
@@ -145,7 +156,7 @@ describe('useCalendarData', () => {
       await act(async () => {
         await result.current.loadBookings('barber', 'bookings');
       });
-      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('client');
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('client', expect.any(Object));
       expect(state.setEvents.mock.calls[0][0][0].title).toBe('Haircut with Fade Co');
     });
 
@@ -155,7 +166,30 @@ describe('useCalendarData', () => {
       await act(async () => {
         await result.current.loadBookings();
       });
-      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('client');
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('client', expect.any(Object));
+    });
+
+    it('loads another month when asked', async () => {
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
+      await act(async () => {
+        await result.current.loadBookings('barber', 'appointments', { month: new Date(2027, 1, 1) });
+      });
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('barber', {
+        from: '2027-01-25T05:00:00.000Z',
+        to: '2027-03-08T05:00:00.000Z',
+      });
+    });
+
+    it('shows an error and keeps the events when loading fails', async () => {
+      svc.fetchCalendarBookings.mockRejectedValue(Object.assign(new Error('Server down'), { name: 'ApiError', code: 'INTERNAL', status: 500 }));
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
+      await act(async () => {
+        await result.current.loadBookings('barber');
+      });
+      expect(state.setEvents).not.toHaveBeenCalled();
+      expect(state.setLoadError).toHaveBeenCalledWith('Server down');
     });
 
     it('does nothing without a role', async () => {

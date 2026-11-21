@@ -7,7 +7,8 @@
  * @module useCalendarData
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
+import { errorMessage, isApiError } from '@barber-app/shared';
 import {
   fetchCalendarIdentity,
   fetchCalendarBookings,
@@ -17,12 +18,21 @@ import {
   completeBooking,
   markNoShow,
   cancelBooking as cancelBookingService,
+  calendarMonthRange,
   type BookingActionResult,
   type ManualAppointmentResult,
 } from '../lib/calendar/calendarDataService';
 import { transformBookingToEvent } from '../lib/calendar/calendarUtils';
 import { logger } from '../lib/logger';
 import type { CalendarState } from './useCalendarState';
+
+function deviceTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+  } catch {
+    return 'America/New_York';
+  }
+}
 
 /**
  * Hook for calendar data operations
@@ -39,18 +49,30 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
     setUserRole,
     barberViewMode,
     setBarberId,
+    barberTimeZone,
     setBarberTimeZone,
+    currentDate,
+    setLoadError,
     setServices,
     setTimeSlots,
     setLoadingTimeSlots,
   } = state;
 
+  // Only the newest load may write events (month switches can overlap).
+  const loadSeq = useRef(0);
+
   /**
-   * Load bookings for the role and view: a barber's "appointments" are bookings
-   * with them; "bookings" (and a client's calendar) are bookings they made.
+   * Load the visible month's bookings for the role and view: a barber's
+   * "appointments" are bookings with them; "bookings" (and a client's calendar)
+   * are bookings they made. The month is bounded in the barber's time zone
+   * (the device's for clients). On failure the error is shown; events are kept.
    */
   const loadBookings = useCallback(
-    async (role?: 'client' | 'barber', explicitViewMode?: 'appointments' | 'bookings') => {
+    async (
+      role?: 'client' | 'barber',
+      explicitViewMode?: 'appointments' | 'bookings',
+      options: { month?: Date; timeZone?: string | null } = {}
+    ) => {
       if (!userId) return;
       const roleToUse = role || userRole;
       if (!roleToUse) return;
@@ -58,15 +80,22 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
       // Use the explicitly passed view mode (avoids a stale closure after setBarberViewMode).
       const viewMode = explicitViewMode || barberViewMode;
       const as = roleToUse === 'barber' && viewMode === 'appointments' ? 'barber' : 'client';
+      const timeZone = options.timeZone || barberTimeZone || deviceTimeZone();
+      const range = calendarMonthRange(options.month ?? currentDate, timeZone);
+      const seq = ++loadSeq.current;
 
       try {
-        const bookings = await fetchCalendarBookings(as);
+        const bookings = await fetchCalendarBookings(as, range);
+        if (seq !== loadSeq.current) return;
         setEvents(bookings.map((booking) => transformBookingToEvent(booking, roleToUse, viewMode)));
+        setLoadError(null);
       } catch (error) {
-        logger.error('Error loading bookings:', error);
+        if (seq !== loadSeq.current) return;
+        logger.error('Error loading bookings', { code: isApiError(error) ? error.code : 'UNKNOWN' });
+        setLoadError(errorMessage(error, 'Could not load your calendar. Check your connection and try again.'));
       }
     },
-    [userId, userRole, barberViewMode, setEvents]
+    [userId, userRole, barberViewMode, barberTimeZone, currentDate, setEvents, setLoadError]
   );
 
   /**
@@ -82,14 +111,16 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
         setUserRole(identity.role);
         setBarberId(identity.barberId);
         setBarberTimeZone(identity.timeZone);
-        await loadBookings(identity.role);
+        await loadBookings(identity.role, undefined, { timeZone: identity.timeZone });
+      } else {
+        setLoadError('Could not load your calendar. Check your connection and try again.');
       }
     } catch (error) {
       logger.error('Error initializing calendar:', error);
     } finally {
       setLoading(false);
     }
-  }, [userId, setLoading, setUserRole, setBarberId, setBarberTimeZone, loadBookings]);
+  }, [userId, setLoading, setUserRole, setBarberId, setBarberTimeZone, setLoadError, loadBookings]);
 
   const refresh = useCallback(async () => {
     try {

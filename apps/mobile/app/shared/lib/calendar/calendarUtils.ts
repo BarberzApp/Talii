@@ -9,7 +9,7 @@
  */
 
 import { theme } from '../theme';
-import { formatCents, formatClockTime, type BookingListItem } from '@barber-app/shared';
+import { formatCents, formatClockTime, localDateInTimeZone, type BookingListItem } from '@barber-app/shared';
 import type { CalendarEvent } from './calendarDataService';
 
 /**
@@ -118,18 +118,30 @@ export function filterEventsByStatus(events: CalendarEvent[], status: string): C
 }
 
 /**
- * Get events for a specific date
- * 
- * @param events - Array of calendar events
- * @param date - Date to filter by
- * @returns Events on the specified date
+ * The calendar day a grid cell stands for ("YYYY-MM-DD" on the device calendar;
+ * grid dates are local midnights).
+ */
+export function dayKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/** A device-local Date for a calendar day "YYYY-MM-DD" (for the grid and date pickers). */
+export function dateFromDayKey(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** The day an event falls on in the barber's time zone, matching the times shown. */
+export function eventDayKey(event: CalendarEvent): string {
+  return localDateInTimeZone(event.start, event.extendedProps.timeZone);
+}
+
+/**
+ * Get events for a calendar day (grouped in each booking's barber time zone).
  */
 export function getEventsForDate(events: CalendarEvent[], date: Date): CalendarEvent[] {
-  const dateStr = date.toISOString().split('T')[0];
-  return events.filter(event => {
-    const eventDateStr = new Date(event.start).toISOString().split('T')[0];
-    return eventDateStr === dateStr;
-  });
+  const key = dayKey(date);
+  return events.filter(event => eventDayKey(event) === key);
 }
 
 /**
@@ -178,21 +190,14 @@ export function getPastEvents(events: CalendarEvent[]): CalendarEvent[] {
 }
 
 /**
- * Group events by date
- * 
- * @param events - Array of calendar events
- * @returns Map of date string to events array
+ * Group events by their day in the barber's time zone ("YYYY-MM-DD").
  */
 export function groupEventsByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
   const grouped = new Map<string, CalendarEvent[]>();
-  
   events.forEach(event => {
-    const dateStr = new Date(event.start).toISOString().split('T')[0];
-    const existing = grouped.get(dateStr) || [];
-    existing.push(event);
-    grouped.set(dateStr, existing);
+    const key = eventDayKey(event);
+    grouped.set(key, [...(grouped.get(key) || []), event]);
   });
-  
   return grouped;
 }
 

@@ -64,6 +64,8 @@ export function useCalendarState() {
   const [isMarkingCompleted, setIsMarkingCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  /** Message shown when the month's bookings could not be loaded. */
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // User role and view mode
   const [userRole, setUserRole] = useState<'client' | 'barber' | null>(null);
@@ -168,6 +170,7 @@ export function useCalendarState() {
     setIsMarkingCompleted(false);
     setIsSubmitting(false);
     setLoadingTimeSlots(false);
+    setLoadError(null);
     // Reset user-specific state
     setUserRole(null);
     setBarberId(null);
@@ -228,6 +231,8 @@ export function useCalendarState() {
     setIsSubmitting,
     loadingTimeSlots,
     setLoadingTimeSlots,
+    loadError,
+    setLoadError,
 
     // User role
     userRole,

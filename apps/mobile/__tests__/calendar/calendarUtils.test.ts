@@ -8,6 +8,9 @@ import {
   transformBookingToEvent,
   filterEventsByStatus,
   getEventsForDate,
+  groupEventsByDate,
+  dayKey,
+  dateFromDayKey,
   formatTimeSlot,
   calculateTotalRevenue,
   getUpcomingEvents,
@@ -145,12 +148,25 @@ describe('calendarUtils', () => {
     });
   });
 
-  describe('getEventsForDate', () => {
-    const events = [makeEvent({ id: '1' }), makeEvent({ id: '2', start: '2024-12-16T10:00:00Z' })];
+  describe('getEventsForDate / groupEventsByDate (barber time zone)', () => {
+    // 03:30 UTC on Dec 16 is still Dec 15 (19:30) in Los Angeles.
+    const lateEvening = makeEvent({ id: 'la', start: '2024-12-16T03:30:00Z', props: { timeZone: 'America/Los_Angeles' } });
+    const morning = makeEvent({ id: 'ny', start: '2024-12-16T15:00:00Z', props: { timeZone: 'America/New_York' } });
 
-    it('gets events on a date', () => {
-      expect(getEventsForDate(events, new Date('2024-12-15')).map((e) => e.id)).toEqual(['1']);
-      expect(getEventsForDate(events, new Date('2024-12-17'))).toEqual([]);
+    it('puts an event on its day in the barber zone, whatever the device zone', () => {
+      expect(getEventsForDate([lateEvening, morning], new Date(2024, 11, 15)).map((e) => e.id)).toEqual(['la']);
+      expect(getEventsForDate([lateEvening, morning], new Date(2024, 11, 16)).map((e) => e.id)).toEqual(['ny']);
+      expect(getEventsForDate([lateEvening, morning], new Date(2024, 11, 17))).toEqual([]);
+    });
+
+    it('groups by barber-local day', () => {
+      const grouped = groupEventsByDate([lateEvening, morning]);
+      expect([...grouped.keys()]).toEqual(['2024-12-15', '2024-12-16']);
+    });
+
+    it('converts between grid dates and day keys', () => {
+      expect(dayKey(new Date(2024, 0, 5))).toBe('2024-01-05');
+      expect(dayKey(dateFromDayKey('2024-03-10'))).toBe('2024-03-10');
     });
   });
 

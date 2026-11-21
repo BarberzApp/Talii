@@ -155,7 +155,10 @@ export async function createBooking(
           application_fee_amount: fees.applicationFeeCents,
           transfer_data: { destination },
           metadata: buildBookingPaymentMetadata(hold.id),
-          automatic_payment_methods: { enabled: true },
+          // Immediate methods only: the slot is held for 10 minutes, so delayed methods
+          // (bank debits, buy-now-pay-later, vouchers) cannot confirm in time. Cards
+          // include Apple Pay and Google Pay.
+          payment_method_types: ['card', 'link'],
           description: 'Talii booking fee',
         },
         { idempotencyKey: `booking-${hold.id}-payment-intent` }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
-import { initPaymentSheet, presentPaymentSheet } from '@stripe/stripe-react-native';
+import { initPaymentSheet, presentPaymentSheet, retrievePaymentIntent } from '@stripe/stripe-react-native';
 import { ApiError } from '@barber-app/shared';
 import BookingForm from '@/components/BookingForm';
 import { api } from '@/lib/api';
@@ -28,6 +28,7 @@ jest.mock('react-native-vector-icons/Feather', () => 'Icon');
 jest.mock('@stripe/stripe-react-native', () => ({
   initPaymentSheet: jest.fn(),
   presentPaymentSheet: jest.fn(),
+  retrievePaymentIntent: jest.fn(),
 }));
 
 jest.mock('@/components/ui', () => {
@@ -150,16 +151,46 @@ describe('BookingForm', () => {
     expect(Alert.alert).toHaveBeenCalledWith('Payment Successful!', expect.any(String), expect.any(Array));
   });
 
-  it('releases the hold when the PaymentSheet is cancelled', async () => {
+  it('releases the hold when the PaymentSheet is cancelled and nothing was paid', async () => {
     mockApi.bookings.create.mockResolvedValue({ booking: { id: 'k1' }, clientSecret: 'pi_secret' });
     (initPaymentSheet as jest.Mock).mockResolvedValue({});
     (presentPaymentSheet as jest.Mock).mockResolvedValue({ error: { code: 'Canceled', message: 'Canceled' } });
+    (retrievePaymentIntent as jest.Mock).mockResolvedValue({ paymentIntent: { status: 'RequiresPaymentMethod' } });
     mockApi.bookings.cancel.mockResolvedValue({ booking: {}, refund: null });
     await bookThroughSteps();
 
     await waitFor(() => expect(mockApi.bookings.cancel).toHaveBeenCalledWith('k1', 'Payment not completed'));
+    expect(retrievePaymentIntent).toHaveBeenCalledWith('pi_secret');
     expect(Alert.alert).toHaveBeenCalledWith('Payment Cancelled', expect.any(String));
     expect(props.onBookingCreated).not.toHaveBeenCalled();
+  });
+
+  it.each(['Succeeded', 'Processing', 'RequiresCapture'])(
+    'keeps the booking when the sheet errors but the PaymentIntent is %s',
+    async (status) => {
+      mockApi.bookings.create.mockResolvedValue({ booking: { id: 'k1' }, clientSecret: 'pi_secret' });
+      (initPaymentSheet as jest.Mock).mockResolvedValue({});
+      (presentPaymentSheet as jest.Mock).mockResolvedValue({ error: { code: 'Failed', message: 'Network lost' } });
+      (retrievePaymentIntent as jest.Mock).mockResolvedValue({ paymentIntent: { status } });
+      await bookThroughSteps();
+
+      await waitFor(() =>
+        expect(Alert.alert).toHaveBeenCalledWith('Payment Successful!', expect.any(String), expect.any(Array))
+      );
+      expect(mockApi.bookings.cancel).not.toHaveBeenCalled();
+    }
+  );
+
+  it('releases the hold when the PaymentIntent status cannot be read', async () => {
+    mockApi.bookings.create.mockResolvedValue({ booking: { id: 'k1' }, clientSecret: 'pi_secret' });
+    (initPaymentSheet as jest.Mock).mockResolvedValue({});
+    (presentPaymentSheet as jest.Mock).mockResolvedValue({ error: { code: 'Failed', message: 'Declined' } });
+    (retrievePaymentIntent as jest.Mock).mockRejectedValue(new Error('offline'));
+    mockApi.bookings.cancel.mockResolvedValue({ booking: {}, refund: null });
+    await bookThroughSteps();
+
+    await waitFor(() => expect(mockApi.bookings.cancel).toHaveBeenCalledWith('k1', 'Payment not completed'));
+    expect(Alert.alert).toHaveBeenCalledWith('Payment Failed', 'Declined');
   });
 
   it('shows the friendly message for SLOT_TAKEN', async () => {
