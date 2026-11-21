@@ -37,7 +37,7 @@ import { logger } from '../lib/logger';
 type BookingFormNavigationProp = NativeStackNavigationProp<RootStackParamList, 'BookingCalendar'>;
 
 /** Deep link Stripe returns to after a redirect-based payment step (3-D Secure, bank apps). */
-const STRIPE_RETURN_URL = 'bocm://stripe-redirect';
+const STRIPE_RETURN_URL = 'talii://stripe-redirect';
 const DAYS_SHOWN = 14;
 
 interface BookingFormProps {

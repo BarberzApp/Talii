@@ -112,7 +112,7 @@ export const getRouteRole = (route: string): 'client' | 'barber' | 'admin' | und
 
 // Deep linking configuration
 export const DEEP_LINKING_CONFIG = {
-  prefixes: ['bocm://', 'https://bocm.app'],
+  prefixes: ['talii://'],
   config: {
     screens: {
       Home: '',

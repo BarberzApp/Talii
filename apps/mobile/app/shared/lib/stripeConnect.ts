@@ -5,9 +5,9 @@ import { logger } from './logger';
 
 /**
  * The website's /barber/connect/return and /refresh pages send the browser to
- * this deep link (bocm://stripe-connect/return?account_id=... or /refresh).
+ * this deep link (talii://stripe-connect/return?account_id=... or /refresh).
  */
-export const STRIPE_CONNECT_DEEP_LINK = 'bocm://stripe-connect';
+export const STRIPE_CONNECT_DEEP_LINK = 'talii://stripe-connect';
 
 export type ConnectFlowResult = {
   /** The account's status read from Stripe after the browser closed (null if that failed). */
@@ -47,7 +47,7 @@ export async function fetchConnectStatus(): Promise<ConnectStatusResponse | null
 /**
  * Opens Stripe onboarding (or the Express dashboard) in an in-app browser session.
  * `POST /api/stripe/connect/onboarding` or `/dashboard` returns the URL; the
- * session closes when the website redirects to the bocm://stripe-connect deep
+ * session closes when the website redirects to the talii://stripe-connect deep
  * link (or the barber closes it). The status is then read with
  * GET /api/stripe/connect/status. Throws ApiError when no link could be created.
  */

@@ -24,13 +24,13 @@ describe('openStripeConnect', () => {
     let openDuringSession: boolean | undefined;
     (WebBrowser.openAuthSessionAsync as jest.Mock).mockImplementation(async () => {
       openDuringSession = isConnectSessionOpen();
-      return { type: 'success', url: 'bocm://stripe-connect/return?account_id=acct_1' };
+      return { type: 'success', url: 'talii://stripe-connect/return?account_id=acct_1' };
     });
 
     const result = await openStripeConnect('onboarding');
 
     expect(openDuringSession).toBe(true);
-    expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith('https://connect.stripe.com/x', 'bocm://stripe-connect');
+    expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith('https://connect.stripe.com/x', 'talii://stripe-connect');
     expect(isStripeReady(result.status)).toBe(true);
     expect(result.needsNewLink).toBe(false);
     // Still flagged right after (a late deep link), cleared shortly after.
@@ -42,7 +42,7 @@ describe('openStripeConnect', () => {
   it('reports an expired link (refresh URL)', async () => {
     (WebBrowser.openAuthSessionAsync as jest.Mock).mockResolvedValue({
       type: 'success',
-      url: 'bocm://stripe-connect/refresh?account_id=acct_1',
+      url: 'talii://stripe-connect/refresh?account_id=acct_1',
     });
     const result = await openStripeConnect('onboarding');
     expect(result.needsNewLink).toBe(true);

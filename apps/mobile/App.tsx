@@ -63,7 +63,7 @@ const App = () => {
         }
 
         // Stripe PaymentSheet redirects (3-D Secure, bank apps) come back on
-        // bocm://stripe-redirect; the Stripe SDK handles them.
+        // talii://stripe-redirect; the Stripe SDK handles them.
       } catch (error) {
         logger.error('Error handling deep link:', error);
         // Don't crash the app - just log the error
@@ -108,7 +108,7 @@ const App = () => {
       ) : !stripePublishableKey ? (
         <AppConfigErrorScreen />
       ) : (
-        <StripeProvider publishableKey={stripePublishableKey} urlScheme="bocm">
+        <StripeProvider publishableKey={stripePublishableKey} urlScheme="talii">
           <AuthProvider>
             <AppNavigator />
             <Toaster toasts={toasts} onDismiss={dismiss} />

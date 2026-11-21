@@ -329,7 +329,7 @@ export default function BarberOnboardingPage() {
     /**
      * POST /api/stripe/connect/onboarding (creates the Express account if needed),
      * opens the link in the browser, then reads GET /api/stripe/connect/status
-     * once the website sends the barber back with the bocm://stripe-connect link.
+     * once the website sends the barber back with the talii://stripe-connect link.
      */
     const handleStripeConnect = async () => {
         if (stripeLoading) return;
