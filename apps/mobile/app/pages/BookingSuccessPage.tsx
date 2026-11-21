@@ -1,16 +1,15 @@
 // screens/BookingSuccessPage.tsx
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   SafeAreaView,
   TouchableOpacity,
-  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
-const Icon = require('react-native-vector-icons/Feather').default;
+import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../shared/components/theme';
 import { RootStackParamList } from '../shared/types';
 
@@ -19,23 +18,6 @@ type BookingSuccessNavigationProp = NativeStackNavigationProp<RootStackParamList
 export default function BookingSuccessPage() {
   const { colors } = useTheme();
   const navigation = useNavigation<BookingSuccessNavigationProp>();
-
-  useEffect(() => {
-    // Handle deep link from Stripe success redirect
-    const handleDeepLink = (url: string) => {
-      if (url.includes('booking-success')) {
-        // Do something later
-      }
-    };
-
-    const subscription = Linking.addEventListener('url', (event) => {
-      handleDeepLink(event.url);
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
 
   return (
     <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
@@ -49,7 +31,7 @@ export default function BookingSuccessPage() {
         </Text>
         
         <Text style={[tw`text-center mb-8`, { color: colors.mutedForeground }]}>
-          Your appointment has been successfully booked. You&apos;ll receive a confirmation email shortly.
+          Your appointment has been booked. You can find it any time in the Calendar tab.
         </Text>
 
         <TouchableOpacity

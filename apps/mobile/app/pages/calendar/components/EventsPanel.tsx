@@ -82,10 +82,10 @@ export default function EventsPanel({
                 >
                   <View style={tw`flex-row items-center justify-between`}>
                     <View style={tw`flex-1`}>
-                      <Text style={[tw`font-semibold text-sm mb-1`, { color: colors.foreground }]}>
+                      <Text style={[tw`font-semibold text-sm mb-1`, { color: colors.foreground }]} numberOfLines={1}>
                         {event.extendedProps.serviceName}
                       </Text>
-                      <Text style={[tw`text-xs mb-2`, { color: colors.mutedForeground }]}>
+                      <Text style={[tw`text-xs mb-2`, { color: colors.mutedForeground }]} numberOfLines={1}>
                         {event.extendedProps.clientName}
                       </Text>
                       <View style={tw`flex-row items-center`}>

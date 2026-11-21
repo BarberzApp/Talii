@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Star, MessageSquare, Calendar, Flag, CheckCircle, Pencil, Trash2 } from 'lucide-react-native';
+import { Star, Calendar, Flag, CheckCircle, Pencil, Trash2 } from 'lucide-react-native';
 import tw from 'twrnc';
 import type { PublicReview } from '@barber-app/shared';
 import { Avatar } from './ui';

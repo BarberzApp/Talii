@@ -15,18 +15,9 @@ import { centsToDollarInput, dollarsToCents, formatCents, type AddonRow } from '
 import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
-import { Button, Card, CardContent, LoadingSpinner } from '../ui';
+import { Card, CardContent, LoadingSpinner } from '../ui';
 import Input from '../ui/Input';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Package, 
-  DollarSign,
-  AlertCircle,
-  CheckCircle,
-  Sparkles
-} from 'lucide-react-native';
+import { Edit, Trash2, Package, DollarSign } from 'lucide-react-native';
 import type { ServiceAddon } from '../../types/settings.types';
 
 interface AddonsSettingsProps {

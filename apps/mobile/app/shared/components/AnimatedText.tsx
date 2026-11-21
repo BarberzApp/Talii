@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated } from 'react-native';
+import { View, Animated } from 'react-native';
 import { theme } from '../lib/theme';
 import { useTheme } from './theme/ThemeProvider';
 import type { ResolvedColors } from '../lib/theme';
@@ -80,6 +80,7 @@ export const AnimatedText: React.FC<AnimatedTextProps> = ({
 
       Animated.stagger(theme.animations.timing.CHARACTER_DELAY, animations).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the animation starts once on mount
   }, [isVisible]);
 
   const typeStyles = getTypeStyles(type, colors);

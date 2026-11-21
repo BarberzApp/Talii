@@ -14,7 +14,7 @@ import {
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../shared/types';
-import { ArrowLeft, Calendar, MapPin, Star, Heart, Users, History, Camera, Loader2, Eye, Clock, Share2, Flag, Ban, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft, Heart, History, Clock, MoreVertical } from 'lucide-react-native';
 import tw from 'twrnc';
 import { useTheme } from '../shared/components/theme';
 import { formatCents, type PublicService } from '@barber-app/shared';
@@ -23,20 +23,12 @@ import { logger } from '../shared/lib/logger';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useReporting } from '../shared/hooks/useReporting';
 import { ReportContentModal } from '../shared/components/ReportContentModal';
-import {
-  Button,
-  Card,
-  CardContent,
-  Badge,
-  Avatar,
-  Dialog,
-  DialogContent,
-} from '../shared/components/ui';
+import { Button, Dialog, DialogContent } from '../shared/components/ui';
 import { GlassyCard } from '../shared/components/ui/GlassyCard';
 import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 // Helper function to get initials from name
 const getInitials = (name: string) => {
@@ -71,7 +63,7 @@ export default function ProfilePreview() {
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const isOwnProfile = user?.id === profile?.id;
   const [services, setServices] = useState<PublicService[]>([]);
-  const [posts, setPosts] = useState<Array<{ id: string; url: string; title: string }>>([]);
+  const [posts, setPosts] = useState<{ id: string; url: string; title: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [openDialog, setOpenDialog] = useState<null | 'video'>(null);
@@ -81,6 +73,7 @@ export default function ProfilePreview() {
 
   useEffect(() => {
     fetchProfileData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [barberId]);
 
   const promptAuth = (context: string = 'continue') => {
@@ -136,22 +129,6 @@ export default function ProfilePreview() {
     setRefreshing(true);
     await fetchProfileData();
     setRefreshing(false);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
   };
 
   const renderTabContent = () => {

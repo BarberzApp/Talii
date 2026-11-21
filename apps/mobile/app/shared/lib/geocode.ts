@@ -10,18 +10,6 @@ function logFailure(what: string, error: unknown) {
   logger.error(`Geocoding failed (${what})`, { code: isApiError(error) ? error.code : 'UNKNOWN' });
 }
 
-/** Geocode a full address string to { lat, lon } */
-export async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
-  try {
-    const results = await api.geocode.search({ q: address });
-    if (results.length === 0) return null;
-    return { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) };
-  } catch (error) {
-    logFailure('geocode', error);
-    return null;
-  }
-}
-
 /**
  * Address autocomplete suggestions (Google Places): normalized results including
  * the `address` component map (house_number, road, city, state, postcode, ...).
@@ -33,19 +21,6 @@ export async function getAddressSuggestionsDetailed(query: string): Promise<Geoc
   } catch (error) {
     logFailure('autocomplete', error);
     return [];
-  }
-}
-
-/** Reverse geocode a lat/lon to a place name (Google Geocoding API) */
-export async function reverseGeocode(
-  lat: number,
-  lon: number
-): Promise<{ name: string; city?: string; state?: string; country?: string } | null> {
-  try {
-    return await api.geocode.reverse(lat, lon);
-  } catch (error) {
-    logFailure('reverse', error);
-    return null;
   }
 }
 

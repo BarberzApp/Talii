@@ -38,7 +38,7 @@ export function isStripeReady(status: ConnectStatusResponse | null | undefined):
 export async function fetchConnectStatus(): Promise<ConnectStatusResponse | null> {
   try {
     return await api.connect.status();
-  } catch (error) {
+  } catch {
     logger.warn('Could not read Stripe Connect status.');
     return null;
   }

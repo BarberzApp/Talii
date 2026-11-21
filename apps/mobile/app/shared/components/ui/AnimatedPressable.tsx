@@ -1,12 +1,6 @@
 import React from 'react';
 import { Pressable, ViewStyle, StyleProp } from 'react-native';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring,
-  withTiming
-} from 'react-native-reanimated';
-import { theme } from '../../lib/theme';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 interface AnimatedPressableProps {
   children: React.ReactNode;

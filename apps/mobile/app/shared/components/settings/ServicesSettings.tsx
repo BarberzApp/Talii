@@ -14,20 +14,9 @@ import { centsToDollarInput, dollarsToCents, formatCents, type ServiceRow } from
 import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
-import { Button, Card, CardContent, LoadingSpinner } from '../ui';
+import { Card, CardContent, LoadingSpinner } from '../ui';
 import Input from '../ui/Input';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Scissors, 
-  DollarSign, 
-  Clock,
-  AlertCircle,
-  CheckCircle,
-  Sparkles,
-  Package
-} from 'lucide-react-native';
+import { Plus, Edit, Trash2, Scissors, DollarSign, Clock, CheckCircle, Sparkles, Package } from 'lucide-react-native';
 import type { Service } from '../../types/settings.types';
 
 interface ServicesSettingsProps {

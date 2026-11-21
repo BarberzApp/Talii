@@ -14,7 +14,6 @@ export type RootStackParamList = {
   Browse: undefined;
   Settings: undefined;
   ForgotPassword: undefined;
-  FindBarber: undefined;
   BarberOnboarding: undefined;
   BarberDashboard: undefined;
   BookingSuccess: undefined;

@@ -51,11 +51,13 @@ export default function EmailConfirmationScreen() {
     }, 2000);
 
     return () => clearInterval(checkInterval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [user]);
 
   const handleConfirmed = () => {
-    // Default to client flow if no user profile
-    navigation.replace('FindBarber' as any, {});
+    // The sign-in screen finds the existing session and opens onboarding or the main app
+    // (the old 'FindBarber' route is not registered).
+    navigation.replace('Login' as any, {});
   };
 
   const checkEmailConfirmation = async () => {
@@ -80,7 +82,7 @@ export default function EmailConfirmationScreen() {
           'Please check your email and click the confirmation link first.',
         );
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to check confirmation status. Please try again.');
     } finally {
       setChecking(false);

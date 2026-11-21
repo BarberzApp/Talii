@@ -202,17 +202,6 @@ export function groupEventsByDate(events: CalendarEvent[]): Map<string, Calendar
 }
 
 /**
- * Check if a date has any events
- * 
- * @param events - Array of calendar events
- * @param date - Date to check
- * @returns True if date has events
- */
-export function hasEventsOnDate(events: CalendarEvent[], date: Date): boolean {
-  return getEventsForDate(events, date).length > 0;
-}
-
-/**
  * Get count of events by status
  * 
  * @param events - Array of calendar events
@@ -234,23 +223,6 @@ export function getEventCountsByStatus(events: CalendarEvent[]): Record<string, 
   });
   
   return counts;
-}
-
-/**
- * Calculate completion rate
- * 
- * @param events - Array of calendar events
- * @returns Completion rate as percentage (0-100)
- */
-export function calculateCompletionRate(events: CalendarEvent[]): number {
-  const pastEvents = getPastEvents(events);
-  if (pastEvents.length === 0) return 0;
-  
-  const completedCount = pastEvents.filter(
-    e => e.extendedProps.status === 'completed'
-  ).length;
-  
-  return Math.round((completedCount / pastEvents.length) * 100);
 }
 
 /**

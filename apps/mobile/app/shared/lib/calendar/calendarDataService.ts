@@ -175,7 +175,7 @@ export async function fetchWalkInTimeSlots(
   now: Date = new Date()
 ): Promise<TimeSlot[]> {
   const { start, end } = localDayBounds(date, timeZone);
-  let busy: Array<{ start: number; end: number }> = [];
+  let busy: { start: number; end: number }[] = [];
   try {
     const bookings = await listAllBookings({
       as: 'barber',

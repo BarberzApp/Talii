@@ -14,17 +14,15 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import { Scissors, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
-import { useAuth, authAdapter } from '../shared/hooks/useAuth';
+import { authAdapter } from '../shared/hooks/useAuth';
 import { fetchProfileWithRetry } from '@barber-app/shared';
 import { supabase } from '../shared/lib/supabase';
 import { logger } from '../shared/lib/logger';
 import { useTheme } from '../shared/components/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 import { ActionButton } from '../shared/components/ActionButton';
-import { Card } from '../shared/components/ui/Card';
 import Input from '../shared/components/ui/Input';
 import { theme } from '../shared/lib/theme';
-import { GlassyCard } from '../shared/components/ui/GlassyCard';
 import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 
@@ -40,7 +38,6 @@ type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, '
 export default function LoginPage() {
   const { colors, colorScheme } = useTheme();
   const navigation = useNavigation<LoginScreenNavigationProp>();
-  const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -74,6 +71,7 @@ export default function LoginPage() {
       }
     };
     checkSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, []);
 
   /** Loads the profile from GET /api/me and opens the right screen. */
@@ -180,16 +178,9 @@ export default function LoginPage() {
           [{ text: 'OK' }]
         );
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to send reset email. Please try again.');
     }
-  };
-
-  const handleGoogleSignIn = async () => {
-    // Google Sign-In is not yet implemented
-    // This function is kept for future implementation
-    // For now, Google Sign-In button is hidden from the UI
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const handleBack = () => {

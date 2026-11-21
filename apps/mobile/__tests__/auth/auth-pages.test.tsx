@@ -96,13 +96,6 @@ describe('LoginPage', () => {
     expect(root).toBeTruthy()
   })
 
-  it('should use authentication', () => {
-    const { root } = render(<LoginPage />)
-    
-    // Just verify it renders and uses auth
-    expect(root).toBeTruthy()
-    expect(mockUseAuth).toHaveBeenCalled()
-  })
 })
 
 describe('SignUpPage', () => {

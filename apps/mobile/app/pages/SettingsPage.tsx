@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Text,
-  StatusBar,
-} from 'react-native';
+import { View, SafeAreaView, ScrollView, Alert, ActivityIndicator, Text, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
@@ -17,34 +8,18 @@ import { api } from '../shared/lib/api';
 import { fetchConnectStatus, isStripeReady } from '../shared/lib/stripeConnect';
 import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
-import { useTheme } from '../shared/components/theme';
+import { useTheme, ThemeToggle } from '../shared/components/theme';
 import Input from '../shared/components/ui/Input';
-import { ThemeToggle } from '../shared/components/theme';
 import { ProfileSettings } from '../shared/components/settings/ProfileSettings';
 import { ServicesSettings } from '../shared/components/settings/ServicesSettings';
 import { AddonsSettings } from '../shared/components/settings/AddonsSettings';
 import { ShareSettings } from '../shared/components/settings/ShareSettings';
 import { AvailabilityManager } from '../shared/components/settings/AvailabilityManager';
 import { EarningsDashboard } from '../shared/components/settings/EarningsDashboard';
-import { Button, Card, CardContent } from '../shared/components/ui';
 import { GlassyCard } from '../shared/components/ui/GlassyCard';
 import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
-import { 
-  User, 
-  Scissors, 
-  Package, 
-  Share2, 
-  Calendar, 
-  DollarSign, 
-  Settings as SettingsIcon,
-  AlertCircle,
-  LogOut,
-  CheckCircle,
-  RefreshCw,
-  FileText,
-  Shield
-} from 'lucide-react-native';
+import { User, Scissors, Package, Calendar, DollarSign, Settings as SettingsIcon, AlertCircle, LogOut, CheckCircle, FileText, Shield } from 'lucide-react-native';
 import type { Tab, SettingsData } from '../shared/types/settings.types';
 import { useAccountDeletionHelper } from '../shared/helpers/accountDeletionHelper';
 
@@ -63,7 +38,6 @@ export default function SettingsPage() {
     stripeConnected: false
   });
   const [barberId, setBarberId] = useState<string>('');
-  const [showVerifyBanner, setShowVerifyBanner] = useState(true);
 
   const isBarber = userProfile?.role === 'barber';
   const {
@@ -80,6 +54,7 @@ export default function SettingsPage() {
     if (user) {
       loadSettingsData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [user]);
 
   const loadSettingsData = async () => {

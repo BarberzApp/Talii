@@ -12,6 +12,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
+import { captureException } from '../lib/sentry';
 import Icon from 'react-native-vector-icons/Feather';
 import { initPaymentSheet, presentPaymentSheet, retrievePaymentIntent } from '@stripe/stripe-react-native';
 import {
@@ -114,6 +115,7 @@ export default function BookingForm({
       setSelectedSlot(null);
       fetchBarber();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [isVisible, barberId]);
 
   // Auto-select a service passed in by the caller.
@@ -127,12 +129,14 @@ export default function BookingForm({
         }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [preSelectedService, services]);
 
   useEffect(() => {
     if (isVisible && selectedService && selectedDate) {
       fetchTimeSlots(selectedService.id, selectedDate);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [isVisible, selectedService, selectedDate]);
 
   /** Services, add-ons and time zone come from GET /api/barbers/:id. */
@@ -236,7 +240,7 @@ export default function BookingForm({
       const { paymentIntent } = await retrievePaymentIntent(clientSecret);
       const status = paymentIntent?.status as string | undefined;
       return status === 'Succeeded' || status === 'Processing' || status === 'RequiresCapture';
-    } catch (error) {
+    } catch {
       logger.warn('Could not read the PaymentIntent status.');
       return false;
     }
@@ -322,7 +326,6 @@ export default function BookingForm({
     } catch (error) {
       logger.error('Error creating booking', { code: isApiError(error) ? error.code : 'UNKNOWN' });
       if (!isApiError(error)) {
-        const { captureException } = require('../lib/sentry');
         captureException(error as Error, { context: 'BookingForm.handleCreateBooking', barberId });
       }
       Alert.alert('Booking Failed', bookingErrorMessage(error, 'Failed to create booking. Please try again.'));

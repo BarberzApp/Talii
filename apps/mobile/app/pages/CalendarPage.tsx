@@ -1,29 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  Modal, 
-  Alert,
-  ActivityIndicator,
-  Dimensions,
-  Animated,
-  Vibration,
-  TextInput,
-  RefreshControl
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator, Dimensions, Animated, Vibration, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  User, 
-  DollarSign,
-  X,
-  Plus,
-  RefreshCw,
-  Filter,
-  Search
-} from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import tw from 'twrnc';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek } from 'date-fns';
 import {
@@ -40,8 +19,6 @@ import { useTheme } from '../shared/components/theme';
 import Input from '../shared/components/ui/Input';
 import { logger } from '../shared/lib/logger';
 import { ReviewForm } from '../shared/components/ReviewForm';
-import { GlassyCard } from '../shared/components/ui/GlassyCard';
-import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import { useCalendarData } from '../shared/hooks/useCalendarData';
 import { useCalendarState } from '../shared/hooks/useCalendarState';
@@ -96,10 +73,7 @@ export default function CalendarPage() {
     setIsMarkingCompleted,
     setBarberViewMode,
     setManualFormData,
-    setServices,
-    setBarberId,
     setIsSubmitting,
-    setTimeSlots,
     setShowReviewForm,
     setReviewFormData,
   } = calendarState;
@@ -156,6 +130,7 @@ export default function CalendarPage() {
         ])
       ),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [user?.id]);
 
   // Fetch services when manual appointment modal opens
@@ -165,6 +140,7 @@ export default function CalendarPage() {
       // Default the walk-in to the selected grid day, else today on the barber's calendar.
       setManualFormData(prev => ({ ...prev, date: selectedDate || barberDay(0), startsAt: '' }));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [showManualAppointmentForm]);
 
   // Fetch time slots when date or service changes
@@ -172,6 +148,7 @@ export default function CalendarPage() {
     if (showManualAppointmentForm && manualFormData.date && manualFormData.serviceId && barberId) {
       fetchTimeSlots();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [showManualAppointmentForm, manualFormData.date, manualFormData.serviceId, barberId]);
 
   // Auto-scroll to time section when time slots are loaded
@@ -217,6 +194,7 @@ export default function CalendarPage() {
       return;
     }
     if (user && userRole) loadRef.current();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [monthKey, barberTimeZone]);
 
   // Refresh calendar data when the page comes back into focus.
@@ -249,10 +227,6 @@ export default function CalendarPage() {
       ? events
       : events.filter(event => event.extendedProps.status === filterStatus);
     return eventsOnDay(filtered, date);
-  };
-
-  const hasEvents = (date: Date) => {
-    return getEventsForDate(date).length > 0;
   };
 
   const hasPastEvents = (date: Date) => {
@@ -306,7 +280,6 @@ export default function CalendarPage() {
       if (!result.ok) throw new Error(result.message);
 
       Vibration.vibrate(100); // Success haptic feedback
-      const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
       const itemTypeCapitalized = userRole === 'barber' && barberViewMode === 'appointments' ? 'Appointment' : 'Booking';
       Alert.alert('Success', `${itemTypeCapitalized} marked as a no-show`);
       setShowEventDialog(false);
@@ -314,7 +287,6 @@ export default function CalendarPage() {
       logger.error('Error marking as missed:', error);
       Vibration.vibrate([100, 100]); // Error haptic feedback
       const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
-      const itemTypeCapitalized = userRole === 'barber' && barberViewMode === 'appointments' ? 'Appointment' : 'Booking';
       Alert.alert('Error', error instanceof Error && error.message ? error.message : `Failed to mark ${itemType} as a no-show`);
     } finally {
       setIsMarkingMissed(false);
@@ -330,7 +302,6 @@ export default function CalendarPage() {
       if (!result.ok) throw new Error(result.message);
 
       Vibration.vibrate(100); // Success haptic feedback
-      const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
       const itemTypeCapitalized = userRole === 'barber' && barberViewMode === 'appointments' ? 'Appointment' : 'Booking';
       Alert.alert('Success', `${itemTypeCapitalized} marked as completed`);
       setShowEventDialog(false);
@@ -338,7 +309,6 @@ export default function CalendarPage() {
       logger.error('Error marking as completed:', error);
       Vibration.vibrate([100, 100]); // Error haptic feedback
       const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
-      const itemTypeCapitalized = userRole === 'barber' && barberViewMode === 'appointments' ? 'Appointment' : 'Booking';
       Alert.alert('Error', error instanceof Error && error.message ? error.message : `Failed to mark ${itemType} as completed`);
     } finally {
       setIsMarkingCompleted(false);
@@ -412,13 +382,6 @@ export default function CalendarPage() {
 
   const formatDate = (date: Date, timeZone: string) =>
     formatInTimeZone(date, timeZone, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-  const getGlowOpacity = () => {
-    return glowAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.3, 0.8],
-    });
-  };
 
   // Fetch services for manual appointment form
   const fetchServices = async () => {

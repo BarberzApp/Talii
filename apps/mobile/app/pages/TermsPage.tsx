@@ -3,11 +3,9 @@ import { ScrollView, View, Text, TouchableOpacity, StatusBar } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, FileText } from 'lucide-react-native';
 import { useTheme } from '../shared/components/theme';
-import { theme } from '../shared/lib/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 import { RootStackParamList } from '../shared/types';
 
@@ -165,7 +163,7 @@ export default function TermsPage() {
             textAlign: 'center',
             marginBottom: 16,
           }}>
-            By using BOCM, you agree to these terms and conditions
+            By using Talii, you agree to these terms and conditions
           </Text>
           <TouchableOpacity
             onPress={() => {

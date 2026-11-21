@@ -10,8 +10,6 @@ import {
 import tw from 'twrnc';
 import { Instagram, Twitter, Facebook, Share2, Copy, Check } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../hooks/useAuth';
 
 interface SocialMediaLinksProps {
   instagram?: string;
@@ -30,28 +28,6 @@ interface SocialMediaLinksProps {
   showShare?: boolean;
   shareUrl?: string;
   shareTitle?: string;
-}
-
-// Utility function to convert handles to proper social media URLs
-function getSocialMediaUrl(handle: string, platform: string): string {
-  if (!handle) return '';
-  
-  // Remove @ if present and trim whitespace
-  const cleanHandle = handle.replace(/^@/, '').trim();
-  
-  switch (platform) {
-    case 'instagram':
-      return `https://instagram.com/${cleanHandle}`;
-    case 'twitter':
-      return `https://twitter.com/${cleanHandle}`;
-    case 'tiktok':
-      return `https://tiktok.com/@${cleanHandle}`;
-    case 'facebook':
-      // Facebook can be either a page name or username
-      return `https://facebook.com/${cleanHandle}`;
-    default:
-      return handle; // Return as-is if unknown platform
-  }
 }
 
 // Utility function to extract handle from URL or return as-is if already a handle
@@ -93,7 +69,6 @@ export function SocialMediaLinks({
     tiktok,
     facebook,
   });
-  const { user } = useAuth();
 
   const sizeClasses = {
     sm: tw`h-8 w-8`,
@@ -126,7 +101,7 @@ export function SocialMediaLinks({
         });
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
+      } catch {
         Alert.alert('Error', 'Failed to copy link');
       }
     }
@@ -139,7 +114,7 @@ export function SocialMediaLinks({
           message: shareUrl,
           title: shareTitle,
         });
-      } catch (err) {
+      } catch {
         Alert.alert('Error', 'Failed to share');
       }
     }

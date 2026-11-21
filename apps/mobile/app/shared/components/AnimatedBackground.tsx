@@ -40,6 +40,7 @@ const Particle: React.FC<ParticleProps> = ({ delay, duration, startX, startY, si
     animation.start();
 
     return () => animation.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the animation starts once on mount
   }, [duration]);
 
   const translateY = animatedValue.interpolate({
@@ -104,6 +105,7 @@ const LargeFloatingElement: React.FC<{ delay: number; index: number; primarySoft
     animation.start();
 
     return () => animation.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the animation starts once on mount
   }, []);
 
   const translateY = animatedValue.interpolate({
@@ -155,6 +157,7 @@ export const AnimatedBackground: React.FC = () => {
       duration: theme.animations.timing.BACKGROUND_FADE,
       useNativeDriver: false,
     }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the animation starts once on mount
   }, []);
 
   // Generate particles - faster durations

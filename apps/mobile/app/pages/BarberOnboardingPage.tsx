@@ -1,18 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    ScrollView,
-    SafeAreaView,
-    TouchableOpacity,
-    Alert,
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    StatusBar,
-    AppState,
-} from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, StatusBar, AppState } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
@@ -47,9 +34,7 @@ import {
     Info
 } from 'lucide-react-native';
 import { SpecialtyAutocomplete } from '../shared/components/ui/SpecialtyAutocomplete';
-import { SocialMediaLinks } from '../shared/components/ui/SocialMediaLinks';
 import { LocationInput } from '../shared/components/ui/LocationInput';
-import { BARBER_SPECIALTIES } from '../shared/utils/settings.utils';
 import { runBarberPrefillOnce } from '../shared/helpers/barberPrefillHelper';
 import { checkStripeStatusOnce } from '../shared/helpers/barberStripeHelper';
 import {
@@ -110,14 +95,14 @@ interface ValidationErrors {
 }
 
 export default function BarberOnboardingPage() {
-    const { theme, colors } = useTheme();
+    const { colors } = useTheme();
     const navigation = useNavigation<BarberOnboardingNavigationProp>();
     const { user, userProfile, refreshProfile } = useAuth();
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [stripeLoading, setStripeLoading] = useState(false);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-    const [stripeStatus, setStripeStatus] = useState<string | null>(null);
+    const [, setStripeStatus] = useState<string | null>(null);
     const [onboardingComplete, setOnboardingComplete] = useState(false);
     const [showCompleteBanner, setShowCompleteBanner] = useState(true);
     const prefillDoneRef = useRef(false);
@@ -387,24 +372,6 @@ export default function BarberOnboardingPage() {
         }
     };
 
-    const handleSkip = async () => {
-        Alert.alert(
-            'Skip Payment Setup?',
-            'You can always set up payments later in your settings. Are you sure you want to skip this step?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Skip',
-                    style: 'destructive',
-                    onPress: () => {
-                        setFormData(prev => ({ ...prev, stripeConnected: false }));
-                        handleSubmit();
-                    }
-                }
-            ]
-        );
-    };
-
     const getProgressPercentage = () => {
         // If Stripe is connected, show 100% completion
         if (formData.stripeConnected) {
@@ -416,7 +383,6 @@ export default function BarberOnboardingPage() {
 
     const renderStep = () => {
         const step = steps[currentStep];
-        const Icon = step.icon;
 
         switch (step.id) {
             case 'business':

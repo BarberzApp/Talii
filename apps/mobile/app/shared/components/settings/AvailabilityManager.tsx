@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import tw from 'twrnc';
@@ -14,15 +15,7 @@ import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
 import { Card, CardContent, LoadingSpinner } from '../ui';
-import { 
-  Calendar,
-  Clock,
-  Save,
-  AlertCircle,
-  CheckCircle,
-  Loader2,
-  RefreshCw
-} from 'lucide-react-native';
+import { Calendar, Save, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react-native';
 
 interface TimeSlot {
   start: string;
@@ -94,7 +87,7 @@ const TIME_OPTIONS = generateTimeOptions();
  * overlapping windows on a day (touching is fine). The server enforces the same.
  */
 export function findScheduleProblem(
-  windows: Array<{ dayOfWeek: number; startTime: string; endTime: string }>
+  windows: { dayOfWeek: number; startTime: string; endTime: string }[]
 ): string | null {
   for (const w of windows) {
     if (w.startTime >= w.endTime) {
@@ -265,7 +258,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
     return (
       <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
         <CardContent style={tw`p-6 items-center`}>
-          <Loader2 size={32} color={colors.primary} style={tw`mb-3`} />
+          <ActivityIndicator size="large" color={colors.primary} style={tw`mb-3`} />
           <Text style={[tw`text-base`, { color: colors.mutedForeground }]}>
             Loading availability...
           </Text>

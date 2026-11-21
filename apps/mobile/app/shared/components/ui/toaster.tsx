@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Animated, Dimensions } from 'react-native';
+import { View, Animated } from 'react-native';
 import Toast, { ToastProps } from './toast';
 import tw from 'twrnc';
 

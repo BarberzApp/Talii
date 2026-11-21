@@ -30,6 +30,7 @@ export const NumericInput: React.FC<NumericInputProps> = ({
   const [text, setText] = useState(value ? String(value) : '');
   useEffect(() => {
     if ((parseFloat(text) || 0) !== value) setText(value ? String(value) : '');
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [value]);
 
   return (

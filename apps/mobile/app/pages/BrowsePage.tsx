@@ -1,20 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  RefreshControl,
-  Dimensions,
-  Alert,
-  Image,
-  PermissionsAndroid,
-  Platform,
-  Linking,
-} from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, ScrollView, SafeAreaView, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl, Alert, Image } from 'react-native';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,7 +9,6 @@ import type { BarberCard, PublicReview, RatingStats } from '@barber-app/shared';
 import { api, errorMessage } from '../shared/lib/api';
 import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
-import ProfilePreview from './ProfilePreview';
 import {
   ChevronLeft,
   Search,
@@ -32,26 +16,17 @@ import {
   Filter,
   X,
   Scissors,
+  Star,
 } from 'lucide-react-native';
-import { Avatar } from '../shared/components/ui';
 import { GlassyCard } from '../shared/components/ui/GlassyCard';
-import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import { RootStackParamList } from '../shared/types';
 import BookingForm from '../shared/components/BookingForm';
 import { useLocationManager } from '../shared/hooks/useLocationManager';
 import { ReviewCard } from '../shared/components/ReviewCard';
 import { ReviewForm } from '../shared/components/ReviewForm';
-import { Star } from 'lucide-react-native';
-import { getDistanceToItem, sortByDistance, formatDistance } from '../shared/lib/locationUtils';
-import {
-  getLocationPreferences,
-  setLocationEnabled,
-  updateLastLocation,
-  getLastLocation,
-} from '../shared/lib/locationPreferences';
+import { formatDistance } from '../shared/lib/locationUtils';
 
-const { width } = Dimensions.get('window');
 
 type BrowseNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -97,9 +72,6 @@ function toBarber(card: BarberCard): Barber {
     rating: card.rating,
   };
 }
-
-type SortOption = 'name' | 'location' | 'price' | 'distance';
-type SortOrder = 'asc' | 'desc';
 
 // Star Rating Component (stats come with the barber card)
 function BarberRating({ rating }: { rating: RatingStats }) {
@@ -153,6 +125,7 @@ function ReviewsList({
     if (barberId && !hasLoaded) {
       fetchReviews();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [barberId, hasLoaded]);
 
   const fetchReviews = async () => {
@@ -266,12 +239,12 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   // Barber list state
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [barbersLoading, setBarbersLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
   const [filteredBarbers, setFilteredBarbers] = useState<Barber[]>([]);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [allSpecialties, setAllSpecialties] = useState<string[]>([]);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'cosmetologists'>('cosmetologists');
   
   // Batch loading state
   const [barbersPage, setBarbersPage] = useState(0);
@@ -282,17 +255,15 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   // Location management using custom hook
   const {
     userLocation,
-    locationPermission,
     locationLoading,
     useLocation,
     toggleLocation: toggleLocationHook,
-    getUserLocation,
     loadLocationPreferences,
   } = useLocationManager();
   
   // Review system state
   const [selectedBarberForReviews, setSelectedBarberForReviews] = useState<string | null>(null);
-  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [, setShowReviewForm] = useState(false);
   const [showReviews, setShowReviews] = useState(false);
   const [reviewFormData, setReviewFormData] = useState<{
     barberId: string;
@@ -401,6 +372,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     }, 500);
 
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [useLocation, userLocation?.coords?.accuracy]);
 
   // The list reloads by itself when location turns on or off (see the effect below).
@@ -427,6 +399,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     try {
       if (page === 0) setBarbersLoading(true);
       else setBarbersLoadingMore(true);
+      setListError(null);
 
       const { barbers: cards, pagination } = await api.barbers.list({
         q: query.trim() || undefined,
@@ -453,6 +426,9 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
         await fetchBarbers(page, append, true, query);
         return;
       }
+      const message = errorMessage(error, 'Could not load stylists. Check your connection and try again.');
+      if (page === 0) setListError(message);
+      else Alert.alert('Error', message);
     } finally {
       if (seq === listSeq.current) {
         if (page === 0) setBarbersLoading(false);
@@ -478,6 +454,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     setBarbersPage(0);
     setHasMoreBarbers(true);
     fetchBarbers(0, false, false, debouncedSearchQuery);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [debouncedSearchQuery, coordsKey]);
 
   // Filter barbers based on search query and selected specialties
@@ -533,19 +510,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     setFilteredBarbers(barbers);
   };
 
-  // Function to render star ratings
-  const renderStarRating = (rating: number, size: number = 14) => {
-    return Array.from({ length: 5 }, (_, index) => (
-      <Star
-        key={index}
-        size={size}
-        fill={index < rating ? colors.premium : 'transparent'}
-        color={index < rating ? colors.premium : colors.mutedForeground}
-        style={tw`mr-0.5`}
-      />
-    ));
-  };
-
   return (
     <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -570,28 +534,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
             <Text style={[tw`text-2xl font-bold`, { color: colors.foreground }]}>
               Browse
             </Text>
-          </View>
-
-          {/* View Toggle Buttons */}
-          <View style={[tw`flex-row rounded-lg p-1`, { backgroundColor: colors.muted }]}>
-            <TouchableOpacity
-              style={[
-                tw`px-4 py-2 rounded-md`,
-                viewMode === 'cosmetologists' 
-                  ? { backgroundColor: colors.background }
-                  : { backgroundColor: 'transparent' }
-              ]}
-              onPress={() => setViewMode('cosmetologists')}
-            >
-              <Text style={[
-                tw`font-medium text-sm`,
-                viewMode === 'cosmetologists'
-                  ? { color: colors.foreground }
-                  : { color: colors.mutedForeground }
-              ]}>
-                Cosmetologists
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
         
@@ -739,9 +681,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
       {/* Main Content Area */}
       <View style={tw`flex-1`}>
-        {/* TODO(phase-5): Browse was built around an Explore (cuts feed) / Cosmetologists toggle; only the Cosmetologists list remains. */}
-        {(
-          // Cosmetologists View - List of barbers
           <>
             {barbersLoading ? (
               <View style={tw`flex-1 justify-center items-center`}>
@@ -749,6 +688,21 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                 <Text style={[tw`mt-4 text-lg`, { color: colors.foreground }]}>
                   Loading stylists...
                 </Text>
+              </View>
+            ) : listError ? (
+              <View style={tw`flex-1 justify-center items-center py-8 px-6`}>
+                <Text style={[tw`text-lg font-bold text-center mb-2`, { color: colors.foreground }]}>
+                  Could not load stylists
+                </Text>
+                <Text style={[tw`text-sm text-center mb-4`, { color: colors.mutedForeground }]}>
+                  {listError}
+                </Text>
+                <AnimatedPressable
+                  style={[tw`px-5 py-2 rounded-lg`, { backgroundColor: colors.glass }]}
+                  onPress={() => fetchBarbers(0)}
+                >
+                  <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>Try again</Text>
+                </AnimatedPressable>
               </View>
             ) : filteredBarbers.length === 0 ? (
               <View style={tw`flex-1 justify-center items-center py-8`}>
@@ -850,7 +804,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                         {barber.location && (
                           <View style={tw`flex-row items-center justify-center mb-3`}>
                             <MapPin size={16} color={colors.primary} />
-                            <Text style={[tw`text-sm ml-2`, { color: colors.mutedForeground }]}>
+                            <Text style={[tw`text-sm ml-2 flex-shrink`, { color: colors.mutedForeground }]} numberOfLines={2}>
                               {barber.location}
                               {useLocation && barber.distance !== undefined && (
                                 <Text style={[tw`ml-2 font-semibold`, { color: colors.primary }]}>
@@ -885,7 +839,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
                         {/* Bio */}
                         {barber.bio && (
-                          <Text style={[tw`text-sm text-center mb-4 leading-relaxed`, { color: colors.mutedForeground }]}>
+                          <Text style={[tw`text-sm text-center mb-4 leading-relaxed`, { color: colors.mutedForeground }]} numberOfLines={4}>
                             {barber.bio}
                           </Text>
                         )}
@@ -1030,7 +984,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
               </ScrollView>
             )}
           </>
-        )}
       </View>
 
 

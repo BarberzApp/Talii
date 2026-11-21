@@ -56,7 +56,7 @@ export function AuthGuard({
 
       setIsChecking(false);
     }
-  }, [user, userProfile, loading, requiredRole, push, fallbackRoute]);
+  }, [user, userProfile, loading, requiredRole, push, reset, fallbackRoute]);
 
   // Show loading while checking authentication
   if (loading || isChecking) {
@@ -73,33 +73,10 @@ export function AuthGuard({
   return <>{children}</>;
 }
 
-// Higher-order component for role-based protection
-export function withAuthGuard<P extends object>(
-  Component: React.ComponentType<P>,
-  requiredRole?: 'client' | 'barber' | 'admin',
-  fallbackRoute?: string
-) {
-  return function AuthenticatedComponent(props: P) {
-    return (
-      <AuthGuard requiredRole={requiredRole} fallbackRoute={fallbackRoute}>
-        <Component {...props} />
-      </AuthGuard>
-    );
-  };
-}
-
 // Specific role guards
 export function BarberGuard({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard requiredRole="barber" fallbackRoute="Login">
-      {children}
-    </AuthGuard>
-  );
-}
-
-export function ClientGuard({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthGuard requiredRole="client" fallbackRoute="Login">
       {children}
     </AuthGuard>
   );

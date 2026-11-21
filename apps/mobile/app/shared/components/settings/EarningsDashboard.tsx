@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
@@ -12,7 +13,7 @@ import { formatCents, type ConnectStatusResponse, type EarningsResponse } from '
 import { api, errorMessage } from '../../lib/api';
 import { fetchConnectStatus, isStripeReady, openStripeConnect } from '../../lib/stripeConnect';
 import { logger } from '../../lib/logger';
-import { Card, CardContent, LoadingSpinner } from '../ui';
+import { Card, CardContent } from '../ui';
 import { 
   DollarSign,
   TrendingUp,
@@ -21,7 +22,6 @@ import {
   AlertCircle,
   CheckCircle,
   ExternalLink,
-  Loader2,
   RefreshCw
 } from 'lucide-react-native';
 
@@ -69,6 +69,7 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
   });
   const [connect, setConnect] = useState<ConnectStatusResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [connectBusy, setConnectBusy] = useState(false);
   const [period, setPeriod] = useState<Period>('month');
 
@@ -76,12 +77,14 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
     if (barberId) {
       loadEarningsData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [barberId, period]);
 
   /** GET /api/earnings for the period, this week and the last 12 months; Stripe status. */
   const loadEarningsData = async () => {
     try {
       setIsLoading(true);
+      setLoadError(null);
       const now = new Date();
       const to = now.toISOString();
       const [current, week, year, status] = await Promise.all([
@@ -104,7 +107,7 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
       setConnect(status);
     } catch (error) {
       logger.error('Error loading earnings:', error);
-      Alert.alert('Error', errorMessage(error, 'Failed to load earnings data'));
+      setLoadError(errorMessage(error, 'Failed to load earnings data'));
     } finally {
       setIsLoading(false);
     }
@@ -156,11 +159,30 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
     showStatus(status);
   };
 
+  if (loadError && !isLoading) {
+    return (
+      <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+        <CardContent style={tw`p-6 items-center`}>
+          <Text style={[tw`text-base text-center mb-4`, { color: colors.foreground }]}>
+            {loadError}
+          </Text>
+          <TouchableOpacity
+            onPress={loadEarningsData}
+            style={[tw`py-2 px-4 rounded-xl flex-row items-center`, { backgroundColor: colors.glassBorder }]}
+          >
+            <RefreshCw size={16} color={colors.foreground} style={tw`mr-2`} />
+            <Text style={{ color: colors.foreground }}>Try again</Text>
+          </TouchableOpacity>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (isLoading) {
     return (
       <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
         <CardContent style={tw`p-6 items-center`}>
-          <Loader2 size={32} color={colors.primary} style={tw`mb-3`} />
+          <ActivityIndicator size="large" color={colors.primary} style={tw`mb-3`} />
           <Text style={[tw`text-base`, { color: colors.mutedForeground }]}>
             Loading earnings data...
           </Text>

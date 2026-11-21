@@ -12,6 +12,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../shared/types';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useTheme } from '../shared/components/theme';
 import tw from 'twrnc';
@@ -23,16 +25,8 @@ import {
   Avatar,
   Dialog,
 } from '../shared/components/ui';
-import {
-  Heart,
-  Users,
-  History,
-  Camera,
-  Loader2,
-  Calendar,
-  Clock,
-} from 'lucide-react-native';
-import { api, isApiError } from '../shared/lib/api';
+import { Heart, Users, History, Camera, Calendar, Clock } from 'lucide-react-native';
+import { api, errorMessage, isApiError } from '../shared/lib/api';
 import {
   formatBookingTime,
   formatCents,
@@ -47,7 +41,7 @@ import {
   getAvatarFallbackProps,
 } from '../shared/helpers/fallbackImageHelper';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface UserProfile {
   id: string;
@@ -66,7 +60,7 @@ interface BarberProfile {
   business_name: string | null;
   specialties: string[];
   portfolio: string[];
-  services: Array<Pick<ServiceRow, 'id' | 'name' | 'description' | 'price_cents' | 'duration_minutes'>>;
+  services: Pick<ServiceRow, 'id' | 'name' | 'description' | 'price_cents' | 'duration_minutes'>[];
 }
 
 interface Booking {
@@ -85,8 +79,8 @@ interface Booking {
 
 export default function ProfilePortfolio() {
   const { colors } = useTheme();
-  const navigation = useNavigation();
-  const { user, userProfile, logout, refreshProfile } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { user, userProfile, refreshProfile } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [barberProfile, setBarberProfile] = useState<BarberProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -98,6 +92,7 @@ export default function ProfilePortfolio() {
   const [showCoverUpload, setShowCoverUpload] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [coverError, setCoverError] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Profile from GET /api/me; services (barbers) or bookings (clients) from the API.
   const fetchProfileData = async () => {
@@ -107,6 +102,7 @@ export default function ProfilePortfolio() {
       setLoading(true);
       setAvatarError(false);
       setCoverError(false);
+      setLoadError(null);
 
       const me = await api.me.get();
       const listing = me.barber;
@@ -156,6 +152,7 @@ export default function ProfilePortfolio() {
       }
     } catch (error) {
       logger.error('Error fetching profile data:', error);
+      setLoadError(errorMessage(error, 'Could not load your profile. Check your connection and try again.'));
     } finally {
       setLoading(false);
     }
@@ -163,6 +160,7 @@ export default function ProfilePortfolio() {
 
   useEffect(() => {
     fetchProfileData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [user]);
 
   const onRefresh = async () => {
@@ -236,9 +234,14 @@ export default function ProfilePortfolio() {
   if (!user || !profile) {
     return (
       <SafeAreaView style={[tw`flex-1 justify-center items-center`, { backgroundColor: colors.background }]}>
-        <Text style={[tw`text-lg`, { color: colors.foreground }]}>
-          Profile not found
+        <Text style={[tw`text-lg text-center px-6`, { color: colors.foreground }]}>
+          {loadError ?? 'Profile not found'}
         </Text>
+        {loadError && (
+          <Button onPress={fetchProfileData} style={tw`mt-4`}>
+            Try Again
+          </Button>
+        )}
         <Button onPress={() => navigation.goBack()} style={tw`mt-4`}>
           Go Back
         </Button>
@@ -247,10 +250,8 @@ export default function ProfilePortfolio() {
   }
 
   const isBarber = userProfile?.role === 'barber';
-  const pastBarbers = [...new Set(bookings.map(b => b.barber.id))].map(barberId => {
-    const booking = bookings.find(b => b.barber.id === barberId);
-    return booking?.barber;
-  }).filter(Boolean);
+  // Stylists the client has booked before (newest booking first).
+  const pastBarbers = [...new Map(bookings.map((b) => [b.barber.id, b.barber])).values()];
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -280,9 +281,18 @@ export default function ProfilePortfolio() {
                   onImagePress={(imageUrl) => {
                     setSelectedPortfolioImage(imageUrl);
                   }}
-                  onRemoveImage={async (index) => {
-                    const updated = (barberProfile?.portfolio || []).filter((_, i) => i !== index);
-                    await savePortfolio(updated, 'Failed to remove portfolio image');
+                  onRemoveImage={(index) => {
+                    Alert.alert('Remove photo?', 'This photo will be removed from your portfolio.', [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Remove',
+                        style: 'destructive',
+                        onPress: async () => {
+                          const updated = (barberProfile?.portfolio || []).filter((_, i) => i !== index);
+                          await savePortfolio(updated, 'Failed to remove portfolio image');
+                        },
+                      },
+                    ]);
                   }}
                 />
 
@@ -300,6 +310,24 @@ export default function ProfilePortfolio() {
         );
 
       case 'stylists':
+        if (pastBarbers.length > 0) {
+          return (
+            <View style={tw`px-4 py-4`}>
+              {pastBarbers.map((stylist) => (
+                <TouchableOpacity
+                  key={stylist.id}
+                  onPress={() => navigation.navigate('ProfilePreview', { barberId: stylist.id })}
+                  style={[tw`flex-row items-center p-3 mb-2 rounded-xl`, { backgroundColor: colors.glass }]}
+                >
+                  <Avatar size="md" src={stylist.image} fallback={stylist.name?.charAt(0)} />
+                  <Text style={[tw`ml-3 flex-1 font-medium`, { color: colors.foreground }]} numberOfLines={1}>
+                    {stylist.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          );
+        }
         return (
           <View style={tw`flex-1 px-4`}>
             <View style={tw`flex-1 justify-center items-center py-8`}>

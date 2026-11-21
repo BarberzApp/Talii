@@ -20,10 +20,8 @@ import { logger } from '../shared/lib/logger';
 import { useTheme } from '../shared/components/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 import { ActionButton } from '../shared/components/ActionButton';
-import { Card } from '../shared/components/ui/Card';
 import Input from '../shared/components/ui/Input';
 import { theme } from '../shared/lib/theme';
-import { GlassyCard } from '../shared/components/ui/GlassyCard';
 import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 
@@ -176,13 +174,6 @@ export default function SignUpPage() {
     const handleTermsPress = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         navigation.navigate('Terms' as any);
-    };
-
-    const handleGoogleSignUp = async () => {
-        // Google Sign-Up is not yet implemented
-        // This function is kept for future implementation
-        // For now, Google Sign-Up button is hidden from the UI
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     };
 
     const handleBack = () => {

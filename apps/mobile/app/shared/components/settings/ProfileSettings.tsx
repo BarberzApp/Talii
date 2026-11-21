@@ -16,27 +16,10 @@ import type { UpdateMeBody } from '@barber-app/shared';
 import { api, errorMessage, hasErrorCode } from '../../lib/api';
 import { bookingPageUrl } from '../../lib/api-factory';
 import { useAuth } from '../../hooks/useAuth';
-import { Button, Card, CardContent, LoadingSpinner, LocationInput, Input, Textarea } from '../ui';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Building2, 
-  Save, 
-  AlertCircle,
-  Instagram,
-  Music,
-  Sparkles,
-  Info,
-  Camera
-} from 'lucide-react-native';
+import { Card, CardContent, LoadingSpinner, LocationInput, Input, Textarea } from '../ui';
+import { User, Mail, Phone, MapPin, Building2, Save, AlertCircle, Instagram, Music, Sparkles } from 'lucide-react-native';
 import { ProfileFormData } from '../../types/settings.types';
-import { 
-  PRICE_RANGES, 
-  BARBER_SPECIALTIES, 
-  extractHandle 
-} from '../../utils/settings.utils';
+import { BARBER_SPECIALTIES, extractHandle } from '../../utils/settings.utils';
 import { logger } from '../../lib/logger';
 
 
@@ -73,6 +56,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     if (user) {
       fetchProfile();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [user]);
 
   /** GET /api/me: profile plus, for barbers, the listing. */

@@ -79,7 +79,7 @@ export const useSafeNavigation = () => {
   }, [navigation]);
 
   const safeReset = useCallback(
-    (routes: Array<{ name: string; params?: any }>) => {
+    (routes: { name: string; params?: any }[]) => {
       if (isNavigatingRef.current) {
         logger.log('⚠️ Navigation already in progress, skipping reset');
         return;

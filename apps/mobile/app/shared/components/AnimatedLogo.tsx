@@ -36,6 +36,7 @@ const Sparkle: React.FC<SparkleProps> = ({ delay, top, left, primaryColor }) => 
     animation.start();
 
     return () => animation.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the animation starts once on mount
   }, []);
 
   const translateY = animatedValue.interpolate({
@@ -114,6 +115,7 @@ export const AnimatedLogo: React.FC = () => {
         ])
       ).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the animation starts once on mount
   }, [isVisible]);
 
   const pulse = pulseValue.interpolate({

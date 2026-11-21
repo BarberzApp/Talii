@@ -1,18 +1,11 @@
 // screens/BookingCalendarPage.tsx
 import React, { useState } from 'react';
-import {
-    View,
-    Text,
-    ScrollView,
-    SafeAreaView,
-    TouchableOpacity,
-    Alert,
-} from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
+import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../shared/components/theme';
-const Icon = require('react-native-vector-icons/Feather').default;
 import { RootStackParamList } from '../shared/types';
 import BookingForm from '../shared/components/BookingForm';
 
@@ -23,7 +16,7 @@ export default function BookingCalendarPage() {
     const { colors } = useTheme();
     const navigation = useNavigation<BookingPageNavigationProp>();
     const route = useRoute<BookingPageRouteProp>();
-    const { barberId, barberName, preSelectedService, guestMode } = route.params;
+    const { barberId, barberName, preSelectedService } = route.params;
 
     const [showBookingForm, setShowBookingForm] = useState(false);
 
@@ -84,7 +77,7 @@ export default function BookingCalendarPage() {
                                 <Icon name="check-circle" size={16} color={colors.primary} />
                             </View>
                             <Text style={[tw`flex-1`, { color: colors.foreground }]}>
-                                Instant confirmation and reminders
+                                Instant confirmation
                             </Text>
                         </View>
                     </View>

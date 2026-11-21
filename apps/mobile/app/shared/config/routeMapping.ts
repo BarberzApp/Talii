@@ -100,17 +100,6 @@ export const ROUTE_MAPPING: RouteMapping[] = [
   }
 ];
 
-// Helper functions for route mapping
-export const getReactNavigationRoute = (nextjsRoute: string): string | null => {
-  const mapping = ROUTE_MAPPING.find(route => route.nextjs === nextjsRoute);
-  return mapping?.reactNavigation || null;
-};
-
-export const getNextjsRoute = (reactNavigationRoute: string): string | null => {
-  const mapping = ROUTE_MAPPING.find(route => route.reactNavigation === reactNavigationRoute);
-  return mapping?.nextjs || null;
-};
-
 export const isRouteProtected = (route: string): boolean => {
   const mapping = ROUTE_MAPPING.find(r => r.reactNavigation === route || r.nextjs === route);
   return mapping?.requiresAuth || false;

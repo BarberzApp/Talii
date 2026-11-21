@@ -108,9 +108,18 @@ describe('BrowsePage - Basic Tests', () => {
     expect(getByText('Loading stylists...')).toBeTruthy();
   });
 
-  it('should render cosmetologists view mode button', () => {
-    const { getByText } = render(<BrowsePage />);
-    expect(getByText('Cosmetologists')).toBeTruthy();
+  it('has no view toggle (only the stylist list remains)', () => {
+    const { queryByText } = render(<BrowsePage />);
+    expect(queryByText('Cosmetologists')).toBeNull();
+  });
+
+  it('shows an error with Try again when the list fails to load', async () => {
+    const { api } = require('@/lib/api');
+    api.barbers.list.mockImplementationOnce(() => Promise.reject(new Error('offline')));
+    const { findByText, getByText } = render(<BrowsePage />);
+    expect(await findByText('Could not load stylists')).toBeTruthy();
+    fireEvent.press(getByText('Try again'));
+    expect(await findByText('Fade Co')).toBeTruthy();
   });
 
   it('lists barbers from GET /api/barbers with their rating', async () => {

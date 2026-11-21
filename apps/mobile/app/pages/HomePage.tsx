@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  SafeAreaView,
-  StatusBar,
-  Animated,
-  TouchableOpacity,
-} from 'react-native';
+import { View, SafeAreaView, StatusBar, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Sun, Moon } from 'lucide-react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,19 +19,16 @@ export default function HomePage() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [showContent, setShowContent] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
-  const [showSocialProof, setShowSocialProof] = useState(false);
   const homestring = 'Built to Help';
   const homestring2 = 'You Earn More';
   useEffect(() => {
     // Staggered content appearance - sped up
     const contentTimer = setTimeout(() => setShowContent(true), 200); // Reduced from 500
     const buttonsTimer = setTimeout(() => setShowButtons(true), 1200); // Reduced from 2500
-    const socialProofTimer = setTimeout(() => setShowSocialProof(true), 1500); // Reduced from 3000
 
     return () => {
       clearTimeout(contentTimer);
       clearTimeout(buttonsTimer);
-      clearTimeout(socialProofTimer);
     };
   }, []);
 

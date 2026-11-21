@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Share,
-  Alert,
-  Clipboard,
-  Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Share, Alert, Clipboard } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
 import { api } from '../../lib/api';
@@ -15,18 +7,7 @@ import { bookingPageUrl } from '../../lib/api-factory';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
 import { Card, CardContent } from '../ui';
-import { 
-  Share2, 
-  Copy, 
-  Link, 
-  QrCode,
-  ExternalLink,
-  CheckCircle,
-  AlertCircle,
-  Sparkles,
-  Globe,
-  Download
-} from 'lucide-react-native';
+import { Share2, Copy, Link, QrCode, CheckCircle, AlertCircle, Sparkles } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 interface ShareSettingsProps {
@@ -87,7 +68,7 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       Alert.alert('Success', 'Link copied to clipboard!');
-    } catch (err) {
+    } catch {
       Alert.alert('Failed to copy', 'Please try copying the link manually.');
     }
   };
@@ -109,15 +90,6 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
       }
     }
   };
-
-  const openBookingLink = () => {
-    if (!isLinkValid) {
-      Alert.alert('Cannot open link', 'Please complete your barber profile first.');
-      return;
-    }
-  };
-
-
 
   if (isLoading) {
     return (
