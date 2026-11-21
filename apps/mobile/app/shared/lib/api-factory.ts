@@ -9,8 +9,12 @@ import { logger } from './logger';
 /** Used only in development builds when EXPO_PUBLIC_API_URL is not set. */
 export const LOCAL_DEV_API_URL = 'http://localhost:3000';
 
-/** Refresh the session when the access token expires within this many seconds. */
-const REFRESH_BUFFER_SECONDS = 120;
+/**
+ * Refresh the session ourselves only when the access token expires within this
+ * many seconds. Kept below supabase-js's own auto-refresh margin so the two do not
+ * refresh back to back; normally auto-refresh has already renewed the token.
+ */
+export const REFRESH_BUFFER_SECONDS = 60;
 
 let warnedAboutBaseUrl = false;
 
@@ -39,7 +43,7 @@ export function resolveApiBaseUrl(
 }
 
 /**
- * The current Supabase access token, refreshed first when it is about to expire.
+ * The current Supabase access token, refreshed first when it expires within 60 seconds.
  * Returns null when signed out.
  */
 export function createAccessTokenGetter(supabase: SupabaseClient) {

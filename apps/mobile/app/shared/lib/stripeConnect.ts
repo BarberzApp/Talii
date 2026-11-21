@@ -18,6 +18,17 @@ export type ConnectFlowResult = {
   linkType: 'dashboard' | 'onboarding';
 };
 
+let sessionOpen = false;
+
+/**
+ * True while openStripeConnect's in-app browser session is open. On Android the
+ * return deep link also reaches the app's Linking listener; App.tsx ignores it
+ * then, because this flow already reads the status and shows the result.
+ */
+export function isConnectSessionOpen(): boolean {
+  return sessionOpen;
+}
+
 /** True when Stripe can take booking-fee charges for this barber (or the fee is waived). */
 export function isStripeReady(status: ConnectStatusResponse | null | undefined): boolean {
   return !!status && (status.feeExempt || (status.hasAccount && status.chargesEnabled && status.detailsSubmitted));
@@ -44,12 +55,18 @@ export async function openStripeConnect(kind: 'onboarding' | 'dashboard'): Promi
   const link = kind === 'onboarding' ? await api.connect.onboarding() : await api.connect.dashboard();
 
   let needsNewLink = false;
+  sessionOpen = true;
   try {
     const result = await WebBrowser.openAuthSessionAsync(link.url, STRIPE_CONNECT_DEEP_LINK);
     needsNewLink = result.type === 'success' && result.url.includes('/refresh');
   } catch (error) {
     logger.error('Could not open the Stripe page:', error);
     throw error;
+  } finally {
+    // Let a deep link delivered as the session closes still see the flag.
+    setTimeout(() => {
+      sessionOpen = false;
+    }, 1000);
   }
 
   return { status: await fetchConnectStatus(), needsNewLink, linkType: link.type };

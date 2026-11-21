@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-import { formatCents, type AddonRow } from '@barber-app/shared';
+import { centsToDollarInput, dollarsToCents, formatCents, type AddonRow } from '@barber-app/shared';
 import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
@@ -43,7 +43,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
   const [formData, setFormData] = useState<ServiceAddon>({
     name: '',
     description: '',
-    price: 0,
+    price: '',
     is_active: true
   });
 
@@ -68,7 +68,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     const errors: {[key: string]: string} = {};
 
     if (!formData.name?.trim()) errors.name = 'Add-on name is required';
-    if (!Number.isFinite(formData.price) || formData.price < 0) errors.price = 'Price must be at least $0';
+    if (dollarsToCents(formData.price) === null) errors.price = 'Enter a price like 25 or 25.50';
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -83,7 +83,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     const body = {
       name: formData.name.trim(),
       description: formData.description?.trim() || null,
-      priceCents: Math.round(formData.price * 100),
+      priceCents: dollarsToCents(formData.price) ?? 0,
       isActive: formData.is_active,
     };
 
@@ -144,7 +144,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     setFormData({
       name: addon.name,
       description: addon.description || '',
-      price: addon.price_cents / 100,
+      price: centsToDollarInput(addon.price_cents),
       is_active: addon.is_active
     });
   };
@@ -154,7 +154,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     setFormData({
       name: '',
       description: '',
-      price: 0,
+      price: '',
       is_active: true
     });
     setValidationErrors({});
@@ -202,10 +202,10 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
 
             <Input
               label="Price ($) *"
-              value={formData.price.toString()}
-              onChangeText={(text) => setFormData({ ...formData, price: parseFloat(text) || 0 })}
+              value={formData.price}
+              onChangeText={(text) => setFormData({ ...formData, price: text })}
               placeholder="5.00"
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               error={validationErrors.price}
             />
 

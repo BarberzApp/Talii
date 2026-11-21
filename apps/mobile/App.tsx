@@ -9,7 +9,7 @@ import { AppNavigator } from './app/navigation/AppNavigator';
 import { AuthProvider } from './app/shared/hooks/useAuth';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { Toaster, useToast } from './app/shared/components/ui';
-import { STRIPE_CONNECT_DEEP_LINK, fetchConnectStatus } from './app/shared/lib/stripeConnect';
+import { STRIPE_CONNECT_DEEP_LINK, fetchConnectStatus, isConnectSessionOpen } from './app/shared/lib/stripeConnect';
 import { ThemeProvider, useTheme } from './app/shared/components/theme';
 // Initialize Sentry as early as possible (using secure configuration from sentry.ts)
 // The initSentry() function handles proper configuration with data privacy protections
@@ -48,7 +48,8 @@ const App = () => {
         // Stripe Connect: the website's /barber/connect/return and /refresh pages
         // send the barber here. Read the account status from Stripe through the
         // API (it stores the flags); screens re-read it when they come into focus.
-        if (event.url.startsWith(`${STRIPE_CONNECT_DEEP_LINK}/`)) {
+        // While the in-app Stripe session is open, that flow handles the return itself.
+        if (event.url.startsWith(`${STRIPE_CONNECT_DEEP_LINK}/`) && !isConnectSessionOpen()) {
           if (event.url.includes('/return')) {
             fetchConnectStatus().then((status) => {
               if (status) logger.log('Stripe Connect status refreshed after return');

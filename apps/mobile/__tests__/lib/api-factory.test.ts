@@ -39,7 +39,7 @@ describe('createAccessTokenGetter', () => {
     expect(supabase.auth.refreshSession).not.toHaveBeenCalled();
   });
 
-  it('refreshes a token that expires within two minutes', async () => {
+  it('refreshes a token that expires within 60 seconds', async () => {
     const supabase = {
       auth: {
         getSession: jest.fn().mockResolvedValue({ data: { session: { access_token: 'old', expires_at: now() + 30 } }, error: null }),
@@ -47,6 +47,17 @@ describe('createAccessTokenGetter', () => {
       },
     };
     await expect(createAccessTokenGetter(supabase as any)()).resolves.toBe('new');
+  });
+
+  it('leaves a token with 90 seconds left to supabase-js auto-refresh', async () => {
+    const supabase = {
+      auth: {
+        getSession: jest.fn().mockResolvedValue({ data: { session: { access_token: 'cur', expires_at: now() + 90 } }, error: null }),
+        refreshSession: jest.fn(),
+      },
+    };
+    await expect(createAccessTokenGetter(supabase as any)()).resolves.toBe('cur');
+    expect(supabase.auth.refreshSession).not.toHaveBeenCalled();
   });
 });
 

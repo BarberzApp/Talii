@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TextInputProps, ViewStyle } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
@@ -25,6 +25,13 @@ export const NumericInput: React.FC<NumericInputProps> = ({
   ...props
 }) => {
   const { colors } = useTheme();
+  // Keep the raw text so partial input like "25." or "25.5" can be typed;
+  // the parent gets the parsed number.
+  const [text, setText] = useState(value ? String(value) : '');
+  useEffect(() => {
+    if ((parseFloat(text) || 0) !== value) setText(value ? String(value) : '');
+  }, [value]);
+
   return (
     <View style={[tw`flex-1`, containerStyle]}>
       <Text style={[tw`text-sm font-medium mb-2`, { color: colors.foreground }]}>
@@ -53,12 +60,13 @@ export const NumericInput: React.FC<NumericInputProps> = ({
           ]}
           placeholder={placeholder}
           placeholderTextColor={colors.mutedForeground}
-          value={value.toString()}
-          onChangeText={(text) => {
-            const numValue = text === '' ? 0 : parseFloat(text) || 0;
-            onChangeText(numValue);
+          value={text}
+          onChangeText={(input) => {
+            const clean = input.replace(/[^0-9.]/g, '');
+            setText(clean);
+            onChangeText(clean === '' ? 0 : parseFloat(clean) || 0);
           }}
-          keyboardType="numeric"
+          keyboardType="decimal-pad"
           {...props}
         />
         {suffix && (

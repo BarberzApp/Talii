@@ -252,6 +252,39 @@ export default function BarberOnboardingPage() {
         }));
     };
 
+    /**
+     * Saves what the barber has entered so far: PATCH /api/me (profile + listing;
+     * the server geocodes city/state, and the device time zone becomes the
+     * barber's) and the services. Does not mark onboarding complete.
+     */
+    const saveProgress = async () => {
+        const handle = (v: string) => (v ? extractHandle(v).replace(/^@/, '') || null : null);
+        const { city, state } = parseCityState(formData.location);
+        let deviceTimeZone: string | undefined;
+        try {
+            deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+        } catch {
+            deviceTimeZone = undefined;
+        }
+
+        await api.me.update({
+            phone: formData.phone || null,
+            businessName: formData.businessName || null,
+            bio: formData.bio || null,
+            specialties: formData.specialties,
+            city,
+            state,
+            instagram: handle(formData.socialMedia.instagram),
+            tiktok: handle(formData.socialMedia.tiktok),
+            ...(deviceTimeZone ? { timezone: deviceTimeZone } : {}),
+        });
+
+        if (formData.services.length > 0) {
+            const saved = await syncServices(formData.services);
+            setFormData(prev => ({ ...prev, services: saved }));
+        }
+    };
+
     const handleSubmit = async () => {
         if (loading) return;
 
@@ -277,31 +310,7 @@ export default function BarberOnboardingPage() {
                 throw new Error('Only barbers can complete this onboarding process.');
             }
 
-            const handle = (v: string) => (v ? extractHandle(v).replace(/^@/, '') || null : null);
-            const { city, state } = parseCityState(formData.location);
-            let deviceTimeZone: string | undefined;
-            try {
-                deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
-            } catch {
-                deviceTimeZone = undefined;
-            }
-
-            await api.me.update({
-                phone: formData.phone || null,
-                businessName: formData.businessName || null,
-                bio: formData.bio || null,
-                specialties: formData.specialties,
-                city,
-                state,
-                instagram: handle(formData.socialMedia.instagram),
-                tiktok: handle(formData.socialMedia.tiktok),
-                ...(deviceTimeZone ? { timezone: deviceTimeZone } : {}),
-            });
-
-            if (formData.services.length > 0) {
-                const saved = await syncServices(formData.services);
-                setFormData(prev => ({ ...prev, services: saved }));
-            }
+            await saveProgress();
 
             await api.me.update({ onboardingComplete: true });
             await refreshProfile();
@@ -341,6 +350,10 @@ export default function BarberOnboardingPage() {
         if (stripeLoading) return;
         setStripeLoading(true);
         try {
+            // Save the business details and services first: the barber may not come
+            // back to this screen from Stripe (or the app may be closed meanwhile).
+            await saveProgress();
+
             const current = await fetchConnectStatus();
             if (isStripeReady(current)) {
                 setFormData(prev => ({ ...prev, stripeConnected: true }));

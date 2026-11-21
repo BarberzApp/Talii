@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-import { formatCents, type ServiceRow } from '@barber-app/shared';
+import { centsToDollarInput, dollarsToCents, formatCents, type ServiceRow } from '@barber-app/shared';
 import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
@@ -43,7 +43,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [formData, setFormData] = useState<Service>({
     name: '',
-    price: 0,
+    price: '',
     duration: 30,
     description: ''
   });
@@ -75,7 +75,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
     if (!formData.duration || formData.duration < 5 || formData.duration > 480) {
       errors.duration = 'Duration must be between 5 and 480 minutes';
     }
-    if (!Number.isFinite(formData.price) || formData.price < 0) errors.price = 'Price must be at least $0';
+    if (dollarsToCents(formData.price) === null) errors.price = 'Enter a price like 25 or 25.50';
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -89,7 +89,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
 
     const body = {
       name: formData.name.trim(),
-      priceCents: Math.round(formData.price * 100),
+      priceCents: dollarsToCents(formData.price) ?? 0,
       durationMinutes: Math.round(formData.duration),
       description: formData.description?.trim() || null,
     };
@@ -153,7 +153,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
     setEditingService(service);
     setFormData({
       name: service.name,
-      price: service.price_cents / 100,
+      price: centsToDollarInput(service.price_cents),
       duration: service.duration_minutes,
       description: service.description || ''
     });
@@ -163,7 +163,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
     setEditingService(null);
     setFormData({
       name: '',
-      price: 0,
+      price: '',
       duration: 30,
       description: ''
     });
@@ -211,10 +211,10 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                 <Input
                   icon={DollarSign}
                   label="Price ($) *"
-                  value={formData.price.toString()}
-                  onChangeText={(text) => setFormData({ ...formData, price: parseFloat(text) || 0 })}
+                  value={formData.price}
+                  onChangeText={(text) => setFormData({ ...formData, price: text })}
                   placeholder="25.00"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   error={validationErrors.price}
                 />
               </View>
@@ -222,8 +222,8 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                 <Input
                   icon={Clock}
                   label="Duration (min) *"
-                  value={formData.duration.toString()}
-                  onChangeText={(text) => setFormData({ ...formData, duration: parseInt(text) || 30 })}
+                  value={formData.duration ? String(formData.duration) : ''}
+                  onChangeText={(text) => setFormData({ ...formData, duration: parseInt(text.replace(/\D/g, ''), 10) || 0 })}
                   placeholder="30"
                   keyboardType="numeric"
                   error={validationErrors.duration}
@@ -302,7 +302,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                 </Text>
                 <TouchableOpacity
                   style={[tw`px-6 py-3 rounded-xl flex-row items-center`, { backgroundColor: colors.primary }]}
-                  onPress={() => setFormData({ name: '', price: 0, duration: 30, description: '' })}
+                  onPress={() => setFormData({ name: '', price: '', duration: 30, description: '' })}
                 >
                   <Plus size={18} color={colors.primaryForeground} style={tw`mr-2`} />
                   <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>

@@ -33,7 +33,7 @@ Update the status column as phases land.
 | 1 | Delete dead code and cut features | done 2026-11-17 |
 | 2 | Database baseline | done locally 2026-11-17; live reset pending |
 | 3 | API rebuild | 3a (foundation, bookings, money, Stripe) done 2026-11-17; 3b (remaining routes) done 2026-11-18 |
-| 4 | Clients go through the API | 4a (web + shared client) done 2026-11-19; 4b (mobile) next |
+| 4 | Clients go through the API | 4a (web + shared client) done 2026-11-19; 4b (mobile) done 2026-11-21 |
 | 5 | Front end | not started |
 
 ### Phase 0: safety net
@@ -137,6 +137,19 @@ One shared `apiFetch` used by web and mobile. Move direct database writes behind
   - Shared client: the timeout covers reading the body; a non-JSON 2xx body is `ApiError` `INVALID_RESPONSE`.
   - CSP: only the configured Supabase origin, Stripe's Payment Element hosts (incl. 3-D Secure frames), the Sentry host from `NEXT_PUBLIC_SENTRY_DSN`, and `worker-src 'self' blob:`.
 
+### Phase 4b: what landed (2026-11-21)
+
+- `apps/mobile/app/shared/lib/api.ts` is the app's only data path: the shared client with `EXPO_PUBLIC_API_URL` (development falls back to `http://localhost:3000` with a warning; release builds have no fallback host) and the Supabase session token, refreshed when it expires within 60 seconds (below supabase-js's own margin). `api-factory.ts` holds the parts without React Native imports (base URL, token getter, `uploadBytes`, `bookingPageUrl`) so Node can test them. Supabase is used only for Auth and `uploadToSignedUrl`; the client is typed with `Database` so new table access shows up in `tsc`.
+- Auth: `createAuthAdapter({ supabase, api })` sends role, name, username and business name as sign-up metadata and reads the profile from `GET /api/me`; login and sign-up screens create no rows. Admin comes from `isAdmin`.
+- Booking: `POST /api/bookings` with the slot's `startsAt`; `clientSecret: null` means confirmed; otherwise the Stripe PaymentSheet pays the fee. When the sheet is cancelled or fails, the app reads the PaymentIntent first (`retrievePaymentIntent`) and only releases the hold (`PATCH` cancel) if it is not succeeded, processing or awaiting capture. The PaymentIntent now allows `card` and `link` only (server change in `server/bookings/create.ts`): delayed methods (ACH, Klarna, Cash App, Amazon Pay) cannot settle within the 10-minute hold. Apple Pay and Google Pay stay off on mobile until an Apple merchant ID and the Stripe Expo config plugin are set up.
+- Calendar: loads the visible month (bounds in the barber's time zone, padded a week, every page) and reloads when the month changes; a failed load shows an error with Retry instead of an empty month. Days are grouped in the barber's time zone, matching the times shown. Complete, no-show and cancel follow the API rules. Walk-ins use a 15-minute grid over the barber's whole day minus their own live bookings (expired holds ignored), since `POST /api/bookings/manual` does not enforce weekly hours.
+- Barber self-service: services and add-ons (prices typed as text, saved as cents), weekly hours (`PUT` the whole week; every window of a day is editable; overlaps are caught before saving; Save is blocked with a Retry if the week failed to load), profile and listing (`PATCH /api/me`), onboarding (saves progress before opening Stripe Connect, sets the device time zone, marks `onboardingComplete` last), earnings (`GET /api/earnings`, cents).
+- Stripe Connect: onboarding or dashboard link opened with `WebBrowser.openAuthSessionAsync(url, 'bocm://stripe-connect')`; the website's return and refresh pages send the browser back, then the app calls `GET /api/stripe/connect/status`. `App.tsx` ignores those deep links while that session is open.
+- Discovery and safety: Browse sends the search text as `q` (with lat/lng when location is on) and pages through `GET /api/barbers`; ratings come with each card; reviews need a completed, unreviewed booking and use the shared word filter; reports and blocks go through `/api/reports` and `/api/blocks`; account deletion is `DELETE /api/me` with `{ confirm: true }` (409 `HAS_UPCOMING_BOOKINGS` explained). Uploads: `POST /api/uploads` into `avatars` or `media`, then `PATCH /api/me`.
+- Removed: `api-client.ts`, `bookingService.ts`, `bookingDetailsHelper.ts` (fee math), `contentModeration.ts`, the old row types in `types/index.ts`, Twitter/Facebook fields.
+- Not on mobile yet: a special-hours (closed days) screen (barbers use the website).
+- Checks: mobile `tsc` 0 errors; mobile jest 23 suites, 195 tests; a Node smoke script runs the app's own `api-factory.ts` and `auth-adapter.ts` against `next dev` on the local stack (sign-in, nearby and search, slots, booking, SLOT_TAKEN, cancel, token refresh, services/add-ons/hours, walk-in, upload, sign-up and account deletion).
+
 ### Phase 5: front end
 
 Fix type errors, turn build-time type and lint checks back on, then a UX pass.
@@ -154,7 +167,7 @@ These were found by the independent review of Phase 1 and are requirements for t
 - **Phase 4:** rewrite `middleware.ts` (security headers only) and drop `@supabase/auth-helpers-nextjs`. Send Bearer tokens from the twelve web call sites that now return 401.
 - **Phase 4:** set `app_metadata.role = 'admin'` on the owner's account with `scripts/set-admin.ts` (the `SUPER_ADMIN_EMAIL` fallback is already gone with `api-auth.ts`).
 - **Phase 5:** remove wording that promises a confirmation text (`booking/success`, `support`), the Cuts entries in `updates-badge.tsx`, and the one-button toggle on the mobile Browse page.
-- **Phase 5:** fix the three remaining mobile type errors; the mobile CI workflow fails on them. Remove native packages for cut features (`expo-notifications`, `expo-av`, `expo-media-library`) and verify with a build.
+- **Phase 5:** ~~fix the three remaining mobile type errors~~ (done in 4b). Remove native packages for cut features (`expo-notifications`, `expo-av`, `expo-media-library`) and verify with a build.
 - **To verify with Stripe:** that the webhook endpoint receives connected-account events (`account.updated`); mobile barbers only become `active` through it.
 
 ## Parked feature: Cuts
@@ -168,7 +181,7 @@ Removed in Phase 1. Notes for rebuilding it later:
 
 ## Open items for the owner
 
-- `bocmstyle.com` no longer serves this app (it redirects to an unrelated site), yet it is the mobile app's default API host and the web app URL. Choose the new domain.
+- `bocmstyle.com` no longer serves this app (it redirects to an unrelated site). The mobile app no longer defaults to it (set `EXPO_PUBLIC_API_URL` per build); choose the new domain for the website and the API.
 - Change the Apple reviewer test account's password; it was committed in a migration.
 - Stripe (test and live): remove the old webhook endpoints (an ngrok tunnel and `barber-app-five.vercel.app`, which now serves a different app) and add the new deployment's `/api/webhooks/stripe` with the events listed in Phase 3a.
 - Google Cloud: restrict the Maps key to the Geocoding and Places APIs and your domains, and set a daily quota.

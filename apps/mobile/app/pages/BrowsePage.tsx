@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -334,8 +334,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   }, [navigation]);
 
   useEffect(() => {
+    // The first page is loaded by the search effect below (empty query).
     loadLocationPreferences();
-    fetchBarbers(0); // Load first batch
   }, [loadLocationPreferences]);
 
   // Debounce search query
@@ -403,123 +403,88 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     return () => clearTimeout(timer);
   }, [useLocation, userLocation?.coords?.accuracy]);
 
-  // Wrapper for toggleLocation that refreshes barbers
+  // The list reloads by itself when location turns on or off (see the effect below).
   const toggleLocation = async () => {
-    const wasUsingLocation = useLocation;
     await toggleLocationHook();
-    
-    // Refresh barbers after toggling
-    // If turning OFF location, refresh the barber list
-    if (wasUsingLocation) {
-      // Reset pagination state
-      setBarbersPage(0);
-      setHasMoreBarbers(true);
-      
-      // Refresh when turning location off
-      await fetchBarbers(0, false, true); // Skip nearby fetch when turning off
-    } else {
-      fetchBarbers(0, false, false); // Use nearby fetch when turning on
-    }
   };
 
+  // Only the newest list request may update the list (typing fires several).
+  const listSeq = useRef(0);
 
   /**
-   * GET /api/barbers: listed barbers, in pages. With location on, the first page
-   * is the nearby list instead (lat/lng, nearest first, with distance_miles).
+   * GET /api/barbers, one page at a time. The search text goes to the server as
+   * `q`; with location on, lat/lng make it the nearby list (nearest first, with
+   * distance_miles, within 25 miles). Page 0 replaces the list.
    */
-  const fetchBarbers = async (page = 0, append = false, skipNearbyFetch = false) => {
-    if (useLocation && userLocation?.coords && page === 0 && !skipNearbyFetch) {
-      await fetchNearbyBarbers(userLocation.coords.latitude, userLocation.coords.longitude);
-      return;
-    }
-
+  const fetchBarbers = async (
+    page = 0,
+    append = false,
+    skipNearbyFetch = false,
+    query: string = debouncedSearchQuery
+  ) => {
+    const coords = useLocation && !skipNearbyFetch ? userLocation?.coords : undefined;
+    const seq = ++listSeq.current;
     try {
       if (page === 0) setBarbersLoading(true);
       else setBarbersLoadingMore(true);
 
       const { barbers: cards, pagination } = await api.barbers.list({
+        q: query.trim() || undefined,
         limit: BATCH_SIZE,
         offset: page * BATCH_SIZE,
+        ...(coords ? { lat: coords.latitude, lng: coords.longitude } : {}),
       });
+      if (seq !== listSeq.current) return;
       const transformed = cards.map(toBarber);
       setHasMoreBarbers(pagination.hasMore);
 
       if (page === 0 || !append) {
         setBarbers(transformed);
-        setFilteredBarbers(transformed);
         setBarbersPage(page);
       } else {
-        setBarbers(prev => {
-          const merged = [...prev, ...transformed.filter(b => !prev.some(p => p.id === b.id))];
-          setFilteredBarbers(merged);
-          return merged;
-        });
+        setBarbers(prev => [...prev, ...transformed.filter(b => !prev.some(p => p.id === b.id))]);
         setBarbersPage(page);
       }
     } catch (error) {
+      if (seq !== listSeq.current) return;
       logger.error('Error fetching barbers:', error);
+      if (coords) {
+        // Nearby search failed: fall back to the plain list.
+        await fetchBarbers(page, append, true, query);
+        return;
+      }
     } finally {
-      if (page === 0) setBarbersLoading(false);
-      else setBarbersLoadingMore(false);
+      if (seq === listSeq.current) {
+        if (page === 0) setBarbersLoading(false);
+        else setBarbersLoadingMore(false);
+      }
     }
   };
-
 
   // Check if location is available and working
   const isLocationAvailable = useLocation && userLocation && userLocation.coords;
 
-  /** Nearby barbers (GET /api/barbers?lat&lng, within 25 miles, nearest first). */
-  const fetchNearbyBarbers = async (lat: number, lon: number, limit: number = 50) => {
-    try {
-      setBarbersLoading(true);
-      const { barbers: cards } = await api.barbers.list({ lat, lng: lon, limit });
-      const transformed = cards.map(toBarber);
-      setBarbers(transformed);
-      setFilteredBarbers(transformed);
-      setBarbersPage(0);
-      // The nearby list comes in one response.
-      setHasMoreBarbers(false);
-    } catch (error) {
-      logger.error('Error fetching nearby barbers:', error);
-      // Fall back to the plain list (skip the nearby fetch to prevent a loop).
-      await fetchBarbers(0, false, true);
-    } finally {
-      setBarbersLoading(false);
-    }
-  };
-
   const loadMoreBarbers = async () => {
     if (!hasMoreBarbers || barbersLoadingMore) return;
-    
-    // If using location, we can't load more from the endpoint easily
-    // For now, just disable load more when location is enabled
-    if (isLocationAvailable) {
-      logger.log('Load more not supported when location sorting is enabled');
-      return;
-    }
-    
-    const nextPage = barbersPage + 1;
-    logger.log(`Loading more barbers (page ${nextPage + 1})`);
-    await fetchBarbers(nextPage, true);
+    await fetchBarbers(barbersPage + 1, true);
   };
+
+  // A new search, or location turning on/off (or moving), starts again from the first page.
+  const coordsKey =
+    useLocation && userLocation?.coords
+      ? `${userLocation.coords.latitude.toFixed(3)},${userLocation.coords.longitude.toFixed(3)}`
+      : 'off';
+  useEffect(() => {
+    setBarbersPage(0);
+    setHasMoreBarbers(true);
+    fetchBarbers(0, false, false, debouncedSearchQuery);
+  }, [debouncedSearchQuery, coordsKey]);
 
   // Filter barbers based on search query and selected specialties
   useEffect(() => {
     let filtered = barbers;
 
-    // Filter by search query
-    if (debouncedSearchQuery) {
-      filtered = filtered.filter(barber =>
-        barber.name?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        barber.username?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        barber.businessName?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        barber.location?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        barber.specialties?.some(specialty => 
-          specialty.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-        )
-      );
-    }
-
+    // The search text is applied by the server (q); specialties are filtered here.
     // Filter by selected specialties
     if (selectedSpecialties.length > 0) {
       filtered = filtered.filter(barber =>
@@ -530,7 +495,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     }
 
     setFilteredBarbers(filtered);
-  }, [barbers, debouncedSearchQuery, selectedSpecialties]);
+  }, [barbers, selectedSpecialties]);
 
   // Update specialties when barbers are loaded
   useEffect(() => {
@@ -1148,14 +1113,10 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
           }}
           barberId={selectedBarber.barberId}
           barberName={selectedBarber.barberName || selectedBarber.name}
-          onBookingCreated={(booking) => {
+          onBookingCreated={() => {
+            // BookingForm has already told the client the outcome.
             setShowBookingForm(false);
             setSelectedBarber(null);
-            Alert.alert(
-              'Booking Created!',
-              'Your appointment has been scheduled successfully.',
-              [{ text: 'OK' }]
-            );
           }}
         />
       )}

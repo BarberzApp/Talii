@@ -27,13 +27,10 @@ export default function BookingCalendarPage() {
 
     const [showBookingForm, setShowBookingForm] = useState(false);
 
-    const handleBookingCreated = (booking: any) => {
+    // BookingForm has already shown the outcome; go straight to the success screen.
+    const handleBookingCreated = () => {
         setShowBookingForm(false);
-        Alert.alert(
-            'Booking Created!',
-            'Your appointment has been scheduled successfully.',
-            [{ text: 'OK', onPress: () => navigation.navigate('BookingSuccess') }]
-        );
+        navigation.navigate('BookingSuccess');
     };
 
     return (

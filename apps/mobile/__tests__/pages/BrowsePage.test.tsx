@@ -117,7 +117,20 @@ describe('BrowsePage - Basic Tests', () => {
     const { api } = require('@/lib/api');
     const { findByText } = render(<BrowsePage />);
     expect(await findByText('Austin, TX')).toBeTruthy();
-    expect(api.barbers.list).toHaveBeenCalledWith({ limit: 10, offset: 0 });
+    expect(api.barbers.list).toHaveBeenCalledWith({ q: undefined, limit: 10, offset: 0 });
     expect(await findByText('4.5 (2)')).toBeTruthy();
+  });
+
+  it('sends the debounced search text to the server as q and starts from page 0', async () => {
+    const { api } = require('@/lib/api');
+    const screen = render(<BrowsePage />);
+    await screen.findByText('Austin, TX');
+    api.barbers.list.mockClear();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Search stylists...'), '  fade ');
+    await waitFor(() => expect(api.barbers.list).toHaveBeenCalledWith({ q: 'fade', limit: 10, offset: 0 }), {
+      timeout: 2000,
+    });
+    expect(api.barbers.list).toHaveBeenCalledTimes(1);
   });
 });

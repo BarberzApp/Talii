@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import SettingsPage from '@/pages/SettingsPage';
 
 // Mock twrnc
@@ -40,9 +40,11 @@ jest.mock('@/lib/stripeConnect', () => ({
   isStripeReady: () => false,
 }));
 
+const mockReset = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     navigate: jest.fn(),
+    reset: mockReset,
   }),
 }));
 
@@ -119,10 +121,21 @@ describe('SettingsPage - Basic Tests', () => {
     await waitFor(() => expect(api.me.get).toHaveBeenCalled());
   });
 
-  it('should accept navigation prop', () => {
-    // useNavigation is mocked, component should use it
-    render(<SettingsPage />);
-    expect(true).toBe(true);
+  it('deletes the account with DELETE /api/me only after YES is typed', async () => {
+    const { api } = require('@/lib/api');
+    api.me.delete.mockResolvedValue({ deleted: true, cancelledBookings: [], removedFiles: 0, signInBlocked: true });
+    const screen = render(<SettingsPage />);
+
+    fireEvent.press(await screen.findByText('Delete My Account'));
+    const confirm = screen.getByPlaceholderText('Type YES to confirm');
+    fireEvent.changeText(confirm, 'NO');
+    fireEvent.press(screen.getByText('Confirm Delete'));
+    expect(api.me.delete).not.toHaveBeenCalled();
+
+    fireEvent.changeText(confirm, 'YES');
+    fireEvent.press(screen.getByText('Confirm Delete'));
+    await waitFor(() => expect(api.me.delete).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Login' }] }));
   });
 });
 
