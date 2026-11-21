@@ -17,8 +17,10 @@ import type { CalendarEvent, Service, TimeSlot } from '../lib/calendar';
 export interface ManualFormData {
   clientName: string;
   serviceId: string;
+  /** Display only: the service price, formatted. */
   price: string;
-  time: string;
+  /** The chosen slot's ISO start instant. */
+  startsAt: string;
   date: Date;
 }
 
@@ -72,11 +74,13 @@ export function useCalendarState() {
     clientName: '',
     serviceId: '',
     price: '',
-    time: '',
+    startsAt: '',
     date: new Date()
   });
   const [services, setServices] = useState<Service[]>([]);
   const [barberId, setBarberId] = useState<string | null>(null);
+  /** The barber's IANA time zone (barbers only); walk-in times use it. */
+  const [barberTimeZone, setBarberTimeZone] = useState<string | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
 
   // Review form state
@@ -122,7 +126,7 @@ export function useCalendarState() {
       clientName: '',
       serviceId: '',
       price: '',
-      time: '',
+      startsAt: '',
       date: selectedDate || new Date()
     });
     setTimeSlots([]);
@@ -167,13 +171,14 @@ export function useCalendarState() {
     // Reset user-specific state
     setUserRole(null);
     setBarberId(null);
+    setBarberTimeZone(null);
     setBarberViewMode('appointments');
     // Reset form data
     setManualFormData({
       clientName: '',
       serviceId: '',
       price: '',
-      time: '',
+      startsAt: '',
       date: new Date()
     });
     setServices([]);
@@ -239,6 +244,8 @@ export function useCalendarState() {
     setServices,
     barberId,
     setBarberId,
+    barberTimeZone,
+    setBarberTimeZone,
     timeSlots,
     setTimeSlots,
     openManualAppointmentForm,

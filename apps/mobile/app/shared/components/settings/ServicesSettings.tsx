@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-import { supabase } from '../../lib/supabase';
+import { formatCents, type ServiceRow } from '@barber-app/shared';
+import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
 import { Button, Card, CardContent, LoadingSpinner } from '../ui';
@@ -36,10 +37,9 @@ interface ServicesSettingsProps {
 export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const [services, setServices] = useState<Service[]>([]);
+  const [services, setServices] = useState<ServiceRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [editingService, setEditingService] = useState<Service | null>(null);
-  const [barberId, setBarberId] = useState<string | null>(null);
+  const [editingService, setEditingService] = useState<ServiceRow | null>(null);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [formData, setFormData] = useState<Service>({
     name: '',
@@ -50,43 +50,19 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
 
   useEffect(() => {
     if (user) {
-      loadBarberId();
+      loadServices();
     }
   }, [user]);
 
-  const loadBarberId = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error) throw error;
-      if (data) {
-        setBarberId(data.id);
-        loadServices(data.id);
-      }
-    } catch (error) {
-      logger.error('Error loading barber ID:', error);
-      Alert.alert('Error', 'Failed to load barber information.');
-    }
-  };
-
-  const loadServices = async (barberId: string) => {
+  /** GET /api/me/services: the caller's services (inactive ones too). */
+  const loadServices = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .eq('barber_id', barberId)
-        .order('name');
-
-      if (error) throw error;
-      if (data) setServices(data);
+      const { services: rows } = await api.services.list();
+      setServices(rows.filter((s) => s.is_active).sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error) {
       logger.error('Error loading services:', error);
-      Alert.alert('Error', 'Failed to load services.');
+      Alert.alert('Error', errorMessage(error, 'Failed to load services.'));
     } finally {
       setIsLoading(false);
     }
@@ -94,64 +70,46 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
 
   const validateForm = (): boolean => {
     const errors: {[key: string]: string} = {};
-    
+
     if (!formData.name?.trim()) errors.name = 'Service name is required';
-    if (!formData.duration || formData.duration < 1) errors.duration = 'Duration must be at least 1 minute';
-    if (!formData.price || formData.price < 0) errors.price = 'Price must be at least $0';
-    
+    if (!formData.duration || formData.duration < 5 || formData.duration > 480) {
+      errors.duration = 'Duration must be between 5 and 480 minutes';
+    }
+    if (!Number.isFinite(formData.price) || formData.price < 0) errors.price = 'Price must be at least $0';
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSave = async () => {
-    if (!barberId) {
-      Alert.alert('Error', 'Barber information not found.');
-      return;
-    }
-
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please fix the errors before saving.');
       return;
     }
 
+    const body = {
+      name: formData.name.trim(),
+      priceCents: Math.round(formData.price * 100),
+      durationMinutes: Math.round(formData.duration),
+      description: formData.description?.trim() || null,
+    };
+
     try {
       setIsLoading(true);
       if (editingService) {
-        // Update existing service
-        const { error } = await supabase
-          .from('services')
-          .update({
-            name: formData.name,
-            price: formData.price,
-            duration: formData.duration,
-            description: formData.description,
-          })
-          .eq('id', editingService.id);
-
-        if (error) throw error;
+        await api.services.update(editingService.id, body);
         Alert.alert('Success', 'Service updated successfully');
       } else {
-        // Add new service
-        const { error } = await supabase
-          .from('services')
-          .insert({
-            barber_id: barberId,
-            name: formData.name,
-            price: formData.price,
-            duration: formData.duration,
-            description: formData.description,
-          });
-
-        if (error) throw error;
+        await api.services.create(body);
         Alert.alert('Success', 'Service added successfully');
       }
-      
-      await loadServices(barberId);
+
+      await loadServices();
       resetForm();
       onUpdate?.();
     } catch (error) {
       logger.error('Error saving service:', error);
-      Alert.alert('Error', 'Failed to save service.');
+      Alert.alert('Error', errorMessage(error, 'Failed to save service.'));
     } finally {
       setIsLoading(false);
     }
@@ -169,19 +127,19 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
           onPress: async () => {
             try {
               setIsLoading(true);
-              const { error } = await supabase
-                .from('services')
-                .delete()
-                .eq('id', serviceId);
-
-              if (error) throw error;
-
-              Alert.alert('Success', 'Service deleted successfully');
-              await loadServices(barberId!);
+              // A service that bookings reference is deactivated instead of deleted.
+              const result = await api.services.remove(serviceId);
+              Alert.alert(
+                'Success',
+                result.deactivated
+                  ? 'This service has bookings, so it was hidden instead of deleted.'
+                  : 'Service deleted successfully'
+              );
+              await loadServices();
               onUpdate?.();
             } catch (error) {
               logger.error('Error deleting service:', error);
-              Alert.alert('Error', 'Failed to delete service.');
+              Alert.alert('Error', errorMessage(error, 'Failed to delete service.'));
             } finally {
               setIsLoading(false);
             }
@@ -191,12 +149,12 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
     );
   };
 
-  const handleEdit = (service: Service) => {
+  const handleEdit = (service: ServiceRow) => {
     setEditingService(service);
     setFormData({
       name: service.name,
-      price: service.price,
-      duration: service.duration,
+      price: service.price_cents / 100,
+      duration: service.duration_minutes,
       description: service.description || ''
     });
   };
@@ -367,13 +325,13 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                           <View style={[tw`px-3 py-1 rounded-full flex-row items-center`, { backgroundColor: colors.primarySubtle }]}>
                             <DollarSign size={14} color={colors.primary} />
                             <Text style={[tw`ml-1 font-bold`, { color: colors.primary }]}>
-                              {service.price}
+                              {formatCents(service.price_cents).replace('$', '')}
                             </Text>
                           </View>
                           <View style={tw`flex-row items-center`}>
                             <Clock size={14} color={colors.mutedForeground} style={tw`mr-1`} />
                             <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-                              {formatDuration(service.duration)}
+                              {formatDuration(service.duration_minutes)}
                             </Text>
                           </View>
                         </View>
@@ -392,7 +350,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                           <Edit size={18} color={colors.foreground} />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          onPress={() => handleDelete(service.id!)}
+                          onPress={() => handleDelete(service.id)}
                           style={[tw`p-2 rounded-xl`, { backgroundColor: colors.primarySubtle }]}
                         >
                           <Trash2 size={18} color={colors.destructive} />

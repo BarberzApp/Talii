@@ -32,7 +32,15 @@ import {
   Calendar,
   Clock,
 } from 'lucide-react-native';
-import { supabase } from '../shared/lib/supabase';
+import { api, isApiError } from '../shared/lib/api';
+import {
+  formatBookingTime,
+  formatCents,
+  formatInTimeZone,
+  type BookingStatus,
+  type ServiceRow,
+  type UpdateMeBody,
+} from '@barber-app/shared';
 import { logger } from '../shared/lib/logger';
 import { ImageUpload } from '../shared/components/ui/ImageUpload';
 import {
@@ -43,62 +51,42 @@ const { width, height } = Dimensions.get('window');
 
 interface UserProfile {
   id: string;
-  name: string;
-  email: string;
-  username?: string;
-  avatar_url?: string;
-  bio?: string;
-  location?: string;
-  phone?: string;
-  coverphoto?: string;
-  role?: 'client' | 'barber';
+  name: string | null;
+  email: string | null;
+  username: string;
+  avatar_url: string | null;
+  cover_photo_url: string | null;
+  /** "City, State" from the barber listing (barbers only). */
+  location: string | null;
 }
 
 interface BarberProfile {
   id: string;
-  user_id: string;
-  bio?: string;
-  business_name?: string;
-  specialties?: string[];
-  instagram?: string;
-  twitter?: string;
-  facebook?: string;
-  portfolio?: string[];
-  featured_portfolio?: string;
-  services?: Array<{
-    id: string;
-    name: string;
-    price: number;
-    duration: string;
-    description: string;
-  }>;
-  reviews?: Array<{
-    id: string;
-    user: string;
-    avatar: string;
-    rating: number;
-    comment: string;
-    date: string;
-  }>;
+  bio: string | null;
+  business_name: string | null;
+  specialties: string[];
+  portfolio: string[];
+  services: Array<Pick<ServiceRow, 'id' | 'name' | 'description' | 'price_cents' | 'duration_minutes'>>;
 }
 
 interface Booking {
   id: string;
-  date: string;
-  time: string;
+  startsAt: string;
+  /** The barber's time zone; booking times are shown in it. */
+  timeZone: string;
   service: string;
   barber: {
     id: string;
     name: string;
-    image: string;
+    image?: string;
   };
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
+  status: BookingStatus;
 }
 
 export default function ProfilePortfolio() {
   const { colors } = useTheme();
   const navigation = useNavigation();
-  const { user, userProfile, logout } = useAuth();
+  const { user, userProfile, logout, refreshProfile } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [barberProfile, setBarberProfile] = useState<BarberProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -111,93 +99,60 @@ export default function ProfilePortfolio() {
   const [avatarError, setAvatarError] = useState(false);
   const [coverError, setCoverError] = useState(false);
 
-  // Fetch profile data
+  // Profile from GET /api/me; services (barbers) or bookings (clients) from the API.
   const fetchProfileData = async () => {
     if (!user) return;
 
     try {
       setLoading(true);
-      // Reset image error states when fetching new data
       setAvatarError(false);
       setCoverError(false);
-      logger.log('🔄 Fetching profile data for user:', user.id);
-      logger.log('👤 User profile role:', userProfile?.role);
 
-      // Fetch user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      const me = await api.me.get();
+      const listing = me.barber;
+      setProfile({
+        id: me.profile.id,
+        name: me.profile.name,
+        email: me.profile.email,
+        username: me.profile.username,
+        avatar_url: me.profile.avatar_url,
+        cover_photo_url: me.profile.cover_photo_url,
+        location: [listing?.city, listing?.state].filter(Boolean).join(', ') || null,
+      });
 
-      if (profileError) {
-        logger.error('Error fetching profile:', profileError);
-      } else {
-        setProfile(profileData);
-      }
-
-              // Fetch barber profile if user is a barber
-        if (userProfile?.role === 'barber') {
-          const { data: barberData, error: barberError } = await supabase
-            .from('barbers')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-
-          if (barberError) {
-            logger.error('Error fetching barber profile:', barberError);
-          } else {
-            setBarberProfile(barberData);
-            
-            // Fetch barber's services using the barber_id
-            if (barberData) {
-              // Fetch services
-              const { data: servicesData, error: servicesError } = await supabase
-                .from('services')
-                .select('*')
-                .eq('barber_id', barberData.id)
-                .order('name', { ascending: true });
-
-              if (servicesError) {
-                logger.error('Error fetching services:', servicesError);
-              } else {
-                logger.log('💇 Fetched services:', servicesData?.length || 0);
-                // Update barberProfile with services
-                setBarberProfile(prev => prev ? {
-                  ...prev,
-                  services: servicesData || []
-                } : null);
-              }
-            }
-          }
-      } else {
-        // Fetch client bookings
-        const { data: bookingsData, error: bookingsError } = await supabase
-          .from('bookings')
-          .select(`
-            *,
-            barbers:barber_id(
-              id,
-              user_id,
-              profiles:user_id(name, avatar_url)
-            )
-          `)
-          .eq('client_id', user.id)
-          .order('date', { ascending: false });
-
-        if (bookingsError) {
-          logger.error('Error fetching bookings:', bookingsError);
-        } else {
-          const formattedBookings = (bookingsData || []).map((booking: any) => ({
-            ...booking,
-            barber: {
-              id: booking.barbers?.id,
-              name: booking.barbers?.profiles?.name || 'Unknown',
-              image: booking.barbers?.profiles?.avatar_url
-            }
-          }));
-          setBookings(formattedBookings);
+      if (me.profile.role === 'barber' && listing) {
+        let services: BarberProfile['services'] = [];
+        try {
+          services = (await api.services.list()).services.filter((s) => s.is_active);
+        } catch (error) {
+          logger.error('Error fetching services:', error);
         }
+        setBarberProfile({
+          id: listing.id,
+          bio: listing.bio,
+          business_name: listing.business_name,
+          specialties: listing.specialties ?? [],
+          portfolio: listing.portfolio ?? [],
+          services,
+        });
+      } else {
+        const { bookings: rows } = await api.bookings.list({ as: 'client', order: 'desc', limit: 50 });
+        setBookings(
+          rows
+            .filter((b) => b.status !== 'pending')
+            .map((b) => ({
+              id: b.id,
+              startsAt: b.starts_at,
+              timeZone: b.barber?.timezone || 'America/New_York',
+              service: b.service?.name || 'Service',
+              barber: {
+                id: b.barber_id,
+                name: b.barber?.business_name || b.barber?.profile?.name || 'Barber',
+                image: b.barber?.profile?.avatar_url ?? undefined,
+              },
+              status: b.status,
+            }))
+        );
       }
     } catch (error) {
       logger.error('Error fetching profile data:', error);
@@ -216,65 +171,45 @@ export default function ProfilePortfolio() {
     setRefreshing(false);
   };
 
-  const handleAvatarUpload = async (imageUrl: string) => {
+  /** PATCH /api/me with new image fields; returns false (after alerting) on failure. */
+  const saveImages = async (body: UpdateMeBody, failure: string): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ avatar_url: imageUrl })
-        .eq('id', user?.id);
-
-      if (error) {
-        logger.error('Error updating avatar:', error);
-        Alert.alert('Error', 'Failed to update avatar. Please try again.');
-      } else {
-        setAvatarError(false); // Reset error state
-        setProfile(prev => prev ? { ...prev, avatar_url: imageUrl } : null);
-        Alert.alert('Success', 'Avatar updated successfully!');
-        await fetchProfileData();
-      }
+      await api.me.update(body);
+      return true;
     } catch (error) {
-      logger.error('Error updating avatar:', error);
-      Alert.alert('Error', 'Failed to update avatar. Please try again.');
+      logger.error('Error saving images:', error);
+      Alert.alert('Error', isApiError(error) ? error.message : failure);
+      return false;
     }
+  };
+
+  const handleAvatarUpload = async (imageUrl: string) => {
+    if (!(await saveImages({ avatarUrl: imageUrl }, 'Failed to update avatar. Please try again.'))) return;
+    setAvatarError(false);
+    setProfile(prev => prev ? { ...prev, avatar_url: imageUrl } : null);
+    Alert.alert('Success', 'Avatar updated successfully!');
+    await Promise.all([fetchProfileData(), refreshProfile()]);
   };
 
   const handleCoverUpload = async (imageUrl: string) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ coverphoto: imageUrl })
-        .eq('id', user?.id);
-
-      if (error) {
-        logger.error('Error updating cover photo:', error);
-        Alert.alert('Error', 'Failed to update cover photo. Please try again.');
-      } else {
-        setCoverError(false); // Reset error state
-        setProfile(prev => prev ? { ...prev, coverphoto: imageUrl } : null);
-        Alert.alert('Success', 'Cover photo updated successfully!');
-        await fetchProfileData();
-      }
-    } catch (error) {
-      logger.error('Error updating cover photo:', error);
-      Alert.alert('Error', 'Failed to update cover photo. Please try again.');
-    }
+    if (!(await saveImages({ coverPhotoUrl: imageUrl }, 'Failed to update cover photo. Please try again.'))) return;
+    setCoverError(false);
+    setProfile(prev => prev ? { ...prev, cover_photo_url: imageUrl } : null);
+    Alert.alert('Success', 'Cover photo updated successfully!');
+    await Promise.all([fetchProfileData(), refreshProfile()]);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+  const savePortfolio = async (portfolio: string[], failure: string) => {
+    if (!(await saveImages({ portfolio }, failure))) return false;
+    setBarberProfile(prev => prev ? { ...prev, portfolio } : null);
+    return true;
   };
 
-  const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
+  // Booking times are shown in the barber's time zone.
+  const formatDate = (startsAt: string, timeZone: string) =>
+    formatInTimeZone(startsAt, timeZone, { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const formatTime = (startsAt: string, timeZone: string) => formatBookingTime(startsAt, timeZone);
 
   // Set initial tab based on user role
   useEffect(() => {
@@ -327,29 +262,11 @@ export default function ProfilePortfolio() {
               <View style={tw`space-y-4 py-4`}>
                 {/* Portfolio Image Upload */}
                 <ImageUpload
+                  bucket="media"
                   onUploadComplete={async (imageUrl) => {
-                    try {
-                      // Add image to barber's portfolio
-                      const updatedPortfolio = [...(barberProfile?.portfolio || []), imageUrl];
-                      const { error } = await supabase
-                        .from('barbers')
-                        .update({ portfolio: updatedPortfolio })
-                        .eq('user_id', user?.id);
-
-                      if (error) {
-                        Alert.alert('Error', 'Failed to save portfolio image');
-                      } else {
-                        // Update local state
-                        setBarberProfile(prev => prev ? {
-                          ...prev,
-                          portfolio: updatedPortfolio
-                        } : null);
-                        // Refresh profile data to ensure UI is updated
-                        await fetchProfileData();
-                        Alert.alert('Success', 'Portfolio image added successfully!');
-                      }
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to save portfolio image');
+                    const updated = [...(barberProfile?.portfolio || []), imageUrl];
+                    if (await savePortfolio(updated, 'Failed to save portfolio image')) {
+                      Alert.alert('Success', 'Portfolio image added successfully!');
                     }
                   }}
                   onUploadError={(error) => {
@@ -364,24 +281,8 @@ export default function ProfilePortfolio() {
                     setSelectedPortfolioImage(imageUrl);
                   }}
                   onRemoveImage={async (index) => {
-                    try {
-                      const updatedPortfolio = (barberProfile?.portfolio || []).filter((_, i) => i !== index);
-                      const { error } = await supabase
-                        .from('barbers')
-                        .update({ portfolio: updatedPortfolio })
-                        .eq('user_id', user?.id);
-
-                      if (error) {
-                        Alert.alert('Error', 'Failed to remove portfolio image');
-                      } else {
-                        setBarberProfile(prev => prev ? {
-                          ...prev,
-                          portfolio: updatedPortfolio
-                        } : null);
-                      }
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to remove portfolio image');
-                    }
+                    const updated = (barberProfile?.portfolio || []).filter((_, i) => i !== index);
+                    await savePortfolio(updated, 'Failed to remove portfolio image');
                   }}
                 />
 
@@ -468,14 +369,14 @@ export default function ProfilePortfolio() {
                                   { backgroundColor: colors.glass }
                                 ]}>
                                   <Text style={[tw`text-xs font-medium`, { color: colors.primary }]}>
-                                    {service.duration} min
+                                    {service.duration_minutes} min
                                   </Text>
                                 </View>
                               </View>
                             </View>
                             <View style={tw`items-end`}>
                               <Text style={[tw`font-bold text-xl`, { color: colors.primary }]}>
-                                ${service.price}
+                                {formatCents(service.price_cents)}
                               </Text>
                             </View>
                           </View>
@@ -524,13 +425,13 @@ export default function ProfilePortfolio() {
                               <View style={tw`flex-row items-center gap-1`}>
                                 <Calendar size={12} color={colors.mutedForeground} />
                                 <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
-                                  {formatDate(booking.date)}
+                                  {formatDate(booking.startsAt, booking.timeZone)}
                                 </Text>
                               </View>
                               <View style={tw`flex-row items-center gap-1`}>
                                 <Clock size={12} color={colors.mutedForeground} />
                                 <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
-                                  {formatTime(booking.time)}
+                                  {formatTime(booking.startsAt, booking.timeZone)}
                                 </Text>
                               </View>
                             </View>
@@ -571,9 +472,9 @@ export default function ProfilePortfolio() {
       <View style={tw`relative w-full overflow-hidden`}>
         {/* Cover Photo */}
         <View style={[tw`h-40 w-full relative`, { backgroundColor: colors.primarySubtle }]}>
-          {profile.coverphoto && !coverError ? (
+          {profile.cover_photo_url && !coverError ? (
             <Image
-              source={{ uri: profile.coverphoto }}
+              source={{ uri: profile.cover_photo_url }}
               style={tw`absolute inset-0 w-full h-full`}
               resizeMode="cover"
               onError={() => {
@@ -771,23 +672,12 @@ export default function ProfilePortfolio() {
             title="Upload Avatar"
             description="Select a square image for your profile picture"
             existingImages={profile?.avatar_url ? [profile.avatar_url] : []}
-            customPath="avatars"
-            upsert={true}
+            bucket="avatars"
+            replace
             onRemoveImage={async () => {
-              try {
-                const { error } = await supabase
-                  .from('profiles')
-                  .update({ avatar_url: null })
-                  .eq('id', user?.id);
-
-                if (error) {
-                  Alert.alert('Error', 'Failed to remove avatar');
-                } else {
-                  setProfile(prev => prev ? { ...prev, avatar_url: undefined } : null);
-                  await fetchProfileData();
-                }
-              } catch (error) {
-                Alert.alert('Error', 'Failed to remove avatar');
+              if (await saveImages({ avatarUrl: null }, 'Failed to remove avatar')) {
+                setProfile(prev => prev ? { ...prev, avatar_url: null } : null);
+                await Promise.all([fetchProfileData(), refreshProfile()]);
               }
             }}
           />
@@ -812,24 +702,13 @@ export default function ProfilePortfolio() {
             aspectRatio={16/9}
             title="Upload Cover Photo"
             description="Select a wide image for your cover photo"
-            existingImages={profile?.coverphoto ? [profile.coverphoto] : []}
-            customPath="covers"
-            upsert={true}
+            existingImages={profile?.cover_photo_url ? [profile.cover_photo_url] : []}
+            bucket="avatars"
+            replace
             onRemoveImage={async () => {
-              try {
-                const { error } = await supabase
-                  .from('profiles')
-                  .update({ coverphoto: null })
-                  .eq('id', user?.id);
-
-                if (error) {
-                  Alert.alert('Error', 'Failed to remove cover photo');
-                } else {
-                  setProfile(prev => prev ? { ...prev, coverphoto: undefined } : null);
-                  await fetchProfileData();
-                }
-              } catch (error) {
-                Alert.alert('Error', 'Failed to remove cover photo');
+              if (await saveImages({ coverPhotoUrl: null }, 'Failed to remove cover photo')) {
+                setProfile(prev => prev ? { ...prev, cover_photo_url: null } : null);
+                await fetchProfileData();
               }
             }}
           />

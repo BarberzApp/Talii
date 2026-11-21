@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Star, MessageSquare, Calendar, Flag, CheckCircle, Pencil, Trash2 } from 'lucide-react-native';
 import tw from 'twrnc';
-import { Review } from '../types';
+import type { PublicReview } from '@barber-app/shared';
 import { Avatar } from './ui';
 import { ReportContentModal } from './ReportContentModal';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from './theme';
 
 interface ReviewCardProps {
-  review: Review;
+  review: PublicReview;
   onPress?: () => void;
   showActions?: boolean;
   onEdit?: () => void;
@@ -26,7 +26,8 @@ export function ReviewCard({
   const { colors } = useTheme();
   const { user } = useAuth();
   const [showReportModal, setShowReportModal] = useState(false);
-  const isOwnReview = user?.id === review.client_id;
+  // Reviewers stay anonymous (no client id is public); the server refuses reporting your own review.
+  const canReport = !!user;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -73,17 +74,14 @@ export function ReviewCard({
       activeOpacity={0.8}
     >
       {/* Top row: badges */}
-      {(review.is_verified || !isOwnReview) && (
+      {/* Every review belongs to a completed booking. */}
+      {(
         <View style={tw`flex-row items-center justify-between mb-3`}>
-          {review.is_verified ? (
-            <View style={[tw`flex-row items-center px-2.5 py-1 rounded-full`, { backgroundColor: colors.successSubtle }]}>
-              <CheckCircle size={12} color={colors.success} />
-              <Text style={[tw`text-xs font-semibold ml-1`, { color: colors.success }]}>Verified Booking</Text>
-            </View>
-          ) : (
-            <View />
-          )}
-          {!isOwnReview && (
+          <View style={[tw`flex-row items-center px-2.5 py-1 rounded-full`, { backgroundColor: colors.successSubtle }]}>
+            <CheckCircle size={12} color={colors.success} />
+            <Text style={[tw`text-xs font-semibold ml-1`, { color: colors.success }]}>Verified Booking</Text>
+          </View>
+          {canReport && (
             <TouchableOpacity
               style={[tw`flex-row items-center px-2 py-1 rounded-full`, { backgroundColor: colors.muted }]}
               onPress={(e) => {
@@ -111,13 +109,13 @@ export function ReviewCard({
           }
         ]}>
           <Avatar
-            src={review.client?.avatar_url}
+            src={review.reviewer_avatar_url ?? undefined}
             size="sm"
           />
         </View>
         <View style={tw`flex-1 ml-3`}>
           <Text style={[tw`font-bold text-base`, { color: colors.foreground }]}>
-            {review.client?.name || 'Anonymous'}
+            {review.reviewer_name || 'Anonymous'}
           </Text>
           <View style={tw`flex-row items-center mt-1`}>
             {renderStars(review.rating)}
@@ -138,13 +136,6 @@ export function ReviewCard({
             {formatDate(review.created_at)}
           </Text>
         </View>
-        {review.booking?.service?.name && (
-          <View style={[tw`flex-row items-center px-2 py-0.5 rounded-full`, { backgroundColor: colors.primarySubtle }]}>
-            <Text style={[tw`text-xs font-medium`, { color: colors.primary }]}>
-              {review.booking.service.name}
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Review comment */}
@@ -189,8 +180,7 @@ export function ReviewCard({
       onClose={() => setShowReportModal(false)}
       contentType="review"
       contentId={review.id}
-      reportedUserId={review.client_id}
-      contentDescription={`Review by ${review.client?.name || 'Anonymous'}: ${review.comment?.substring(0, 100) || 'No comment'}...`}
+      contentDescription={`Review by ${review.reviewer_name || 'Anonymous'}: ${review.comment?.substring(0, 100) || 'No comment'}...`}
     />
     </>
   );

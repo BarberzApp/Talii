@@ -20,17 +20,24 @@ jest.mock('@/hooks/useAuth', () => {
   return { useAuth: () => value };
 });
 
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn((table) => ({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ 
-        data: { id: 'test-user', name: 'Test User', email: 'test@example.com' }, 
-        error: null 
+jest.mock('@/lib/api', () => ({
+  api: {
+    me: {
+      get: jest.fn().mockResolvedValue({
+        user: { id: 'test-user', email: 'test@example.com' },
+        profile: { id: 'test-user', role: 'client', name: 'Test User', email: 'test@example.com' },
+        barber: null,
       }),
-    })),
+      delete: jest.fn(),
+    },
   },
+  errorMessage: (_e: unknown, fallback: string) => fallback,
+  hasErrorCode: () => false,
+}));
+
+jest.mock('@/lib/stripeConnect', () => ({
+  fetchConnectStatus: jest.fn().mockResolvedValue(null),
+  isStripeReady: () => false,
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -106,10 +113,10 @@ describe('SettingsPage - Basic Tests', () => {
     }).not.toThrow();
   });
 
-  it('should use useAuth hook', () => {
-    // If component renders without error, useAuth is working
+  it('loads settings from GET /api/me', async () => {
+    const { api } = require('@/lib/api');
     render(<SettingsPage />);
-    expect(true).toBe(true);
+    await waitFor(() => expect(api.me.get).toHaveBeenCalled());
   });
 
   it('should accept navigation prop', () => {

@@ -7,7 +7,7 @@ import { Alert } from 'react-native';
 import { reportingService } from '../services/reportingService';
 import { logger } from '../lib/logger';
 import * as Haptics from 'expo-haptics';
-import type { BlockUserParams } from '../types/reporting.types';
+import { errorMessage } from '../lib/api';
 
 export function useReporting() {
   const [isBlocking, setIsBlocking] = useState(false);
@@ -27,15 +27,11 @@ export function useReporting() {
           : 'This user has been blocked. You will no longer see their content.',
         [{ text: 'OK' }]
       );
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Error blocking user:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       
-      if (error.message?.includes('already blocked')) {
-        Alert.alert('Already Blocked', 'This user is already blocked.');
-      } else {
-        Alert.alert('Error', error.message || 'Failed to block user. Please try again.');
-      }
+      Alert.alert('Error', errorMessage(error, 'Failed to block user. Please try again.'));
     } finally {
       setIsBlocking(false);
     }
@@ -55,10 +51,10 @@ export function useReporting() {
           : 'This user has been unblocked.',
         [{ text: 'OK' }]
       );
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Error unblocking user:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to unblock user. Please try again.');
+      Alert.alert('Error', errorMessage(error, 'Failed to unblock user. Please try again.'));
     } finally {
       setIsBlocking(false);
     }
@@ -76,7 +72,7 @@ export function useReporting() {
   const loadBlockedUsers = useCallback(async () => {
     try {
       const blocked = await reportingService.getBlockedUsers();
-      setBlockedUsers(blocked.map((b) => b.blocked_user_id));
+      setBlockedUsers(blocked.map((b) => b.userId));
     } catch (error) {
       logger.error('Error loading blocked users:', error);
     }

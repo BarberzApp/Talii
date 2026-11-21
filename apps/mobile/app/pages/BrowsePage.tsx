@@ -20,7 +20,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
 import { useTheme } from '../shared/components/theme';
-import { supabase } from '../shared/lib/supabase';
+import type { BarberCard, PublicReview, RatingStats } from '@barber-app/shared';
+import { api, errorMessage } from '../shared/lib/api';
 import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
 import ProfilePreview from './ProfilePreview';
@@ -38,7 +39,6 @@ import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import { RootStackParamList } from '../shared/types';
 import BookingForm from '../shared/components/BookingForm';
-import { useReviews } from '../shared/hooks/useReviews';
 import { useLocationManager } from '../shared/hooks/useLocationManager';
 import { ReviewCard } from '../shared/components/ReviewCard';
 import { ReviewForm } from '../shared/components/ReviewForm';
@@ -55,82 +55,63 @@ const { width } = Dimensions.get('window');
 
 type BrowseNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-// Types matching the database structure
-type BarberFromDB = {
-  id: string;
-  user_id: string;
-  business_name?: string;
-  specialties: string[];
-  price_range?: string;
-  stripe_account_status?: string;
-  instagram?: string;
-  twitter?: string;
-  tiktok?: string;
-  facebook?: string;
-  latitude?: number;
-  longitude?: number;
-  city?: string;
-  state?: string;
-}
-
-type ProfileFromDB = {
-  id: string;
-  name: string;
-  username?: string;
-  location?: string;
-  bio?: string;
-  avatar_url?: string;
-  is_public?: boolean;
-}
-
-// Type for the transformed data used in the UI
+// A barber card as the Browse list shows it (from GET /api/barbers).
 type Barber = {
+  /** barbers.id */
   id: string;
+  /** profiles.id */
   userId: string;
   name: string;
-  username?: string;
+  username: string;
   businessName?: string;
+  /** "City, State" */
   location?: string;
   specialties: string[];
   bio?: string;
-  priceRange?: string;
   avatarUrl?: string;
+  /** Cover photos are not part of the list response. */
   coverPhotoUrl?: string;
-  isPublic?: boolean;
-  isStripeReady?: boolean;
-  instagram?: string;
-  twitter?: string;
-  tiktok?: string;
-  facebook?: string;
-  latitude?: number;
-  longitude?: number;
+  priceRange?: string;
   city?: string;
   state?: string;
+  /** Miles, when the list was loaded near a location. */
   distance?: number;
+  rating: RatingStats;
+}
+
+function toBarber(card: BarberCard): Barber {
+  const location = [card.city, card.state].filter(Boolean).join(', ');
+  return {
+    id: card.id,
+    userId: card.user_id,
+    name: card.name || card.username,
+    username: card.username,
+    businessName: card.business_name || card.name || undefined,
+    location: location || undefined,
+    specialties: card.specialties || [],
+    bio: card.bio || undefined,
+    avatarUrl: card.avatar_url || undefined,
+    city: card.city || undefined,
+    state: card.state || undefined,
+    distance: card.distance_miles ?? undefined,
+    rating: card.rating,
+  };
 }
 
 type SortOption = 'name' | 'location' | 'price' | 'distance';
 type SortOrder = 'asc' | 'desc';
 
-// Star Rating Component
-function BarberRating({ barberId }: { barberId: string }) {
+// Star Rating Component (stats come with the barber card)
+function BarberRating({ rating }: { rating: RatingStats }) {
   const { colors } = useTheme();
-  const { stats, loading } = useReviews(barberId);
-  if (loading) {
-    return (
-      <View style={tw`flex-row items-center`}>
-        <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>Loading...</Text>
-      </View>
-    );
-  }
-
-  if (!stats || stats.total_reviews === 0) {
+  if (rating.review_count === 0 || rating.average_rating === null) {
     return (
       <View style={tw`flex-row items-center justify-between`}>
         <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>No reviews yet</Text>
       </View>
     );
   }
+  const stats = { average_rating: rating.average_rating, total_reviews: rating.review_count };
 
   return (
     <View style={tw`flex-row items-center justify-between`}>
@@ -161,7 +142,7 @@ function ReviewsList({
   onAddReview: () => void;
 }) {
   const { colors } = useTheme();
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   
@@ -176,50 +157,14 @@ function ReviewsList({
 
   const fetchReviews = async () => {
     if (!barberId) return;
-    
-    logger.log('Fetching reviews for barber ID:', barberId);
     setLoading(true);
-    
     try {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select(`
-          *,
-          client:client_id(
-            id,
-            name,
-            avatar_url,
-            username
-          ),
-          barber:barber_id(
-            id,
-            user_id,
-            business_name
-          ),
-          booking:booking_id(
-            id,
-            date,
-            service_id,
-            service:service_id(
-              name
-            )
-          )
-        `)
-        .eq('barber_id', barberId)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        logger.error('Error fetching reviews:', error);
-        Alert.alert('Error', 'Failed to load reviews.');
-        return;
-      }
-
-      setReviews(data || []);
+      const res = await api.barbers.reviews(barberId, { limit: 50 });
+      setReviews(res.reviews);
       setHasLoaded(true);
     } catch (error) {
       logger.error('Error fetching reviews:', error);
-      Alert.alert('Error', 'Failed to load reviews.');
+      Alert.alert('Error', errorMessage(error, 'Failed to load reviews.'));
     } finally {
       setLoading(false);
     }
@@ -351,7 +296,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   const [showReviews, setShowReviews] = useState(false);
   const [reviewFormData, setReviewFormData] = useState<{
     barberId: string;
-    bookingId: string | null; // Can be null for reviews not tied to a booking
+    bookingId: string | null;
     isEditing?: boolean;
     reviewId?: string;
     initialRating?: number;
@@ -360,6 +305,21 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   
   // Location accuracy state
   const [locationAccuracy, setLocationAccuracy] = useState<'high' | 'medium' | 'low' | 'error' | null>(null);
+
+  /** The newest completed booking with this barber that has no review yet. */
+  const findReviewableBooking = async (barberId: string): Promise<string | null> => {
+    try {
+      const [{ bookings }, { reviews: own }] = await Promise.all([
+        api.bookings.list({ as: 'client', status: ['completed'], order: 'desc', limit: 100 }),
+        api.reviews.listOwn(),
+      ]);
+      const reviewed = new Set(own.map(r => r.booking_id));
+      return bookings.find(b => b.barber_id === barberId && !reviewed.has(b.id))?.id ?? null;
+    } catch (error) {
+      logger.error('Error finding a booking to review:', error);
+      return null;
+    }
+  };
 
   const promptAuth = useCallback((context: string = 'continue') => {
     Alert.alert(
@@ -463,181 +423,44 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   };
 
 
+  /**
+   * GET /api/barbers: listed barbers, in pages. With location on, the first page
+   * is the nearby list instead (lat/lng, nearest first, with distance_miles).
+   */
   const fetchBarbers = async (page = 0, append = false, skipNearbyFetch = false) => {
+    if (useLocation && userLocation?.coords && page === 0 && !skipNearbyFetch) {
+      await fetchNearbyBarbers(userLocation.coords.latitude, userLocation.coords.longitude);
+      return;
+    }
+
     try {
-      if (page === 0) {
-        setBarbersLoading(true);
-      } else {
-        setBarbersLoadingMore(true);
-      }
-      
-      // If location is enabled and we have coordinates, use the nearby endpoint
-      // BUT skip if this is a fallback call to prevent infinite loop
-      if (useLocation && userLocation?.coords && page === 0 && !skipNearbyFetch) {
-        await fetchNearbyBarbers(userLocation.coords.latitude, userLocation.coords.longitude);
-        return;
-      }
-      
-      const from = page * BATCH_SIZE;
-      const to = from + BATCH_SIZE - 1;
-      
-      logger.log(`Fetching barbers batch ${page + 1} (${from}-${to})`);
-      
-      // Fetch barbers with their profiles and ratings
-      const { data: barbersData, error: barbersError } = await supabase
-        .from('barbers')
-        .select(`
-          id,
-          user_id,
-          bio,
-          specialties,
-          price_range,
-          stripe_account_status,
-          business_name,
-          instagram,
-          twitter,
-          tiktok,
-          facebook,
-          latitude,
-          longitude,
-          city,
-          state,
-          created_at,
-          updated_at
-        `)
-        .range(from, to)
-        .order('created_at', { ascending: false });
+      if (page === 0) setBarbersLoading(true);
+      else setBarbersLoadingMore(true);
 
-      if (barbersError) {
-        logger.error('Error fetching barbers:', barbersError);
-        return;
-      }
-
-      // Fetch profiles for barbers (only public profiles)
-      const userIds = barbersData?.map(barber => barber.user_id) || [];
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          name,
-          username,
-          location,
-          bio,
-          avatar_url,
-          coverphoto,
-          is_public
-        `)
-        .in('id', userIds)
-        .eq('is_public', true);
-
-      if (profilesError) {
-        logger.error('Error fetching profiles:', profilesError);
-        return;
-      }
-
-      // Transform barbers data (only include barbers with public profiles)
-      const transformedBarbers: Barber[] = [];
-      
-      (barbersData || []).forEach(barber => {
-        const profile = profilesData?.find(p => p.id === barber.user_id);
-        
-        // Only include barbers that have a public profile
-        if (profile) {
-          // Calculate distance if user location is available
-          const distance = useLocation && userLocation?.coords
-            ? getDistanceToItem(
-                { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
-                barber.latitude && barber.longitude
-                  ? { latitude: barber.latitude, longitude: barber.longitude }
-                  : undefined
-              )
-            : undefined;
-          
-          transformedBarbers.push({
-            id: barber.id,
-            userId: barber.user_id,
-            name: profile.name || 'Unknown',
-            username: profile.username || 'username',
-            businessName: barber.business_name || profile.name,
-            location: profile.location || barber.city || 'Location',
-            specialties: barber.specialties || [],
-            bio: barber.bio || profile.bio,
-            priceRange: barber.price_range,
-            avatarUrl: processAvatarUrl(profile.avatar_url),
-            coverPhotoUrl: profile.coverphoto,
-            isPublic: profile.is_public ?? true,
-            isStripeReady: barber.stripe_account_status === 'active',
-            instagram: barber.instagram,
-            twitter: barber.twitter,
-            tiktok: barber.tiktok,
-            facebook: barber.facebook,
-            latitude: barber.latitude,
-            longitude: barber.longitude,
-            city: barber.city,
-            state: barber.state,
-            distance,
-          });
-        }
+      const { barbers: cards, pagination } = await api.barbers.list({
+        limit: BATCH_SIZE,
+        offset: page * BATCH_SIZE,
       });
+      const transformed = cards.map(toBarber);
+      setHasMoreBarbers(pagination.hasMore);
 
-      // Sort by distance if location is enabled, and filter out barbers without coordinates
-      if (useLocation && userLocation && userLocation.coords) {
-        // Filter out barbers without valid distances
-        const barbersWithLocation = transformedBarbers.filter(barber => 
-          barber.distance !== undefined && 
-          isFinite(barber.distance) && 
-          barber.distance >= 0
-        );
-        
-        // Sort by distance (closest first) - ensure numeric comparison
-        const sorted = barbersWithLocation.sort((a, b) => {
-          const distA = a.distance ?? Infinity;
-          const distB = b.distance ?? Infinity;
-          return distA - distB;
-        });
-        
-        transformedBarbers.length = 0;
-        transformedBarbers.push(...sorted);
-        
-        logger.log(`Sorted ${sorted.length} barbers by distance`, {
-          firstFew: sorted.slice(0, 3).map(b => ({
-            name: b.name,
-            distance: b.distance?.toFixed(2) + ' mi'
-          }))
-        });
-      }
-      
-      // Check if we have more barbers to load
-      const hasMore = transformedBarbers.length === BATCH_SIZE;
-      setHasMoreBarbers(hasMore);
-      
-      if (page === 0) {
-        // First load - replace all barbers
-        setBarbers(transformedBarbers);
-        setFilteredBarbers(transformedBarbers);
-        setBarbersPage(0);
+      if (page === 0 || !append) {
+        setBarbers(transformed);
+        setFilteredBarbers(transformed);
+        setBarbersPage(page);
       } else {
-        // Append new barbers to existing list
-        setBarbers(prevBarbers => {
-          const newBarbers = [...prevBarbers, ...transformedBarbers];
-          setFilteredBarbers(newBarbers);
-          return newBarbers;
+        setBarbers(prev => {
+          const merged = [...prev, ...transformed.filter(b => !prev.some(p => p.id === b.id))];
+          setFilteredBarbers(merged);
+          return merged;
         });
         setBarbersPage(page);
-      }
-      
-      logger.log(`Loaded ${transformedBarbers.length} barbers (batch ${page + 1})`);
-      if (!hasMore) {
-        logger.log('No more barbers to load');
       }
     } catch (error) {
       logger.error('Error fetching barbers:', error);
     } finally {
-      if (page === 0) {
-        setBarbersLoading(false);
-      } else {
-        setBarbersLoadingMore(false);
-      }
+      if (page === 0) setBarbersLoading(false);
+      else setBarbersLoadingMore(false);
     }
   };
 
@@ -645,108 +468,20 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   // Check if location is available and working
   const isLocationAvailable = useLocation && userLocation && userLocation.coords;
 
-  // Fetch nearby barbers using the edge function
-  const fetchNearbyBarbers = async (lat: number, lon: number, limit: number = 20) => {
+  /** Nearby barbers (GET /api/barbers?lat&lng, within 25 miles, nearest first). */
+  const fetchNearbyBarbers = async (lat: number, lon: number, limit: number = 50) => {
     try {
       setBarbersLoading(true);
-      
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
-        logger.error('Missing Supabase environment variables');
-        // Fallback to regular fetch (skip nearby fetch to prevent infinite loop)
-        await fetchBarbers(0, false, true);
-        return;
-      }
-
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/get-nearby-barbers?lat=${lat}&lon=${lon}&limit=${limit}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch nearby barbers: ${response.statusText}`);
-      }
-
-      const { barbers } = await response.json();
-
-      // Transform to match existing Barber type
-      const transformedBarbers: Barber[] = (barbers || [])
-        .map((barber: any) => {
-          // Calculate distance if not provided by edge function (fallback)
-          // Convert meters to miles: 1 meter = 0.000621371 miles
-          let distance: number | undefined = barber.distance_m 
-            ? barber.distance_m * 0.000621371 // Convert meters to miles
-            : undefined;
-          
-          // If distance not provided but we have coordinates, calculate it
-          if (!distance && userLocation?.coords && barber.latitude && barber.longitude) {
-            distance = getDistanceToItem(
-              { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
-              { latitude: barber.latitude, longitude: barber.longitude }
-            );
-          }
-          
-          return {
-            id: barber.id,
-            userId: barber.user_id,
-            name: barber.name || 'Unknown',
-            username: barber.username || 'username',
-            businessName: barber.business_name || barber.name,
-            location: barber.location || barber.city || 'Location',
-            specialties: barber.specialties || [],
-            bio: barber.bio,
-            priceRange: barber.price_range,
-            avatarUrl: processAvatarUrl(barber.avatar_url),
-            coverPhotoUrl: barber.coverphoto,
-            isPublic: barber.is_public ?? true,
-            isStripeReady: false, // Would need to check stripe_account_status
-            instagram: barber.instagram,
-            twitter: barber.twitter,
-            tiktok: barber.tiktok,
-            facebook: barber.facebook,
-            latitude: barber.latitude,
-            longitude: barber.longitude,
-            city: barber.city,
-            state: barber.state,
-            distance,
-          };
-        })
-        .filter((barber: Barber) => barber.distance !== undefined && isFinite(barber.distance ?? Infinity)) // Only include barbers with valid distances
-        .sort((a: Barber, b: Barber) => {
-          // Sort by distance (closest first)
-          const distA = a.distance ?? Infinity;
-          const distB = b.distance ?? Infinity;
-          return distA - distB;
-        });
-
-      setBarbers(transformedBarbers);
-      setFilteredBarbers(transformedBarbers);
+      const { barbers: cards } = await api.barbers.list({ lat, lng: lon, limit });
+      const transformed = cards.map(toBarber);
+      setBarbers(transformed);
+      setFilteredBarbers(transformed);
       setBarbersPage(0);
-      setHasMoreBarbers(transformedBarbers.length === limit);
-      
-      logger.log(`Loaded ${transformedBarbers.length} nearby barbers`, {
-        distances: transformedBarbers.slice(0, 5).map(b => ({ 
-          name: b.name, 
-          distance: b.distance?.toFixed(2) + ' mi',
-          lat: b.latitude,
-          lon: b.longitude
-        })),
-        userLocation: userLocation?.coords ? {
-          lat: userLocation.coords.latitude,
-          lon: userLocation.coords.longitude
-        } : null
-      });
+      // The nearby list comes in one response.
+      setHasMoreBarbers(false);
     } catch (error) {
       logger.error('Error fetching nearby barbers:', error);
-      // Fallback to regular fetch (skip nearby fetch to prevent infinite loop)
+      // Fall back to the plain list (skip the nearby fetch to prevent a loop).
       await fetchBarbers(0, false, true);
     } finally {
       setBarbersLoading(false);
@@ -845,29 +580,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
       />
     ));
   };
-
-  // Function to process avatar URL
-  const processAvatarUrl = (url?: string) => {
-    if (!url) return undefined;
-    
-    // If it's already a full URL, return as is
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    
-    // If it's a relative path, construct the full URL
-    if (url.startsWith('/')) {
-      return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars${url}`;
-    }
-    
-    // If it's just a filename, construct the full URL
-    return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${url}`;
-  };
-
-
-
-
-  
 
   return (
     <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
@@ -1186,7 +898,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
                         {/* Star Rating - Centered */}
                         <View style={tw`items-center mb-3`}>
-                          <BarberRating barberId={barber.id} />
+                          <BarberRating rating={barber.rating} />
                         </View>
 
                         {/* Price Range */}
@@ -1380,12 +1092,23 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
             <ScrollView style={tw`flex-1 px-4`}>
               <ReviewsList 
                 barberId={selectedBarberForReviews} 
-                onAddReview={() => {
-                  // For reviews from browse page, no booking ID (null)
-                  // These reviews are unverified since they're not tied to a booking
+                onAddReview={async () => {
+                  if (guestMode) {
+                    promptAuth('write a review');
+                    return;
+                  }
+                  // A review needs one of your completed bookings with this barber.
+                  const bookingId = await findReviewableBooking(selectedBarberForReviews);
+                  if (!bookingId) {
+                    Alert.alert(
+                      'Review not available',
+                      'You can review a barber after a completed appointment with them (one review per appointment).'
+                    );
+                    return;
+                  }
                   setReviewFormData({
                     barberId: selectedBarberForReviews,
-                    bookingId: null, // Null for reviews not tied to a booking
+                    bookingId,
                     isEditing: false,
                   });
                   setShowReviews(false);

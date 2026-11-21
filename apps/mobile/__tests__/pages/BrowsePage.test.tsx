@@ -18,17 +18,31 @@ jest.mock('@/hooks/useAuth', () => ({
   }),
 }));
 
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      range: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-    })),
+const mockCard = {
+  id: 'barber-1',
+  user_id: 'user-1',
+  business_name: 'Fade Co',
+  bio: 'Clean fades',
+  specialties: ['Barber'],
+  city: 'Austin',
+  state: 'TX',
+  name: 'Ann',
+  username: 'ann',
+  avatar_url: null,
+  distance_miles: null,
+  rating: { review_count: 2, average_rating: 4.5 },
+};
+
+jest.mock('@/lib/api', () => ({
+  api: {
+    barbers: {
+      list: jest.fn(() => Promise.resolve({ barbers: [mockCard], pagination: { limit: 10, offset: 0, hasMore: false } })),
+      reviews: jest.fn(),
+    },
+    bookings: { list: jest.fn() },
+    reviews: { listOwn: jest.fn() },
   },
+  errorMessage: (_e: unknown, fallback: string) => fallback,
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -57,9 +71,6 @@ jest.mock('@/components/BookingForm', () => 'BookingForm');
 jest.mock('@/pages/ProfilePreview', () => 'ProfilePreview');
 jest.mock('@/components/ReviewCard', () => ({ ReviewCard: 'ReviewCard' }));
 jest.mock('@/components/ReviewForm', () => ({ ReviewForm: 'ReviewForm' }));
-jest.mock('@/hooks/useReviews', () => ({
-  useReviews: () => ({ stats: null, loading: false }),
-}));
 jest.mock('@/components/ui', () => ({ Avatar: 'Avatar' }));
 
 describe('BrowsePage - Basic Tests', () => {
@@ -101,5 +112,12 @@ describe('BrowsePage - Basic Tests', () => {
     const { getByText } = render(<BrowsePage />);
     expect(getByText('Cosmetologists')).toBeTruthy();
   });
-});
 
+  it('lists barbers from GET /api/barbers with their rating', async () => {
+    const { api } = require('@/lib/api');
+    const { findByText } = render(<BrowsePage />);
+    expect(await findByText('Austin, TX')).toBeTruthy();
+    expect(api.barbers.list).toHaveBeenCalledWith({ limit: 10, offset: 0 });
+    expect(await findByText('4.5 (2)')).toBeTruthy();
+  });
+});

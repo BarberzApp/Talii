@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
 import { RootStackParamList } from '../shared/types';
-import { supabase } from '../shared/lib/supabase';
+import { api, errorMessage } from '../shared/lib/api';
 import { useTheme } from '../shared/components/theme';
 import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
@@ -24,25 +24,6 @@ const Icon = require('react-native-vector-icons/Feather').default;
 type FindBarberNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FindBarber'>;
 
 // Types matching the database structure
-type BarberFromDB = {
-    id: string;
-    user_id: string;
-    business_name?: string;
-    specialties: string[];
-    price_range?: string;
-    stripe_account_status?: string;
-}
-
-type ProfileFromDB = {
-    id: string;
-    name: string;
-    location?: string;
-    bio?: string;
-    avatar_url?: string;
-    is_public?: boolean;
-}
-
-// Type for the transformed data used in the UI
 type Barber = {
     id: string; // This is barber.id from barbers table
     userId: string; // This is user_id (profile id)
@@ -91,66 +72,30 @@ export default function FindBarberPage() {
         setFilteredBarbers(filtered);
     }, [barbers, searchQuery]);
 
+    /** Listed barbers from GET /api/barbers (up to 100). */
     const fetchBarbers = async () => {
         try {
             setError(null);
-
-            // Step 1: Fetch all barbers
-            const { data: barbersData, error: barbersError } = await supabase
-                .from('barbers')
-                .select('id, user_id, business_name, specialties, price_range, stripe_account_status');
-
-            if (barbersError) {
-                logger.error('Supabase error:', barbersError);
-                throw barbersError;
-            }
-
-            if (!barbersData || barbersData.length === 0) {
-                setBarbers([]);
-                return;
-            }
-
-            // Step 2: Fetch all profiles for these barbers
-            const userIds = barbersData.map((b: BarberFromDB) => b.user_id);
-            
-            const { data: profilesData, error: profilesError } = await supabase
-                .from('profiles')
-                .select('id, name, location, bio, avatar_url, is_public')
-                .in('id', userIds);
-
-            if (profilesError) {
-                logger.error('Supabase error (profiles):', profilesError);
-                throw profilesError;
-            }
-
-            // Step 3: Merge barbers and profiles
-            const profileMap: Record<string, ProfileFromDB> = {};
-            for (const profile of profilesData || []) {
-                profileMap[profile.id] = profile;
-            }
-
-            const formattedBarbers: Barber[] = (barbersData as BarberFromDB[]).map(barber => {
-                const profile = profileMap[barber.user_id];
-                return {
-                    id: barber.id, // Use barber.id instead of profile.id
-                    userId: barber.user_id, // Keep user_id for reference
-                    name: profile?.name || 'Unknown Barber',
-                    businessName: barber.business_name,
-                    location: profile?.location,
-                    specialties: barber.specialties || [],
-                    bio: profile?.bio,
-                    priceRange: barber.price_range,
-                    avatarUrl: profile?.avatar_url,
-                    isPublic: profile?.is_public || false,
-                    isStripeReady: barber.stripe_account_status === 'active'
-                };
-            }).filter(barber => barber.isPublic);
-
-            setBarbers(formattedBarbers);
+            const { barbers: cards } = await api.barbers.list({ limit: 100 });
+            setBarbers(
+                cards.map(card => ({
+                    id: card.id,
+                    userId: card.user_id,
+                    name: card.name || card.username,
+                    businessName: card.business_name ?? undefined,
+                    location: [card.city, card.state].filter(Boolean).join(', ') || undefined,
+                    specialties: card.specialties || [],
+                    bio: card.bio ?? undefined,
+                    avatarUrl: card.avatar_url ?? undefined,
+                    isPublic: true,
+                    // Listed barbers take bookings; the API answers BARBER_NOT_READY if Stripe is not set up yet.
+                    isStripeReady: true,
+                }))
+            );
         } catch (error) {
             logger.error('Error fetching barbers:', error);
             setError('Failed to load barbers. Please try again.');
-            Alert.alert('Error', 'Failed to load barbers. Please refresh to try again.');
+            Alert.alert('Error', errorMessage(error, 'Failed to load barbers. Please refresh to try again.'));
         } finally {
             setLoading(false);
             setRefreshing(false);

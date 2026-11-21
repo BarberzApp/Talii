@@ -17,7 +17,8 @@ import { RootStackParamList } from '../shared/types';
 import { ArrowLeft, Calendar, MapPin, Star, Heart, Users, History, Camera, Loader2, Eye, Clock, Share2, Flag, Ban, MoreVertical } from 'lucide-react-native';
 import tw from 'twrnc';
 import { useTheme } from '../shared/components/theme';
-import { supabase } from '../shared/lib/supabase';
+import { formatCents, type PublicService } from '@barber-app/shared';
+import { api, errorMessage, hasErrorCode } from '../shared/lib/api';
 import { logger } from '../shared/lib/logger';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useReporting } from '../shared/hooks/useReporting';
@@ -44,36 +45,14 @@ const getInitials = (name: string) => {
 };
 
 interface UserProfile {
+  /** profiles.id (the barber's user id; reports and blocks use it). */
   id: string;
   name: string;
-  email: string;
-  username?: string;
-  avatar_url?: string;
-  bio?: string;
-  location?: string;
-  phone?: string;
-  coverphoto?: string;
-  role?: 'client' | 'barber';
-}
-
-interface BarberProfile {
-  id: string;
-  user_id: string;
-  bio?: string;
-  business_name?: string;
-  specialties?: string[];
-  instagram?: string;
-  twitter?: string;
-  facebook?: string;
-  portfolio?: string[];
-  featured_portfolio?: string;
-  services?: Array<{
-    id: string;
-    name: string;
-    price: number;
-    duration: string;
-    description: string;
-  }>;
+  username: string;
+  avatar_url: string | null;
+  cover_photo_url: string | null;
+  /** "City, State" from the listing. */
+  location: string | null;
 }
 
 type ProfilePreviewNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ProfilePreview'>;
@@ -91,9 +70,8 @@ export default function ProfilePreview() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const isOwnProfile = user?.id === profile?.id;
-  const [barberProfile, setBarberProfile] = useState<BarberProfile | null>(null);
-  const [services, setServices] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [services, setServices] = useState<PublicService[]>([]);
+  const [posts, setPosts] = useState<Array<{ id: string; url: string; title: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [openDialog, setOpenDialog] = useState<null | 'video'>(null);
@@ -117,142 +95,38 @@ export default function ProfilePreview() {
     );
   };
 
+  /** GET /api/barbers/:id: public listing, profile, active services and add-ons. */
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      
-      // barberId could be:
-      // 1. barbers.id (most common - passed from BrowsePage)
-      // 2. barbers.user_id (which is profiles.id)
-      // 3. profiles.id (direct profile ID)
-      
-      // First, try to fetch barber by ID (most common case - barberId is barbers.id)
-      let { data: barberData, error: barberError } = await supabase
-        .from('barbers')
-        .select('*')
-        .eq('id', barberId)
-        .maybeSingle();
-
-      // If not found by ID, try by user_id (in case barberId is a profile ID)
-      if (!barberData && !barberError) {
-        const { data: barberByUserId, error: errorByUserId } = await supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', barberId)
-          .maybeSingle();
-        if (barberByUserId) {
-          logger.log('Found barber by user_id:', barberId);
-        }
-        barberData = barberByUserId;
-        barberError = errorByUserId;
-      } else if (barberData) {
-        logger.log('Found barber by id:', barberId);
-      }
-
-      // Fetch profile data
-      let profileData = null;
-      let profileError = null;
-
-      if (barberData) {
-        // We have barber data, fetch profile using barber's user_id
-        const { data: profile, error: error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', barberData.user_id)
-          .maybeSingle();
-        profileData = profile;
-        profileError = error;
-      } else {
-        // No barber found, try to fetch profile directly (might be a client profile or barberId is a profile ID)
-        const { data: profile, error: error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', barberId)
-          .maybeSingle();
-        profileData = profile;
-        profileError = error;
-      }
-
-      // Handle profile fetch errors
-      if (profileError) {
-        // Check if it's a "no rows" error (PGRST116)
-        if (profileError.code === 'PGRST116') {
-          logger.error('Profile not found:', barberId);
-          Alert.alert(
-            'Profile Not Found',
-            'The profile you are looking for does not exist or has been removed.',
-            [{ text: 'OK', onPress: () => navigation.goBack() }]
-          );
-          return;
-        }
-        logger.error('Error fetching profile:', profileError);
-        Alert.alert(
-          'Error',
-          'Failed to load profile. Please try again.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      if (!profileData) {
-        logger.error('Profile data is null');
+      const data = await api.barbers.get(barberId);
+      setProfile({
+        id: data.profile.id,
+        name: data.barber.business_name || data.profile.name || data.profile.username,
+        username: data.profile.username,
+        avatar_url: data.profile.avatar_url,
+        cover_photo_url: data.profile.cover_photo_url,
+        location: [data.barber.city, data.barber.state].filter(Boolean).join(', ') || null,
+      });
+      setServices(data.services);
+      setPosts(
+        data.barber.portfolio.map((url, index) => ({
+          id: `portfolio-${index}`,
+          url,
+          title: `Portfolio Image ${index + 1}`,
+        }))
+      );
+    } catch (error) {
+      if (hasErrorCode(error, 'BARBER_NOT_FOUND', 'NOT_FOUND')) {
         Alert.alert(
           'Profile Not Found',
-          'The profile you are looking for does not exist.',
+          'The profile you are looking for does not exist or has been removed.',
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
         return;
       }
-
-      setProfile(profileData);
-
-      // Handle barber data (might not exist if it's a client profile)
-      if (barberError && barberError.code !== 'PGRST116') {
-        logger.error('Error fetching barber data:', barberError);
-      }
-
-      if (barberData) {
-        setBarberProfile(barberData);
-
-        // Fetch services
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select('*')
-          .eq('barber_id', barberData.id)
-          .order('name');
-
-        if (servicesError) {
-          logger.error('Error fetching services:', servicesError);
-        } else if (servicesData) {
-          setServices(servicesData);
-        }
-      }
-
-      // Convert portfolio array to posts format for display
-      if (barberData?.portfolio && Array.isArray(barberData.portfolio) && barberData.portfolio.length > 0) {
-        const portfolioPosts = barberData.portfolio.map((url: string, index: number) => ({
-          id: `portfolio-${index}`,
-          url: url,
-          title: `Portfolio Image ${index + 1}`,
-        }));
-        setPosts(portfolioPosts);
-      } else {
-        setPosts([]);
-      }
-
-      // If no barber data, set empty arrays for barber-specific content
-      if (!barberData) {
-        setServices([]);
-        setPosts([]);
-      }
-
-    } catch (error) {
       logger.error('Error fetching profile data:', error);
-      Alert.alert(
-        'Error',
-        'An unexpected error occurred while loading the profile. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', errorMessage(error, 'Failed to load profile. Please try again.'), [{ text: 'OK' }]);
     } finally {
       setLoading(false);
     }
@@ -419,7 +293,7 @@ export default function ProfilePreview() {
                         ]}
                       >
                         <Text style={[tw`font-bold text-sm`, { color: colors.primary }]}>
-                          ${service.price + 1}
+                          {formatCents(service.price_cents)}
                         </Text>
                       </View>
                     </View>
@@ -428,7 +302,7 @@ export default function ProfilePreview() {
                       <View style={tw`flex-row items-center`}>
                         <Clock size={14} color={colors.mutedForeground} />
                         <Text style={[tw`ml-2 text-sm`, { color: colors.mutedForeground }]}>
-                          {service.duration} minutes
+                          {service.duration_minutes} minutes
                         </Text>
                       </View>
                       
@@ -505,9 +379,9 @@ export default function ProfilePreview() {
       <View style={tw`relative w-full overflow-hidden`}>
         {/* Cover Photo */}
         <View style={[tw`h-40 w-full relative`, { backgroundColor: colors.primarySubtle }]}>
-          {profile.coverphoto ? (
+          {profile.cover_photo_url ? (
             <Image
-              source={{ uri: profile.coverphoto }}
+              source={{ uri: profile.cover_photo_url }}
               style={tw`absolute inset-0 w-full h-full`}
               resizeMode="cover"
             />

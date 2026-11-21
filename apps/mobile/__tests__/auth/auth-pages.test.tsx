@@ -78,8 +78,7 @@ describe('LoginPage', () => {
       register: jest.fn(),
       logout: jest.fn(),
       updateProfile: jest.fn(),
-      addToFavorites: jest.fn(),
-      removeFromFavorites: jest.fn(),
+      refreshProfile: jest.fn(),
     })
   })
 
@@ -116,11 +115,10 @@ describe('SignUpPage', () => {
       userProfile: null,
       loading: false,
       login: jest.fn(),
-      register: jest.fn().mockResolvedValue(true),
+      register: jest.fn().mockResolvedValue({ ok: true }),
       logout: jest.fn(),
       updateProfile: jest.fn(),
-      addToFavorites: jest.fn(),
-      removeFromFavorites: jest.fn(),
+      refreshProfile: jest.fn(),
     })
   })
 

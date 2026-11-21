@@ -1,30 +1,24 @@
 /**
  * useCalendarData Hook
- * 
- * Handles data fetching and processing for calendar events.
- * Uses calendarDataService for API calls and calendarUtils for transformations.
- * Follows Single Responsibility Principle - only handles data operations.
- * 
+ *
+ * Data operations for the calendar: loads bookings from the API and turns them
+ * into calendar events; booking actions go through PATCH /api/bookings/:id.
+ *
  * @module useCalendarData
  */
 
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 import {
-  fetchUserRole,
-  fetchBarberId,
-  fetchBarberBookings,
-  fetchClientBookings,
-  fetchServiceById,
-  fetchClientProfile,
-  fetchBarberProfile,
-  fetchBookingAddons,
+  fetchCalendarIdentity,
+  fetchCalendarBookings,
   fetchBarberServices,
-  fetchAvailableTimeSlots,
+  fetchWalkInTimeSlots,
   createManualAppointment,
-  updateBookingStatus as updateBookingStatusService,
+  completeBooking,
+  markNoShow,
   cancelBooking as cancelBookingService,
-  type CalendarEvent,
+  type BookingActionResult,
+  type ManualAppointmentResult,
 } from '../lib/calendar/calendarDataService';
 import { transformBookingToEvent } from '../lib/calendar/calendarUtils';
 import { logger } from '../lib/logger';
@@ -32,9 +26,9 @@ import type { CalendarState } from './useCalendarState';
 
 /**
  * Hook for calendar data operations
- * 
+ *
  * @param state - Calendar state from useCalendarState hook
- * @param userId - Current user ID
+ * @param userId - Current user ID (loading waits until signed in)
  */
 export function useCalendarData(state: CalendarState, userId: string | undefined) {
   const {
@@ -45,124 +39,58 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
     setUserRole,
     barberViewMode,
     setBarberId,
+    setBarberTimeZone,
     setServices,
     setTimeSlots,
     setLoadingTimeSlots,
-    manualFormData,
   } = state;
 
-  
   /**
-   * Load bookings based on user role
+   * Load bookings for the role and view: a barber's "appointments" are bookings
+   * with them; "bookings" (and a client's calendar) are bookings they made.
    */
-  const loadBookings = useCallback(async (role?: 'client' | 'barber', explicitViewMode?: 'appointments' | 'bookings') => {
-    if (!userId) return;
-
-    try {
+  const loadBookings = useCallback(
+    async (role?: 'client' | 'barber', explicitViewMode?: 'appointments' | 'bookings') => {
+      if (!userId) return;
       const roleToUse = role || userRole;
       if (!roleToUse) return;
 
-      // Use explicitly passed view mode (avoids stale closure after setBarberViewMode)
+      // Use the explicitly passed view mode (avoids a stale closure after setBarberViewMode).
       const viewMode = explicitViewMode || barberViewMode;
+      const as = roleToUse === 'barber' && viewMode === 'appointments' ? 'barber' : 'client';
 
-      logger.log('Loading bookings for user:', userId, 'with role:', roleToUse);
-
-      let bookings: any[] = [];
-
-      if (roleToUse === 'barber') {
-        // Fetch barber ID first
-        const barberId = await fetchBarberId(userId);
-        if (!barberId) {
-          logger.log('No barber found for user');
-          return;
-        }
-
-        setBarberId(barberId);
-
-        // Fetch bookings based on view mode
-        bookings = await fetchBarberBookings(barberId, userId, viewMode);
-      } else {
-        // Fetch client bookings
-        bookings = await fetchClientBookings(userId);
+      try {
+        const bookings = await fetchCalendarBookings(as);
+        setEvents(bookings.map((booking) => transformBookingToEvent(booking, roleToUse, viewMode)));
+      } catch (error) {
+        logger.error('Error loading bookings:', error);
       }
+    },
+    [userId, userRole, barberViewMode, setEvents]
+  );
 
-      // Process bookings into calendar events
-      await processBookings(bookings, roleToUse, viewMode);
-    } catch (error) {
-      logger.error('Error loading bookings:', error);
-    }
-  }, [userId, userRole, barberViewMode, setBarberId]);
-/**
-   * Initialize user role and fetch initial data
+  /**
+   * Load the caller's role, barber id and time zone, then the bookings.
    */
   const initialize = useCallback(async () => {
     if (!userId) return;
 
     try {
       setLoading(true);
-      const role = await fetchUserRole(userId);
-      if (role) {
-        setUserRole(role);
-        await loadBookings(role);
+      const identity = await fetchCalendarIdentity();
+      if (identity) {
+        setUserRole(identity.role);
+        setBarberId(identity.barberId);
+        setBarberTimeZone(identity.timeZone);
+        await loadBookings(identity.role);
       }
     } catch (error) {
       logger.error('Error initializing calendar:', error);
     } finally {
       setLoading(false);
     }
-  }, [userId, setLoading, setUserRole, loadBookings]);
+  }, [userId, setLoading, setUserRole, setBarberId, setBarberTimeZone, loadBookings]);
 
-  /**
-   * Process raw bookings into calendar events
-   */
-  const processBookings = useCallback(async (bookings: any[], role: 'client' | 'barber', viewMode?: 'appointments' | 'bookings') => {
-    try {
-      const effectiveViewMode = viewMode || barberViewMode;
-      const events = await Promise.all(
-        bookings.map(async (booking) => {
-          // Fetch service details
-          const service = await fetchServiceById(booking.service_id);
-
-          // Fetch client details if client_id exists
-          let client = null;
-          if (booking.client_id) {
-            client = await fetchClientProfile(booking.client_id);
-          }
-
-          // Fetch barber details for client view or barber bookings view
-          let barber = null;
-          if (role === 'client' || (role === 'barber' && effectiveViewMode === 'bookings')) {
-            barber = await fetchBarberProfile(booking.barber_id);
-          }
-
-          // Fetch add-ons for this booking
-          const { calculatedAddonTotal, addonNames } = await fetchBookingAddons(booking.id);
-
-          // Transform booking to calendar event
-          return transformBookingToEvent(
-            booking,
-            service,
-            client,
-            barber,
-            calculatedAddonTotal,
-            addonNames,
-            role,
-            effectiveViewMode
-          );
-        })
-      );
-
-      setEvents(events);
-      logger.log('✅ Processed', events.length, 'calendar events');
-    } catch (error) {
-      logger.error('Error processing bookings:', error);
-      Alert.alert('Error', 'Failed to load calendar events');
-    }
-  }, [barberViewMode, setEvents]);
-
-  /**
-   * Refresh calendar data
-   */
   const refresh = useCallback(async () => {
     try {
       setRefreshing(true);
@@ -174,142 +102,60 @@ export function useCalendarData(state: CalendarState, userId: string | undefined
     }
   }, [loadBookings, setRefreshing]);
 
-  /**
-   * Load services for barber (for manual appointment form)
-   */
-  const loadServices = useCallback(async (barberId: string) => {
-    try {
-      const services = await fetchBarberServices(barberId);
-      setServices(services);
-    } catch (error) {
-      logger.error('Error loading services:', error);
-      setServices([]);
-    }
+  /** The barber's active services (for the walk-in form). */
+  const loadServices = useCallback(async () => {
+    const services = await fetchBarberServices();
+    setServices(services);
+    return services;
   }, [setServices]);
 
-  /**
-   * Load available time slots
-   */
-  const loadTimeSlots = useCallback(async (
-    barberId: string,
-    date: Date,
-    serviceDuration: number
-  ) => {
-    try {
-      setLoadingTimeSlots(true);
-      const slots = await fetchAvailableTimeSlots(barberId, date, serviceDuration);
-      setTimeSlots(slots);
-    } catch (error) {
-      logger.error('Error loading time slots:', error);
-      setTimeSlots([]);
-    } finally {
-      setLoadingTimeSlots(false);
-    }
-  }, [setTimeSlots, setLoadingTimeSlots]);
-
-  /**
-   * Create manual appointment
-   */
-  const createAppointment = useCallback(async (
-    barberId: string,
-    appointmentData: {
-      clientName: string;
-      serviceId: string;
-      date: Date;
-      time: string;
-      price: number;
-    }
-  ) => {
-    try {
-      const result = await createManualAppointment({
-        barberId,
-        ...appointmentData,
-      });
-
-      if (result.booking) {
-        logger.log('✅ Manual appointment created successfully');
-        // Refresh bookings to show new appointment
-        await loadBookings();
-        return { success: true, conflict: false };
+  /** Walk-in start times on a barber-local date ("YYYY-MM-DD"). */
+  const loadTimeSlots = useCallback(
+    async (date: string, durationMinutes: number, timeZone: string) => {
+      try {
+        setLoadingTimeSlots(true);
+        setTimeSlots(await fetchWalkInTimeSlots(date, durationMinutes, timeZone));
+      } catch (error) {
+        logger.error('Error loading time slots:', error);
+        setTimeSlots([]);
+      } finally {
+        setLoadingTimeSlots(false);
       }
-      return { success: false, conflict: result.conflict };
-    } catch (error) {
-      logger.error('Error creating manual appointment:', error);
-      return { success: false, conflict: false };
-    }
-  }, [loadBookings]);
+    },
+    [setTimeSlots, setLoadingTimeSlots]
+  );
 
-  /**
-   * Mark booking as completed
-   */
-  const markCompleted = useCallback(async (bookingId: string) => {
-    try {
-      const success = await updateBookingStatusService(bookingId, 'completed');
-      if (success) {
-        logger.log('✅ Booking marked as completed');
-        await loadBookings();
-      }
-      return success;
-    } catch (error) {
-      logger.error('Error marking booking as completed:', error);
-      return false;
-    }
-  }, [loadBookings]);
+  /** POST /api/bookings/manual, then reload. */
+  const createAppointment = useCallback(
+    async (input: { serviceId: string; startsAt: string; customerName: string; notes?: string }): Promise<ManualAppointmentResult> => {
+      const result = await createManualAppointment(input);
+      if (result.ok) await loadBookings();
+      return result;
+    },
+    [loadBookings]
+  );
 
-  /**
-   * Mark booking as missed
-   */
-  const markMissed = useCallback(async (bookingId: string) => {
-    try {
-      const success = await updateBookingStatusService(bookingId, 'missed');
-      if (success) {
-        logger.log('✅ Booking marked as missed');
-        await loadBookings();
-      }
-      return success;
-    } catch (error) {
-      logger.error('Error marking booking as missed:', error);
-      return false;
-    }
-  }, [loadBookings]);
-
-  /**
-   * Cancel booking
-   */
-  const cancelBooking = useCallback(async (bookingId: string) => {
-    try {
-      const success = await cancelBookingService(bookingId);
-      if (success) {
-        logger.log('✅ Booking cancelled successfully');
-        await loadBookings();
-      }
-      return success;
-    } catch (error) {
-      logger.error('Error cancelling booking:', error);
-      return false;
-    }
-  }, [loadBookings]);
+  const withReload = useCallback(
+    (action: (bookingId: string) => Promise<BookingActionResult>) =>
+      async (bookingId: string): Promise<BookingActionResult> => {
+        const result = await action(bookingId);
+        if (result.ok) await loadBookings();
+        return result;
+      },
+    [loadBookings]
+  );
 
   return {
-    // Initialization
     initialize,
-    
-    // Data loading
     loadBookings,
     refresh,
     loadServices,
     loadTimeSlots,
-    
-    // Mutations
     createAppointment,
-    markCompleted,
-    markMissed,
-    cancelBooking,
+    markCompleted: withReload(completeBooking),
+    markMissed: withReload(markNoShow),
+    cancelBooking: withReload((id) => cancelBookingService(id)),
   };
 }
 
-/**
- * Type definition for the hook's return value
- */
 export type CalendarDataOperations = ReturnType<typeof useCalendarData>;
-

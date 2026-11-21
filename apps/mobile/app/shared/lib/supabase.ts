@@ -2,6 +2,7 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@barber-app/shared';
 import { logger } from './logger';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -23,8 +24,10 @@ if (__DEV__ && supabaseUrl) {
   logger.log(`🔗 Mobile Supabase URL: ${supabaseUrl}`);
 }
 
-// Create Supabase client with React Native AsyncStorage
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Supabase client for Auth (session, sign-in, sign-up) and Storage uploads to
+// signed URLs only. Every database read and write goes through the Talii API
+// (lib/api.ts); the schema grants clients almost nothing.
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

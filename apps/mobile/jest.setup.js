@@ -157,16 +157,12 @@ jest.mock('./app/shared/lib/supabase', () => ({
       getSession: jest.fn(),
       onAuthStateChange: jest.fn(),
     },
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          single: jest.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
+    // The app uses Supabase only for Auth and signed Storage uploads; data goes through lib/api.
+    storage: {
+      from: jest.fn(() => ({
+        uploadToSignedUrl: jest.fn(() => Promise.resolve({ data: { path: 'p' }, error: null })),
       })),
-      insert: jest.fn(() => Promise.resolve({ data: null, error: null })),
-      update: jest.fn(() => Promise.resolve({ data: null, error: null })),
-      delete: jest.fn(() => Promise.resolve({ data: null, error: null })),
-    })),
+    },
   },
 }))
 

@@ -13,7 +13,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
 import { RootStackParamList } from '../shared/types';
-import { supabase } from '../shared/lib/supabase';
+import { api } from '../shared/lib/api';
+import { fetchConnectStatus, isStripeReady } from '../shared/lib/stripeConnect';
 import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
 import { useTheme } from '../shared/components/theme';
@@ -73,7 +74,7 @@ export default function SettingsPage() {
     requestDelete,
     deleteAccount,
     isConfirmed,
-  } = useAccountDeletionHelper({ barberId });
+  } = useAccountDeletionHelper();
 
   useEffect(() => {
     if (user) {
@@ -87,54 +88,25 @@ export default function SettingsPage() {
     try {
       setIsLoading(true);
       
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      const me = await api.me.get();
+      const profileComplete = !!(me.profile.name && me.profile.email);
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        logger.error('Error fetching profile:', profileError);
-      }
+      if (isBarber && me.barber) {
+        setBarberId(me.barber.id);
 
-      if (isBarber) {
-        const { data: barber, error: barberError } = await supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+        const [servicesRes, weekRes, connect] = await Promise.all([
+          api.services.list().catch(() => ({ services: [] })),
+          api.schedule.getWeek().catch(() => ({ availability: [] })),
+          fetchConnectStatus(),
+        ]);
 
-        if (barberError && barberError.code !== 'PGRST116') {
-          logger.error('Error fetching barber data:', barberError);
-        }
-
-        if (barber) {
-          setBarberId(barber.id);
-          
-          const { data: services } = await supabase
-            .from('services')
-            .select('id')
-            .eq('barber_id', barber.id);
-
-          const { data: availability } = await supabase
-            .from('availability')
-            .select('id')
-            .eq('barber_id', barber.id);
-
-          const profileComplete = !!(profile?.name && profile?.email);
-          const servicesComplete = !!(services && services.length > 0);
-          const availabilityComplete = !!(availability && availability.length > 0);
-          const stripeConnected = barber?.stripe_account_status === 'active';
-
-          setSettingsData({
-            profileComplete,
-            servicesComplete,
-            availabilityComplete,
-            stripeConnected
-          });
-        }
+        setSettingsData({
+          profileComplete,
+          servicesComplete: servicesRes.services.some((s) => s.is_active),
+          availabilityComplete: weekRes.availability.length > 0,
+          stripeConnected: isStripeReady(connect),
+        });
       } else {
-        const profileComplete = !!(profile?.name && profile?.email);
         setSettingsData({
           profileComplete,
           servicesComplete: false,

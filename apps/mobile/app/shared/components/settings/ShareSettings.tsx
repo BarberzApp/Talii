@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
+import { bookingPageUrl } from '../../lib/api-factory';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
 import { Card, CardContent } from '../ui';
@@ -56,27 +57,13 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
   const loadProfileData = async () => {
     try {
       setIsLoading(true);
-      
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name, is_public, username')
-        .eq('id', user?.id)
-        .single();
-
-      let barberData = {};
-      if (user?.role === 'barber' && barberId) {
-        const { data: barber } = await supabase
-          .from('barbers')
-          .select('business_name')
-          .eq('id', barberId)
-          .single();
-
-        if (barber) {
-          barberData = { business_name: barber.business_name };
-        }
-      }
-
-      setProfileData({ ...profile, ...barberData });
+      const me = await api.me.get();
+      setProfileData({
+        name: me.profile.name ?? undefined,
+        username: me.profile.username,
+        business_name: me.barber?.business_name ?? undefined,
+        is_public: me.barber?.is_public ?? false,
+      });
     } catch (error) {
       logger.error('Error loading profile data:', error);
     } finally {
@@ -84,22 +71,10 @@ export function ShareSettings({ barberId }: ShareSettingsProps) {
     }
   };
 
-  const getBookingLink = () => {
-    const baseUrl = 'https://bocmstyle.com';
-    
-    if (profileData.username) {
-      return `${baseUrl}/book/${profileData.username}`;
-    }
-    
-    if (barberId) {
-      return `${baseUrl}/book/${barberId}`;
-    }
-    
-    return `${baseUrl}/book/placeholder`;
-  };
+  const getBookingLink = () => bookingPageUrl(profileData.username) ?? '';
 
   const bookingLink = getBookingLink();
-  const isLinkValid = barberId || user?.id;
+  const isLinkValid = !!bookingLink;
 
   const copyToClipboard = async () => {
     if (!isLinkValid) {

@@ -5,14 +5,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Linking,
-  Platform,
 } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../hooks/useAuth';
+import { formatCents, type ConnectStatusResponse, type EarningsResponse } from '@barber-app/shared';
+import { api, errorMessage } from '../../lib/api';
+import { fetchConnectStatus, isStripeReady, openStripeConnect } from '../../lib/stripeConnect';
 import { logger } from '../../lib/logger';
 import { Card, CardContent, LoadingSpinner } from '../ui';
 import { 
@@ -22,44 +20,57 @@ import {
   CreditCard,
   AlertCircle,
   CheckCircle,
-  ArrowUpRight,
-  ArrowDownRight,
   ExternalLink,
   Loader2,
   RefreshCw
 } from 'lucide-react-native';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "https://www.bocmstyle.com";
-
 interface EarningsData {
-  totalEarnings: number;
-  monthlyEarnings: number;
-  weeklyEarnings: number;
-  pendingPayouts: number;
+  /** Service + add-ons of completed appointments plus the net booking-fee share, in cents. */
+  periodEarningsCents: number;
+  periodFeeShareCents: number;
+  periodServiceRevenueCents: number;
+  weeklyEarningsCents: number;
+  yearEarningsCents: number;
   completedBookings: number;
-  averageServicePrice: number;
-  stripeConnected: boolean;
-  stripeAccountId?: string;
+  averageServiceCents: number;
 }
 
 interface EarningsDashboardProps {
   barberId: string;
 }
 
+type Period = 'week' | 'month' | 'year';
+
+/** Start of the current week, month or year on the device's calendar. */
+function periodStart(period: Period, now: Date): Date {
+  if (period === 'week') {
+    const d = new Date(now);
+    d.setDate(now.getDate() - now.getDay());
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  if (period === 'month') return new Date(now.getFullYear(), now.getMonth(), 1);
+  return new Date(now.getFullYear(), 0, 1);
+}
+
+const earned = (totals: EarningsResponse['totals']) => totals.serviceRevenueCents + totals.netFeeShareCents;
+
 export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
-  const { user } = useAuth();
   const { colors } = useTheme();
   const [earnings, setEarnings] = useState<EarningsData>({
-    totalEarnings: 0,
-    monthlyEarnings: 0,
-    weeklyEarnings: 0,
-    pendingPayouts: 0,
+    periodEarningsCents: 0,
+    periodFeeShareCents: 0,
+    periodServiceRevenueCents: 0,
+    weeklyEarningsCents: 0,
+    yearEarningsCents: 0,
     completedBookings: 0,
-    averageServicePrice: 0,
-    stripeConnected: false
+    averageServiceCents: 0,
   });
+  const [connect, setConnect] = useState<ConnectStatusResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const [connectBusy, setConnectBusy] = useState(false);
+  const [period, setPeriod] = useState<Period>('month');
 
   useEffect(() => {
     if (barberId) {
@@ -67,277 +78,82 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
     }
   }, [barberId, period]);
 
+  /** GET /api/earnings for the period, this week and the last 12 months; Stripe status. */
   const loadEarningsData = async () => {
     try {
       setIsLoading(true);
-
-      // Get barber's Stripe status
-      const { data: barber } = await supabase
-        .from('barbers')
-        .select('stripe_account_id, stripe_account_status')
-        .eq('id', barberId)
-        .single();
-
-      // Get bookings data
       const now = new Date();
-      // Fix: Create new date objects to avoid mutation
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      startOfWeek.setHours(0, 0, 0, 0);
-      
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      
-      const startOfYear = new Date(now.getFullYear(), 0, 1);
-      startOfYear.setHours(0, 0, 0, 0);
+      const to = now.toISOString();
+      const [current, week, year, status] = await Promise.all([
+        api.earnings.get({ from: periodStart(period, now).toISOString(), to, limit: 1 }),
+        api.earnings.get({ from: periodStart('week', now).toISOString(), to, limit: 1 }),
+        api.earnings.get({ from: new Date(now.getTime() - 365 * 86_400_000).toISOString(), to, limit: 1 }),
+        fetchConnectStatus(),
+      ]);
 
-      // Fetch bookings with service and addon data
-      const { data: bookings, error } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          created_at,
-          barber_payout,
-          service_id,
-          addon_total,
-          services:service_id(price)
-        `)
-        .eq('barber_id', barberId)
-        .eq('status', 'completed');
-
-      if (error) throw error;
-
-      // Calculate earnings
-      // Barber earnings = service price (paid at appointment) + addons (paid at appointment) + barber_payout (from platform fee)
-      let totalEarnings = 0;
-      let monthlyEarnings = 0;
-      let weeklyEarnings = 0;
-      let yearlyEarnings = 0;
-
-      bookings?.forEach(booking => {
-        const bookingDate = new Date(booking.created_at);
-        
-        // Get service price (paid directly at appointment)
-        const servicePrice = Number((booking.services as any)?.price || 0);
-        
-        // Get addon total (paid directly at appointment)
-        const addonTotal = Number(booking.addon_total || 0);
-        
-        // Get barber's share from platform fee (from Stripe)
-        const barberPayout = Number(booking.barber_payout || 0);
-        
-        // Total earnings for this booking
-        const bookingEarnings = servicePrice + addonTotal + barberPayout;
-        
-        totalEarnings += bookingEarnings;
-        
-        if (bookingDate >= startOfWeek) {
-          weeklyEarnings += bookingEarnings;
-        }
-        if (bookingDate >= startOfMonth) {
-          monthlyEarnings += bookingEarnings;
-        }
-        if (bookingDate >= startOfYear) {
-          yearlyEarnings += bookingEarnings;
-        }
-      });
-
-      const averageServicePrice = bookings?.length ? totalEarnings / bookings.length : 0;
-
+      const completed = current.totals.completedBookings;
       setEarnings({
-        totalEarnings,
-        monthlyEarnings: period === 'month' ? monthlyEarnings : period === 'week' ? weeklyEarnings : yearlyEarnings,
-        weeklyEarnings,
-        pendingPayouts: 0, // Could be derived from Stripe balance transactions
-        completedBookings: bookings?.length || 0,
-        averageServicePrice,
-        stripeConnected: barber?.stripe_account_status === 'active',
-        stripeAccountId: barber?.stripe_account_id
+        periodEarningsCents: earned(current.totals),
+        periodFeeShareCents: current.totals.netFeeShareCents,
+        periodServiceRevenueCents: current.totals.serviceRevenueCents,
+        weeklyEarningsCents: earned(week.totals),
+        yearEarningsCents: earned(year.totals),
+        completedBookings: completed,
+        averageServiceCents: completed > 0 ? Math.round(current.totals.serviceRevenueCents / completed) : 0,
       });
+      setConnect(status);
     } catch (error) {
       logger.error('Error loading earnings:', error);
-      Alert.alert('Error', 'Failed to load earnings data');
+      Alert.alert('Error', errorMessage(error, 'Failed to load earnings data'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleStripeConnect = async () => {
+  const stripeConnected = isStripeReady(connect);
+
+  /** Onboarding or dashboard in the browser; the status is re-read when it closes. */
+  const runConnect = async (kind: 'onboarding' | 'dashboard') => {
+    if (connectBusy) return;
+    setConnectBusy(true);
     try {
-      logger.log('Starting Stripe Connect process for barber:', barberId);
-      
-      const { data: { session } } = await supabase.auth.getSession();
-
-      const response = await fetch(`${API_BASE_URL}/api/connect/create-account`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session?.access_token ?? ''}`,
-          'Content-Type': 'application/json',
-          'expo-platform': Platform.OS,
-        },
-        body: JSON.stringify({ 
-          barberId: barberId,
-          email: user?.email
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      logger.log('Stripe Connect response:', data);
-
-      if (data.url) {
-        // Open Stripe onboarding in browser
-        const result = await WebBrowser.openBrowserAsync(data.url);
-        
-        // After browser closes, check status
-        await checkStripeStatus();
-      } else {
-        throw new Error('No redirect URL received from Stripe');
+      const result = await openStripeConnect(kind);
+      setConnect(result.status);
+      if (result.needsNewLink) {
+        Alert.alert('Continue Stripe Setup', 'The setup link expired. Tap Connect Stripe to continue where you left off.');
+      } else if (result.linkType === 'onboarding') {
+        showStatus(result.status);
       }
     } catch (error) {
-      logger.error('Error connecting Stripe:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to connect Stripe account. Please try again.');
+      logger.error('Error opening Stripe:', error);
+      Alert.alert('Error', errorMessage(error, 'Failed to open Stripe. Please try again.'));
+    } finally {
+      setConnectBusy(false);
     }
   };
 
-  const handleViewStripeDetails = async () => {
-    try {
-      logger.log('Opening Stripe Dashboard for barber:', barberId);
-      
-      // Create Stripe dashboard link
-      const { data, error } = await supabase.functions.invoke('stripe-dashboard', {
-        body: { barberId }
-      });
+  const handleStripeConnect = () => runConnect('onboarding');
+  const handleViewStripeDetails = () => runConnect('dashboard');
 
-      if (error) {
-        logger.error('Supabase function error:', error);
-        throw new Error(error.message || 'Failed to create dashboard link');
-      }
-
-      if (!data.url) {
-        throw new Error('No dashboard URL received');
-      }
-
-      logger.log('Opening Stripe URL:', data.url);
-      logger.log('URL type:', data.type);
-      
-      // Show appropriate message based on type
-      if (data.type === 'onboarding') {
-        Alert.alert(
-          'Complete Stripe Setup',
-          data.message || 'Please complete your Stripe account setup to access the dashboard.',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel'
-            },
-            {
-              text: 'Continue Setup',
-              onPress: async () => {
-                try {
-                  const result = await WebBrowser.openBrowserAsync(data.url, {
-                    presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-                    controlsColor: colors.primary,
-                    toolbarColor: colors.background,
-                  });
-                  
-                  logger.log('WebBrowser result:', result);
-                  
-                  // After browser closes, refresh the earnings data
-                  await loadEarningsData();
-                } catch (browserError) {
-                  logger.error('Error opening browser:', browserError);
-                }
-              }
-            }
-          ]
-        );
-      } else {
-        // Open Stripe dashboard in browser
-        const result = await WebBrowser.openBrowserAsync(data.url, {
-          presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-          controlsColor: colors.primary,
-          toolbarColor: colors.background,
-        });
-        
-        logger.log('WebBrowser result:', result);
-      }
-      
-    } catch (error) {
-      logger.error('Error opening Stripe dashboard:', error);
+  const showStatus = (status: ConnectStatusResponse | null) => {
+    if (!status) {
+      Alert.alert('Error', 'Could not check Stripe status. Please try again.');
+    } else if (isStripeReady(status)) {
+      Alert.alert('Success!', 'Your Stripe account is connected and ready to receive payments.');
+    } else if (!status.hasAccount) {
+      Alert.alert('Not Connected', 'You have not connected your Stripe account yet. Use "Connect Stripe" to set it up.');
+    } else {
       Alert.alert(
-        'Error', 
-        error instanceof Error ? error.message : 'Failed to open Stripe dashboard. Please try again.'
+        'Setup In Progress',
+        'Your Stripe account is connected but setup is not finished yet. Please complete the remaining steps in Stripe.'
       );
     }
   };
 
   const checkStripeStatus = async () => {
-    try {
-      logger.log('Checking Stripe status for barber:', barberId);
-      
-      // Get barber's Stripe account status directly from database
-      const { data: barber, error } = await supabase
-        .from('barbers')
-        .select('stripe_account_id, stripe_account_status, stripe_account_ready, user_id')
-        .eq('id', barberId)
-        .single();
-
-      if (error) {
-        logger.error('Error fetching barber:', error);
-        Alert.alert('Error', 'Could not check Stripe status. Please try again.');
-        return;
-      }
-
-      logger.log('Barber data:', barber);
-
-      if (!barber) {
-        Alert.alert('Error', 'Barber not found.');
-        return;
-      }
-
-      if (!barber.stripe_account_id) {
-        Alert.alert(
-          'Not Connected',
-          'You have not connected your Stripe account yet. Please use the "Connect Stripe" button to set up your account.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      // Check if Stripe account is ready
-      if (barber.stripe_account_ready) {
-        Alert.alert(
-          'Success!',
-          `Your Stripe account is connected and ready to receive payments.\n\nAccount ID: ${barber.stripe_account_id}`,
-          [{ text: 'OK', onPress: () => loadEarningsData() }]
-        );
-      } else if (barber.stripe_account_status === 'active') {
-        Alert.alert(
-          'Success!',
-          `Your Stripe account is connected and active.\n\nAccount ID: ${barber.stripe_account_id}`,
-          [{ text: 'OK', onPress: () => loadEarningsData() }]
-        );
-      } else {
-        Alert.alert(
-          'Setup In Progress',
-          `Your Stripe account is connected but setup is still in progress.\n\nAccount ID: ${barber.stripe_account_id}\nStatus: ${barber.stripe_account_status || 'pending'}\n\nPlease complete the required information in your Stripe dashboard.`,
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      logger.error('Error checking Stripe status:', error);
-      Alert.alert('Error', `Failed to check Stripe status: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const getPercentageChange = () => {
-    // Calculate percentage change (random number, change later)
-    return 12.5;
+    const status = await fetchConnectStatus();
+    setConnect(status);
+    showStatus(status);
   };
 
   if (isLoading) {
@@ -356,7 +172,7 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={tw`pb-24`}>
       {/* Stripe Connect Status */}
-      {!earnings.stripeConnected && (
+      {!stripeConnected && (
         <Card style={[tw`mb-6`, { backgroundColor: colors.primarySubtle, borderColor: colors.primarySubtle }]}>
           <CardContent style={tw`p-4`}>
             <View style={tw`flex-row items-start`}>
@@ -370,6 +186,7 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
                 </Text>
                 <TouchableOpacity
                   onPress={handleStripeConnect}
+                  disabled={connectBusy}
                   style={[tw`py-2 px-4 rounded-xl flex-row items-center self-start`, { backgroundColor: colors.warning }]}
                 >
                   <CreditCard size={16} color={colors.primary} style={tw`mr-2`} />
@@ -420,29 +237,14 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
             <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
               {period === 'week' ? 'Weekly' : period === 'month' ? 'Monthly' : 'Yearly'} Earnings
             </Text>
-            <View style={[
-              tw`flex-row items-center px-2 py-1 rounded-full`,
-              { backgroundColor: colors.primarySubtle }
-            ]}>
-              {getPercentageChange() >= 0 ? (
-                <ArrowUpRight size={14} color={colors.primary} />
-              ) : (
-                <ArrowDownRight size={14} color={colors.destructive} />
-              )}
-              <Text style={[
-                tw`text-xs font-bold ml-1`,
-                { color: getPercentageChange() >= 0 ? colors.primary : colors.destructive }
-              ]}>
-                {Math.abs(getPercentageChange())}%
-              </Text>
-            </View>
           </View>
           
           <Text style={[tw`text-3xl font-bold mb-4`, { color: colors.foreground }]}>
-            ${earnings.monthlyEarnings.toFixed(2)}
+            {formatCents(earnings.periodEarningsCents)}
           </Text>
           <Text style={[tw`text-xs mb-2`, { color: colors.mutedForeground }]}>
-            Includes: Service price + Add-ons (at appointment) + Platform fee share (via Stripe)
+            Service and add-ons of completed appointments ({formatCents(earnings.periodServiceRevenueCents)}, paid at the
+            appointment) plus your booking-fee share ({formatCents(earnings.periodFeeShareCents)}, paid out by Stripe)
           </Text>
 
           <View style={tw`flex-row justify-between`}>
@@ -459,7 +261,7 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
                 Avg. Service Price
               </Text>
               <Text style={[tw`text-base font-semibold`, { color: colors.foreground }]}>
-                ${earnings.averageServicePrice.toFixed(2)}
+                {formatCents(earnings.averageServiceCents)}
               </Text>
             </View>
           </View>
@@ -478,10 +280,10 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
                 <TrendingUp size={16} color={colors.primary} />
               </View>
               <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
-                Total Earnings
+                Last 12 Months
               </Text>
               <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>
-                ${earnings.totalEarnings.toFixed(2)}
+                {formatCents(earnings.yearEarningsCents)}
               </Text>
             </CardContent>
           </Card>
@@ -497,14 +299,14 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
                 This Week
               </Text>
               <Text style={[tw`text-xl font-bold`, { color: colors.foreground }]}>
-                ${earnings.weeklyEarnings.toFixed(2)}
+                {formatCents(earnings.weeklyEarningsCents)}
               </Text>
             </CardContent>
           </Card>
         </View>
 
         {/* Pending Payouts */}
-        {earnings.stripeConnected && (
+        {stripeConnected && (
           <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <CardContent style={tw`p-4`}>
               <View style={tw`flex-row items-center justify-between`}>
@@ -512,16 +314,17 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
                   <View style={tw`flex-row items-center mb-1`}>
                     <CreditCard size={16} color={colors.primary} style={tw`mr-2`} />
                     <Text style={[tw`font-medium`, { color: colors.foreground }]}>
-                      Pending Payouts
+                      Payouts
                     </Text>
                   </View>
-                  <Text style={[tw`text-2xl font-bold`, { color: colors.primary }]}>
-                    ${earnings.pendingPayouts.toFixed(2)}
+                  <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
+                    Balance and payouts are in your Stripe dashboard
                   </Text>
                 </View>
                 <TouchableOpacity
                   style={[tw`px-4 py-2 rounded-xl`, { backgroundColor: colors.primarySubtle }]}
                   onPress={handleViewStripeDetails}
+                  disabled={connectBusy}
                 >
                   <Text style={[tw`text-sm font-medium`, { color: colors.primary }]}>
                     View Details
@@ -534,7 +337,7 @@ export function EarningsDashboard({ barberId }: EarningsDashboardProps) {
       </View>
 
       {/* Success Message */}
-      {earnings.stripeConnected && (
+      {stripeConnected && (
         <View style={[tw`mt-6 p-4 rounded-xl flex-row items-start`, { backgroundColor: colors.primarySubtle, borderWidth: 1, borderColor: colors.primarySubtle }]}>
           <CheckCircle size={16} color={colors.primary} style={tw`mr-2 mt-0.5`} />
           <View style={tw`flex-1`}>

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { MapPin, ChevronDown, X } from 'lucide-react-native';
+import type { GeocodeResult } from '@barber-app/shared';
 import { getAddressSuggestionsDetailed } from '../../lib/geocode';
 import { logger } from '../../lib/logger';
 import { useTheme } from '../theme/ThemeProvider';
@@ -22,20 +23,7 @@ interface LocationInputProps {
   disabled?: boolean;
 }
 
-interface Suggestion {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-  address?: {
-    house_number?: string;
-    road?: string;
-    city?: string;
-    state?: string;
-    postcode?: string;
-    country?: string;
-  };
-}
+type Suggestion = GeocodeResult;
 
 export function LocationInput({
   value,
@@ -103,7 +91,10 @@ export function LocationInput({
   }, [searchQuery]);
 
   const handleSelectSuggestion = (suggestion: Suggestion) => {
-    onChange(suggestion.display_name);
+    // Listings store city and state only (the server geocodes them), so keep those when known.
+    const city = suggestion.address?.city;
+    const state = suggestion.address?.state;
+    onChange(city && state ? `${city}, ${state}` : suggestion.display_name);
     setModalVisible(false);
     setSearchQuery('');
     setSuggestions([]);

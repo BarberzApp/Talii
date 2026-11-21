@@ -26,7 +26,14 @@ import {
 } from 'lucide-react-native';
 import tw from 'twrnc';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
-import { supabase } from '../shared/lib/supabase';
+import {
+  ApiError,
+  bookingErrorMessage,
+  formatBookingTime,
+  formatCents,
+  formatInTimeZone,
+  localDateInTimeZone,
+} from '@barber-app/shared';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useTheme } from '../shared/components/theme';
 import Input from '../shared/components/ui/Input';
@@ -71,6 +78,7 @@ export default function CalendarPage() {
     manualFormData,
     services,
     barberId,
+    barberTimeZone,
     isSubmitting,
     timeSlots,
     loadingTimeSlots,
@@ -169,15 +177,16 @@ export default function CalendarPage() {
       return;
     }
 
-    try {
-      const selectedService = services.find(s => s.id === manualFormData.serviceId);
-      if (!selectedService) return;
+    const selectedService = services.find(s => s.id === manualFormData.serviceId);
+    if (!selectedService) return;
 
-      await calendarData.loadTimeSlots(barberId, manualFormData.date, selectedService.duration);
-    } catch (error) {
-      logger.error('Error fetching time slots:', error);
-      setTimeSlots([]);
-    }
+    // Walk-in times are in the barber's time zone.
+    const timeZone = barberTimeZone || 'America/New_York';
+    await calendarData.loadTimeSlots(
+      localDateInTimeZone(manualFormData.date, timeZone),
+      selectedService.duration_minutes,
+      timeZone
+    );
   };
 
   // Refresh calendar data when page comes into focus
@@ -273,20 +282,20 @@ export default function CalendarPage() {
 
     setIsMarkingMissed(true);
     try {
-      const success = await calendarData.markMissed(selectedEvent.id);
-      if (!success) throw new Error('Failed to mark as missed');
+      const result = await calendarData.markMissed(selectedEvent.id);
+      if (!result.ok) throw new Error(result.message);
 
       Vibration.vibrate(100); // Success haptic feedback
       const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
       const itemTypeCapitalized = userRole === 'barber' && barberViewMode === 'appointments' ? 'Appointment' : 'Booking';
-      Alert.alert('Success', `${itemTypeCapitalized} marked as missed`);
+      Alert.alert('Success', `${itemTypeCapitalized} marked as a no-show`);
       setShowEventDialog(false);
     } catch (error) {
       logger.error('Error marking as missed:', error);
       Vibration.vibrate([100, 100]); // Error haptic feedback
       const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
       const itemTypeCapitalized = userRole === 'barber' && barberViewMode === 'appointments' ? 'Appointment' : 'Booking';
-      Alert.alert('Error', `Failed to mark ${itemType} as missed`);
+      Alert.alert('Error', error instanceof Error && error.message ? error.message : `Failed to mark ${itemType} as a no-show`);
     } finally {
       setIsMarkingMissed(false);
     }
@@ -297,8 +306,8 @@ export default function CalendarPage() {
 
     setIsMarkingCompleted(true);
     try {
-      const success = await calendarData.markCompleted(selectedEvent.id);
-      if (!success) throw new Error('Failed to mark as completed');
+      const result = await calendarData.markCompleted(selectedEvent.id);
+      if (!result.ok) throw new Error(result.message);
 
       Vibration.vibrate(100); // Success haptic feedback
       const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
@@ -310,7 +319,7 @@ export default function CalendarPage() {
       Vibration.vibrate([100, 100]); // Error haptic feedback
       const itemType = userRole === 'barber' && barberViewMode === 'appointments' ? 'appointment' : 'booking';
       const itemTypeCapitalized = userRole === 'barber' && barberViewMode === 'appointments' ? 'Appointment' : 'Booking';
-      Alert.alert('Error', `Failed to mark ${itemType} as completed`);
+      Alert.alert('Error', error instanceof Error && error.message ? error.message : `Failed to mark ${itemType} as completed`);
     } finally {
       setIsMarkingCompleted(false);
     }
@@ -346,7 +355,9 @@ export default function CalendarPage() {
     // Show confirmation dialog
     Alert.alert(
       `Cancel ${itemTypeCapitalized}`,
-      `Are you sure you want to cancel this ${itemType}? This action cannot be undone.`,
+      isAppointment
+        ? `Are you sure you want to cancel this ${itemType}? The client's booking fee is refunded in full.`
+        : `Are you sure you want to cancel this ${itemType}? The booking fee is refunded only when you cancel more than 24 hours before the start.`,
       [
         {
           text: `Keep ${itemTypeCapitalized}`,
@@ -356,41 +367,31 @@ export default function CalendarPage() {
           text: `Cancel ${itemTypeCapitalized}`,
           style: 'destructive',
           onPress: async () => {
-            try {
-              const success = await calendarData.cancelBooking(selectedEvent.id);
-              if (!success) {
-                throw new Error('Failed to cancel booking');
-              }
-              Vibration.vibrate(100); // Success haptic feedback
-              Alert.alert('Success', `${itemTypeCapitalized} cancelled successfully`);
-              setShowEventDialog(false);
-            } catch (error) {
-              logger.error(`Error cancelling ${itemType}:`, error);
+            const result = await calendarData.cancelBooking(selectedEvent.id);
+            if (!result.ok) {
               Vibration.vibrate([100, 100]); // Error haptic feedback
-              Alert.alert('Error', `Failed to cancel ${itemType}. Please try again.`);
+              Alert.alert('Error', bookingErrorMessage(new ApiError(0, result.code, result.message), `Failed to cancel ${itemType}. Please try again.`));
+              return;
             }
+            Vibration.vibrate(100); // Success haptic feedback
+            Alert.alert(
+              'Success',
+              result.refundCents
+                ? `${itemTypeCapitalized} cancelled. ${formatCents(result.refundCents)} will be refunded.`
+                : `${itemTypeCapitalized} cancelled successfully`
+            );
+            setShowEventDialog(false);
           }
         }
       ]
     );
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
+  // Booking times are shown in the barber's time zone.
+  const formatTime = (date: Date, timeZone: string) => formatBookingTime(date, timeZone);
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const formatDate = (date: Date, timeZone: string) =>
+    formatInTimeZone(date, timeZone, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const getGlowOpacity = () => {
     return glowAnim.interpolate({
@@ -401,99 +402,51 @@ export default function CalendarPage() {
 
   // Fetch services for manual appointment form
   const fetchServices = async () => {
-    try {
-      // First check if user exists
-      if (!user?.id) {
-        Alert.alert('Error', 'User not authenticated');
-        return;
-      }
+    if (!user?.id) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
 
-      // Check if barber profile exists
-      const { data: barberData, error: barberError } = await supabase
-        .from('barbers')
-        .select('id, onboarding_complete')
-        .eq('user_id', user?.id)
-        .single();
+    if (!barberId) {
+      Alert.alert(
+        'Profile Setup Required',
+        'You need to complete your barber profile setup first. Please go to Settings to set up your profile.',
+        [{ text: 'OK', onPress: () => setShowManualAppointmentForm(false) }]
+      );
+      return;
+    }
 
-      if (barberError) {
-        logger.error('Barber not found:', barberError);
-        Alert.alert(
-          'Profile Setup Required', 
-          'You need to complete your barber profile setup first. Please go to Settings to set up your profile.',
-          [{ text: 'OK', onPress: () => setShowManualAppointmentForm(false) }]
-        );
-        return;
-      }
-
-      // Check if onboarding is complete
-      if (!barberData.onboarding_complete) {
-        Alert.alert(
-          'Profile Setup Incomplete', 
-          'Please complete your profile setup before creating appointments.',
-          [{ text: 'OK', onPress: () => setShowManualAppointmentForm(false) }]
-        );
-        return;
-      }
-
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('id, name, price, duration')
-        .eq('barber_id', barberData.id)
-        .order('name');
-
-      if (servicesError) {
-        logger.error('Error fetching services:', servicesError);
-        setServices([]);
-        return;
-      }
-
-      setServices(servicesData || []);
-      setBarberId(barberData.id);
-      
-      if (!servicesData || servicesData.length === 0) {
-        Alert.alert(
-          'No Services Found', 
-          'You need to add services to your profile before creating manual appointments. Please go to Settings to add your services.',
-          [
-            { text: 'OK', onPress: () => setShowManualAppointmentForm(false) }
-          ]
-        );
-      }
-    } catch (error) {
-      logger.error('Error fetching services:', error);
-      setServices([]);
+    const servicesData = await calendarData.loadServices();
+    if (servicesData.length === 0) {
+      Alert.alert(
+        'No Services Found',
+        'You need to add services to your profile before creating manual appointments. Please go to Settings to add your services.',
+        [{ text: 'OK', onPress: () => setShowManualAppointmentForm(false) }]
+      );
     }
   };
 
   // Handle manual appointment form submission
   const handleManualAppointmentSubmit = async () => {
-    if (!manualFormData.clientName || !manualFormData.serviceId || !manualFormData.time) {
+    if (!manualFormData.clientName || !manualFormData.serviceId || !manualFormData.startsAt) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      if (!barberId) {
-        throw new Error('Barber ID not found');
-      }
-
-      const selectedService = services.find(s => s.id === manualFormData.serviceId);
-      if (!selectedService) throw new Error('Service not found');
-
-      const result = await calendarData.createAppointment(barberId, {
-        clientName: manualFormData.clientName,
+      const result = await calendarData.createAppointment({
+        customerName: manualFormData.clientName,
         serviceId: manualFormData.serviceId,
-        date: manualFormData.date,
-        time: manualFormData.time,
-        price: selectedService.price,
+        startsAt: manualFormData.startsAt,
       });
 
-      if (!result.success) {
-        if (result.conflict) {
+      if (!result.ok) {
+        if (result.code === 'SLOT_TAKEN') {
           Alert.alert('Time Conflict', 'This time overlaps an existing booking.');
+          fetchTimeSlots();
         } else {
-          Alert.alert('Error', 'Failed to create appointment');
+          Alert.alert('Error', result.message || 'Failed to create appointment');
         }
         return;
       }
@@ -504,12 +457,9 @@ export default function CalendarPage() {
         clientName: '',
         serviceId: '',
         price: '',
-        time: '',
+        startsAt: '',
         date: selectedDate || new Date()
       });
-    } catch (error) {
-      logger.error('Error creating manual appointment:', error);
-      Alert.alert('Error', 'Failed to create appointment');
     } finally {
       setIsSubmitting(false);
     }
@@ -521,7 +471,8 @@ export default function CalendarPage() {
     setManualFormData(prev => ({
       ...prev,
       serviceId,
-      price: selectedService ? selectedService.price.toString() : ''
+      price: selectedService ? formatCents(selectedService.price_cents) : '',
+      startsAt: ''
     }));
   };
 
@@ -529,7 +480,7 @@ export default function CalendarPage() {
     setManualFormData(prev => ({
       ...prev,
       date: date,
-      time: '' // Clear time when date changes
+      startsAt: '' // Clear time when date changes
     }));
   };
 
@@ -826,11 +777,11 @@ export default function CalendarPage() {
                             {service.name}
                           </Text>
                           <Text style={[tw`font-semibold`, { color: colors.primary }]}>
-                            ${service.price}
+                            {formatCents(service.price_cents)}
                           </Text>
                         </View>
                         <Text style={[tw`text-xs`, { color: colors.mutedForeground }]}>
-                          {service.duration} minutes
+                          {service.duration_minutes} minutes
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -931,20 +882,20 @@ export default function CalendarPage() {
                           .filter(slot => slot.available)
                           .map((slot) => (
                             <TouchableOpacity
-                              key={slot.time}
-                              onPress={() => setManualFormData(prev => ({ ...prev, time: slot.time }))}
+                              key={slot.startsAt}
+                              onPress={() => setManualFormData(prev => ({ ...prev, startsAt: slot.startsAt }))}
                               style={tw`w-1/3 px-1 mb-2`}
                               disabled={isSubmitting}
                             >
                               <View style={[
                                 tw`rounded-lg py-3 items-center`,
-                                manualFormData.time === slot.time
+                                manualFormData.startsAt === slot.startsAt
                                   ? { backgroundColor: colors.primary }
                                   : { backgroundColor: colors.glass }
                               ]}>
                                 <Text style={[
                                   tw`text-sm font-medium`,
-                                  manualFormData.time === slot.time
+                                  manualFormData.startsAt === slot.startsAt
                                     ? { color: colors.background }
                                     : { color: colors.foreground }
                                 ]}>

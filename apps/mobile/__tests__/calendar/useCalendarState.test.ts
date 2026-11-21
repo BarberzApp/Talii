@@ -160,8 +160,8 @@ describe('useCalendarState', () => {
     it('should set services', () => {
       const { result } = renderHook(() => useCalendarState());
       const mockServices = [
-        { id: '1', name: 'Haircut', price: 50, duration: 30 },
-        { id: '2', name: 'Shave', price: 30, duration: 20 },
+        { id: '1', name: 'Haircut', price_cents: 5000, duration_minutes: 30 },
+        { id: '2', name: 'Shave', price_cents: 3000, duration_minutes: 20 },
       ];
 
       act(() => {
@@ -174,8 +174,8 @@ describe('useCalendarState', () => {
     it('should set time slots', () => {
       const { result } = renderHook(() => useCalendarState());
       const mockSlots = [
-        { time: '09:00', available: true },
-        { time: '10:00', available: false },
+        { startsAt: '2026-01-01T14:00:00.000Z', time: '09:00', available: true },
+        { startsAt: '2026-01-01T15:00:00.000Z', time: '10:00', available: false },
       ];
 
       act(() => {

@@ -2,8 +2,16 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { logger } from '../lib/logger';
 import { setUserContext } from '../lib/sentry';
-import { AuthController, type AuthProfile, type AuthUser, type AuthState } from '@barber-app/shared';
-import { createMobileAuthAdapter } from '../lib/auth-adapter';
+import {
+  AuthController,
+  type AuthProfile,
+  type AuthRegisterResult,
+  type AuthUser,
+  type AuthState,
+} from '@barber-app/shared';
+import { createAuthAdapter } from '../lib/auth-adapter';
+import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 // Types
 export type UserRole = 'client' | 'barber';
@@ -15,16 +23,24 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string, role: UserRole, businessName?: string) => Promise<boolean | 'needs-confirmation' | 'already-exists'>;
+  /** Sign-up; the database creates the profile (and barber rows) from the metadata. */
+  register: (input: {
+    name: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    username?: string;
+    businessName?: string;
+  }) => Promise<AuthRegisterResult>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
-  addToFavorites: (barberId: string) => Promise<void>;
-  removeFromFavorites: (barberId: string) => Promise<void>;
+  /** Reloads the profile from GET /api/me (after onboarding or settings changes). */
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const authAdapter = createMobileAuthAdapter();
+export const authAdapter = createAuthAdapter({ supabase, api });
 const authController = new AuthController(authAdapter);
 
 function applyState(setState: (next: AuthState) => void, next: AuthState) {
@@ -95,30 +111,22 @@ export function AuthProvider({ children }: { children: ReactNode }): React.React
     }
   };
 
-  const register = async (
-    name: string,
-    email: string,
-    password: string,
-    role: UserRole,
-    businessName?: string
-  ): Promise<boolean | 'needs-confirmation' | 'already-exists'> => {
+  const register: AuthContextType['register'] = async (input) => {
     try {
       setState(prev => ({ ...prev, isLoading: true, status: 'loading' }));
-      const { state: next, result } = await authController.register({
-        name,
-        email,
-        password,
-        role,
-        businessName,
-      });
+      const { state: next, result } = await authController.register(input);
       applyState(setState, next);
-
-      if (result.needsConfirmation) return 'needs-confirmation';
-      if (result.alreadyExists) return 'already-exists';
-      return result.ok;
+      return result;
     } catch (error) {
       logger.error('Registration error', error);
-      return false;
+      applyState(setState, {
+        status: 'unauthenticated',
+        isLoading: false,
+        isInitialized: true,
+        user: null,
+        profile: null,
+      });
+      return { ok: false, reason: 'auth-error', errorMessage: 'Registration failed. Please try again.' };
     }
   };
 
@@ -141,23 +149,15 @@ export function AuthProvider({ children }: { children: ReactNode }): React.React
     }
   };
 
-  const addToFavorites = async (barberId: string) => {
+  const refreshProfile = async () => {
+    if (!state.user) return;
     try {
-      const next = await authController.addToFavorites(state, barberId);
-      applyState(setState, next);
+      const next = await authController.refreshProfile(state.user.id);
+      // Keep the current state when the profile could not be loaded (e.g. offline);
+      // keep the signed-in user (with email) from the current state.
+      if (next.profile) applyState(setState, { ...next, user: state.user });
     } catch (error) {
-      logger.error('Add to favorites error:', error);
-      throw error;
-    }
-  };
-
-  const removeFromFavorites = async (barberId: string) => {
-    try {
-      const next = await authController.removeFromFavorites(state, barberId);
-      applyState(setState, next);
-    } catch (error) {
-      logger.error('Remove from favorites error:', error);
-      throw error;
+      logger.error('Profile refresh error:', error);
     }
   };
 
@@ -171,8 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }): React.React
         register, 
         logout,
         updateProfile,
-        addToFavorites,
-        removeFromFavorites,
+        refreshProfile,
       }}
     >
       {children}

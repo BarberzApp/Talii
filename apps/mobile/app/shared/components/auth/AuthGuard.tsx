@@ -35,7 +35,9 @@ export function AuthGuard({
       }
 
       // Check if user has required role
-      if (requiredRole && userProfile?.role !== requiredRole) {
+      // Admin is not a profile role: it comes from the server (GET /api/me isAdmin).
+      const hasRole = requiredRole === 'admin' ? !!userProfile?.is_admin : userProfile?.role === requiredRole;
+      if (requiredRole && !hasRole) {
         logger.log(`🔒 AuthGuard: User role ${userProfile?.role} does not match required role ${requiredRole}`);
         
         // Redirect based on user role

@@ -53,16 +53,13 @@ jest.mock('@/hooks/useAuth', () => ({
   }),
 }));
 
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn((table) => ({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: { role: 'client' }, error: null }),
-      order: jest.fn().mockResolvedValue({ data: [], error: null }),
-    })),
+jest.mock('@/lib/api', () => ({
+  api: {
+    me: { get: jest.fn().mockResolvedValue({ profile: { role: 'client' }, barber: null }) },
+    bookings: { list: jest.fn().mockResolvedValue({ bookings: [], pagination: { limit: 100, offset: 0, total: 0 } }) },
+    services: { list: jest.fn().mockResolvedValue({ services: [] }) },
   },
+  isApiError: () => false,
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -95,13 +92,6 @@ jest.mock('@/components/ReviewForm', () => ({
   ReviewForm: 'ReviewForm',
 }));
 
-jest.mock('@/lib/bookingService', () => ({
-  bookingService: {
-    getBarberBookings: jest.fn().mockResolvedValue([]),
-    getClientBookings: jest.fn().mockResolvedValue([]),
-  },
-}));
-
 // Increase timeout for this test suite due to animations
 jest.setTimeout(10000);
 
@@ -121,11 +111,13 @@ describe('CalendarPage - Basic Tests', () => {
     expect(root).toBeTruthy();
   });
 
-  it('should use useAuth hook', () => {
+  it('loads the calendar through the API', async () => {
+    const { api } = require('@/lib/api');
     render(<CalendarPage />);
-    // The component should call useAuth (mocked)
-    // If it doesn't throw, the hook is being used
-    expect(true).toBe(true);
+    await waitFor(() => expect(api.me.get).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(api.bookings.list).toHaveBeenCalledWith(expect.objectContaining({ as: 'client' }))
+    );
   });
 });
 

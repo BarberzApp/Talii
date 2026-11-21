@@ -10,7 +10,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-import { supabase } from '../../lib/supabase';
+import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
 import { Card, CardContent, LoadingSpinner } from '../ui';
@@ -103,33 +103,28 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (barberId) {
+    if (user) {
       loadAvailability();
     }
-  }, [barberId]);
+  }, [user]);
 
+  /** GET /api/me/availability: weekly windows, local times in the barber's time zone. */
   const loadAvailability = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('availability')
-        .select('*')
-        .eq('barber_id', barberId);
+      const { availability } = await api.schedule.getWeek();
 
-      if (error) throw error;
-
-      if (data && data.length > 0) {
+      if (availability.length > 0) {
         const loadedSchedule = DAYS_OF_WEEK.map(day => {
-          const dayNumber = DAY_TO_NUMBER[day];
-          const dayData = data.find(d => d.day_of_week === dayNumber);
-          if (dayData) {
+          const windows = availability
+            .filter(w => w.day_of_week === DAY_TO_NUMBER[day])
+            .sort((a, b) => a.start_time.localeCompare(b.start_time));
+          if (windows.length > 0) {
+            // The form edits the first window; any further windows are kept as they are.
             return {
               day,
               enabled: true,
-              slots: [{
-                start: dayData.start_time.slice(0, 5),
-                end: dayData.end_time.slice(0, 5)
-              }]
+              slots: windows.map(w => ({ start: w.start_time.slice(0, 5), end: w.end_time.slice(0, 5) })),
             };
           }
           return {
@@ -142,47 +137,34 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
       }
     } catch (error) {
       logger.error('Error loading availability:', error);
-      Alert.alert('Error', 'Failed to load availability');
+      Alert.alert('Error', errorMessage(error, 'Failed to load availability'));
     } finally {
       setIsLoading(false);
     }
   };
 
+  /** PUT /api/me/availability replaces the whole week in one transaction. */
   const handleSave = async () => {
+    const windows = schedule
+      .filter(day => day.enabled)
+      .flatMap(day =>
+        day.slots.map(slot => ({ dayOfWeek: DAY_TO_NUMBER[day.day], startTime: slot.start, endTime: slot.end }))
+      );
+
+    const invalid = windows.find(w => w.startTime >= w.endTime);
+    if (invalid) {
+      Alert.alert('Invalid hours', `${NUMBER_TO_DAY[invalid.dayOfWeek]}: the end time must be after the start time.`);
+      return;
+    }
+
     try {
       setIsSaving(true);
-
-      // Delete existing availability
-      const { error: deleteError } = await supabase
-        .from('availability')
-        .delete()
-        .eq('barber_id', barberId);
-
-      if (deleteError) throw deleteError;
-
-      // Insert new availability
-      const availabilityData = schedule
-        .filter(day => day.enabled)
-        .map(day => ({
-          barber_id: barberId,
-          day_of_week: DAY_TO_NUMBER[day.day],
-          start_time: day.slots[0].start + ':00',
-          end_time: day.slots[0].end + ':00'
-        }));
-
-      if (availabilityData.length > 0) {
-        const { error: insertError } = await supabase
-          .from('availability')
-          .insert(availabilityData);
-
-        if (insertError) throw insertError;
-      }
-
+      await api.schedule.replaceWeek(windows);
       Alert.alert('Success', 'Availability updated successfully');
       onUpdate?.();
     } catch (error) {
       logger.error('Error saving availability:', error);
-      Alert.alert('Error', 'Failed to save availability');
+      Alert.alert('Error', errorMessage(error, 'Failed to save availability'));
     } finally {
       setIsSaving(false);
     }

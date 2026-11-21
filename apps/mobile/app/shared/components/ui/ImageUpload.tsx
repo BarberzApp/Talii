@@ -9,13 +9,12 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import { Camera, Upload, X } from 'lucide-react-native';
-import { supabase } from '../../lib/supabase';
+import { uploadImageFromUri, type UploadBucket } from '../../lib/uploads';
+import { isApiError } from '../../lib/api';
 import { useTheme } from '../theme/ThemeProvider';
 import tw from 'twrnc';
 import { logger } from '../../lib/logger';
-import { validateImageContent } from '../../lib/contentModeration';
 
 interface ImageUploadProps {
   onUploadComplete: (url: string) => void;
@@ -27,8 +26,10 @@ interface ImageUploadProps {
   existingImages?: string[];
   onRemoveImage?: (index: number) => void;
   onImagePress?: (imageUrl: string, index: number) => void;
-  customPath?: string; // Custom path prefix (e.g., 'avatars', 'covers')
-  upsert?: boolean; // Whether to overwrite existing files
+  /** Storage bucket: 'avatars' for profile and cover photos, 'media' for portfolio images. */
+  bucket: UploadBucket;
+  /** Allow uploading a replacement when maxImages is already reached (single avatar or cover). */
+  replace?: boolean;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -41,8 +42,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   existingImages = [],
   onRemoveImage,
   onImagePress,
-  customPath = 'uploads',
-  upsert = false,
+  bucket,
+  replace = false,
 }) => {
   const { colors } = useTheme();
   const [uploading, setUploading] = useState(false);
@@ -72,7 +73,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       });
 
       if (!result.canceled && result.assets[0]) {
-        await uploadImage(result.assets[0].uri);
+        await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
       }
     } catch (error) {
       logger.error('Error picking image:', error);
@@ -95,7 +96,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       });
 
       if (!result.canceled && result.assets[0]) {
-        await uploadImage(result.assets[0].uri);
+        await uploadImage(result.assets[0].uri, result.assets[0].mimeType);
       }
     } catch (error) {
       logger.error('Error taking photo:', error);
@@ -103,190 +104,22 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     }
   };
 
-  const uploadImage = async (uri: string) => {
-    if (existingImages.length >= maxImages) {
+  const uploadImage = async (uri: string, mimeType?: string | null) => {
+    if (existingImages.length >= maxImages && !replace) {
       onUploadError(`Maximum ${maxImages} image${maxImages > 1 ? 's' : ''} allowed`);
       return;
     }
 
     setUploading(true);
     try {
-      // Get file info for validation
-      const fileInfoForValidation = await FileSystem.getInfoAsync(uri);
-      if (!fileInfoForValidation.exists) {
-        onUploadError('Image file not found. Please try selecting the image again.');
-        setUploading(false);
-        return;
-      }
-      
-      // Get MIME type from file extension
-      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const mimeTypes: Record<string, string> = {
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'webp': 'image/webp',
-        'gif': 'image/gif',
-      };
-      const mimeType = mimeTypes[fileExt] || 'image/jpeg';
-      
-      // Validate image content before upload
-      const fileSize = fileInfoForValidation.exists && 'size' in fileInfoForValidation 
-        ? fileInfoForValidation.size 
-        : 0;
-      const validation = await validateImageContent(uri, fileSize, mimeType);
-      if (!validation.isValid) {
-        Alert.alert(
-          'Image Not Allowed',
-          validation.reason || 'This image cannot be uploaded. Please select a different image.',
-          [{ text: 'OK' }]
-        );
-        setUploading(false);
-        return;
-      }
-      
-      // Generate unique filename
-      let fileName: string;
-      if (upsert && existingImages.length > 0) {
-        // For upsert, use a fixed filename based on the custom path
-        const baseName = customPath === 'avatars' ? 'avatar' : customPath === 'covers' ? 'cover' : 'image';
-        fileName = `${baseName}.${fileExt}`;
-      } else {
-        // For new uploads, use a unique filename
-        fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      }
-      const filePath = `${customPath}/${fileName}`;
-
-      // For React Native, use file URI directly - Supabase handles file:// URIs
-      // For web, convert to blob first
-      let uploadData: any;
-      let uploadError: any;
-      
-      if (Platform.OS === 'web') {
-        // Web: use fetch to get blob
-        logger.log('Web: Reading image file:', { uri, fileExt });
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        
-        if (!blob || blob.size === 0) {
-          throw new Error('Failed to read image file. The file appears to be empty.');
-        }
-        
-        logger.log('Web: Blob created:', { blobSize: blob.size, contentType: blob.type });
-        
-        // Upload blob
-        const result = await supabase.storage
-          .from('images')
-          .upload(filePath, blob, {
-            contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`,
-            upsert: upsert,
-          });
-        uploadData = result.data;
-        uploadError = result.error;
-      } else {
-        // React Native: Use file URI directly - Supabase Storage handles file:// URIs
-        logger.log('React Native: Uploading file directly:', { uri, filePath, fileExt });
-        
-        // First, verify the file exists and get its size
-        const fileInfo = await FileSystem.getInfoAsync(uri);
-        if (!fileInfo.exists) {
-          throw new Error('Image file not found. Please try selecting the image again.');
-        }
-        
-        if (fileInfo.size === 0) {
-          throw new Error('Image file is empty. Please select a different image.');
-        }
-        
-        logger.log('React Native: File verified:', { 
-          uri, 
-          exists: fileInfo.exists, 
-          size: fileInfo.size,
-          isDirectory: fileInfo.isDirectory 
-        });
-        
-        // Read file as base64 and create FormData (Supabase accepts base64 strings)
-        const base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        
-        if (!base64 || base64.length === 0) {
-          throw new Error('Failed to read image file. The file appears to be empty or corrupted.');
-        }
-        
-        logger.log('React Native: Base64 read:', { base64Length: base64.length });
-        
-        // Convert base64 to Uint8Array for upload
-        // This is the most reliable method for React Native
-        let bytes: Uint8Array;
-        if (typeof atob !== 'undefined') {
-          // Use atob if available (most environments)
-          const binaryString = atob(base64);
-          bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-        } else {
-          // Fallback: use Buffer if atob is not available
-          const buffer = Buffer.from(base64, 'base64');
-          bytes = new Uint8Array(buffer);
-        }
-        
-        if (!bytes || bytes.length === 0) {
-          throw new Error('Failed to convert image to bytes. The file may be corrupted.');
-        }
-        
-        logger.log('React Native: Bytes array created:', { bytesLength: bytes.length });
-        
-        // Upload the Uint8Array directly
-        const result = await supabase.storage
-          .from('images')
-          .upload(filePath, bytes, {
-            contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`,
-            upsert: upsert,
-          });
-        uploadData = result.data;
-        uploadError = result.error;
-      }
-
-      if (uploadError) {
-        logger.error('Upload error details:', uploadError);
-        throw uploadError;
-      }
-
-      logger.log('Upload successful, verifying file:', { filePath, uploadData });
-
-      // Verify the file was uploaded successfully by checking its metadata
-      const { data: uploadedFileList, error: infoError } = await supabase.storage
-        .from('images')
-        .list(customPath, {
-          limit: 1,
-          search: fileName,
-        });
-
-      if (infoError) {
-        logger.warn('Could not verify file upload:', infoError);
-      } else if (uploadedFileList && uploadedFileList.length > 0) {
-        const uploadedFile = uploadedFileList[0];
-        const uploadedFileSize = uploadedFile.metadata?.size || 0;
-        if (uploadedFileSize === 0 || uploadedFileSize === '0') {
-          // File is empty, delete it and throw error
-          logger.error('Uploaded file is empty, deleting:', { filePath, metadata: uploadedFile.metadata });
-          await supabase.storage.from('images').remove([filePath]);
-          throw new Error('Uploaded file is empty. Please try again.');
-        }
-        logger.log('File verified:', { fileName: uploadedFile.name, size: uploadedFileSize });
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('images')
-        .getPublicUrl(filePath);
-
-      logger.log('Image uploaded successfully:', { publicUrl, filePath });
+      // POST /api/uploads -> signed upload URL in the caller's folder -> public URL.
+      const publicUrl = await uploadImageFromUri(uri, bucket, { mimeType });
       onUploadComplete(publicUrl);
     } catch (error) {
       logger.error('Error uploading image:', error);
-      onUploadError('Failed to upload image. Please try again.');
+      onUploadError(
+        isApiError(error) ? error.message : 'Failed to upload image. Please try again.'
+      );
     } finally {
       setUploading(false);
     }
@@ -307,7 +140,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   return (
     <View style={tw`space-y-4`}>
       {/* Upload Button */}
-      {existingImages.length < maxImages && (
+      {(existingImages.length < maxImages || replace) && (
         <TouchableOpacity
           style={[
             tw`flex-row items-center justify-center p-6 rounded-2xl border-2 border-dashed`,
