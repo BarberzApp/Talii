@@ -16,7 +16,17 @@ export type RootStackParamList = {
   ForgotPassword: undefined;
   BarberOnboarding: undefined;
   BarberDashboard: undefined;
-  BookingSuccess: undefined;
+  BookingSuccess:
+    | {
+        barberName: string;
+        serviceName: string;
+        startsAt: string;
+        endsAt: string;
+        timeZone: string;
+        city: string | null;
+        state: string | null;
+      }
+    | undefined;
   BookingPage: {
     barberId: string;
     barberName: string;

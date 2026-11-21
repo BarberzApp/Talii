@@ -24,6 +24,7 @@ import { useAuth } from '../shared/hooks/useAuth';
 import { useReporting } from '../shared/hooks/useReporting';
 import { ReportContentModal } from '../shared/components/ReportContentModal';
 import { Button, Dialog, DialogContent } from '../shared/components/ui';
+import BookingFeeNote from '../shared/components/BookingFeeNote';
 import { GlassyCard } from '../shared/components/ui/GlassyCard';
 import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
@@ -243,6 +244,7 @@ export default function ProfilePreview() {
               </View>
             ) : (
               <View style={tw`space-y-4`}>
+                <BookingFeeNote />
                 {services.map((service) => (
                   <GlassyCard
                     key={service.id}

@@ -29,6 +29,7 @@ import {
 } from '@barber-app/shared';
 import { RootStackParamList } from '../types';
 import { Button, Textarea } from './ui';
+import BookingFeeNote from './BookingFeeNote';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../components/theme';
 import { api, bookingErrorMessage, isApiError } from '../lib/api';
@@ -47,7 +48,18 @@ interface BookingFormProps {
   barberName: string;
   preSelectedService?: Pick<PublicService, 'id'> | null;
   /** Called with the booking once it is confirmed (fee waived) or paid. */
-  onBookingCreated: (booking: BookingRow) => void;
+  onBookingCreated: (booking: BookingRow, summary: BookedSummary) => void;
+}
+
+/** What the success screen shows; the times are instants, shown in `timeZone`. */
+export interface BookedSummary {
+  barberName: string;
+  serviceName: string;
+  startsAt: string;
+  endsAt: string;
+  timeZone: string;
+  city: string | null;
+  state: string | null;
 }
 
 interface CalendarDay {
@@ -97,6 +109,7 @@ export default function BookingForm({
   const [services, setServices] = useState<PublicService[]>([]);
   const [addons, setAddons] = useState<PublicAddon[]>([]);
   const [timeZone, setTimeZone] = useState('America/New_York');
+  const [place, setPlace] = useState<{ city: string | null; state: string | null }>({ city: null, state: null });
   const [selectedService, setSelectedService] = useState<PublicService | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
@@ -107,7 +120,7 @@ export default function BookingForm({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
 
-  const totalSteps = 4;
+  const totalSteps = 3;
 
   useEffect(() => {
     if (isVisible) {
@@ -145,6 +158,7 @@ export default function BookingForm({
       setLoading(true);
       const profile = await api.barbers.get(barberId);
       setTimeZone(profile.barber.timezone);
+      setPlace({ city: profile.barber.city ?? null, state: profile.barber.state ?? null });
       setAddons(profile.addons);
 
       if (profile.services.length === 0) {
@@ -193,7 +207,6 @@ export default function BookingForm({
       case 2:
         return !!selectedDate && !!selectedSlot;
       case 3:
-      case 4:
         return true;
       default:
         return false;
@@ -202,7 +215,7 @@ export default function BookingForm({
 
   const handleNextStep = () => {
     // Guests may look at services and availability, but must sign in to book.
-    if (currentStep === 3 && !user) {
+    if (currentStep === 2 && !user) {
       Alert.alert(
         'Sign in required',
         'You can view availability as a guest, but you need an account to book an appointment.',
@@ -247,7 +260,16 @@ export default function BookingForm({
   };
 
   const finish = (booking: BookingRow, title: string, message: string) => {
-    Alert.alert(title, message, [{ text: 'OK', onPress: () => onBookingCreated(booking) }]);
+    const summary: BookedSummary = {
+      barberName,
+      serviceName: selectedService?.name ?? '',
+      startsAt: booking.starts_at ?? selectedSlot?.startsAt ?? '',
+      endsAt: booking.ends_at ?? selectedSlot?.endsAt ?? '',
+      timeZone,
+      city: place.city,
+      state: place.state,
+    };
+    Alert.alert(title, message, [{ text: 'OK', onPress: () => onBookingCreated(booking, summary) }]);
     onClose();
   };
 
@@ -349,8 +371,7 @@ export default function BookingForm({
     switch (currentStep) {
       case 1: return 'Choose Your Service';
       case 2: return 'Pick Your Time';
-      case 3: return 'Your Information';
-      case 4: return 'Review & Book';
+      case 3: return 'Review & Book';
       default: return '';
     }
   };
@@ -395,7 +416,7 @@ export default function BookingForm({
 
           {/* Step Indicators */}
           <View style={tw`flex-row justify-between`}>
-            {[1, 2, 3, 4].map((step) => (
+            {[1, 2, 3].map((step) => (
               <View key={step} style={tw`items-center`}>
                 <View style={[
                   tw`w-8 h-8 rounded-full items-center justify-center`,
@@ -433,6 +454,8 @@ export default function BookingForm({
                     Choose from {barberName}&apos;s services
                   </Text>
                 </View>
+
+                <BookingFeeNote />
 
                 {loading ? (
                   <View style={tw`items-center py-8`}>
@@ -644,78 +667,8 @@ export default function BookingForm({
               </View>
             )}
 
-            {/* Step 3: Your Information */}
+            {/* Step 3: Review & Book (notes live here) */}
             {currentStep === 3 && (
-              <View style={tw`space-y-6`}>
-                <View style={tw`items-center mb-6`}>
-                  <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${colors.primary}20` }]}>
-                    <Icon name="user" size={24} color={colors.primary} />
-                  </View>
-                  <Text style={[tw`text-xl font-bold mb-2`, { color: colors.foreground }]}>
-                    Tell us about yourself
-                  </Text>
-                  <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
-                    We&apos;ll use this to confirm your booking
-                  </Text>
-                </View>
-
-                {!user ? (
-                  <View style={[tw`p-6 rounded-2xl`, { backgroundColor: colors.destructiveSubtle, borderWidth: 1, borderColor: colors.destructive }]}>
-                    <View style={tw`items-center`}>
-                      <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-4`, { backgroundColor: colors.destructiveSubtle }]}>
-                        <Icon name="lock" size={24} color={colors.destructive} />
-                      </View>
-                      <Text style={[tw`text-lg font-semibold mb-2`, { color: colors.foreground }]}>
-                        Sign In Required
-                      </Text>
-                      <Text style={[tw`text-center mb-4`, { color: colors.mutedForeground }]}>
-                        You can add a note below, but you must sign in to complete your booking.
-                      </Text>
-                      <View style={tw`w-full flex-row gap-3`}>
-                        <TouchableOpacity
-                          style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: colors.primary }]}
-                          onPress={() => closeAndNavigateToAuth('Login')}
-                        >
-                          <Text style={[tw`font-semibold`, { color: colors.background }]}>Log In</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[tw`flex-1 py-3 rounded-full items-center`, { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }]}
-                          onPress={() => closeAndNavigateToAuth('SignUp')}
-                        >
-                          <Text style={[tw`font-semibold`, { color: colors.foreground }]}>Sign Up</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                ) : (
-                  <View style={[tw`p-6 rounded-2xl`, { backgroundColor: `${colors.primary}10`, borderWidth: 1, borderColor: `${colors.primary}20` }]}>
-                    <View style={tw`items-center`}>
-                      <View style={[tw`w-12 h-12 rounded-full items-center justify-center mb-4`, { backgroundColor: `${colors.primary}20` }]}>
-                        <Icon name="check" size={24} color={colors.primary} />
-                      </View>
-                      <Text style={[tw`text-lg font-semibold mb-2`, { color: colors.foreground }]}>
-                        Welcome back{userProfile?.name ? `, ${userProfile.name}` : ''}!
-                      </Text>
-                      <Text style={[tw`text-center`, { color: colors.mutedForeground }]}>
-                        We&apos;ll use your account information for this booking
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                <View style={tw`mt-4`}>
-                  <Textarea
-                    placeholder="Any special requests or notes... (Optional)"
-                    value={notes}
-                    onChangeText={(text: string) => setNotes(text)}
-                    rows={4}
-                  />
-                </View>
-              </View>
-            )}
-
-            {/* Step 4: Review & Book */}
-            {currentStep === 4 && (
               <View style={tw`space-y-6`}>
                 <View style={tw`items-center mb-6`}>
                   <View style={[tw`w-16 h-16 rounded-full items-center justify-center mb-4`, { backgroundColor: `${colors.primary}20` }]}>
@@ -806,6 +759,21 @@ export default function BookingForm({
                       straight away.
                     </Text>
                   </View>
+                </View>
+
+                <View style={tw`mt-4`}>
+                  <Text style={[tw`text-lg font-semibold mb-4`, { color: colors.foreground }]}>
+                    Notes for {barberName}
+                  </Text>
+                  <Textarea
+                    placeholder="Any special requests or notes... (Optional)"
+                    value={notes}
+                    onChangeText={(text: string) => setNotes(text)}
+                    rows={4}
+                  />
+                  <Text style={[tw`text-sm mt-2`, { color: colors.mutedForeground }]}>
+                    Booking as {userProfile?.name || user?.email || 'your account'}.
+                  </Text>
                 </View>
               </View>
             )}

@@ -84,7 +84,6 @@ async function bookThroughSteps() {
   fireEvent.press(screen.getAllByText(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/)[1]);
   fireEvent.press(await screen.findByText('10:00 AM'));
   fireEvent.press(screen.getByText('Continue'));
-  fireEvent.press(screen.getByText('Continue'));
   fireEvent.press(screen.getByText('Book & Pay'));
   return screen;
 }
@@ -119,6 +118,26 @@ describe('BookingForm', () => {
     expect(await findByText('Haircut')).toBeTruthy();
     expect(getByText('$30.00')).toBeTruthy();
     expect(mockApi.barbers.get).toHaveBeenCalledWith('barber-1');
+  });
+
+  it('states the fee rule above the services', async () => {
+    const { findByText } = render(<BookingForm {...props} />);
+    expect(await findByText('Booking fee $3.40 (some barbers waive it) \u2014 service paid in person.')).toBeTruthy();
+  });
+
+  it('takes notes on the review step (no separate info step) and sends them', async () => {
+    mockApi.bookings.create.mockResolvedValue({ booking: { id: 'k1' }, clientSecret: null });
+    const screen = render(<BookingForm {...props} />);
+    fireEvent.press(await screen.findByText('Haircut'));
+    fireEvent.press(screen.getByText('Continue'));
+    fireEvent.press(screen.getAllByText(/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)$/)[1]);
+    fireEvent.press(await screen.findByText('10:00 AM'));
+    fireEvent.press(screen.getByText('Continue'));
+    expect(screen.getByText('Review & Book')).toBeTruthy();
+    expect(screen.queryByText('Your Information')).toBeNull();
+    fireEvent.changeText(screen.getByPlaceholderText(/special requests/i), ' Skin fade ');
+    fireEvent.press(screen.getByText('Book & Pay'));
+    await waitFor(() => expect(mockApi.bookings.create).toHaveBeenCalledWith(expect.objectContaining({ notes: 'Skin fade' })));
   });
 
   it('confirms straight away when the barber waives the fee (clientSecret null)', async () => {

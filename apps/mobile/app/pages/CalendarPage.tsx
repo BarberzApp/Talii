@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator, Dimensions, Animated, Vibration, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +30,7 @@ import {
 } from '../shared/lib/calendar/calendarUtils';
 import type { CalendarEvent } from '../shared/lib/calendar';
 import CalendarGrid from './calendar/components/CalendarGrid';
+import TodayAgenda from './calendar/components/TodayAgenda';
 import EventsPanel from './calendar/components/EventsPanel';
 import EventDetailsModal from './calendar/components/EventDetailsModal';
 
@@ -80,6 +81,8 @@ export default function CalendarPage() {
 
   const { loadBookings, refresh, initialize } = calendarData;
   const manualFormScrollRef = useRef<ScrollView>(null);
+  // Barbers land on today's agenda; the month grid is one tap away.
+  const [showMonth, setShowMonth] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -253,6 +256,12 @@ export default function CalendarPage() {
   const nextMonth = () => {
     Vibration.vibrate(30); // Light haptic feedback
     setCurrentDate(prev => addMonths(prev, 1));
+  };
+
+  const showTodayAgenda = () => {
+    setCurrentDate(new Date());
+    setSelectedDate(new Date());
+    setShowMonth(false);
   };
 
   const goToToday = () => {
@@ -471,6 +480,7 @@ export default function CalendarPage() {
     }));
   };
 
+  const showAgenda = userRole === 'barber' && !showMonth;
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
 
   if (loading) {
@@ -606,7 +616,27 @@ export default function CalendarPage() {
             </View>
           )}
 
+          {showAgenda && (
+            <TodayAgenda
+              events={getEventsForDate(barberDay(0))}
+              timeZone={barberTimeZone || 'America/New_York'}
+              onEventClick={handleEventClick}
+              onShowMonth={() => setShowMonth(true)}
+            />
+          )}
+
+          {userRole === 'barber' && showMonth && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={showTodayAgenda}
+              style={[tw`mx-5 mb-4 py-3 rounded-full items-center`, { backgroundColor: `${colors.primary}20`, borderWidth: 1, borderColor: `${colors.primary}30` }]}
+            >
+              <Text style={[tw`font-semibold`, { color: colors.primary }]}>Back to today</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Single Main Calendar Container - Enhanced with glow */}
+          {!showAgenda && (
           <Animated.View 
             style={[
               tw`mx-5 mb-6 p-6 rounded-3xl`,
@@ -683,6 +713,7 @@ export default function CalendarPage() {
               formatTime={formatTime}
             />
           </Animated.View>
+          )}
       </ScrollView>
       </Animated.View>
 

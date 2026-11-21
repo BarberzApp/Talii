@@ -7,7 +7,7 @@ import tw from 'twrnc';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../shared/components/theme';
 import { RootStackParamList } from '../shared/types';
-import BookingForm from '../shared/components/BookingForm';
+import BookingForm, { type BookedSummary } from '../shared/components/BookingForm';
 
 type BookingPageNavigationProp = NativeStackNavigationProp<RootStackParamList, 'BookingCalendar'>;
 type BookingPageRouteProp = RouteProp<RootStackParamList, 'BookingCalendar'>;
@@ -21,9 +21,9 @@ export default function BookingCalendarPage() {
     const [showBookingForm, setShowBookingForm] = useState(false);
 
     // BookingForm has already shown the outcome; go straight to the success screen.
-    const handleBookingCreated = () => {
+    const handleBookingCreated = (_booking: unknown, summary: BookedSummary) => {
         setShowBookingForm(false);
-        navigation.navigate('BookingSuccess');
+        navigation.navigate('BookingSuccess', summary);
     };
 
     return (
