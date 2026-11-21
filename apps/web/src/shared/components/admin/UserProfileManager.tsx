@@ -31,7 +31,10 @@ import {
   Calendar,
 } from 'lucide-react'
 import { api, errorMessage } from '@/shared/lib/api'
+import type { AdminUser } from '@barber-app/shared'
 import { logger } from '@/shared/lib/logger'
+
+const SEARCH_PAGE_SIZE = 10
 
 interface UserProfile {
   id: string
@@ -52,12 +55,42 @@ export function UserProfileManager() {
   const [searchTerm, setSearchTerm] = useState('')
   const [searching, setSearching] = useState(false)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [results, setResults] = useState<AdminUser[]>([])
+  const [resultsTotal, setResultsTotal] = useState(0)
   const [deletingPhoto, setDeletingPhoto] = useState<string | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [photoToDelete, setPhotoToDelete] = useState<{ type: string; url: string; id?: string } | null>(null)
   const { toast } = useToast()
 
-  const searchUser = async () => {
+  /** Loads one user's photos: portfolio and cover photo come from the public barber profile (listed barbers only). */
+  const selectUser = async (profile: AdminUser) => {
+    let barberData: UserProfile['barber'] = undefined
+    let coverPhoto: string | null = null
+    if (profile.barber) {
+      barberData = { id: profile.barber.id, portfolio: [] }
+      try {
+        const pub = await api.barbers.get(profile.barber.id)
+        barberData.portfolio = pub.barber.portfolio
+        coverPhoto = pub.profile.cover_photo_url
+      } catch {
+        // Unlisted or suspended: not readable through the public route.
+      }
+    }
+    setUserProfile({
+      id: profile.id,
+      name: profile.name || profile.username,
+      email: profile.email ?? '',
+      phone: profile.phone,
+      role: profile.role,
+      avatar_url: profile.avatar_url,
+      cover_photo_url: coverPhoto,
+      created_at: profile.created_at,
+      barber: barberData,
+    })
+  }
+
+  /** GET /api/admin/users?q= (name, username or email), paged; one match opens directly. */
+  const searchUser = async (more = false) => {
     if (!searchTerm.trim()) {
       toast({
         title: 'Search Required',
@@ -69,50 +102,24 @@ export function UserProfileManager() {
 
     setSearching(true)
     try {
-      // GET /api/admin/users?q= matches name, username or email.
-      const { users } = await api.admin.listUsers({ q: searchTerm.trim(), limit: 1 })
-      const profile = users[0]
+      const offset = more ? results.length : 0
+      const { users, pagination } = await api.admin.listUsers({ q: searchTerm.trim(), limit: SEARCH_PAGE_SIZE, offset })
+      const all = more ? [...results, ...users] : users
+      setResults(all)
+      setResultsTotal(pagination.total)
 
-      if (!profile) {
-        toast({
-          title: 'User Not Found',
-          description: 'No user found with that name, username or email',
-          variant: 'destructive',
-        })
+      if (!more) {
         setUserProfile(null)
-        return
-      }
-
-      // Portfolio and cover photo come from the public barber profile (listed barbers only).
-      let barberData: UserProfile['barber'] = undefined
-      let coverPhoto: string | null = null
-      if (profile.barber) {
-        barberData = { id: profile.barber.id, portfolio: [] }
-        try {
-          const pub = await api.barbers.get(profile.barber.id)
-          barberData.portfolio = pub.barber.portfolio
-          coverPhoto = pub.profile.cover_photo_url
-        } catch {
-          // Unlisted or suspended: not readable through the public route.
+        if (users.length === 0) {
+          toast({
+            title: 'User Not Found',
+            description: 'No user found with that name, username or email',
+            variant: 'destructive',
+          })
+        } else if (pagination.total === 1) {
+          await selectUser(users[0])
         }
       }
-
-      setUserProfile({
-        id: profile.id,
-        name: profile.name || profile.username,
-        email: profile.email ?? '',
-        phone: profile.phone,
-        role: profile.role,
-        avatar_url: profile.avatar_url,
-        cover_photo_url: coverPhoto,
-        created_at: profile.created_at,
-        barber: barberData,
-      })
-
-      toast({
-        title: 'User Found',
-        description: `Found profile for ${profile.name || profile.username}`,
-      })
     } catch (error) {
       logger.error('Error searching user', error)
       toast({
@@ -211,7 +218,7 @@ export function UserProfileManager() {
               />
             </div>
             <Button
-              onClick={searchUser}
+              onClick={() => searchUser()}
               disabled={searching}
               className="bg-secondary text-primary hover:bg-secondary/90"
             >
@@ -228,6 +235,31 @@ export function UserProfileManager() {
               )}
             </Button>
           </div>
+
+          {/* Search results (pick one) */}
+          {results.length > 1 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-white/60 text-sm">{resultsTotal} matches</p>
+              {results.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => selectUser(u)}
+                  className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors ${
+                    userProfile?.id === u.id ? 'border-white/40 bg-white/10' : 'border-white/10 hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-white font-medium">{u.name || u.username}</span>
+                  <span className="text-white/50"> @{u.username} · {u.email ?? 'no email'} · {u.role}</span>
+                </button>
+              ))}
+              {results.length < resultsTotal && (
+                <Button variant="outline" size="sm" onClick={() => searchUser(true)} disabled={searching} className="border-white/20 text-white">
+                  Load more
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* User Profile Display */}
           {userProfile && (

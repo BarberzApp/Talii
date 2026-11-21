@@ -16,7 +16,7 @@ import { supabase } from '@/shared/lib/supabase'
 import React from "react"
 import { Loader2 } from "lucide-react"
 import { logger } from '@/shared/lib/logger'
-import { PENDING_ROLE_KEY } from '@/shared/lib/redirect-utils'
+import { setPendingSignupRole } from '@/shared/lib/redirect-utils'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -118,11 +118,7 @@ export default function RegisterPage() {
     // The callback turns the new account into a barber when that role was chosen
     // (the profile itself is created by the database on first sign-in). Kept out
     // of the redirect URL so it still matches Supabase's allow-list exactly.
-    try {
-      window.localStorage.setItem(PENDING_ROLE_KEY, role)
-    } catch {
-      // storage unavailable: the account stays a client and can switch in onboarding
-    }
+    setPendingSignupRole(role)
     
     logger.debug('Using redirect URL for Google signup', { redirectUrl })
     

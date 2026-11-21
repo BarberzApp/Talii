@@ -8,7 +8,8 @@ interface EnhancedCalendarEventsPanelProps {
   selectedDate: Date
   events: CalendarEvent[]
   onEventClick: (event: CalendarEvent) => void
-  formatTime: (date: Date) => string
+  /** Start time of an event, in its barber's time zone. */
+  formatTime: (event: CalendarEvent) => string
 }
 
 export function EnhancedCalendarEventsPanel({
@@ -82,7 +83,7 @@ export function EnhancedCalendarEventsPanel({
                         )}
                       />
                       <span className="font-medium">
-                        {formatTime(new Date(event.start))}
+                        {formatTime(event)}
                       </span>
                     </div>
                   </div>

@@ -8,10 +8,9 @@ import { Loader2, Calendar, DollarSign, User, Clock, TrendingUp, TrendingDown, S
 import { useToast } from '@/shared/components/ui/use-toast'
 import { LoadingSpinner } from '@/shared/components/ui/loading-spinner'
 import { GlassyCard } from '@/shared/components/ui/glassy-card'
-import { format } from 'date-fns'
 import { logger } from '@/shared/lib/logger'
 import { api, errorMessage } from '@/shared/lib/api'
-import { formatCents, type EarningsResponse } from '@barber-app/shared'
+import { formatBookingDate, formatBookingTime, formatCents, type EarningsResponse } from '@barber-app/shared'
 
 interface PaymentHistoryProps {
   barberId: string
@@ -41,6 +40,7 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
   const { toast } = useToast()
+  const [timeZone, setTimeZone] = useState('America/New_York')
 
   const loadPayments = async (pageNum: number = 0) => {
     try {
@@ -99,6 +99,10 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
   }
 
   useEffect(() => {
+    api.me
+      .get()
+      .then((me) => me.barber?.timezone && setTimeZone(me.barber.timezone))
+      .catch(() => undefined)
     loadPayments()
     loadEarningsData()
   }, [barberId])
@@ -111,13 +115,9 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
 
   const formatCurrency = (cents: number) => formatCents(cents)
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'MMM dd, yyyy')
-  }
-
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), 'h:mm a')
-  }
+  // Appointment times in the barber's time zone (barbers.timezone).
+  const formatDate = (iso: string) => formatBookingDate(iso, timeZone)
+  const formatTime = (iso: string) => formatBookingTime(iso, timeZone)
 
   const getStatusBadge = (status: string) => {
     switch (status) {

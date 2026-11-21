@@ -24,7 +24,7 @@ import {
 } from '@barber-app/shared'
 import { api, bookingErrorMessage, errorMessage, hasErrorCode } from '@/shared/lib/api'
 import { storeRedirectUrl } from '@/shared/lib/redirect-utils'
-import { BookingPayment } from '@/shared/components/payment/booking-payment'
+import { BookingPayment, paymentIntentStatus } from '@/shared/components/payment/booking-payment'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
 import { CalendarIcon, Clock, User, CreditCard, Loader2, MapPin, Scissors, Star, ChevronLeft, ChevronRight, X, CheckCircle, ArrowRight, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
@@ -68,6 +68,8 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
   const [date, setDate] = useState<Date>(selectedDate)
   const [currentMonth, setCurrentMonth] = useState<Date>(selectedDate ? new Date(selectedDate) : new Date())
   const [payment, setPayment] = useState<PendingPayment | null>(null)
+  /** confirmPayment is in flight: the dialog cannot be closed and the hold is not released. */
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false)
   
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
@@ -194,11 +196,20 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
     }
   }
 
-  /** Leaving the payment step releases the held slot (an unpaid hold is cancelled without a charge). */
+  /**
+   * Leaving the payment step releases the held slot, unless the client has in
+   * fact paid (or the payment is still processing): then the booking stands and
+   * the success page takes over.
+   */
   const abandonPayment = async () => {
     const pending = payment
+    if (!pending || paymentSubmitting) return
     setPayment(null)
-    if (!pending) return
+    const status = await paymentIntentStatus(pending.clientSecret)
+    if (status === 'succeeded' || status === 'processing') {
+      router.push(`/booking/success?booking_id=${encodeURIComponent(pending.bookingId)}`)
+      return
+    }
     try {
       await api.bookings.cancel(pending.bookingId, 'Payment abandoned')
     } catch (error) {
@@ -208,6 +219,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
   }
 
   const handleClose = () => {
+    if (paymentSubmitting) return // never close mid-confirmation
     if (payment) void abandonPayment()
     onClose()
   }
@@ -582,6 +594,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                  clientSecret={payment.clientSecret}
                  amountCents={payment.amountCents}
                  onCancel={() => void abandonPayment()}
+                 onSubmittingChange={setPaymentSubmitting}
                />
              </div>
            )}

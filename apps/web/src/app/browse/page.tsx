@@ -75,6 +75,10 @@ type Barber = {
   rating?: number
 }
 
+const PAGE_SIZE = 24
+/** GET /api/barbers stops nearby paging at the 200 nearest. */
+const NEARBY_MAX = 200
+
 type SortOption = 'name' | 'rating' | 'location' | 'price' | 'distance'
 type SortOrder = 'asc' | 'desc'
 
@@ -89,6 +93,9 @@ export default function BrowsePage() {
   const { user } = useAuth()
   const [barbers, setBarbers] = useState<Barber[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filteredBarbers, setFilteredBarbers] = useState<Barber[]>([])
@@ -233,28 +240,24 @@ export default function BrowsePage() {
     return Array.from(locations).sort()
   }, [barbers])
 
+  // Search is sent to the server, debounced.
   useEffect(() => {
-    fetchBarbers()
-  }, [locationFilter.useCurrentLocation, userLocation?.lat, userLocation?.lng, locationFilter.range])
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  useEffect(() => {
+    fetchBarbers(true)
+  }, [debouncedQuery, locationFilter.useCurrentLocation, userLocation?.lat, userLocation?.lng, locationFilter.range])
 
   useEffect(() => {
     // Filter and sort barbers
     let filtered = barbers.filter(barber => {
       if (!barber.isPublic) return false // Only show public profiles
       
-      // Search query filter
-      const query = searchQuery.toLowerCase()
-      const matchesSearch = !searchQuery || (
-        barber.name.toLowerCase().includes(query) ||
-        barber.businessName?.toLowerCase().includes(query) ||
-        barber.location?.toLowerCase().includes(query) ||
-        barber.city?.toLowerCase().includes(query) ||
-        barber.state?.toLowerCase().includes(query) ||
-        barber.specialties.some(specialty => 
-          specialty.toLowerCase().includes(query)
-        ) ||
-        barber.bio?.toLowerCase().includes(query)
-      )
+      // Text search happens on the server (q); the specialty, city/state and
+      // distance filters below narrow the loaded results.
+      const matchesSearch = true
 
       // Specialty filter
       const matchesSpecialties = selectedSpecialties.length === 0 || 
@@ -332,22 +335,32 @@ export default function BrowsePage() {
   }, [barbers, searchQuery, sortBy, sortOrder, selectedSpecialties, priceRange, locationFilter, userLocation])
 
   /**
-   * GET /api/barbers: listed barbers only. With "use current location" the
-   * server returns barbers within the range, nearest first (distance_miles).
+   * GET /api/barbers: listed barbers only, searched on the server (`q` matches
+   * business name, name, username, city and state) and paged with offset. With
+   * "use current location" the server returns barbers within the range, nearest
+   * first (distance_miles; nearby results stop at 200).
    */
-  const fetchBarbers = async () => {
+  const fetchBarbers = async (reset = true) => {
     try {
-      setLoading(true)
+      if (reset) setLoading(true)
+      else setLoadingMore(true)
       setError(null)
 
+      const offset = reset ? 0 : barbers.length
       const nearby = locationFilter.useCurrentLocation && userLocation
-      const { barbers: cards } = await api.barbers.list(
+      const limit = nearby ? Math.min(PAGE_SIZE, NEARBY_MAX - offset) : PAGE_SIZE
+      if (limit <= 0) {
+        setHasMore(false)
+        return
+      }
+      const q = debouncedQuery.trim() || undefined
+      const { barbers: cards, pagination } = await api.barbers.list(
         nearby
-          ? { lat: userLocation.lat, lng: userLocation.lng, radiusMiles: Math.min(locationFilter.range, 100), limit: 100 }
-          : { limit: 100 }
+          ? { lat: userLocation.lat, lng: userLocation.lng, radiusMiles: Math.min(locationFilter.range, 100), q, limit, offset }
+          : { q, limit, offset }
       )
 
-      const combinedBarbers: Barber[] = cards.map(card => ({
+      const page: Barber[] = cards.map(card => ({
         id: card.id,
         name: card.name || card.business_name || 'Unknown',
         username: card.username,
@@ -363,7 +376,8 @@ export default function BrowsePage() {
         rating: card.rating.average_rating ?? undefined,
       }))
 
-      setBarbers(combinedBarbers)
+      setBarbers(prev => (reset ? page : [...prev, ...page]))
+      setHasMore(pagination.hasMore && (!nearby || offset + cards.length < NEARBY_MAX))
     } catch (err) {
       logger.error('Error fetching barbers', err)
       setError('Failed to load barbers. Please try again.')
@@ -374,6 +388,7 @@ export default function BrowsePage() {
       })
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
 
@@ -811,6 +826,14 @@ export default function BrowsePage() {
                   className="hover:-translate-y-2 transition-all duration-300"
                 />
               ))}
+            </div>
+          )}
+
+          {!error && hasMore && (
+            <div className="flex justify-center mt-10">
+              <Button variant="outline" onClick={() => fetchBarbers(false)} disabled={loadingMore} className="rounded-xl px-8">
+                {loadingMore ? 'Loading…' : 'Load more barbers'}
+              </Button>
             </div>
           )}
 

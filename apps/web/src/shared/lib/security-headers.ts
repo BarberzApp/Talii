@@ -9,36 +9,46 @@ function originOf(url: string | undefined): string | null {
   }
 }
 
+/** Sentry's ingest origin from the DSN (https://<key>@<host>/<project>), or null. */
+function sentryOrigin(dsn: string | undefined): string | null {
+  if (!dsn) return null
+  try {
+    const url = new URL(dsn)
+    return `${url.protocol}//${url.host}`
+  } catch {
+    return null
+  }
+}
+
+// Stripe's CSP guidance for Stripe.js and the Payment Element (incl. 3-D Secure frames).
+const STRIPE_SCRIPT = ['https://js.stripe.com', 'https://*.js.stripe.com']
+const STRIPE_FRAME = ['https://js.stripe.com', 'https://*.js.stripe.com', 'https://hooks.stripe.com', 'https://m.stripe.network']
+const STRIPE_CONNECT = ['https://api.stripe.com', 'https://m.stripe.network']
+
 /**
- * Content-Security-Policy for the pages. Allows this app, the Supabase project
- * (auth, storage, and its websocket), and Stripe.js / the Payment Element.
+ * Content-Security-Policy for the pages. Allows this app, the configured
+ * Supabase project (auth, storage and its websocket), Stripe.js / the Payment
+ * Element, and the Sentry ingest host of the configured DSN (Replay runs in a
+ * blob: worker).
  */
 export function contentSecurityPolicy(): string {
   const isDev = process.env.NODE_ENV === 'development'
   const supabase = originOf(process.env.NEXT_PUBLIC_SUPABASE_URL)
   const supabaseWs = supabase ? supabase.replace(/^http/, 'ws') : null
+  const sentry = sentryOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN)
 
-  const connect = [
-    "'self'",
-    'https://*.supabase.co',
-    'wss://*.supabase.co',
-    supabase,
-    supabaseWs,
-    'https://api.stripe.com',
-    'https://m.stripe.network',
-    'https://*.ingest.sentry.io',
-    'https://*.ingest.us.sentry.io',
-  ].filter(Boolean)
+  const connect = ["'self'", supabase, supabaseWs, ...STRIPE_CONNECT, sentry].filter(Boolean)
 
   return [
     "default-src 'self'",
     // Next.js dev (React refresh, eval source maps) needs 'unsafe-eval'; production does not.
-    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} ${STRIPE_SCRIPT.join(' ')}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:" + (supabase && supabase.startsWith('http:') ? ` ${supabase}` : ''),
     `connect-src ${[...new Set(connect)].join(' ')}`,
-    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+    `frame-src 'self' ${STRIPE_FRAME.join(' ')}`,
+    "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

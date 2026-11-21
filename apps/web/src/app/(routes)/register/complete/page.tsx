@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/shared/hooks/use-auth-zustand"
+import { browserTimeZone } from "@/shared/lib/redirect-utils"
 import { api, errorMessage } from "@/shared/lib/api"
 import { useAuthStore } from "@/shared/stores/auth-store"
 import { Card, CardContent } from "@/shared/components/ui/card"
@@ -53,7 +54,7 @@ export default function RegisterCompletePage() {
         await api.me.update({ username: form.username })
       }
       if (form.role === 'barber' && user.role !== 'barber') {
-        await api.me.becomeBarber({})
+        await api.me.becomeBarber({ timezone: browserTimeZone() })
       }
       await fetchUserProfile(user.id)
     } catch (error) {

@@ -10,74 +10,18 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User, DollarSign, Grid, Calendar, Scissors, Mail, Phone } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
-import { api } from '@/shared/lib/api';
-import type { BookingListItem } from '@barber-app/shared';
 import { useAuth } from '@/shared/hooks/use-auth-zustand';
 import { logger } from '@/shared/lib/logger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog';
 import { Badge } from '@/shared/components/ui/badge';
 import { EnhancedCalendar } from '@/shared/components/calendar/enhanced-calendar';
 
-interface CalendarEvent {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  backgroundColor: string;
-  borderColor: string;
-  textColor: string;
-  extendedProps: {
-    status: string;
-    serviceName: string;
-    clientName?: string;
-    barberName?: string;
-    price: number;
-    basePrice: number;
-    addons: { name: string; price: number }[];
-    isGuest: boolean;
-    guestEmail: string;
-    guestPhone: string;
-    isBarberView: boolean;
-  };
-}
-
-/** Prices in dollars for display; times are instants (FullCalendar shows them in the browser zone). */
-function toEvent(booking: BookingListItem, isBarberView: boolean): CalendarEvent {
-  const clientName = booking.client?.name || booking.customer_name || 'Walk-in';
-  const barberName = booking.barber?.profile?.name || booking.barber?.business_name || 'Barber';
-  const serviceName = booking.service?.name || 'Service';
-  return {
-    id: booking.id,
-    title: isBarberView ? `${serviceName} - ${clientName}` : `${serviceName} with ${barberName}`,
-    start: booking.starts_at,
-    end: booking.ends_at,
-    backgroundColor: 'hsl(var(--secondary))',
-    borderColor: 'hsl(var(--secondary))',
-    textColor: '#FFFFFF',
-    extendedProps: {
-      status: booking.status,
-      serviceName,
-      clientName: isBarberView ? clientName : undefined,
-      barberName: isBarberView ? undefined : barberName,
-      price: (booking.service_price_cents + booking.addon_total_cents) / 100,
-      basePrice: booking.service_price_cents / 100,
-      addons: booking.addons.map((a) => ({ name: a.name, price: a.price_cents / 100 })),
-      isGuest: !booking.client_id,
-      guestEmail: '',
-      guestPhone: '',
-      isBarberView,
-    },
-  };
-}
-
 export default function BarberCalendar() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [eventCount, setEventCount] = useState<number | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
   const [view, setView] = useState('timeGridWeek');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [mounted, setMounted] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [showEventDialog, setShowEventDialog] = useState(false);
   const [userRole, setUserRole] = useState<'barber' | 'client' | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -87,48 +31,13 @@ export default function BarberCalendar() {
     logger.debug('Barber calendar page loaded/reloaded');
   }, []);
 
+  // EnhancedCalendar loads the bookings for the visible month (GET /api/bookings with from/to)
+  // and reports how many it found, for the empty state below.
   useEffect(() => {
     if (!user) return;
-    logger.debug('Fetching bookings for user', { userId: user.id });
-    
-    const fetchBookings = async () => {
-      setLoading(true);
-      try {
-        const isBarber = user.role === 'barber';
-        setUserRole(isBarber ? 'barber' : 'client');
-        // Paid or fee-free bookings that are booked (no unpaid holds).
-        const { bookings } = await api.bookings.list({
-          as: isBarber ? 'barber' : 'client',
-          status: ['confirmed', 'completed', 'no_show'],
-          order: 'asc',
-          limit: 100,
-        });
-        setEvents(bookings.map((booking) => toEvent(booking, isBarber)));
-      } catch (error) {
-        logger.error('Error fetching bookings', error);
-        setEvents([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchBookings();
+    setUserRole(user.role === 'barber' ? 'barber' : 'client');
+    setLoading(false);
   }, [user]);
-
-  const handleEventClick = (info: any) => {
-    const event = info.event;
-    setSelectedEvent({
-      id: event.id,
-      title: event.title,
-      start: event.start.toISOString(),
-      end: event.end.toISOString(),
-      backgroundColor: event.backgroundColor,
-      borderColor: event.borderColor,
-      textColor: event.textColor,
-      extendedProps: event.extendedProps
-    });
-    setShowEventDialog(true);
-  };
 
   const handleViewChange = (newView: string) => {
     setView(newView);
@@ -342,23 +251,6 @@ export default function BarberCalendar() {
     }
   `;
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   if (!mounted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -404,8 +296,8 @@ export default function BarberCalendar() {
               </div>
             ) : (
               <div className="w-full">
-                <EnhancedCalendar />
-                {events.length === 0 && !loading && (
+                <EnhancedCalendar onEventsLoaded={setEventCount} />
+                {eventCount === 0 && !loading && (
                   <div className="mt-8 text-center animate-fade-in">
                     <p className="text-foreground/40 font-bebas text-xl tracking-widest italic opacity-50">
                       Currently no scheduled appointments
@@ -425,78 +317,6 @@ export default function BarberCalendar() {
         </div>
       </div>
 
-      {showEventDialog && selectedEvent && (
-         <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
-          <DialogContent className="max-w-md w-full max-h-[85vh] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl p-10 overflow-hidden ring-1 ring-white/10">
-            <DialogHeader className="flex-shrink-0 space-y-2 mb-8">
-              <DialogTitle className="text-5xl font-bebas text-foreground tracking-wider leading-none">
-                {selectedEvent.extendedProps.isBarberView ? 'Client Session' : 'Premium Booking'}
-              </DialogTitle>
-              <DialogDescription className="text-foreground/40 text-sm font-medium italic uppercase tracking-widest pl-1">
-                {selectedEvent.title}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6 overflow-y-auto flex-1 max-h-[55vh] pr-2 custom-scrollbar">
-              <div className="rounded-[2rem] p-6 bg-foreground/[0.03] border border-foreground/5 space-y-4">
-                <div className="flex items-center justify-between py-2 border-b border-foreground/5">
-                  <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Service</span>
-                  <span className="text-foreground font-bold tracking-tight">{selectedEvent.extendedProps.serviceName}</span>
-                </div>
-                
-                {selectedEvent.extendedProps.isBarberView ? (
-                  <div className="flex items-center justify-between py-2 border-b border-foreground/5">
-                    <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Client</span>
-                    <span className="text-foreground font-bold tracking-tight">{selectedEvent.extendedProps.clientName}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between py-2 border-b border-foreground/5">
-                    <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Artisan</span>
-                    <span className="text-foreground font-bold tracking-tight">{selectedEvent.extendedProps.barberName}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between py-2 border-b border-foreground/5">
-                  <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Status</span>
-                  <Badge variant="secondary" className="bg-secondary/10 text-secondary border-none uppercase text-[8px] font-black px-2">{selectedEvent.extendedProps.status}</Badge>
-                </div>
-
-                <div className="flex items-center justify-between py-2 border-b border-foreground/5">
-                  <span className="text-foreground/40 text-[10px] font-black uppercase tracking-widest">Timing</span>
-                  <span className="text-foreground font-bold tracking-tight">{formatTime(new Date(selectedEvent.start))} - {formatTime(new Date(selectedEvent.end))}</span>
-                </div>
-              </div>
-
-              <div className="rounded-[2rem] p-6 bg-secondary/5 border border-secondary/10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-foreground font-bebas text-2xl tracking-wide opacity-80 uppercase">Total Worth</span>
-                  <span className="text-secondary font-bold text-4xl tracking-tighter">${selectedEvent.extendedProps.price?.toFixed(2)}</span>
-                </div>
-                {selectedEvent.extendedProps.addons && selectedEvent.extendedProps.addons.length > 0 && (
-                  <div className="space-y-2 mt-4 pt-4 border-t border-secondary/10">
-                    <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-2">Enabled Enhancements</p>
-                    {selectedEvent.extendedProps.addons.map((addon, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm">
-                        <span className="text-foreground/60 font-medium italic">{addon.name}</span>
-                        <span className="text-secondary font-bold">+${addon.price?.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <DialogFooter className="mt-8">
-              <Button
-                onClick={() => setShowEventDialog(false)}
-                className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90 font-bold py-8 rounded-2xl text-xl transition-all active:scale-95 shadow-xl shadow-secondary/20"
-              >
-                Close Details
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
 
       <style dangerouslySetInnerHTML={{ __html: customStyles }} />
     </div>

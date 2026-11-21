@@ -120,13 +120,15 @@ function seg(value: string): string {
   return encodeURIComponent(value)
 }
 
-async function parseBody(res: Response): Promise<unknown> {
-  const text = await res.text()
+const NOT_JSON = Symbol('not-json')
+
+/** The parsed JSON body; undefined when empty, NOT_JSON when the body is not JSON. */
+function parseText(text: string): unknown {
   if (text.length === 0) return undefined
   try {
     return JSON.parse(text)
   } catch {
-    return undefined
+    return NOT_JSON
   }
 }
 
@@ -178,18 +180,10 @@ export function createApiClient(options: ApiClientOptions) {
     const timer = controller && timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null
 
     const doFetch = options.fetch ?? fetch
-    let res: Response
-    try {
-      res = await doFetch(`${baseUrl}${path}${buildQuery(opts.query)}`, {
-        method,
-        headers,
-        body: hasBody ? JSON.stringify(opts.body) : undefined,
-        signal: controller?.signal,
-      })
-    } catch {
+    const failure = (): ApiError => {
       const aborted = !!controller?.signal.aborted
       const byCaller = !!opts.signal?.aborted
-      throw new ApiError(
+      return new ApiError(
         0,
         byCaller ? 'ABORTED' : aborted ? 'TIMEOUT' : 'NETWORK_ERROR',
         byCaller
@@ -198,14 +192,32 @@ export function createApiClient(options: ApiClientOptions) {
             ? 'The server took too long to respond. Please try again.'
             : 'Could not reach the server. Check your connection and try again.'
       )
+    }
+
+    // The timeout (and the caller's signal) covers the whole exchange, body included.
+    let res: Response
+    let text: string
+    try {
+      res = await doFetch(`${baseUrl}${path}${buildQuery(opts.query)}`, {
+        method,
+        headers,
+        body: hasBody ? JSON.stringify(opts.body) : undefined,
+        signal: controller?.signal,
+      })
+      text = res.status === 204 ? '' : await res.text()
+    } catch {
+      throw failure()
     } finally {
       if (timer) clearTimeout(timer)
       opts.signal?.removeEventListener('abort', onAbort)
     }
 
     if (res.status === 204) return undefined as T
-    const body = await parseBody(res)
-    if (!res.ok) throw toApiError(res.status, res.statusText, body)
+    const body = parseText(text)
+    if (!res.ok) throw toApiError(res.status, res.statusText, body === NOT_JSON ? undefined : body)
+    if (body === NOT_JSON) {
+      throw new ApiError(res.status, 'INVALID_RESPONSE', 'The server sent an unexpected response. Please try again.')
+    }
     return body as T
   }
 

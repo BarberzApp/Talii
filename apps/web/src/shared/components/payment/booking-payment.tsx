@@ -8,7 +8,7 @@ import { Button } from '@/shared/components/ui/button'
 import { formatCents } from '@barber-app/shared'
 
 let stripePromise: Promise<Stripe | null> | null = null
-function getStripe() {
+export function getStripe() {
   if (!stripePromise) {
     const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
     stripePromise = key ? loadStripe(key) : Promise.resolve(null)
@@ -27,6 +27,24 @@ interface BookingPaymentProps {
   clientSecret: string
   amountCents: number
   onCancel: () => void
+  /** True while confirmPayment is in flight; the parent must not release the hold meanwhile. */
+  onSubmittingChange?: (submitting: boolean) => void
+}
+
+/**
+ * The PaymentIntent's status as Stripe reports it to the browser, or null when it
+ * cannot be read. Used before releasing a hold: a succeeded or processing intent
+ * means the client paid (or is paying), so the booking must not be cancelled.
+ */
+export async function paymentIntentStatus(clientSecret: string): Promise<string | null> {
+  try {
+    const stripe = await getStripe()
+    if (!stripe) return null
+    const { paymentIntent } = await stripe.retrievePaymentIntent(clientSecret)
+    return paymentIntent?.status ?? null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -34,7 +52,7 @@ interface BookingPaymentProps {
  * POST /api/bookings; confirming sends the browser to /booking/success, which
  * waits for the webhook to confirm the booking.
  */
-export function BookingPayment({ bookingId, clientSecret, amountCents, onCancel }: BookingPaymentProps) {
+export function BookingPayment({ bookingId, clientSecret, amountCents, onCancel, onSubmittingChange }: BookingPaymentProps) {
   if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
     return (
       <p className="text-sm text-red-500">
@@ -44,16 +62,35 @@ export function BookingPayment({ bookingId, clientSecret, amountCents, onCancel 
   }
   return (
     <Elements stripe={getStripe()} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
-      <PaymentForm bookingId={bookingId} amountCents={amountCents} onCancel={onCancel} />
+      <PaymentForm
+        bookingId={bookingId}
+        amountCents={amountCents}
+        onCancel={onCancel}
+        onSubmittingChange={onSubmittingChange}
+      />
     </Elements>
   )
 }
 
-function PaymentForm({ bookingId, amountCents, onCancel }: { bookingId: string; amountCents: number; onCancel: () => void }) {
+function PaymentForm({
+  bookingId,
+  amountCents,
+  onCancel,
+  onSubmittingChange,
+}: {
+  bookingId: string
+  amountCents: number
+  onCancel: () => void
+  onSubmittingChange?: (submitting: boolean) => void
+}) {
   const stripe = useStripe()
   const elements = useElements()
-  const [submitting, setSubmitting] = useState(false)
+  const [submitting, setSubmittingState] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const setSubmitting = (value: boolean) => {
+    setSubmittingState(value)
+    onSubmittingChange?.(value)
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

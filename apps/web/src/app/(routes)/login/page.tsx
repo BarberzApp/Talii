@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Scissors, Loader2, AlertCircle } from 'lucide-react'
 import { supabase } from '@/shared/lib/supabase'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
-import { getAndClearRedirectUrl } from '@/shared/lib/redirect-utils'
+import { clearPendingSignupRole, getAndClearRedirectUrl } from '@/shared/lib/redirect-utils'
 import { getRedirectPath } from '@/shared/hooks/use-auth-zustand'
 import { logger } from '@/shared/lib/logger'
 
@@ -99,6 +99,8 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setError(null)
+    // Signing in, not signing up: a role left over from the sign-up page must not apply.
+    clearPendingSignupRole()
     try {
       logger.debug('Starting Google OAuth login')
       

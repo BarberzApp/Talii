@@ -6,7 +6,7 @@ import { WeeklySchedule } from './weekly-schedule'
 import { SpecialHoursManager, type SpecialHours } from './special-hours-manager'
 
 import { api, errorMessage } from '@/shared/lib/api'
-import type { SpecialHoursRow } from '@barber-app/shared'
+import { localDateInTimeZone, type SpecialHoursRow } from '@barber-app/shared'
 import { toast } from 'sonner'
 import { Loader2, Calendar, Clock, Settings, Sparkles } from 'lucide-react'
 import { Card, CardContent } from '@/shared/components/ui/card'
@@ -53,7 +53,9 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
   const fetchAvailability = async () => {
     try {
       setLoading(true)
-      const today = new Date().toISOString().slice(0, 10)
+      // "Today" in the barber's time zone, not UTC.
+      const me = await api.me.get()
+      const today = localDateInTimeZone(new Date(), me.barber?.timezone ?? 'America/New_York')
       const [{ availability: week }, { specialHours: overrides }] = await Promise.all([
         api.schedule.getWeek(),
         api.schedule.listSpecialHours({ from: today }),
@@ -84,7 +86,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
       )
       if (result.bookingsOutsideHours.length > 0) {
         toast.warning(
-          `${result.bookingsOutsideHours.length} existing booking(s) fall outside these hours. They were not changed; cancel them from your calendar if needed.`
+          `${result.bookingsOutsideHours.length} existing booking(s) fall outside these hours and were kept. To cancel one, open it in your Calendar (the client's booking fee is refunded in full).`
         )
       } else {
         toast.success('Special hours saved')

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { browserTimeZone } from "@/shared/lib/redirect-utils";
 import { api, errorMessage } from "@/shared/lib/api";
 import { useAuth } from "@/shared/hooks/use-auth-zustand";
 import { useAuthStore } from "@/shared/stores/auth-store";
@@ -41,7 +42,7 @@ export default function SelectRolePage() {
     setError(null);
     try {
       if (role === "barber") {
-        await api.me.becomeBarber({});
+        await api.me.becomeBarber({ timezone: browserTimeZone() });
         if (user) await fetchUserProfile(user.id);
         safeReplace("/barber/onboarding");
       } else {

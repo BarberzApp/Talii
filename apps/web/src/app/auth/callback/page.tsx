@@ -8,7 +8,7 @@ import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import { logger } from '@/shared/lib/logger'
 import { api, hasErrorCode } from '@/shared/lib/api'
-import { PENDING_ROLE_KEY } from '@/shared/lib/redirect-utils'
+import { browserTimeZone, takePendingSignupRole } from '@/shared/lib/redirect-utils'
 import { useAuthStore } from '@/shared/stores/auth-store'
 
 export default function AuthCallbackPage() {
@@ -65,15 +65,11 @@ export default function AuthCallbackPage() {
 
         // Step 3: a barber sign-up through Google: the trigger made a client
         // profile (OAuth carries no role), so turn it into a barber now.
-        let pendingRole: string | null = null
-        try {
-          pendingRole = window.localStorage.getItem(PENDING_ROLE_KEY)
-          window.localStorage.removeItem(PENDING_ROLE_KEY)
-        } catch {
-          pendingRole = null
-        }
+        // Honoured only for a brand-new account created within minutes of choosing
+        // the role; read and cleared either way.
+        const pendingRole = takePendingSignupRole(me.profile.created_at)
         if (pendingRole === 'barber' && me.profile.role !== 'barber') {
-          await api.me.becomeBarber({})
+          await api.me.becomeBarber({ timezone: browserTimeZone() })
         }
 
         // Make the auth store pick up the (possibly new) role.

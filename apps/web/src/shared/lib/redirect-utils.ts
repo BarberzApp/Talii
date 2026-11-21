@@ -71,3 +71,59 @@ export const storeCurrentPageAsRedirect = () => {
 } 
 /** Role picked on the sign-up page before a Google OAuth redirect (read once by /auth/callback). */
 export const PENDING_ROLE_KEY = 'talii:pending-signup-role'
+
+/** A pending role is honoured only this soon after it was chosen. */
+export const PENDING_ROLE_MAX_AGE_MS = 10 * 60 * 1000
+
+type PendingRole = { role: 'barber' | 'client'; at: number }
+
+export function setPendingSignupRole(role: 'barber' | 'client'): void {
+  try {
+    window.localStorage.setItem(PENDING_ROLE_KEY, JSON.stringify({ role, at: Date.now() } satisfies PendingRole))
+  } catch {
+    // storage unavailable: the account stays a client and can switch in onboarding
+  }
+}
+
+export function clearPendingSignupRole(): void {
+  try {
+    window.localStorage.removeItem(PENDING_ROLE_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Reads and always clears the pending role. Returns it only when it was chosen
+ * within PENDING_ROLE_MAX_AGE_MS and the account was created after it was
+ * chosen (a brand-new sign-up), so a stale choice never promotes a later sign-in.
+ */
+export function takePendingSignupRole(profileCreatedAt: string, now: number = Date.now()): 'barber' | 'client' | null {
+  let pending: PendingRole | null = null
+  try {
+    const raw = window.localStorage.getItem(PENDING_ROLE_KEY)
+    const parsed = raw ? (JSON.parse(raw) as Partial<PendingRole>) : null
+    if (parsed && (parsed.role === 'barber' || parsed.role === 'client') && typeof parsed.at === 'number') {
+      pending = { role: parsed.role, at: parsed.at }
+    }
+  } catch {
+    pending = null
+  }
+  clearPendingSignupRole()
+  if (!pending) return null
+
+  const created = Date.parse(profileCreatedAt)
+  const fresh = now - pending.at >= 0 && now - pending.at <= PENDING_ROLE_MAX_AGE_MS
+  // Clock skew allowance of a minute between the browser and the database.
+  const justCreated = Number.isFinite(created) && created >= pending.at - 60_000 && now - created <= PENDING_ROLE_MAX_AGE_MS
+  return fresh && justCreated ? pending.role : null
+}
+
+/** The browser's IANA time zone, if it reports one. */
+export function browserTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+  } catch {
+    return undefined
+  }
+}

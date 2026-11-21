@@ -70,6 +70,8 @@ export default function ClientPortfolio() {
 
   const upcomingBookings = clientBookings
     .filter(b => (b.status === 'pending' || b.status === 'confirmed') && new Date(b.ends_at) > new Date())
+    // An unpaid hold whose time ran out no longer holds the slot.
+    .filter(b => !(b.status === 'pending' && b.hold_expires_at && Date.parse(b.hold_expires_at) <= Date.now()))
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
 
   // Past barbers from the client's bookings

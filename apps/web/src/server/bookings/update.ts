@@ -25,7 +25,8 @@ export interface BookingActionResult {
  *          started. A paid fee is refunded per `feeRefundDue` (policy.ts). An
  *          unpaid hold's PaymentIntent is cancelled so it cannot be paid
  *          afterwards; if it turns out to have been paid already, the booking
- *          is treated as paid.
+ *          is treated as paid and the fee is refunded in full whatever the
+ *          24-hour rule says: the client cancelled before seeing a confirmation.
  * complete owning barber only; booking confirmed and its start time passed.
  * no_show  same rules as complete.
  */
@@ -132,6 +133,10 @@ async function cancelBooking(
   let booking = initial
   let refund: Stripe.Refund | null = null
   let refundSettled = false // a full refund was issued, or found already complete, in this request
+  // The caller cancelled while the booking was still an unconfirmed hold. If the payment
+  // went through anyway (here or in the webhook meanwhile), they never saw a confirmation:
+  // always refund in full.
+  const cancelledBeforeConfirmation = initial.status === 'pending'
 
   for (let attempt = 0; attempt < MAX_CANCEL_ATTEMPTS; attempt++) {
     if (attempt > 0) {
@@ -161,7 +166,7 @@ async function cancelBooking(
 
     let paymentStatus = booking.payment_status
     if (paid) {
-      if (!refundSettled && feeRefundDue(cancelledBy, booking.starts_at, now)) {
+      if (!refundSettled && (cancelledBeforeConfirmation || feeRefundDue(cancelledBy, booking.starts_at, now))) {
         const paymentIntentId = booking.payment_intent_id as string
         const result = await callStripe('refunds.create', () =>
           refundPaymentIntentInFull(db, {

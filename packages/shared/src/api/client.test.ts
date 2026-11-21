@@ -183,3 +183,34 @@ test('typed helpers hit the documented routes', async () => {
   assert.deepEqual(JSON.parse(String(calls[0].init.body)), { action: 'cancel', reason: 'sick' })
   assert.equal(calls[4].init.body, undefined)
 })
+
+test('a 2xx body that is not JSON becomes ApiError INVALID_RESPONSE', async () => {
+  const { fn } = fakeFetch(() => new Response('<html>proxy page</html>', { status: 200 }))
+  const api = createApiClient({ baseUrl: '', getAccessToken: () => 't', fetch: fn })
+  const error = await api.me.get().catch((e) => e)
+  assert.ok(error instanceof ApiError)
+  assert.equal(error.status, 200)
+  assert.equal(error.code, 'INVALID_RESPONSE')
+})
+
+test('an empty 2xx body still resolves to undefined', async () => {
+  const { fn } = fakeFetch(() => new Response('', { status: 200 }))
+  const api = createApiClient({ baseUrl: '', getAccessToken: () => 't', fetch: fn })
+  assert.equal(await api.request('GET', '/api/anything'), undefined)
+})
+
+test('the timeout also covers reading the body', async () => {
+  const fn = ((_url: string, init: RequestInit) => {
+    // Headers arrive at once; the body never finishes until the request is aborted.
+    const body = new ReadableStream({
+      start(controller) {
+        init.signal?.addEventListener('abort', () => controller.error(new Error('aborted')))
+      },
+    })
+    return Promise.resolve(new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  }) as unknown as typeof fetch
+  const api = createApiClient({ baseUrl: '', getAccessToken: () => 't', fetch: fn, timeoutMs: 20 })
+  const error = await api.me.get().catch((e) => e)
+  assert.ok(error instanceof ApiError)
+  assert.equal(error.code, 'TIMEOUT')
+})

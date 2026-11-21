@@ -113,6 +113,8 @@ interface UserStats {
   regularBookings?: number
 }
 
+const ADMIN_PAGE_SIZE = 25
+
 export default function SuperAdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -120,6 +122,8 @@ export default function SuperAdminPage() {
   const [adminEmail, setAdminEmail] = useState('')
   const [barbers, setBarbers] = useState<Barber[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [barberTotal, setBarberTotal] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [userFilter, setUserFilter] = useState<'all' | 'developers' | 'regular'>('all')
   const [updatingBarber, setUpdatingBarber] = useState<string | null>(null)
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null)
@@ -147,7 +151,6 @@ export default function SuperAdminPage() {
   const user = useAuthStore((state) => state.user)
 
   const loadDashboard = () => {
-    fetchBarbers()
     fetchStats()
     checkSystemStatus()
   }
@@ -216,12 +219,22 @@ export default function SuperAdminPage() {
     }
   }
 
-  /** GET /api/admin/users?role=barber, shaped like the old barber rows this page renders. */
-  const fetchBarbers = async () => {
+  /**
+   * GET /api/admin/users?role=barber&q=, searched on the server (name, username,
+   * email) and paged; shaped like the old barber rows this page renders.
+   */
+  const fetchBarbers = async (reset = true) => {
     try {
-      const { users } = await api.admin.listUsers({ role: 'barber', limit: 100 })
-      setBarbers(
-        users.map((u): Barber => ({
+      if (!reset) setLoadingMore(true)
+      const offset = reset ? 0 : barbers.length
+      const { users, pagination } = await api.admin.listUsers({
+        role: 'barber',
+        q: searchTerm.trim() || undefined,
+        limit: ADMIN_PAGE_SIZE,
+        offset,
+      })
+      setBarberTotal(pagination.total)
+      const page = users.map((u): Barber => ({
           id: u.barber?.id ?? u.id,
           user_id: u.id,
           business_name: u.barber?.business_name ?? '',
@@ -239,7 +252,7 @@ export default function SuperAdminPage() {
             is_public: !u.barber?.listing_suspended,
           },
         }))
-      )
+      setBarbers(prev => (reset ? page : [...prev, ...page]))
     } catch (error) {
       logger.error('Error fetching barbers', error)
       toast({
@@ -247,8 +260,17 @@ export default function SuperAdminPage() {
         description: errorMessage(error, 'Failed to fetch barbers'),
         variant: 'destructive',
       })
+    } finally {
+      setLoadingMore(false)
     }
   }
+
+  // Search runs on the server, debounced.
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const timer = setTimeout(() => fetchBarbers(true), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm, isAuthenticated])
 
   /** GET /api/admin/stats?days=1 ("today" = the last 24 hours). Money in dollars for display. */
   const fetchStats = async () => {
@@ -386,13 +408,8 @@ export default function SuperAdminPage() {
     }).format(amount);
   };
 
+  // Text search is done by the server; this only applies the fee-exemption filter.
   const filteredBarbers = barbers.filter(barber => {
-    const matchesSearch = barber.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      barber.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      barber.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    if (!matchesSearch) return false
-    
     if (userFilter === 'developers') return barber.fee_exempt
     if (userFilter === 'regular') return !barber.fee_exempt
     return true
@@ -961,6 +978,18 @@ export default function SuperAdminPage() {
                   </CardContent>
                 </Card>
                 ))
+              )}
+              {barbers.length < barberTotal && (
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchBarbers(false)}
+                    disabled={loadingMore}
+                    className="border-white/20 text-white hover:bg-white/10"
+                  >
+                    {loadingMore ? 'Loading…' : `Load more (${barbers.length} of ${barberTotal})`}
+                  </Button>
+                </div>
               )}
             </div>
           </TabsContent>

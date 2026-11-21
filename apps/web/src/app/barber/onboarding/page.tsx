@@ -345,6 +345,55 @@ export default function BarberOnboardingPage() {
     }))
   }
 
+  /**
+   * Saves what has been entered so far: PATCH /api/me (profile + listing; the
+   * server geocodes city/state) and the services (update existing, create new,
+   * remove dropped). markComplete also sets onboardingComplete.
+   */
+  const persistOnboarding = async (markComplete: boolean) => {
+    const handle = (v: string) => (v ? extractHandle(v).replace(/^@/, '') : null)
+    let browserTimeZone: string | undefined
+    try {
+      browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+    } catch {
+      browserTimeZone = undefined
+    }
+
+    // PATCH /api/me: profile + barber listing (the server geocodes city/state).
+    await api.me.update({
+      phone: formData.phone || null,
+      businessName: formData.businessName || null,
+      bio: formData.bio || null,
+      specialties: formData.specialties,
+      city: formData.city || null,
+      state: formData.state || null,
+      instagram: handle(formData.socialMedia.instagram),
+      tiktok: handle(formData.socialMedia.tiktok),
+      ...(browserTimeZone ? { timezone: browserTimeZone } : {}),
+      ...(markComplete ? { onboardingComplete: true } : {}),
+    })
+
+    // Sync services: update existing, create new, remove dropped (removal
+    // deactivates a service that bookings reference).
+    if (user) {
+      const { services: existing } = await api.services.list()
+      const keep = new Set(formData.services.map((s) => s.id).filter(Boolean))
+      for (const service of formData.services) {
+        const body = {
+          name: service.name.trim(),
+          priceCents: Math.round(service.price * 100),
+          durationMinutes: Math.round(service.duration),
+        }
+        if (service.id) await api.services.update(service.id, { ...body, isActive: true })
+        else await api.services.create(body)
+      }
+      for (const old of existing) {
+        if (old.is_active && !keep.has(old.id)) await api.services.remove(old.id)
+      }
+    }
+
+  }
+
   const handleSubmit = async () => {
     if (!isRouterReady) {
       logger.debug('Router not ready, waiting');
@@ -363,47 +412,8 @@ export default function BarberOnboardingPage() {
 
     setLoading(true)
     try {
-      const handle = (v: string) => (v ? extractHandle(v).replace(/^@/, '') : null)
       const isLastStep = currentStep >= steps.length - 1
-      let browserTimeZone: string | undefined
-      try {
-        browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
-      } catch {
-        browserTimeZone = undefined
-      }
-
-      // PATCH /api/me: profile + barber listing (the server geocodes city/state).
-      await api.me.update({
-        phone: formData.phone || null,
-        businessName: formData.businessName || null,
-        bio: formData.bio || null,
-        specialties: formData.specialties,
-        city: formData.city || null,
-        state: formData.state || null,
-        instagram: handle(formData.socialMedia.instagram),
-        tiktok: handle(formData.socialMedia.tiktok),
-        ...(browserTimeZone ? { timezone: browserTimeZone } : {}),
-        ...(isLastStep ? { onboardingComplete: true } : {}),
-      })
-
-      // Sync services: update existing, create new, remove dropped (removal
-      // deactivates a service that bookings reference).
-      if (user) {
-        const { services: existing } = await api.services.list()
-        const keep = new Set(formData.services.map((s) => s.id).filter(Boolean))
-        for (const service of formData.services) {
-          const body = {
-            name: service.name.trim(),
-            priceCents: Math.round(service.price * 100),
-            durationMinutes: Math.round(service.duration),
-          }
-          if (service.id) await api.services.update(service.id, { ...body, isActive: true })
-          else await api.services.create(body)
-        }
-        for (const old of existing) {
-          if (old.is_active && !keep.has(old.id)) await api.services.remove(old.id)
-        }
-      }
+      await persistOnboarding(isLastStep)
 
       toast({
         title: 'Profile updated',
@@ -433,6 +443,8 @@ export default function BarberOnboardingPage() {
   const handleStripeConnect = async () => {
     try {
       setLoading(true);
+      // Keep what was entered: the Stripe redirect leaves this page.
+      await persistOnboarding(false);
       
       // GET /api/stripe/connect/status refreshes the flags from Stripe.
       const status = await api.connect.status();
@@ -461,32 +473,13 @@ export default function BarberOnboardingPage() {
     }
   };
 
+  /** "Skip for Now" (payments step): save everything like Continue does, then move on. */
   const handleSkip = async () => {
-    setLoading(true);
-    try {
-      toast({
-        title: 'Payment Setup Skipped',
-        description: 'You can set up payments later in your settings.',
-      });
-      
-      // Move to next step or complete
-      if (currentStep < steps.length - 1) {
-        logger.debug(`Moving to step ${currentStep + 1}`);
-        setCurrentStep(currentStep + 1);
-      } else {
-        logger.debug('Onboarding completed, redirecting to settings');
-        safePush('/settings');
-      }
-    } catch (error) {
-      logger.error('Error skipping step', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to skip step. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    toast({
+      title: 'Payment Setup Skipped',
+      description: 'You can set up payments later in your settings.',
+    });
+    await handleSubmit();
   };
 
   // Debounced fetch suggestions

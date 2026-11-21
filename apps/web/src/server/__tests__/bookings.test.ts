@@ -404,8 +404,8 @@ describe('PATCH /api/bookings/:id', () => {
     expect(res.body.refund).toMatchObject({ id: 're_1', amountCents: 340 })
   })
 
-  it('applies the no-refund rule when the race happens within 24 hours', async () => {
-    jest.setSystemTime(new Date('2026-03-02T00:00:00Z'))
+  it('refunds in full when a still-pending hold turns out to be paid, even within 24 hours', async () => {
+    jest.setSystemTime(new Date('2026-03-02T00:00:00Z')) // 15h before: the 24h rule would keep the fee
     Object.assign(mockDb.one('bookings', { id })!, {
       status: 'pending',
       payment_status: 'pending',
@@ -416,8 +416,40 @@ describe('PATCH /api/bookings/:id', () => {
 
     const res = await patch(id, { action: 'cancel' }, TOKENS.client)
     expect(res.status).toBe(200)
+    // The client cancelled before seeing a confirmation, so the fee comes back whatever the timing.
+    expect(mockStripe.refunds.create).toHaveBeenCalledTimes(1)
+    expect(res.body.booking).toMatchObject({ status: 'cancelled', payment_status: 'refunded' })
+    expect(res.body.refund).toMatchObject({ id: 're_1', amountCents: 340 })
+  })
+
+  it('still refunds in full within 24 hours when the webhook confirms the hold during the cancel', async () => {
+    jest.setSystemTime(new Date('2026-03-02T00:00:00Z'))
+    Object.assign(mockDb.one('bookings', { id })!, {
+      status: 'pending',
+      payment_status: 'pending',
+      hold_expires_at: '2026-03-02T00:05:00.000Z',
+    })
+    mockStripe.paymentIntents.cancel.mockImplementation(async () => {
+      Object.assign(mockDb.one('bookings', { id })!, { status: 'confirmed', payment_status: 'succeeded', hold_expires_at: null })
+      mockDb.table('payments').push({
+        booking_id: id, type: 'charge', stripe_object_id: 'pi_test_1', payment_intent_id: 'pi_test_1',
+        amount_cents: 340, application_fee_cents: 220, status: 'succeeded',
+      })
+      throw invalidRequestError('payment_intent_unexpected_state', 'already succeeded')
+    })
+    mockStripe.paymentIntents.retrieve.mockResolvedValue({ id: 'pi_test_1', status: 'succeeded' })
+
+    const res = await patch(id, { action: 'cancel' }, TOKENS.client)
+    expect(res.status).toBe(200)
+    expect(mockStripe.refunds.create).toHaveBeenCalledTimes(1)
+    expect(res.body.booking).toMatchObject({ status: 'cancelled', payment_status: 'refunded' })
+  })
+
+  it('keeps the 24h rule for a booking the client saw confirmed', async () => {
+    jest.setSystemTime(new Date('2026-03-02T00:00:00Z'))
+    const res = await patch(id, { action: 'cancel' }, TOKENS.client)
+    expect(res.status).toBe(200)
     expect(mockStripe.refunds.create).not.toHaveBeenCalled()
-    // Recorded as paid, so the late payment_intent.succeeded will not refund it either.
     expect(res.body.booking).toMatchObject({ status: 'cancelled', payment_status: 'succeeded' })
   })
 

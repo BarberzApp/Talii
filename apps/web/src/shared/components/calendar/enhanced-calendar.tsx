@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { api, bookingErrorMessage } from '@/shared/lib/api'
+import { formatBookingTime, formatCents, localDateInTimeZone, type BookingListItem } from '@barber-app/shared'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
@@ -294,6 +295,12 @@ export interface CalendarEvent {
     guestPhone: string
     isBarberView: boolean
     startsAt?: string
+    /** IANA zone the appointment is shown in (the barber's). */
+    timeZone: string
+    /** "YYYY-MM-DD" of the start in that zone, for placing it on the grid. */
+    localDate: string
+    bookingFeeCents: number
+    paymentStatus: string
   }
 }
 
@@ -301,9 +308,14 @@ export interface EnhancedCalendarProps {
   className?: string
   onEventClick?: (event: CalendarEvent) => void
   onDateSelect?: (date: Date) => void
+  /** Called with the number of bookings in the visible range after each load. */
+  onEventsLoaded?: (count: number) => void
 }
 
-export function EnhancedCalendar({ className, onEventClick, onDateSelect }: EnhancedCalendarProps) {
+const PAGE_SIZE = 100
+const MAX_PAGES = 10
+
+export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEventsLoaded }: EnhancedCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -313,6 +325,7 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [isMarkingMissed, setIsMarkingMissed] = useState(false)
+  const [actionPending, setActionPending] = useState<null | 'complete' | 'cancel'>(null)
   const [isBarber, setIsBarber] = useState(false)
   const { user } = useAuth()
   const { toast } = useToast()
@@ -328,7 +341,7 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     }
     logger.debug('EnhancedCalendar: Fetching bookings for user', { userId: user.id })
     fetchBookings()
-  }, [user])
+  }, [user?.id, currentDate.getFullYear(), currentDate.getMonth()])
 
   // Touch gesture handlers for mobile swipe navigation
   const onTouchStart = (e: React.TouchEvent) => {
@@ -354,23 +367,43 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     }
   }
 
-  /** GET /api/bookings as barber or client: booked appointments (no unpaid holds). */
+  /**
+   * GET /api/bookings for the visible grid (with a day of margin either side for
+   * time zones), every status, paged until complete. Unpaid holds that already
+   * expired are left out. Refetched when the month changes.
+   */
   const fetchBookings = async () => {
     try {
       const barberView = user?.role === 'barber'
       setIsBarber(barberView)
-      const { bookings } = await api.bookings.list({
-        as: barberView ? 'barber' : 'client',
-        status: ['confirmed', 'completed', 'no_show', 'cancelled'],
-        order: 'asc',
-        limit: 100,
-      })
+      const gridStart = startOfWeek(startOfMonth(currentDate))
+      const gridEnd = endOfWeek(endOfMonth(currentDate))
+      const from = new Date(gridStart.getTime() - 86_400_000).toISOString()
+      const to = new Date(gridEnd.getTime() + 2 * 86_400_000).toISOString()
 
-      setEvents(
-        bookings.map((booking): CalendarEvent => {
+      const rows: BookingListItem[] = []
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const { bookings, pagination } = await api.bookings.list({
+          as: barberView ? 'barber' : 'client',
+          from,
+          to,
+          order: 'asc',
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
+        })
+        rows.push(...bookings)
+        if (rows.length >= pagination.total || bookings.length < PAGE_SIZE) break
+      }
+
+      const now = Date.now()
+      const visible = rows.filter(
+        (b) => !(b.status === 'pending' && b.hold_expires_at && Date.parse(b.hold_expires_at) <= now)
+      )
+      const mapped = visible.map((booking): CalendarEvent => {
           const serviceName = booking.service?.name || 'Service'
           const clientName = booking.client?.name || booking.customer_name || 'Walk-in'
           const barberName = booking.barber?.profile?.name || booking.barber?.business_name || 'Barber'
+          const timeZone = booking.barber?.timezone || 'America/New_York'
           return {
             id: booking.id,
             title: barberView ? `${serviceName} - ${clientName}` : `${serviceName} with ${barberName}`,
@@ -394,10 +427,15 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
               guestPhone: '',
               isBarberView: barberView,
               startsAt: booking.starts_at,
+              timeZone,
+              localDate: localDateInTimeZone(booking.starts_at, timeZone),
+              bookingFeeCents: booking.booking_fee_cents,
+              paymentStatus: booking.payment_status,
             },
           }
         })
-      )
+      setEvents(mapped)
+      onEventsLoaded?.(mapped.length)
     } catch (error) {
       logger.error('EnhancedCalendar: Error fetching bookings', error)
     }
@@ -409,11 +447,10 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     return eachDayOfInterval({ start, end })
   }
 
+  /** Events whose start falls on this calendar day in the barber's time zone. */
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => {
-      const eventDate = new Date(event.start)
-      return isSameDay(eventDate, date)
-    })
+    const day = format(date, 'yyyy-MM-dd')
+    return events.filter(event => event.extendedProps.localDate === day)
   }
 
   const hasEvents = (date: Date) => {
@@ -462,6 +499,10 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     onEventClick?.(event)
   }
 
+  const replaceSelected = (status: string) => {
+    setSelectedEvent(prev => prev ? { ...prev, extendedProps: { ...prev.extendedProps, status } } : null)
+  }
+
   /** PATCH /api/bookings/:id { action: 'no_show' }: confirmed bookings, after the start time. */
   const handleMarkAsMissed = async () => {
     if (!selectedEvent) return
@@ -469,7 +510,7 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     setIsMarkingMissed(true)
     try {
       await api.bookings.noShow(selectedEvent.id)
-      setSelectedEvent(prev => prev ? { ...prev, extendedProps: { ...prev.extendedProps, status: 'no_show' } } : null)
+      replaceSelected('no_show')
       await fetchBookings()
     } catch (error) {
       logger.error('Failed to mark booking as missed', error)
@@ -479,13 +520,47 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     }
   }
 
-  const formatTime = (date: Date) => {
-    return format(date, 'h:mm a')
+  /** PATCH /api/bookings/:id { action: 'complete' }: confirmed bookings, after the start time. */
+  const handleMarkCompleted = async () => {
+    if (!selectedEvent) return
+    setActionPending('complete')
+    try {
+      await api.bookings.complete(selectedEvent.id)
+      replaceSelected('completed')
+      toast({ title: 'Marked completed' })
+      await fetchBookings()
+    } catch (error) {
+      logger.error('Failed to mark booking completed', error)
+      toast({ title: 'Could not mark completed', description: bookingErrorMessage(error), variant: 'destructive' })
+    } finally {
+      setActionPending(null)
+    }
   }
 
-  const formatDate = (date: Date) => {
-    return format(date, 'MMM d, yyyy')
+  /** PATCH /api/bookings/:id { action: 'cancel' }: pending or confirmed, before the start time. */
+  const handleCancel = async () => {
+    if (!selectedEvent) return
+    setActionPending('cancel')
+    try {
+      const result = await api.bookings.cancel(selectedEvent.id)
+      replaceSelected('cancelled')
+      toast({
+        title: 'Booking cancelled',
+        description: result.refund
+          ? `${formatCents(result.refund.amountCents)} booking fee refunded to the client.`
+          : 'No booking fee needed refunding.',
+      })
+      await fetchBookings()
+    } catch (error) {
+      logger.error('Failed to cancel booking', error)
+      toast({ title: 'Could not cancel', description: bookingErrorMessage(error), variant: 'destructive' })
+    } finally {
+      setActionPending(null)
+    }
   }
+
+  /** An event's start time in its barber's time zone. */
+  const formatTime = (event: CalendarEvent) => formatBookingTime(event.start, event.extendedProps.timeZone)
 
   const calendarDays = getCalendarDays()
 
@@ -543,6 +618,9 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
         selectedEvent={selectedEvent}
         onMarkAsMissed={handleMarkAsMissed}
         isMarkingMissed={isMarkingMissed}
+        onMarkCompleted={handleMarkCompleted}
+        onCancel={handleCancel}
+        actionPending={actionPending}
         user={user}
       />
 

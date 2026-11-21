@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { formatBookingDate, formatCents, formatTimeRange, timeZoneAbbreviation } from '@barber-app/shared'
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -11,6 +11,7 @@ import {
   X,
   DownloadIcon,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/shared/components/ui/dialog'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -32,11 +33,23 @@ interface EnhancedCalendarEventDialogProps {
   selectedEvent: CalendarEvent | null
   onMarkAsMissed: () => Promise<void> | void
   isMarkingMissed: boolean
+  onMarkCompleted: () => Promise<void> | void
+  onCancel: () => Promise<void> | void
+  actionPending: null | 'complete' | 'cancel'
   user: CalendarUser | null
 }
 
-const formatTime = (date: Date) => format(date, 'h:mm a')
-const formatDate = (date: Date) => format(date, 'MMM d, yyyy')
+/** What cancelling does to the booking fee, per the API's refund policy. */
+function refundPreview(event: CalendarEvent): string {
+  const p = event.extendedProps
+  const paid = p.bookingFeeCents > 0 && (p.paymentStatus === 'succeeded' || p.paymentStatus === 'partially_refunded')
+  if (!paid) return 'No booking fee was charged, so nothing is refunded.'
+  if (p.isBarberView) return `The client's ${formatCents(p.bookingFeeCents)} booking fee will be refunded in full.`
+  const hours = (Date.parse(event.start) - Date.now()) / 3_600_000
+  return hours > 24
+    ? `Your ${formatCents(p.bookingFeeCents)} booking fee will be refunded in full.`
+    : `This is less than 24 hours away, so the ${formatCents(p.bookingFeeCents)} booking fee is not refunded.`
+}
 
 export function EnhancedCalendarEventDialog({
   open,
@@ -44,8 +57,18 @@ export function EnhancedCalendarEventDialog({
   selectedEvent,
   onMarkAsMissed,
   isMarkingMissed,
+  onMarkCompleted,
+  onCancel,
+  actionPending,
   user,
 }: EnhancedCalendarEventDialogProps) {
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  useEffect(() => setConfirmCancel(false), [selectedEvent?.id, open])
+  const started = !!selectedEvent && Date.parse(selectedEvent.start) <= Date.now()
+  const status = selectedEvent?.extendedProps.status
+  const canComplete = !!selectedEvent?.extendedProps.isBarberView && status === 'confirmed' && started
+  const canCancel = !!selectedEvent && (status === 'pending' || status === 'confirmed') && !started
+  const tz = selectedEvent?.extendedProps.timeZone ?? 'America/New_York'
 
   const handleDownloadICal = () => {
     if (!selectedEvent) return
@@ -94,7 +117,7 @@ export function EnhancedCalendarEventDialog({
                     : 'My Appointment'}
                 </DialogTitle>
                 <DialogDescription className="text-foreground/50 text-base font-medium italic mt-1">
-                  {selectedEvent && formatDate(new Date(selectedEvent.start))}
+                  {selectedEvent && formatBookingDate(selectedEvent.start, tz)}
                 </DialogDescription>
               </div>
             </div>
@@ -174,7 +197,7 @@ export function EnhancedCalendarEventDialog({
                   <div className="flex-1">
                     <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-0.5">Time Slot</p>
                     <p className="text-foreground font-bold text-lg tracking-tight leading-tight">
-                      {formatTime(new Date(selectedEvent.start))} - {formatTime(new Date(selectedEvent.end))}
+                      {formatTimeRange(selectedEvent.start, selectedEvent.end, tz)} {timeZoneAbbreviation(tz, selectedEvent.start)}
                     </p>
                   </div>
                 </div>
@@ -215,10 +238,52 @@ export function EnhancedCalendarEventDialog({
 
             {/* Actions */}
             <div className="space-y-4">
-              {selectedEvent.extendedProps.isBarberView && selectedEvent.extendedProps.status === 'confirmed' && new Date(selectedEvent.start) <= new Date() && (
+              {canComplete && (
+                <Button
+                  onClick={onMarkCompleted}
+                  disabled={actionPending !== null}
+                  className="w-full bg-green-500/10 hover:bg-green-600 text-green-600 hover:text-white font-bold py-7 rounded-2xl border border-green-500/20 transition-all active:scale-[0.98]"
+                >
+                  {actionPending === 'complete' ? <Loader2 className="animate-spin" /> : 'Mark Completed'}
+                </Button>
+              )}
+
+              {canCancel && !confirmCancel && (
+                <Button
+                  onClick={() => setConfirmCancel(true)}
+                  variant="outline"
+                  className="w-full border-red-500/30 text-red-500 hover:bg-red-500/10 font-bold py-6 rounded-2xl"
+                >
+                  Cancel Booking
+                </Button>
+              )}
+
+              {canCancel && confirmCancel && selectedEvent && (
+                <div className="rounded-2xl border border-red-500/20 p-4 space-y-3">
+                  <p className="text-sm text-foreground/80">{refundPreview(selectedEvent)}</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setConfirmCancel(false)} disabled={actionPending !== null}>
+                      Keep it
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      disabled={actionPending !== null}
+                      onClick={async () => {
+                        await onCancel()
+                        setConfirmCancel(false)
+                      }}
+                    >
+                      {actionPending === 'cancel' ? <Loader2 className="animate-spin" /> : 'Yes, cancel'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {canComplete && (
                 <Button
                   onClick={onMarkAsMissed}
-                  disabled={isMarkingMissed}
+                  disabled={isMarkingMissed || actionPending !== null}
                   variant="destructive"
                   className="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-bold py-7 rounded-2xl border border-red-500/20 transition-all active:scale-[0.98]"
                 >
