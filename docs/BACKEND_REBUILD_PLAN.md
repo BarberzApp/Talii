@@ -34,7 +34,7 @@ Update the status column as phases land.
 | 2 | Database baseline | done locally 2026-11-17; live reset pending |
 | 3 | API rebuild | 3a (foundation, bookings, money, Stripe) done 2026-11-17; 3b (remaining routes) done 2026-11-18 |
 | 4 | Clients go through the API | 4a (web + shared client) done 2026-11-19; 4b (mobile) done 2026-11-21 |
-| 5 | Front end | not started |
+| 5 | Front end | mobile done 2026-11-21; web done 2026-11-21 (a3d29374) |
 
 ### Phase 0: safety net
 
@@ -154,6 +154,16 @@ One shared `apiFetch` used by web and mobile. Move direct database writes behind
 
 Fix type errors, turn build-time type and lint checks back on, then a UX pass.
 
+### Phase 5: what landed (2026-11-21)
+
+- Web build runs with type and lint checks on (ESLint 9 flat config; 0 errors, 40 warnings: 25 hook-dependency, 15 `<img>`). The repo now has one React (19.0.0, as Expo needs); the web app had its own 19.2.4 copy, so Next.js and the app code used different Reacts.
+- Sentry on the web: `global-error.tsx`, `instrumentation-client.ts`, `onRequestError`.
+- Web UX pass at 390px and desktop: login errors, forgot/reset password, sign-up errors, browse search in place, barber page Share/Report/Block, bookings loading/error states, calendar, settings (account deletion, blocked users), services visibility, profile, hours, admin with real data.
+- Design changes on both apps: fee note up front, 3-step booking, barber calendar opens on Today, richer success page (add to calendar, maps link, barber's time zone, cancellation policy), faster barber page (skeleton at once, 1 `/api/me` call, no second barber fetch).
+- Identifiers renamed to Talii (`talii://`, `com.yaskhalil.talii`); Expo slug and Sentry org unchanged.
+- Checks: web tsc 0, web jest 228, shared 30, pgTAP 293, mobile tsc 0, mobile jest 203; production build passes; booking (fee-exempt), success page and calendar checked in a headless browser at 390px and 1280px.
+- Left as is: primary buttons are white on #EE6D23 (about 3.1:1, below 4.5:1 for small text); no public fee flag on `GET /api/barbers/:id` yet (the fee note is generic); no web screen for walk-ins (mobile has one).
+
 ## Carried forward from the Phase 1 review
 
 These were found by the independent review of Phase 1 and are requirements for the phases named.
@@ -187,3 +197,5 @@ Removed in Phase 1. Notes for rebuilding it later:
 - Google Cloud: restrict the Maps key to the Geocoding and Places APIs and your domains, and set a daily quota.
 - Align Stripe keys: the mobile app's publishable key is live while the server keys are test. Use test everywhere until launch.
 - Before the live database reset: run `scripts/set-admin.ts` against the new project for the owner's account.
+- Website questions from the Phase 5 pass: keep or delete `/reach` (an unlinked waitlist page); merge `/admin` and `/super-admin`; confirm the support page details (support@talii.com, hours, reply time); should fee-exempt barbers see "Set up payments" on Earnings; check the landing page testimonials and the "30-day money-back guarantee"; darken the primary button orange for contrast.
+- Once the domain is chosen: set `site_url` and add `<domain>/auth/callback`, `<domain>/reset-password` and `talii://**` to the Supabase redirect allow-list (config.toml and the dashboard).
