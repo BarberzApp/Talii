@@ -14,8 +14,23 @@ import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 const MIN_PASSWORD_LENGTH = 6 // matches sign-up (web and mobile) and Supabase's default
 
 /**
- * Opened from the password-reset email. supabase-js exchanges the ?code= for a
- * recovery session (PKCE, same browser); then the user picks a new password.
+ * Set when supabase-js reports a recovery sign-in from a PKCE ?code= link (older
+ * emails). Registered when this module loads, before the client's own URL
+ * exchange (a network round trip) can finish.
+ */
+let recoveryEventSeen = false
+if (typeof window !== 'undefined') {
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') recoveryEventSeen = true
+  })
+}
+
+/**
+ * Opened from the password-reset email:
+ * ?token_hash=…&type=recovery (supabase/templates/recovery.html; works on any device).
+ * The form is shown only once this link itself has been verified. An existing
+ * session in the browser is never enough, so nobody can change the password of
+ * whoever is signed in on a shared browser.
  */
 export default function ResetPasswordPage() {
   const [phase, setPhase] = useState<'checking' | 'ready' | 'invalid' | 'done'>('checking')
@@ -32,13 +47,19 @@ export default function ResetPasswordPage() {
     ;(async () => {
       try {
         const params = new URLSearchParams(window.location.search)
-        let { data: { session } } = await supabase.auth.getSession()
-        const code = params.get('code')
-        if (!session && code) {
-          const exchanged = await supabase.auth.exchangeCodeForSession(code)
-          session = exchanged.data.session
+        const tokenHash = params.get('token_hash')
+        let verified = false
+        if (tokenHash && params.get('type') === 'recovery') {
+          const { data, error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+          verified = !verifyError && !!data.session
+        } else if (params.get('code')) {
+          // supabase-js exchanges the code itself while it starts up; wait for that.
+          await supabase.auth.getSession()
+          verified = recoveryEventSeen
         }
-        setPhase(session ? 'ready' : 'invalid')
+        // Keep the one-time token out of history and referrers.
+        window.history.replaceState(null, '', window.location.pathname)
+        setPhase(verified ? 'ready' : 'invalid')
       } catch (err) {
         logger.error('Password reset link check failed', err)
         setPhase('invalid')

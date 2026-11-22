@@ -83,6 +83,13 @@ max_frequency = "1m0s"
 otp_length = 6
 otp_expiry = 86400
 
+# Password reset: the link carries a token hash that /reset-password verifies itself
+# (works on any device, unlike the PKCE ?code= link). Set the same template in the
+# Supabase dashboard for the live project.
+[auth.email.template.recovery]
+subject = "Reset your Talii password"
+content_path = "./supabase/templates/recovery.html"
+
 [auth.sms]
 enable_signup = false
 

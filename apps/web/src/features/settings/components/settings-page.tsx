@@ -66,6 +66,11 @@ export function SettingsPage() {
     }
   }, [])
 
+  // Only barbers have the services, add-ons, hours and earnings tabs.
+  useEffect(() => {
+    if (user && user.role !== 'barber' && activeTab !== 'profile') setActiveTab('profile')
+  }, [user, activeTab])
+
   useEffect(() => {
     if (status === 'loading') return
     

@@ -84,15 +84,26 @@ function BookingSuccessContent() {
       if (cancelled) return
       setIntentStatus(piStatus)
 
-      // Payment failed (and did not succeed after all): release the hold so the slot frees up.
-      if (redirectStatus === 'failed' && piStatus !== 'succeeded' && piStatus !== 'processing') {
+      // Payment failed: release the hold so the slot frees up. Only when Stripe itself
+      // says so (the URL's redirect_status alone can be stale or hand-made, and the
+      // secret is gone after a reload) and the booking is still an unpaid hold.
+      if (redirectStatus === 'failed' && (piStatus === 'requires_payment_method' || piStatus === 'canceled')) {
+        let released = false
         try {
-          await api.bookings.cancel(bookingId, 'Payment failed')
+          const booking = await findBooking()
+          if (booking?.status === 'pending') {
+            await api.bookings.cancel(bookingId, 'Payment failed')
+            released = true
+          }
         } catch (error) {
           logger.warn('Could not release the hold after a failed payment', error)
         }
-        if (!cancelled) setView({ kind: 'failed', message: 'Your payment did not go through, so the time was released. Please try booking again.' })
-        return
+        if (cancelled) return
+        if (released) {
+          setView({ kind: 'failed', message: 'Your payment did not go through, so the time was released. Please try booking again.' })
+          return
+        }
+        // Otherwise show whatever the booking's real status is (below).
       }
 
       let last: BookingListItem | null = null

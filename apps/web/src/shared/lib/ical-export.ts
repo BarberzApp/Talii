@@ -21,7 +21,33 @@ function icsDate(iso: string): string {
 
 /** RFC 5545 text escaping: backslash, semicolon, comma and newlines. */
 export function escapeIcsText(text: string): string {
-  return text.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
+  return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
+}
+
+function utf8Bytes(ch: string): number {
+  const cp = ch.codePointAt(0) ?? 0
+  return cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4
+}
+
+/** RFC 5545 line folding: at most 75 octets per line, continuation lines start with a space. */
+export function foldIcsLine(line: string): string {
+  if (line.length <= 75 && /^[\x00-\x7f]*$/.test(line)) return line
+  const parts: string[] = []
+  let current = ''
+  let size = 0
+  for (const ch of line) {
+    const bytes = utf8Bytes(ch)
+    const limit = parts.length === 0 ? 75 : 74 // continuation lines lose one octet to the leading space
+    if (size + bytes > limit) {
+      parts.push(current)
+      current = ''
+      size = 0
+    }
+    current += ch
+    size += bytes
+  }
+  parts.push(current)
+  return parts.join('\r\n ')
 }
 
 export function buildIcs(events: IcsEvent[], now: Date = new Date()): string {
@@ -41,7 +67,7 @@ export function buildIcs(events: IcsEvent[], now: Date = new Date()): string {
     lines.push('END:VEVENT')
   }
   lines.push('END:VCALENDAR')
-  return lines.join('\r\n')
+  return lines.map(foldIcsLine).join('\r\n')
 }
 
 /** Starts a download of the events as an .ics file (browser only). */
