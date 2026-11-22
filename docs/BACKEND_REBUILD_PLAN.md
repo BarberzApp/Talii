@@ -31,7 +31,7 @@ Update the status column as phases land.
 |---|---|---|
 | 0 | Safety net: make the test suites run | done 2026-11-17 |
 | 1 | Delete dead code and cut features | done 2026-11-17 |
-| 2 | Database baseline | done locally 2026-11-17; live reset pending |
+| 2 | Database baseline | done locally 2026-11-17; live project reset 2026-11-22 |
 | 3 | API rebuild | 3a (foundation, bookings, money, Stripe) done 2026-11-17; 3b (remaining routes) done 2026-11-18 |
 | 4 | Clients go through the API | 4a (web + shared client) done 2026-11-19; 4b (mobile) done 2026-11-21 |
 | 5 | Front end | mobile done 2026-11-21; web done 2026-11-21 (a3d29374) |
@@ -196,7 +196,7 @@ Removed in Phase 1. Notes for rebuilding it later:
 - Stripe (test and live): remove the old webhook endpoints (an ngrok tunnel and `barber-app-five.vercel.app`, which now serves a different app) and add the new deployment's `/api/webhooks/stripe` with the events listed in Phase 3a.
 - Google Cloud: restrict the Maps key to the Geocoding and Places APIs and your domains, and set a daily quota.
 - Align Stripe keys: the mobile app's publishable key is live while the server keys are test. Use test everywhere until launch.
-- Before the live database reset: run `scripts/set-admin.ts` against the new project for the owner's account.
+- Live database reset done 2026-11-22: all old data, accounts and storage removed; baseline applied; migration history in sync; generated types match. Next: sign up with the owner's account, then run `scripts/set-admin.ts` for it.
 - Website questions from the Phase 5 pass: keep or delete `/reach` (an unlinked waitlist page); merge `/admin` and `/super-admin`; confirm the support page details (support@talii.com, hours, reply time); should fee-exempt barbers see "Set up payments" on Earnings; check the landing page testimonials and the "30-day money-back guarantee"; darken the primary button orange for contrast.
 - Once the domain is chosen: set `site_url` and add `<domain>/auth/callback`, `<domain>/reset-password` and `talii://**` to the Supabase redirect allow-list (config.toml and the dashboard).
 - Supabase dashboard (live project), Authentication → Email templates → Reset password: use the link from `supabase/templates/recovery.html` (`{{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery`). The website's reset page needs it, and it makes resets requested in the phone app open on the website.
