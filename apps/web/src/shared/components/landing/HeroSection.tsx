@@ -4,7 +4,6 @@ import React from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { ArrowRight, Play } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/shared/lib/utils";
 import { AnimatedSection } from "@/shared/components/ui/animated-section";
 import { motion } from "framer-motion";

@@ -47,7 +47,7 @@ export default function StripeConnectReturn() {
           await refreshConnectStatus();
           
           // Try to open the mobile app with deep link
-          const mobileDeepLink = `bocm://stripe-connect/return?account_id=${accountId}`;
+          const mobileDeepLink = `talii://stripe-connect/return?account_id=${accountId}`;
           
           logger.debug('Attempting to redirect to mobile app', { mobileDeepLink });
           
@@ -136,7 +136,7 @@ export default function StripeConnectReturn() {
           </p>
           <button 
             onClick={() => {
-              const mobileDeepLink = `bocm://stripe-connect/return?account_id=${new URLSearchParams(window.location.search).get('account_id')}`;
+              const mobileDeepLink = `talii://stripe-connect/return?account_id=${new URLSearchParams(window.location.search).get('account_id')}`;
               window.location.href = mobileDeepLink;
             }}
             style={{
@@ -153,7 +153,7 @@ export default function StripeConnectReturn() {
             Return to App
           </button>
           <p style={{ fontSize: '14px', opacity: 0.6 }}>
-            If the app doesn't open automatically, tap the button above
+            If the app doesn&apos;t open automatically, tap the button above
           </p>
         </>
       )}

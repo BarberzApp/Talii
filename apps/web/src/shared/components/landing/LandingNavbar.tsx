@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Button } from "@/shared/components/ui/button";
@@ -50,7 +50,6 @@ export function LandingNavbar({
   // Avoid hydration mismatch: only use theme for logo after mount (server and initial client both use light)
   const isDark = mounted && resolvedTheme === "dark";
   const logoSrc = isDark ? logoDark : logo;
-  const logoAlt = isDark ? `${logoText} Logo (Dark)` : `${logoText} Logo`;
 
   useEffect(() => {
     setMounted(true);

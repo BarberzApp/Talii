@@ -9,7 +9,7 @@ import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card"
 import { Checkbox } from "@/shared/components/ui/checkbox"
-import { Scissors } from "lucide-react"
+import { Scissors, AlertCircle } from "lucide-react"
 import { useToast } from "@/shared/components/ui/use-toast"
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
 import { supabase } from '@/shared/lib/supabase'
@@ -17,6 +17,19 @@ import React from "react"
 import { Loader2 } from "lucide-react"
 import { logger } from '@/shared/lib/logger'
 import { setPendingSignupRole } from '@/shared/lib/redirect-utils'
+
+const MIN_PASSWORD_LENGTH = 6 // Supabase's default; the mobile app uses the same rule
+
+function signUpErrorText(outcome: { alreadyExists?: boolean; errorMessage?: string }): string {
+  if (outcome.alreadyExists) {
+    return 'An account with this email already exists. Sign in instead, or reset your password from the sign-in page.'
+  }
+  const m = (outcome.errorMessage ?? '').toLowerCase()
+  if (m.includes('password')) return outcome.errorMessage as string
+  if (m.includes('rate limit') || m.includes('too many')) return 'Too many sign-up attempts. Please wait a few minutes and try again.'
+  if (m.includes('invalid') && m.includes('email')) return 'Please enter a valid email address.'
+  return 'Could not create your account. Please try again.'
+}
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -48,29 +61,22 @@ export default function RegisterPage() {
     setError(null)
 
     if (!role) {
-      toast({
-        title: "Select a role",
-        description: "Please choose whether you are a Client or Barber.",
-        variant: "destructive",
-      })
+      setError("Choose whether you are signing up as a Client or a Barber (at the top of the form).")
+      return
+    }
+
+    if (formData.password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Your password needs at least ${MIN_PASSWORD_LENGTH} characters.`)
       return
     }
 
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match",
-        variant: "destructive",
-      })
+      setError("The two passwords do not match.")
       return
     }
 
     if (!formData.agreeTerms) {
-      toast({
-        title: "Terms and conditions",
-        description: "You must agree to the terms and conditions",
-        variant: "destructive",
-      })
+      setError("Please agree to the terms and privacy policy to create an account.")
       return
     }
 
@@ -89,14 +95,12 @@ export default function RegisterPage() {
       } else if (outcome.ok) {
         // Signed in straight away (email confirmation off).
         router.push(role === 'barber' ? '/barber/onboarding' : '/browse')
+      } else {
+        setError(signUpErrorText(outcome))
       }
     } catch (err) {
-      setError('Failed to create account')
-      toast({
-        title: "Registration failed",
-        description: err instanceof Error ? err.message : "An error occurred during registration",
-        variant: "destructive",
-      })
+      logger.error('Registration failed', err)
+      setError('Could not create your account. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -104,14 +108,11 @@ export default function RegisterPage() {
 
   const handleGoogleSignUp = async () => {
     if (!role) {
-      toast({
-        title: "Select a role",
-        description: "Please choose whether you are a Client or Barber.",
-        variant: "destructive",
-      })
+      setError("Choose whether you are signing up as a Client or a Barber (at the top of the form).")
       return
     }
-    
+    setError(null)
+
     // Use NEXT_PUBLIC_APP_URL for redirects
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3002');
     const redirectUrl = `${baseUrl}/auth/callback`;
@@ -186,7 +187,8 @@ export default function RegisterPage() {
           </CardHeader>
           <CardContent>
             {/* Minimal role toggle, styled as pill buttons */}
-            <div className="flex w-full max-w-xs mx-auto mb-4 bg-muted border border-border rounded-full p-1">
+            <p id="role-label" className="text-sm font-medium text-foreground text-center mb-2">I am signing up as a</p>
+            <div role="group" aria-labelledby="role-label" className="flex w-full max-w-xs mx-auto mb-4 bg-muted border border-border rounded-full p-1">
               <button
                 type="button"
                 onClick={() => setRole('client')}
@@ -206,12 +208,19 @@ export default function RegisterPage() {
                 Barber
               </button>
             </div>
+            {error && (
+              <div role="alert" className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-sm font-medium text-foreground">Full Name</Label>
                 <Input
                   id="name"
                   name="name"
+                  autoComplete="name"
                   placeholder="John Doe"
                   required
                   value={formData.name}
@@ -225,6 +234,7 @@ export default function RegisterPage() {
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="you@example.com"
                   required
                   value={formData.email}
@@ -238,11 +248,14 @@ export default function RegisterPage() {
                   id="password"
                   name="password"
                   type="password"
+                  autoComplete="new-password"
+                  aria-describedby="password-hint"
                   required
                   value={formData.password}
                   onChange={handleChange}
                   className="h-11 bg-muted border-border text-foreground placeholder-muted-foreground focus:border-primary"
                 />
+                <p id="password-hint" className="text-xs text-muted-foreground">At least {MIN_PASSWORD_LENGTH} characters.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">Confirm Password</Label>
@@ -250,6 +263,7 @@ export default function RegisterPage() {
                   id="confirmPassword"
                   name="confirmPassword"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
@@ -316,6 +330,9 @@ export default function RegisterPage() {
               </TooltipTrigger>
               <TooltipContent>Sign up with Google</TooltipContent>
             </Tooltip>
+            {!role && (
+              <p className="text-xs text-muted-foreground text-center mt-2">Choose Client or Barber above to sign up with Google.</p>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-sm text-center text-muted-foreground">

@@ -8,10 +8,10 @@ import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
-import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Loader2, Plus, Edit, Trash2, Scissors, AlertCircle, CheckCircle, Sparkles, Clock, DollarSign, Package } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
+import { Switch } from '@/shared/components/ui/switch'
 import { logger } from '@/shared/lib/logger'
 
 /** A service as edited here: price in dollars for the form, cents on the wire. */
@@ -42,6 +42,7 @@ interface ServiceFormData {
   price: number
   duration: number
   description: string
+  isActive: boolean
 }
 
 interface ServicesSettingsProps {
@@ -56,7 +57,8 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
   const { toast } = useToast()
   const { user } = useAuth()
-  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm<ServiceFormData>()
+  const { register, handleSubmit, reset, setValue, watch } = useForm<ServiceFormData>({ defaultValues: { isActive: true } })
+  const isActive = watch('isActive')
 
   // Load the barber's services (GET /api/me/services)
   useEffect(() => {
@@ -122,6 +124,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
         priceCents: Math.round(data.price * 100),
         durationMinutes: Math.round(data.duration),
         description: data.description?.trim() || null,
+        isActive: data.isActive !== false,
       }
       if (editingService) {
         await api.services.update(editingService.id, body)
@@ -138,7 +141,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
       }
       
       await loadServices()
-      reset()
+      reset({ name: '', description: '', isActive: true })
       setEditingService(null)
       
       // Call onUpdate to refresh settings data
@@ -157,7 +160,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
 
   // Delete service
   const deleteService = async (serviceId: string) => {
-    if (!confirm('Are you sure you want to delete this service?')) return
+    if (!confirm('Delete this service? If clients have booked it before, it is hidden instead so their history stays intact.')) return
 
     try {
       setIsLoading(true)
@@ -190,11 +193,13 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
     setValue('price', service.price)
     setValue('duration', service.duration)
     setValue('description', service.description || '')
+    setValue('isActive', service.isActive)
+    document.getElementById('service-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const cancelEdit = () => {
     setEditingService(null)
-    reset()
+    reset({ name: '', description: '', isActive: true })
     setValidationErrors({})
   }
 
@@ -284,7 +289,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
         </CardHeader>
         
         <CardContent className="p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form id="service-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6 scroll-mt-24">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="name" className="text-foreground font-semibold text-lg flex items-center gap-2">
@@ -365,7 +370,21 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
               </div>
             </div>
             
-            <div className="flex gap-4 pt-6">
+            <div className="flex items-center gap-3 p-4 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10">
+              <Switch
+                id="service-active"
+                checked={isActive !== false}
+                onCheckedChange={(checked: boolean) => setValue('isActive', checked)}
+              />
+              <div>
+                <Label htmlFor="service-active" className="text-foreground font-semibold cursor-pointer">
+                  Show to clients
+                </Label>
+                <p className="text-muted-foreground text-sm">Turn off to hide this service without deleting it.</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4 pt-6">
               <Button
                 type="submit"
                 disabled={isLoading}
@@ -436,7 +455,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-3">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3">
                         <h4 className="text-xl font-bebas text-foreground tracking-wide">{service.name}</h4>
                         <Badge variant="secondary" className="text-sm px-3 py-1 bg-secondary/20 text-secondary border-secondary/30">
                           {formatCents(service.priceCents)}{!service.isActive && ' · hidden'}
@@ -451,10 +470,11 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                       )}
                     </div>
                     
-                    <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="flex gap-1 sm:gap-3 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                       <Button
                         size="sm"
                         variant="ghost"
+                        aria-label={`Edit ${service.name}`}
                         onClick={() => editService(service)}
                         className="text-foreground/70 hover:text-foreground hover:bg-black/5 dark:bg-white/10 rounded-xl p-3"
                       >
@@ -463,9 +483,10 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                       <Button
                         size="sm"
                         variant="ghost"
+                        aria-label={`Delete ${service.name}`}
                         onClick={() => deleteService(service.id)}
                         disabled={isLoading}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl p-3"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded-xl p-3"
                       >
                         <Trash2 className="h-5 w-5" />
                       </Button>

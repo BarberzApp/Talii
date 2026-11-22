@@ -1,22 +1,16 @@
 import { formatBookingDate, formatCents, formatTimeRange, timeZoneAbbreviation } from '@barber-app/shared'
 import {
-  Calendar as CalendarIcon,
   Clock,
   DollarSign,
-  Loader2,
-  Mail,
-  Phone,
-  Scissors,
-  User,
-  X,
-  DownloadIcon,
+  Loader2, Scissors,
+  User, DownloadIcon
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/shared/components/ui/dialog'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { cn } from '@/shared/lib/utils'
-import { downloadICalFile } from '@/shared/lib/ical-export'
+import { downloadIcs } from '@/shared/lib/ical-export'
 import { logger } from '@/shared/lib/logger'
 import type { CalendarEvent } from './enhanced-calendar'
 
@@ -60,7 +54,6 @@ export function EnhancedCalendarEventDialog({
   onMarkCompleted,
   onCancel,
   actionPending,
-  user,
 }: EnhancedCalendarEventDialogProps) {
   const [confirmCancel, setConfirmCancel] = useState(false)
   useEffect(() => setConfirmCancel(false), [selectedEvent?.id, open])
@@ -73,16 +66,15 @@ export function EnhancedCalendarEventDialog({
   const handleDownloadICal = () => {
     if (!selectedEvent) return
     try {
-      downloadICalFile(
-        [selectedEvent],
-        selectedEvent.extendedProps.isBarberView ? 'barber' : 'client',
-        {
-          name:
-            user?.user_metadata?.full_name ||
-            (selectedEvent.extendedProps.isBarberView ? 'Barber' : 'Client'),
-          email: user?.email || '',
-          location: '',
-        },
+      const p = selectedEvent.extendedProps
+      downloadIcs(
+        [{
+          id: selectedEvent.id,
+          start: selectedEvent.start,
+          end: selectedEvent.end,
+          summary: p.isBarberView ? `${p.serviceName} with ${p.clientName}` : `${p.serviceName} with ${p.barberName}`,
+          description: [p.serviceName, ...p.addonNames].join(', '),
+        }],
         `appointment-${selectedEvent.id}.ics`,
       )
     } catch (error) {
@@ -92,7 +84,7 @@ export function EnhancedCalendarEventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md w-full max-h-[90vh] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl p-8 overflow-hidden ring-1 ring-white/10">
+      <DialogContent className="max-w-md w-full max-h-[90vh] bg-background border border-border rounded-[2rem] shadow-2xl p-6 sm:p-8 overflow-hidden">
         <DialogHeader className="pb-6 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -146,17 +138,12 @@ export function EnhancedCalendarEventDialog({
                   <h3 className="text-foreground font-bebas text-4xl mb-1 tracking-wide leading-none">
                     {selectedEvent.extendedProps.serviceName}
                   </h3>
-                  <p className="text-foreground/40 text-[10px] font-black uppercase tracking-[0.2em] pl-0.5">
-                    {selectedEvent.extendedProps.isBarberView
-                      ? 'Inbound Request'
-                      : 'Premium Session'}
-                  </p>
                 </div>
                 <div className="text-right">
                   <div className="text-4xl font-bold text-secondary tracking-tighter drop-shadow-sm">
                     ${selectedEvent.extendedProps.price.toFixed(2)}
                   </div>
-                  <div className="text-foreground/40 text-[9px] font-bold uppercase tracking-widest leading-none">Total Value</div>
+                  <div className="text-foreground/40 text-[9px] font-bold uppercase tracking-widest leading-none">Paid in person</div>
                 </div>
               </div>
 
@@ -172,7 +159,7 @@ export function EnhancedCalendarEventDialog({
                         {selectedEvent.extendedProps.clientName}
                       </p>
                       {selectedEvent.extendedProps.isGuest && (
-                        <Badge variant="outline" className="mt-1 bg-secondary/5 text-secondary border-secondary/20 text-[9px] font-black uppercase tracking-tighter">Guest</Badge>
+                        <Badge variant="outline" className="mt-1 bg-secondary/5 text-secondary border-secondary/20 text-[9px] font-black uppercase tracking-tighter">Walk-in</Badge>
                       )}
                     </div>
                   </div>
@@ -182,7 +169,7 @@ export function EnhancedCalendarEventDialog({
                       <Scissors className="w-5 h-5 text-secondary" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-0.5">Artisan</p>
+                      <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-0.5">Barber</p>
                       <p className="text-foreground font-bold text-lg tracking-tight leading-tight">
                         {selectedEvent.extendedProps.barberName}
                       </p>
@@ -217,7 +204,7 @@ export function EnhancedCalendarEventDialog({
                     <span className="text-foreground font-bold">${selectedEvent.extendedProps.basePrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-foreground/40 font-medium italic">Enhancements</span>
+                    <span className="text-foreground/40 font-medium italic">Add-ons</span>
                     <span className="text-foreground font-bold">${selectedEvent.extendedProps.addonTotal.toFixed(2)}</span>
                   </div>
                   <div className="pt-4 border-t border-foreground/5 flex justify-between items-center">
@@ -298,7 +285,7 @@ export function EnhancedCalendarEventDialog({
                   className="bg-foreground/[0.02] border-foreground/5 text-foreground/70 hover:bg-foreground/5 font-bold py-6 rounded-2xl transition-all"
                 >
                   <DownloadIcon className="w-4 h-4 mr-2 opacity-40" />
-                  Offline
+                  Add to calendar
                 </Button>
               </div>
             </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Clock, Car, Sparkles, CheckCircle, User } from 'lucide-react';
+import { Car, Sparkles, CheckCircle, User } from 'lucide-react';
 import { api, errorMessage } from '@/shared/lib/api';
 
 const deliverySteps = [
@@ -75,7 +75,7 @@ export default function ReachPage() {
             <div className="w-8 h-8 bg-saffron rounded-lg flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white font-bebas tracking-wide">BOCM Reach</span>
+            <span className="text-2xl font-bold text-white font-bebas tracking-wide">Talii Reach</span>
           </div>
           <div className="bg-saffron/10 text-saffron px-4 py-2 rounded-full text-sm font-medium">
             Coming August 2025
@@ -125,7 +125,7 @@ export default function ReachPage() {
             </button>
           </form>
         </div>
-        {submitted && <div className="text-green-400 text-center mt-2">You've been added to the waitlist!</div>}
+        {submitted && <div className="text-green-400 text-center mt-2">You&apos;ve been added to the waitlist!</div>}
         {error && <div className="text-red-400 text-center mt-2">{error}</div>}
         <div className="text-white/60 text-sm mt-4 text-center">
           Early access • Be part of the development • No spam, ever
@@ -133,7 +133,7 @@ export default function ReachPage() {
       </div>
       {/* Coming Soon Message */}
       <div className="text-center text-saffron font-bold text-lg py-8">
-        BOCM Reach is coming soon. Stay tuned!
+        Talii Reach is coming soon. Stay tuned!
       </div>
     </div>
   );

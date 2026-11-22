@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { logger } from '@/shared/lib/logger'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Button } from '@/shared/components/ui/button'
@@ -12,52 +10,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Badge } from '@/shared/components/ui/badge'
 import { Switch } from '@/shared/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
+import { ReviewModeration } from '@/shared/components/admin/ReviewModeration'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
-import { 
-  Loader2, 
-  Shield, 
-  Users, 
-  Crown, 
-  LogOut, 
-  Search, 
-  UserX, 
-  UserCheck, 
-  Settings, 
-  Eye, 
-  Edit, 
-  Trash2,
-  AlertTriangle,
-  Calendar,
-  Mail,
-  Phone,
-  MapPin,
-  Building,
-  DollarSign,
-  Activity,
-  Ban,
-  CheckCircle,
-  Clock,
-  Star,
-  TrendingUp,
-  Database,
-  Globe,
-  Bell,
-  Zap,
-  BarChart3,
-  MessageSquare,
-  Key,
-  Lock,
-  Unlock,
-  RefreshCw,
-  Download,
-  Upload,
-  Archive,
-  AlertCircle,
-  Info,
-  HelpCircle,
-  User
+import {
+  Loader2,
+  Shield,
+  Users,
+  Crown,
+  LogOut,
+  Search, Eye, Calendar, DollarSign,
+  Activity, Zap, MessageSquare, User
 } from 'lucide-react'
 import { supabase } from '@/shared/lib/supabase'
 import { api, errorMessage } from '@/shared/lib/api'
@@ -140,19 +104,11 @@ export default function SuperAdminPage() {
     revenueToday: 0
   })
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [systemStatus, setSystemStatus] = useState({
-    database: 'healthy',
-    api: 'healthy',
-    payments: 'healthy',
-    notifications: 'healthy'
-  })
-  const router = useRouter()
   const { toast } = useToast()
   const user = useAuthStore((state) => state.user)
 
   const loadDashboard = () => {
     fetchStats()
-    checkSystemStatus()
   }
 
   // Admin = GET /api/me isAdmin (auth app_metadata.role, set with scripts/set-admin.ts).
@@ -291,16 +247,6 @@ export default function SuperAdminPage() {
     } catch (error) {
       logger.error('Error fetching stats', error)
     }
-  }
-
-  const checkSystemStatus = async () => {
-    // Simulate system status check
-    setSystemStatus({
-      database: 'healthy',
-      api: 'healthy',
-      payments: 'healthy',
-      notifications: 'healthy'
-    })
   }
 
   /** "Developer" is fee exemption now (barber_billing.fee_exempt). */
@@ -493,7 +439,7 @@ export default function SuperAdminPage() {
       {/* Enhanced Header */}
       <div className="bg-gradient-to-r from-black/95 to-black/80 border-b border-white/20 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3 min-h-16">
             <div className="flex items-center gap-4">
               <div className="p-2 bg-gradient-to-br from-red-500/20 to-red-600/20 rounded-xl">
                 <Crown className="h-6 w-6 text-red-500" />
@@ -504,14 +450,14 @@ export default function SuperAdminPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="text-right">
+              <div className="text-right hidden sm:block">
                 <p className="text-white/60 text-sm">Super Admin</p>
                 <p className="text-white font-medium">{user?.email}</p>
               </div>
               <Button
                 onClick={handleLogout}
                 variant="outline"
-                className="border-white/20 text-white hover:bg-white/10"
+                className="bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
@@ -524,66 +470,27 @@ export default function SuperAdminPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-white/10 border border-white/20 p-1 rounded-xl">
-            <TabsTrigger value="dashboard" className="text-white data-[state=active]:bg-white/20 rounded-lg">
-              <Activity className="h-4 w-4 mr-2" />
-              Dashboard
+          <TabsList className="grid w-full grid-cols-4 h-auto bg-white/10 border border-white/20 p-1 rounded-xl">
+            <TabsTrigger value="dashboard" className="text-white data-[state=active]:bg-white/20 rounded-lg px-1 sm:px-3 py-2 text-xs sm:text-sm flex-col sm:flex-row gap-1">
+              <Activity className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Dashboard</span><span className="sm:hidden">Home</span>
             </TabsTrigger>
-            <TabsTrigger value="users" className="text-white data-[state=active]:bg-white/20 rounded-lg">
+            <TabsTrigger value="users" className="text-white data-[state=active]:bg-white/20 rounded-lg px-1 sm:px-3 py-2 text-xs sm:text-sm flex-col sm:flex-row gap-1">
               <Users className="h-4 w-4 mr-2" />
-              Users & Developers
+              <span className="hidden sm:inline">Users &amp; Developers</span><span className="sm:hidden">Users</span>
             </TabsTrigger>
-            <TabsTrigger value="profiles" className="text-white data-[state=active]:bg-white/20 rounded-lg">
+            <TabsTrigger value="profiles" className="text-white data-[state=active]:bg-white/20 rounded-lg px-1 sm:px-3 py-2 text-xs sm:text-sm flex-col sm:flex-row gap-1">
               <User className="h-4 w-4 mr-2" />
-              Profile Manager
+              <span className="hidden sm:inline">Profile Manager</span><span className="sm:hidden">Profiles</span>
             </TabsTrigger>
-            <TabsTrigger value="reviews" className="text-white data-[state=active]:bg-white/20 rounded-lg">
+            <TabsTrigger value="reviews" className="text-white data-[state=active]:bg-white/20 rounded-lg px-1 sm:px-3 py-2 text-xs sm:text-sm flex-col sm:flex-row gap-1">
               <MessageSquare className="h-4 w-4 mr-2" />
               Reviews
-            </TabsTrigger>
-            <TabsTrigger value="system" className="text-white data-[state=active]:bg-white/20 rounded-lg">
-              <Database className="h-4 w-4 mr-2" />
-              System
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="text-white data-[state=active]:bg-white/20 rounded-lg">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
             </TabsTrigger>
           </TabsList>
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-6">
-            {/* System Status */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {Object.entries(systemStatus).map(([service, status]) => (
-                <Card key={service} className={`bg-white/5 border border-white/10 ${
-                  status === 'healthy' ? 'border-green-400/50' : 'border-red-400/50'
-                }`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-white/60 text-sm capitalize">{service}</p>
-                        <p className={`text-white font-bold ${
-                          status === 'healthy' ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {status === 'healthy' ? 'Healthy' : 'Issue'}
-                        </p>
-                      </div>
-                      <div className={`p-2 rounded-lg ${
-                        status === 'healthy' ? 'bg-green-500/20' : 'bg-red-500/20'
-                      }`}>
-                        {status === 'healthy' ? (
-                          <CheckCircle className="w-5 h-5 text-green-400" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-red-400" />
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-400/50">
@@ -1001,157 +908,11 @@ export default function SuperAdminPage() {
 
           {/* Reviews Tab */}
           <TabsContent value="reviews" className="space-y-6">
-            <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-400/50 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-yellow-500/20 rounded-lg">
-                  <MessageSquare className="h-6 w-6 text-yellow-400" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Review Moderation</h3>
-                  <p className="text-white/80">
-                    Manage and moderate user reviews to maintain platform quality
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="text-center py-12">
-              <MessageSquare className="h-16 w-16 text-white/40 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">Review Moderation</h3>
-              <p className="text-white/60 mb-4">
-                Access the comprehensive review moderation system
-              </p>
-              <Button 
-                onClick={() => router.push('/admin')}
-                className="bg-secondary text-primary hover:bg-secondary/90"
-              >
-                Go to Admin Dashboard
-              </Button>
+            <div className="rounded-xl bg-neutral-950 p-4 sm:p-6">
+              <ReviewModeration />
             </div>
           </TabsContent>
 
-          {/* System Tab */}
-          <TabsContent value="system" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-white/10 border-white/20">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Database className="h-5 w-5" />
-                    System Health
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {Object.entries(systemStatus).map(([service, status]) => (
-                    <div key={service} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
-                          status === 'healthy' ? 'bg-green-500/20' : 'bg-red-500/20'
-                        }`}>
-                          {status === 'healthy' ? (
-                            <CheckCircle className="w-4 h-4 text-green-400" />
-                          ) : (
-                            <AlertCircle className="w-4 h-4 text-red-400" />
-                          )}
-                        </div>
-                        <span className="text-white font-medium capitalize">{service}</span>
-                      </div>
-                      <Badge className={
-                        status === 'healthy' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                      }>
-                        {status}
-                      </Badge>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/10 border-white/20">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Activity className="h-5 w-5" />
-                    Quick Actions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button className="w-full bg-white/10 border border-white/20 hover:bg-white/20 text-white justify-start">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh System Status
-                  </Button>
-                  <Button className="w-full bg-white/10 border border-white/20 hover:bg-white/20 text-white justify-start">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export System Logs
-                  </Button>
-                  <Button className="w-full bg-white/10 border border-white/20 hover:bg-white/20 text-white justify-start">
-                    <Archive className="h-4 w-4 mr-2" />
-                    Backup Database
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <Card className="bg-white/10 border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Platform Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Developer Mode</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-white/80">Enable Developer Accounts</span>
-                        <Switch defaultChecked className="bg-green-500" />
-                      </div>
-                      <p className="text-sm text-white/60">
-                        Allow barbers to bypass platform fees
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-white">Account Management</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-white/80">Allow Account Disabling</span>
-                        <Switch defaultChecked className="bg-green-500" />
-                      </div>
-                      <p className="text-sm text-white/60">
-                        Enable super admin to disable user accounts
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="pt-4 border-t border-white/20">
-                  <h3 className="text-lg font-semibold text-white mb-4">Platform Statistics</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-4 bg-white/5 rounded-lg">
-                      <p className="text-2xl font-bold text-white">{stats.totalUsers}</p>
-                      <p className="text-sm text-white/60">Total Users</p>
-                    </div>
-                    <div className="text-center p-4 bg-white/5 rounded-lg">
-                      <p className="text-2xl font-bold text-white">{stats.totalBarbers}</p>
-                      <p className="text-sm text-white/60">Barbers</p>
-                    </div>
-                    <div className="text-center p-4 bg-white/5 rounded-lg">
-                      <p className="text-2xl font-bold text-white">{stats.developers}</p>
-                      <p className="text-sm text-white/60">Developers</p>
-                    </div>
-                    <div className="text-center p-4 bg-white/5 rounded-lg">
-                      <p className="text-2xl font-bold text-white">{stats.disabledAccounts}</p>
-                      <p className="text-sm text-white/60">Disabled</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </div>

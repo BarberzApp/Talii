@@ -4,38 +4,21 @@ import * as React from 'react'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { api, errorMessage } from '@/shared/lib/api'
 import { logger } from '@/shared/lib/logger'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Card, CardContent } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { Badge } from '@/shared/components/ui/badge'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { 
-  Search, 
-  MapPin, 
-  Scissors, 
-  Star, 
-  Loader2, 
-  AlertCircle, 
-  Users, 
-  Filter, 
-  X,
+import {
+  Search,
+  MapPin, Loader2,
+  AlertCircle,
+  Users, X,
   SortAsc,
   SortDesc,
-  Map as MapIcon,
-  Clock,
-  DollarSign,
-  Sparkles,
-  TrendingUp,
-  Heart,
-  Calendar,
-  Phone,
-  Mail,
-  Globe,
-  Navigation,
-  Menu
+  Map as MapIcon
 } from 'lucide-react'
-import Link from 'next/link'
 import { BarberCard } from '@/shared/components/profile/barber-card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Checkbox } from '@/shared/components/ui/checkbox'
@@ -45,11 +28,7 @@ import { Separator } from '@/shared/components/ui/separator'
 import { SearchResultsSummary } from '@/shared/components/search/search-results-summary'
 import { SearchSkeleton } from '@/shared/components/search/search-skeleton'
 import { Skeleton } from '@/shared/components/ui/skeleton'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip'
-import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
-import { getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
+import { getAddressSuggestionsDetailed, type GeocodeResult } from '@/shared/lib/geocode'
 
 // Type for the raw data structure from the database
 // Type for the transformed data used in the UI
@@ -61,7 +40,6 @@ type Barber = {
   location?: string
   specialties: string[]
   bio?: string
-  priceRange?: string
   avatarUrl?: string
   isPublic?: boolean
   isStripeReady?: boolean
@@ -73,13 +51,14 @@ type Barber = {
   state?: string
   distance?: number // Distance from user's location (miles, from the API)
   rating?: number
+  reviewCount?: number
 }
 
 const PAGE_SIZE = 24
 /** GET /api/barbers stops nearby paging at the 200 nearest. */
 const NEARBY_MAX = 200
 
-type SortOption = 'name' | 'rating' | 'location' | 'price' | 'distance'
+type SortOption = 'name' | 'rating' | 'location' | 'distance'
 type SortOrder = 'asc' | 'desc'
 
 type LocationFilter = {
@@ -90,19 +69,20 @@ type LocationFilter = {
 }
 
 export default function BrowsePage() {
-  const { user } = useAuth()
   const [barbers, setBarbers] = useState<Barber[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [loading, setLoading] = useState(true)
+  // The full-page skeleton is only for the first load; later searches keep the
+  // search box mounted (so typing is never interrupted) and show results skeletons.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filteredBarbers, setFilteredBarbers] = useState<Barber[]>([])
   const [sortBy, setSortBy] = useState<SortOption>('name')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
-  const [priceRange, setPriceRange] = useState<string>('all')
   const [locationFilter, setLocationFilter] = useState<LocationFilter>({
     city: '',
     state: '',
@@ -111,14 +91,13 @@ export default function BrowsePage() {
   })
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null)
   const [showFilters, setShowFilters] = useState(false)
-  const [showLocationFilter, setShowLocationFilter] = useState(false)
+  const [showLocationFilter] = useState(false)
   const { toast } = useToast()
   const cityInputRef = useRef<HTMLInputElement>(null)
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([])
+  const [locationSuggestions, setLocationSuggestions] = useState<GeocodeResult[]>([])
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false)
   const [locationSuggestionsLoading, setLocationSuggestionsLoading] = useState(false)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const [barberViews, setBarberViews] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (showLocationFilter && cityInputRef.current) {
@@ -172,8 +151,8 @@ export default function BrowsePage() {
   }, [locationFilter.city, showLocationSuggestions, debouncedFetchLocationSuggestions]);
 
   // Handle location suggestion select
-  const handleLocationSuggestionSelect = (suggestion: any) => {
-    const displayName = suggestion.display_name || suggestion.name || '';
+  const handleLocationSuggestionSelect = (suggestion: GeocodeResult) => {
+    const displayName = suggestion.display_name || '';
     // Extract city and state from the suggestion address
     const city = suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || '';
     const state = suggestion.address?.state || '';
@@ -198,13 +177,19 @@ export default function BrowsePage() {
         },
         (error) => {
           logger.error('Error getting location', error)
+          setLocationFilter(prev => ({ ...prev, useCurrentLocation: false }))
           toast({
-            title: 'Location Error',
-            description: 'Could not get your current location.',
+            title: 'Location unavailable',
+            description: error.code === error.PERMISSION_DENIED
+              ? 'Allow location access in your browser to find barbers near you, or search by city instead.'
+              : 'Could not get your current location. Search by city instead.',
             variant: 'destructive',
           })
         }
       )
+    } else {
+      setLocationFilter(prev => ({ ...prev, useCurrentLocation: false }))
+      toast({ title: 'Location unavailable', description: 'Your browser cannot share its location. Search by city instead.', variant: 'destructive' })
     }
   }, [toast])
 
@@ -229,17 +214,6 @@ export default function BrowsePage() {
     return Array.from(specialties).sort()
   }, [barbers])
 
-  // Get all available locations for filtering
-  const allLocations = useMemo(() => {
-    const locations = new Set<string>()
-    barbers.forEach(barber => {
-      if (barber.location) locations.add(barber.location)
-      if (barber.city) locations.add(barber.city)
-      if (barber.state) locations.add(barber.state)
-    })
-    return Array.from(locations).sort()
-  }, [barbers])
-
   // Search is sent to the server, debounced.
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300)
@@ -252,7 +226,7 @@ export default function BrowsePage() {
 
   useEffect(() => {
     // Filter and sort barbers
-    let filtered = barbers.filter(barber => {
+    const filtered = barbers.filter(barber => {
       if (!barber.isPublic) return false // Only show public profiles
       
       // Text search happens on the server (q); the specialty, city/state and
@@ -286,13 +260,7 @@ export default function BrowsePage() {
         barber.distance = distance // Add distance to barber object for sorting
       }
 
-      // Price range filter
-      const matchesPrice = priceRange === 'all' || 
-        (priceRange === 'Budget' && barber.priceRange === 'Budget') ||
-        (priceRange === 'Mid-range' && barber.priceRange === 'Mid-range') ||
-        (priceRange === 'Premium' && barber.priceRange === 'Premium')
-
-      return matchesSearch && matchesSpecialties && matchesLocation && matchesPrice
+      return matchesSearch && matchesSpecialties && matchesLocation
     })
 
     // Sort barbers
@@ -317,11 +285,6 @@ export default function BrowsePage() {
           aValue = a.distance || Infinity
           bValue = b.distance || Infinity
           break
-        case 'price':
-          const priceOrder = { 'Budget': 1, 'Mid-range': 2, 'Premium': 3 }
-          aValue = priceOrder[a.priceRange as keyof typeof priceOrder] || 0
-          bValue = priceOrder[b.priceRange as keyof typeof priceOrder] || 0
-          break
       }
 
       if (sortOrder === 'asc') {
@@ -332,7 +295,7 @@ export default function BrowsePage() {
     })
 
     setFilteredBarbers(filtered)
-  }, [barbers, searchQuery, sortBy, sortOrder, selectedSpecialties, priceRange, locationFilter, userLocation])
+  }, [barbers, searchQuery, sortBy, sortOrder, selectedSpecialties, locationFilter, userLocation])
 
   /**
    * GET /api/barbers: listed barbers only, searched on the server (`q` matches
@@ -374,30 +337,19 @@ export default function BrowsePage() {
         state: card.state ?? undefined,
         distance: card.distance_miles ?? undefined,
         rating: card.rating.average_rating ?? undefined,
+        reviewCount: card.rating.review_count,
       }))
 
       setBarbers(prev => (reset ? page : [...prev, ...page]))
       setHasMore(pagination.hasMore && (!nearby || offset + cards.length < NEARBY_MAX))
     } catch (err) {
       logger.error('Error fetching barbers', err)
-      setError('Failed to load barbers. Please try again.')
-      toast({
-        title: 'Error',
-        description: errorMessage(err, 'Failed to load barbers.'),
-        variant: 'destructive',
-      })
+      setError(errorMessage(err, 'Could not load barbers. Check your connection and try again.'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
+      setHasLoadedOnce(true)
     }
-  }
-
-  // Handle location filter changes
-  const handleLocationFilter = () => {
-    if (locationFilter.useCurrentLocation && !userLocation) {
-      getCurrentLocation()
-    }
-    setShowLocationFilter(false)
   }
 
   // Clear location filters
@@ -424,7 +376,6 @@ export default function BrowsePage() {
   const clearAllFilters = () => {
     setSearchQuery('')
     setSelectedSpecialties([])
-    setPriceRange('all')
     clearLocationFilter()
     setSortBy('name')
     setSortOrder('asc')
@@ -447,11 +398,10 @@ export default function BrowsePage() {
   const activeFiltersCount = [
     searchQuery,
     selectedSpecialties.length,
-    priceRange !== 'all',
     locationFilter.city || locationFilter.state
   ].filter(Boolean).length
 
-  if (loading) {
+  if (loading && !hasLoadedOnce) {
     return (
       <div className="min-h-screen bg-background">
         {/* Loading Content */}
@@ -515,7 +465,9 @@ export default function BrowsePage() {
                   <Search className="h-5 w-5" />
                 </div>
                 <Input
-                  placeholder="Search by name, business, location, specialty, stylist, or cosmetologist..."
+                  type="search"
+                  aria-label="Search barbers"
+                  placeholder="Search by name, business or city"
                   value={searchQuery}
                   onChange={handleSearch}
                   onKeyDown={handleKeyDown}
@@ -526,6 +478,7 @@ export default function BrowsePage() {
                     variant="ghost"
                     size="sm"
                     onClick={clearSearch}
+                    aria-label="Clear search"
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full"
                   >
                     <X className="h-4 w-4" />
@@ -572,7 +525,7 @@ export default function BrowsePage() {
                       <SheetTrigger asChild>
                         <Button variant="outline" size="sm" className="flex items-center gap-2 bg-muted border-border text-foreground hover:bg-muted/80 rounded-xl flex-1 sm:flex-none">
                           <MapPin className="h-4 w-4" />
-                          Search Location
+                          Location &amp; filters
                           {activeFiltersCount > 0 && (
                             <Badge variant="secondary" className="ml-1 bg-primary/20 text-primary border-primary/30">
                               {activeFiltersCount}
@@ -625,7 +578,7 @@ export default function BrowsePage() {
                                           className="w-full text-left px-4 py-2 text-foreground hover:bg-primary/10 transition-colors"
                                           onMouseDown={() => handleLocationSuggestionSelect(s)}
                                         >
-                                          {s.display_name || s.name}
+                                          {s.display_name}
                                         </button>
                                       ))}
                                     </div>
@@ -648,7 +601,10 @@ export default function BrowsePage() {
                                 <Checkbox
                                   id="sidebar-current-location"
                                   checked={locationFilter.useCurrentLocation}
-                                  onCheckedChange={(checked: boolean) => setLocationFilter(prev => ({ ...prev, useCurrentLocation: checked }))}
+                                  onCheckedChange={(checked: boolean) => {
+                                    setLocationFilter(prev => ({ ...prev, useCurrentLocation: checked }))
+                                    if (checked && !userLocation) getCurrentLocation()
+                                  }}
                                   className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                 />
                                 <Label htmlFor="sidebar-current-location" className="text-sm font-medium text-foreground">
@@ -703,24 +659,6 @@ export default function BrowsePage() {
                             </div>
                           </div>
 
-                          <Separator className="bg-border" />
-
-                          {/* Price Range Filter */}
-                          <div className="space-y-4">
-                            <Label className="text-lg font-bebas text-foreground tracking-wide">Price Range</Label>
-                            <Select value={priceRange} onValueChange={setPriceRange}>
-                              <SelectTrigger className="bg-muted border-border text-foreground rounded-xl">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-popover border-border backdrop-blur-xl">
-                                <SelectItem value="all">All Prices</SelectItem>
-                                <SelectItem value="Budget">Budget</SelectItem>
-                                <SelectItem value="Mid-range">Mid-range</SelectItem>
-                                <SelectItem value="Premium">Premium</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
                           <div className="pt-6 space-y-3">
                             <Button 
                               onClick={() => setShowFilters(false)}
@@ -750,14 +688,13 @@ export default function BrowsePage() {
                   {/* Sort Controls */}
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                      <SelectTrigger className="w-full sm:w-[140px] bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground focus:border-saffron rounded-xl">
+                      <SelectTrigger aria-label="Sort by" className="w-full sm:w-[140px] bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground focus:border-saffron rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-black/90 border border-white/10 backdrop-blur-xl">
+                      <SelectContent className="bg-popover border-border">
                         <SelectItem value="name" className="text-foreground hover:bg-background dark:bg-white/10">Name</SelectItem>
                         <SelectItem value="rating" className="text-foreground hover:bg-background dark:bg-white/10">Rating</SelectItem>
                         <SelectItem value="location" className="text-foreground hover:bg-background dark:bg-white/10">Location</SelectItem>
-                        <SelectItem value="price" className="text-foreground hover:bg-background dark:bg-white/10">Price</SelectItem>
                         {userLocation && (
                           <SelectItem value="distance" className="text-foreground hover:bg-background dark:bg-white/10">Distance</SelectItem>
                         )}
@@ -767,6 +704,7 @@ export default function BrowsePage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                      aria-label={sortOrder === 'asc' ? 'Sorted ascending; switch to descending' : 'Sorted descending; switch to ascending'}
                       className="bg-background dark:bg-white/10 border-input dark:border-white/20 text-foreground hover:bg-white/20 rounded-xl flex-shrink-0"
                     >
                       {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
@@ -781,7 +719,10 @@ export default function BrowsePage() {
           {error && (
             <Alert variant="destructive" className="bg-red-100 dark:bg-red-900/30 border-red-200 dark:border-red-400/30 rounded-[2rem]">
               <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-              <AlertDescription className="text-red-800 dark:text-red-200">{error}</AlertDescription>
+              <AlertDescription className="text-red-800 dark:text-red-200 flex flex-wrap items-center justify-between gap-3">
+                <span>{error}</span>
+                <Button size="sm" variant="outline" onClick={() => fetchBarbers(true)}>Try again</Button>
+              </AlertDescription>
             </Alert>
           )}
 
@@ -793,7 +734,6 @@ export default function BrowsePage() {
               searchQuery={searchQuery}
               activeFilters={{
                 specialties: selectedSpecialties,
-                priceRange,
                 location: locationFilter.city || locationFilter.state
               }}
               onClearFilters={clearAllFilters}
@@ -801,8 +741,11 @@ export default function BrowsePage() {
             />
           )}
 
+          {/* Refreshing results (search or filter change) */}
+          {loading && hasLoadedOnce && <SearchSkeleton count={3} />}
+
           {/* Barbers Grid */}
-          {!error && filteredBarbers.length > 0 && (
+          {!error && !loading && filteredBarbers.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredBarbers.map((barber) => (
                 <BarberCard
@@ -815,13 +758,12 @@ export default function BrowsePage() {
                     location: barber.location,
                     bio: barber.bio,
                     specialties: barber.specialties,
-                    priceRange: barber.priceRange,
                     instagram: barber.instagram,
                     tiktok: barber.tiktok,
                     image: barber.avatarUrl,
-                    portfolio: [],
-                    trending: false,
-                    openToHire: false
+                    distance: barber.distance,
+                    rating: barber.rating,
+                    reviewCount: barber.reviewCount,
                   }}
                   className="hover:-translate-y-2 transition-all duration-300"
                 />
@@ -838,7 +780,7 @@ export default function BrowsePage() {
           )}
 
           {/* No Results */}
-          {!error && filteredBarbers.length === 0 && !loading && (
+          {!error && filteredBarbers.length === 0 && !loading && (barbers.length > 0 || activeFiltersCount > 0) && (
             <Card className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-[2rem]">
               <CardContent className="p-16 text-center">
                 <div className="space-y-6">
@@ -865,8 +807,8 @@ export default function BrowsePage() {
           )}
 
           {/* Empty State */}
-          {!error && barbers.length === 0 && !loading && (
-            <Card className="bg-white/5 border border-white/10 shadow-2xl backdrop-blur-xl rounded-2xl">
+          {!error && barbers.length === 0 && !loading && activeFiltersCount === 0 && (
+            <Card className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-xl backdrop-blur-xl rounded-[2rem]">
               <CardContent className="p-16 text-center">
                 <div className="space-y-6">
                   <div className="w-20 h-20 bg-background dark:bg-white/10 rounded-full flex items-center justify-center mx-auto">

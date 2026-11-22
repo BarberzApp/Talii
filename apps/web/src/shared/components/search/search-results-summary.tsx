@@ -2,7 +2,7 @@
 
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
-import { Users, Filter, X, MapPin, Scissors, DollarSign } from 'lucide-react'
+import { Users, Filter, X, MapPin, Scissors } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface SearchResultsSummaryProps {
@@ -11,7 +11,6 @@ interface SearchResultsSummaryProps {
   searchQuery: string
   activeFilters: {
     specialties: string[]
-    priceRange: string
     location: string
   }
   onClearFilters: () => void
@@ -28,13 +27,10 @@ export function SearchResultsSummary({
   onClearSearch,
   className = ''
 }: SearchResultsSummaryProps) {
-  const hasActiveFilters = activeFilters.specialties.length > 0 || 
-    activeFilters.priceRange !== 'all' || 
-    activeFilters.location
+  const hasActiveFilters = activeFilters.specialties.length > 0 || !!activeFilters.location
 
   const activeFiltersList = [
     ...activeFilters.specialties.map(s => ({ type: 'specialty', label: s, icon: Scissors })),
-    ...(activeFilters.priceRange !== 'all' ? [{ type: 'price', label: activeFilters.priceRange, icon: DollarSign }] : []),
     ...(activeFilters.location ? [{ type: 'location', label: activeFilters.location, icon: MapPin }] : [])
   ]
 
@@ -116,7 +112,7 @@ export function SearchResultsSummary({
         >
           <span>Searching for:</span>
           <Badge variant="outline" className="font-medium">
-            "{searchQuery}"
+            &quot;{searchQuery}&quot;
           </Badge>
         </motion.div>
       )}

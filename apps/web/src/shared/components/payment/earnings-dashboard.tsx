@@ -3,20 +3,19 @@
 import type * as React from "react"
 import { useState, useEffect } from "react"
 import {
-  Card,
   CardContent as CardContentBase,
   CardDescription as CardDescriptionBase,
   CardHeader as CardHeaderBase,
-  CardTitle as CardTitleBase,
+  CardTitle as CardTitleBase
 } from "@/shared/components/ui/card"
 import { useToast } from "@/shared/components/ui/use-toast"
 import { Loader2, DollarSign, TrendingUp, TrendingDown, CreditCard, Sparkles } from "lucide-react"
 import { Button as ButtonBase } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
-import { LoadingSpinner } from "@/shared/components/ui/loading-spinner"
 import { cn } from "@/shared/lib/utils"
 import { api, errorMessage } from "@/shared/lib/api"
 import { logger } from "@/shared/lib/logger"
+import { formatCents } from "@barber-app/shared"
 
 // React 19 JSX compatibility: cast to valid component types
 const CardHeader = CardHeaderBase as React.ComponentType<React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }>
@@ -221,7 +220,7 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
               )}
               <div className={cn("relative rounded-2xl p-8", mainBoxCls)}>
                 <div className="text-5xl font-bebas font-bold text-secondary mb-2">
-                  ${earnings?.current ? (earnings.current / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  {formatCents(earnings?.current ?? 0)}
                 </div>
                 <div className="flex items-center justify-center space-x-2">
                   {earnings?.trend === "up" ? (
@@ -247,14 +246,14 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
               <div className={smallCardCls}>
                 <div className={smallLabelCls}>Services</div>
                 <div className={smallValueCls}>
-                  ${earnings?.breakdown?.serviceFees ? (earnings.breakdown.serviceFees / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  {formatCents(earnings?.breakdown.serviceFees ?? 0)}
                 </div>
                 <div className={smallHintCls}>Completed appointments (paid in person)</div>
               </div>
               <div className={smallCardCls}>
                 <div className={smallLabelCls}>Booking Fees</div>
                 <div className={smallValueCls}>
-                  ${earnings?.breakdown?.platformFees ? (earnings.breakdown.platformFees / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  {formatCents(earnings?.breakdown.platformFees ?? 0)}
                 </div>
                 <div className={smallHintCls}>Your share of online booking fees</div>
               </div>

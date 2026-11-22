@@ -41,15 +41,15 @@ const faqData = [
   },
   {
     question: "Can I cancel or reschedule my appointment?",
-    answer: "Yes! You can cancel or reschedule your appointment up to 2 hours before your scheduled time through your booking confirmation or profile page."
+    answer: "You can cancel any time before your appointment starts, from Appointments on your profile. If you cancel more than 24 hours ahead, the $3.40 booking fee is refunded in full; closer than that it is not. If the barber cancels, the fee is always refunded. To change the time, cancel and book a new one."
   },
   {
     question: "What payment methods do you accept?",
-    answer: "We accept all major credit cards, debit cards, and digital payment methods through our secure payment system."
+    answer: "The booking fee is paid online by credit or debit card (or Link) through Stripe. The service itself is paid to your barber in person."
   },
   {
     question: "How do I become a barber on the platform?",
-    answer: "Click on 'Become a Barber' in the main menu, complete the registration process, and our team will review your application within 24-48 hours."
+    answer: "Sign up and choose Barber, then follow the setup steps: your profile, services, Stripe payouts and weekly hours. Your booking page goes live when they are done."
   },
   {
     question: "Is my personal information secure?",
@@ -94,7 +94,7 @@ export default function SupportPage() {
 
       toast({
         title: "Message Sent!",
-        description: "We've received your support request and will get back to you within 5 days.",
+        description: "We've received your message and will reply by email, usually within 24 hours.",
       })
 
       // Reset form
@@ -109,7 +109,9 @@ export default function SupportPage() {
       logger.error('Support form error', error)
       toast({
         title: "Error",
-        description: isApiError(error) || error instanceof Error ? error.message : "Failed to send your message. Please try again.",
+        description: isApiError(error) && error.status === 503
+          ? "Our message form is not available right now. Please email support@talii.com instead."
+          : isApiError(error) || error instanceof Error ? error.message : "Failed to send your message. Please try again.",
         variant: "destructive"
       })
     } finally {

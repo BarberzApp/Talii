@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { Progress } from '@/shared/components/ui/progress'
-import { CheckCircle, AlertCircle, Loader2, CreditCard, Building, Scissors, X, Instagram, Twitter, Music, Facebook } from 'lucide-react'
+import { CheckCircle, AlertCircle, Loader2, CreditCard, Building, Scissors, X, Instagram, Music } from 'lucide-react'
 import { api, errorMessage } from '@/shared/lib/api'
 import { logger } from '@/shared/lib/logger'
 import Link from 'next/link'
@@ -20,7 +20,7 @@ import { SpecialtyAutocomplete } from '@/shared/components/ui/specialty-autocomp
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { SocialMediaLinks } from '@/shared/components/social-media-links'
 import React from 'react'
-import { getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
+import { cityStateOf, getAddressSuggestionsDetailed, type GeocodeResult } from '@/shared/lib/geocode'
 
 const steps = [
   {
@@ -60,9 +60,7 @@ interface FormData {
   stripeConnected: boolean
   socialMedia: {
     instagram: string
-    twitter: string
     tiktok: string
-    facebook: string
   }
 }
 
@@ -92,7 +90,7 @@ function extractHandle(input: string): string {
 export default function BarberOnboardingPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { push: safePush, replace: safeReplace } = useSafeNavigation()
+  const { push: safePush } = useSafeNavigation()
   const { toast } = useToast()
   const [currentStep, setCurrentStep] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -104,11 +102,11 @@ export default function BarberOnboardingPage() {
 
   // Add state for location input and suggestions
   const [locationInput, setLocationInput] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<GeocodeResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isLocationAutofilled, setIsLocationAutofilled] = useState(false);
+  const [, setIsLocationAutofilled] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [, setSuggestionsLoading] = useState(false);
 
   useEffect(() => {
     setIsRouterReady(true)
@@ -209,22 +207,19 @@ export default function BarberOnboardingPage() {
     stripeConnected: false,
     socialMedia: {
       instagram: '',
-      twitter: '',
       tiktok: '',
-      facebook: '',
     }
   })
 
   const validateStep = async (stepIndex: number): Promise<boolean> => {
     const errors: ValidationErrors = {};
-    const step = steps[stepIndex];
 
     if (stepIndex === 0) {
       // Business Information validation
       if (!formData.businessName.trim()) errors.businessName = 'Business name is required';
       if (!formData.phone.trim()) errors.phone = 'Phone number is required';
       // Only city and state are stored (the listing shows "City, ST"); pick a suggestion to fill them.
-      if (!formData.city.trim() || !formData.state.trim()) errors.address = 'Please choose your location from the suggestions';
+      if (!formData.city.trim() || !formData.state.trim()) errors.address = 'Enter your city and state, for example "Chicago, IL", or pick a suggestion';
       if (!formData.bio.trim()) errors.bio = 'Bio is required';
 
       // Phone validation (US default)
@@ -425,8 +420,13 @@ export default function BarberOnboardingPage() {
         logger.debug(`Moving to step ${currentStep + 1}`);
         setCurrentStep(currentStep + 1)
       } else {
-        logger.debug('Onboarding completed, redirecting to settings');
-        safePush('/settings');
+        logger.debug('Onboarding completed, redirecting to weekly hours');
+        // Hours are not part of onboarding, and clients cannot book without them.
+        toast({
+          title: 'Last step: your hours',
+          description: 'Set your weekly hours so clients can pick a time.',
+        })
+        safePush('/settings?tab=availability');
       }
     } catch (error) {
       logger.error('Error updating profile', error)
@@ -492,7 +492,7 @@ export default function BarberOnboardingPage() {
     try {
       const suggestions = await getAddressSuggestionsDetailed(query);
       setLocationSuggestions(suggestions);
-    } catch (error) {
+    } catch {
       setLocationSuggestions([]);
     } finally {
       setSuggestionsLoading(false);
@@ -517,23 +517,27 @@ export default function BarberOnboardingPage() {
 
   // Handle location input change
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocationInput(e.target.value ?? '');
+    const value = e.target.value ?? '';
+    setLocationInput(value);
     setShowSuggestions(true);
     setIsLocationAutofilled(false); // Reset autofilled flag when user types
-    setFormData(prev => ({ ...prev, address: '', city: '', state: '', zipCode: '' }));
+    // A typed "City, ST" is enough (suggestions need the geocoding service,
+    // which may be unavailable); the server geocodes city/state on save.
+    const typed = value.includes(',') ? cityStateOf(value) : { city: null, state: null };
+    setFormData(prev => ({ ...prev, address: '', city: typed.city ?? '', state: typed.state ?? '', zipCode: '' }));
   };
 
   // Handle suggestion select
-  const handleSuggestionSelect = (suggestion: any) => {
+  const handleSuggestionSelect = (suggestion: GeocodeResult) => {
     const address = suggestion.address || {};
     const house = address.house_number ? address.house_number : '';
     const road = address.road ? address.road : '';
     const city = address.city || address.town || address.village || address.hamlet || '';
     const state = address.state || address.state_code || '';
     const zip = address.postcode || '';
-    let line1 = [house, road].filter(Boolean).join(' ');
-    let line2 = [city, state].filter(Boolean).join(', ');
-    let formatted = [line1, line2].filter(Boolean).join(', ');
+    const line1 = [house, road].filter(Boolean).join(' ');
+    const line2 = [city, state].filter(Boolean).join(', ');
+    const formatted = [line1, line2].filter(Boolean).join(', ');
     setLocationInput(formatted);
     setShowSuggestions(false);
     setLocationSuggestions([]);
@@ -583,14 +587,14 @@ export default function BarberOnboardingPage() {
                 value={locationInput}
                 onChange={handleLocationChange}
                 onFocus={() => setShowSuggestions(true)}
-                className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground focus:border-secondary rounded-xl"
                 placeholder="Start typing your address..."
                 autoComplete="off"
               />
               {showSuggestions && locationSuggestions.length > 0 && (
                 <div className="absolute z-50 mt-1 w-full bg-black border border-black/20 dark:border-white/20 rounded-xl shadow-lg max-h-60 overflow-auto">
                   {locationSuggestions.map((suggestion, idx) => {
-                    const display = suggestion.display_name || suggestion.name;
+                    const display = suggestion.display_name;
                     return (
                       <div
                         key={idx}
@@ -649,9 +653,7 @@ export default function BarberOnboardingPage() {
               <div className="flex items-center gap-2 mb-2">
                 <SocialMediaLinks
                   instagram={formData.socialMedia.instagram}
-                  twitter={formData.socialMedia.twitter}
                   tiktok={formData.socialMedia.tiktok}
-                  facebook={formData.socialMedia.facebook}
                   size="md"
                   className="justify-center"
                 />
@@ -666,21 +668,7 @@ export default function BarberOnboardingPage() {
                     name="socialMedia.instagram"
                     value={formData.socialMedia.instagram}
                     onChange={handleChange}
-                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
-                    placeholder="@yourusername"
-                  />
-                  <p className="text-xs text-muted-foreground dark:text-white/60">Only your handle (e.g., @yourusername)</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="socialMedia.twitter" className="text-foreground dark:text-white font-semibold flex items-center gap-2">
-                    <Twitter className="h-4 w-4 text-[#1DA1F2]" /> Twitter/X
-                  </Label>
-                  <Input
-                    id="socialMedia.twitter"
-                    name="socialMedia.twitter"
-                    value={formData.socialMedia.twitter}
-                    onChange={handleChange}
-                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground focus:border-secondary rounded-xl"
                     placeholder="@yourusername"
                   />
                   <p className="text-xs text-muted-foreground dark:text-white/60">Only your handle (e.g., @yourusername)</p>
@@ -694,24 +682,10 @@ export default function BarberOnboardingPage() {
                     name="socialMedia.tiktok"
                     value={formData.socialMedia.tiktok}
                     onChange={handleChange}
-                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
+                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder:text-muted-foreground focus:border-secondary rounded-xl"
                     placeholder="@yourusername"
                   />
                   <p className="text-xs text-muted-foreground dark:text-white/60">Only your handle (e.g., @yourusername)</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="socialMedia.facebook" className="text-foreground dark:text-white font-semibold flex items-center gap-2">
-                    <Facebook className="h-4 w-4 text-[#1877F3]" /> Facebook
-                  </Label>
-                  <Input
-                    id="socialMedia.facebook"
-                    name="socialMedia.facebook"
-                    value={formData.socialMedia.facebook}
-                    onChange={handleChange}
-                    className="bg-black/10 dark:bg-white/10 border-black/20 dark:border-white/20 text-foreground dark:text-white placeholder-white/40 focus:border-secondary rounded-xl"
-                    placeholder="yourpagename"
-                  />
-                  <p className="text-xs text-muted-foreground dark:text-white/60">Only your page name (e.g., yourpagename)</p>
                 </div>
               </div>
             </div>
@@ -862,7 +836,7 @@ export default function BarberOnboardingPage() {
                 
                 <div className="flex flex-col gap-3">
                   <p className="text-xs text-muted-foreground dark:text-white/60 text-center">
-                    You'll be redirected to Stripe to complete the setup. This process is secure and takes about 5 minutes.
+                    You&apos;ll be redirected to Stripe to complete the setup. This process is secure and takes about 5 minutes.
                   </p>
                   
                   <div className="relative">

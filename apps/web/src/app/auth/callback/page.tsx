@@ -14,7 +14,7 @@ import { useAuthStore } from '@/shared/stores/auth-store'
 export default function AuthCallbackPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
   const [status, setStatus] = useState<'verifying' | 'completing' | 'redirecting' | 'error'>('verifying')
   const [error, setError] = useState<string | null>(null)
   const { replace: safeReplace } = useSafeNavigation();
@@ -84,8 +84,8 @@ export default function AuthCallbackPage() {
         
         // Step 6: Show success message and redirect
         toast({
-          title: "Welcome back!",
-          description: "Successfully signed in with Google.",
+          title: "You're signed in",
+          description: "Welcome to Talii.",
         })
 
         // Small delay to show success state
@@ -135,35 +135,35 @@ export default function AuthCallbackPage() {
     switch (status) {
       case 'verifying':
       case 'completing':
-        return <Loader2 className="h-8 w-8 animate-spin text-saffron" />
+        return <Loader2 className="h-8 w-8 animate-spin text-primary" />
       case 'redirecting':
         return <CheckCircle className="h-8 w-8 text-green-500" />
       case 'error':
         return <AlertCircle className="h-8 w-8 text-red-500" />
       default:
-        return <Loader2 className="h-8 w-8 animate-spin text-saffron" />
+        return <Loader2 className="h-8 w-8 animate-spin text-primary" />
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center space-y-6 p-8">
         {getStatusIcon()}
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-white">
+          <h1 className="text-2xl font-semibold text-foreground">
             {status === 'error' ? 'Authentication Failed' : 'Completing Sign-In'}
           </h1>
-          <p className="text-white/60 max-w-md">
+          <p className="text-muted-foreground max-w-md">
             {getStatusMessage()}
           </p>
           {error && (
-            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
+            <div role="alert" className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
         </div>
         {status === 'error' && (
-          <div className="text-sm text-white/40">
+          <div className="text-sm text-muted-foreground">
             Redirecting to login in 3 seconds...
           </div>
         )}

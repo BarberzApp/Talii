@@ -60,7 +60,7 @@ export function AdminRouteGuard({
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-white/60">
-              You don't have permission to access this page. Admin privileges are required.
+              You don&apos;t have permission to access this page. Admin privileges are required.
             </p>
             <div className="flex gap-2">
               <Button 

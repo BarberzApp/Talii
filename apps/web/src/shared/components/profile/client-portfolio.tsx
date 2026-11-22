@@ -9,29 +9,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avat
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/components/ui/tabs'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/shared/components/ui/dialog'
-import { Progress } from '@/shared/components/ui/progress'
 import { Textarea } from '@/shared/components/ui/textarea'
-import { 
-  Heart, 
-  Users, 
-  History, 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  Play, 
-  Camera, 
+import {
+  Users, Calendar,
+  Clock, Camera,
   Loader2,
-  Star,
-  MessageCircle,
-  Share2,
-  Eye,
-  Edit3,
-  Save,
-  X
+  Star, Edit3
 } from 'lucide-react'
 import { PastStylistCard } from './PastStylistCard'
-import { cn } from '@/shared/lib/utils'
 import { api, errorMessage } from '@/shared/lib/api'
 import { uploadImage } from '@/shared/lib/uploads'
 import { BookingDetails } from '@/shared/components/booking/booking-details'
@@ -67,6 +52,7 @@ export default function ClientPortfolio() {
   const [editReviewData, setEditReviewData] = useState<{rating: number, comment: string}>({rating: 5, comment: ''});
   const [updatingReview, setUpdatingReview] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingListItem | null>(null);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
 
   const upcomingBookings = clientBookings
     .filter(b => (b.status === 'pending' || b.status === 'confirmed') && new Date(b.ends_at) > new Date())
@@ -75,14 +61,21 @@ export default function ClientPortfolio() {
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
 
   // Past barbers from the client's bookings
-  const pastBarbers = [...new Set(clientBookings.map(b => b.barber_id))].map(barberId => {
-    const booking = clientBookings.find(b => b.barber_id === barberId)
+  // Barbers the client has actually seen (completed appointments), newest first.
+  const reviewedBookingIds = new Set(userReviews.map(r => r.booking_id))
+  const completed = clientBookings
+    .filter(b => b.status === 'completed')
+    .sort((a, b) => b.starts_at.localeCompare(a.starts_at))
+  const pastBarbers = [...new Set(completed.map(b => b.barber_id))].map(barberId => {
+    const booking = completed.find(b => b.barber_id === barberId)
     if (booking?.barber) {
       return {
         id: booking.barber_id,
         name: booking.barber.profile?.name || booking.barber.business_name || 'Barber',
         image: booking.barber.profile?.avatar_url || undefined,
-        username: booking.barber.profile?.username || undefined
+        username: booking.barber.profile?.username || undefined,
+        lastVisit: formatBookingDate(booking.starts_at, booking.barber.timezone),
+        canReview: completed.some(b => b.barber_id === barberId && !reviewedBookingIds.has(b.id)),
       }
     }
     return null
@@ -120,6 +113,7 @@ export default function ClientPortfolio() {
     if (!user) return;
     try {
       setReviewsLoading(true);
+      setBookingsError(null);
       const [{ bookings }, { reviews }] = await Promise.all([
         api.bookings.list({ as: 'client', limit: 100 }),
         api.reviews.listOwn(),
@@ -129,6 +123,7 @@ export default function ClientPortfolio() {
       setUserReviews(reviews.map(r => ({ ...r, booking: byId.get(r.booking_id) })));
     } catch (error) {
       logger.error('Error fetching bookings and reviews', error);
+      setBookingsError(errorMessage(error, 'Could not load your bookings.'));
     } finally {
       setReviewsLoading(false);
     }
@@ -200,13 +195,6 @@ export default function ClientPortfolio() {
     })
   }
 
-  const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
 
   // Handle review editing
   const handleEditReview = (review: ReviewView) => {
@@ -262,7 +250,7 @@ export default function ClientPortfolio() {
         <div className="text-center space-y-6 relative z-10">
           <div className="relative">
             <Loader2 className="h-16 w-16 animate-spin mx-auto text-secondary opacity-80" />
-            <div className="absolute inset-0 rounded-full bg-secondary/15 animate-ping duration-[2000ms]" />
+            <div className="absolute inset-0 rounded-full bg-secondary/15 animate-ping [animation-duration:2000ms]" />
           </div>
           <p className="text-foreground font-bebas text-2xl tracking-[0.2em] opacity-40 animate-pulse">Loading Profile...</p>
         </div>
@@ -378,24 +366,24 @@ export default function ClientPortfolio() {
       <div className="w-full max-w-5xl mx-auto mb-16">
         <Tabs defaultValue="appointments" className="w-full">
           <div className="flex justify-center mb-8">
-            <TabsList className="inline-flex h-14 items-center justify-center rounded-2xl bg-white/5 border border-white/10 p-1.5 backdrop-blur-2xl shadow-2xl">
+            <TabsList className="grid grid-cols-3 w-full max-w-lg h-14 items-center rounded-2xl bg-white/5 border border-white/10 p-1.5 backdrop-blur-2xl shadow-2xl">
               <TabsTrigger
                 value="appointments"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
               >
                 <Calendar className="h-4 w-4" />
                 <span className="uppercase">Appointments</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="past-barbers" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
               >
                 <Users className="h-4 w-4" />
                 <span className="uppercase">Stylists</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="bookings" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-8 py-3 text-sm font-bold tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
               >
                 <Star className="h-4 w-4" />
                 <span className="uppercase">Reviews</span>
@@ -406,12 +394,22 @@ export default function ClientPortfolio() {
 
 
           <TabsContent value="appointments" className="mt-0 outline-none">
-            {upcomingBookings.length === 0 ? (
+            {bookingsError ? (
+              <div role="alert" className="max-w-2xl mx-auto rounded-2xl border border-red-200 bg-red-50 dark:bg-red-950/40 dark:border-red-900 p-5 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-red-700 dark:text-red-300">{bookingsError}</p>
+                <Button size="sm" variant="outline" onClick={() => void loadBookingsAndReviews()}>Try again</Button>
+              </div>
+            ) : reviewsLoading ? (
+              <div className="flex justify-center py-16" role="status" aria-label="Loading your bookings">
+                <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+              </div>
+            ) : upcomingBookings.length === 0 ? (
               <div className="text-center py-20 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl max-w-2xl mx-auto shadow-2xl">
                 <div className="p-4 bg-secondary/10 rounded-full w-fit mx-auto mb-6">
                   <Calendar className="h-10 w-10 text-secondary/60" />
                 </div>
-                <h3 className="text-foreground font-bebas font-bold text-3xl mb-4 tracking-tight">No Upcoming Appointments</h3>
+                <h3 className="text-foreground font-bebas font-bold text-3xl mb-2 tracking-tight">No Upcoming Appointments</h3>
+                <p className="text-muted-foreground mb-6 px-4">Find a barber and pick a time. Your bookings show up here, and you can cancel them here too.</p>
                 <Button
                   onClick={() => window.location.href = '/browse'}
                   className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
@@ -427,8 +425,12 @@ export default function ClientPortfolio() {
                     <Card
                       key={booking.id}
                       data-testid="client-booking"
-                      className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl cursor-pointer hover:border-secondary/20 transition-all"
+                      className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-2xl cursor-pointer hover:border-secondary/20 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() => setSelectedBooking(booking)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Booking details: ${booking.service?.name ?? 'Appointment'}`}
+                      onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedBooking(booking) } }}
                     >
                       <CardContent className="p-6 flex items-center justify-between gap-4">
                         <div>
@@ -467,7 +469,7 @@ export default function ClientPortfolio() {
                 </div>
                 <h3 className="text-foreground font-bebas font-bold text-3xl mb-4 tracking-tight">No Connections</h3>
                 <p className="text-muted-foreground text-base mb-8 max-w-sm mx-auto leading-relaxed">
-                  Your past stylists will appear here. Book an appointment to start building your network.
+                  Barbers you have had an appointment with appear here, so you can book again or leave a review.
                 </p>
                 <Button
                   onClick={() => window.location.href = '/browse'}
@@ -487,15 +489,9 @@ export default function ClientPortfolio() {
                       image: barber?.image,
                       username: barber?.username
                     }}
-                    rating={4}
-                    isOnline={true}
-                    onBookAgain={(barberId) => {
-                      if (barber?.username) {
-                        window.location.href = `/book/${barber.username}`;
-                      } else {
-                        window.location.href = `/browse?barber=${barberId}`;
-                      }
-                    }}
+                    lastVisit={barber?.lastVisit}
+                    canReview={barber?.canReview}
+                    onReviewed={loadBookingsAndReviews}
                   />
                 ))}
               </div>
@@ -533,7 +529,7 @@ export default function ClientPortfolio() {
                         <Avatar className="h-12 w-12 border border-white/10">
                           <AvatarImage 
                             src={review.booking?.barber?.profile?.avatar_url || undefined} 
-                            alt={review.booking?.barber?.profile?.name || review.booking?.barber?.business_name} 
+                            alt={review.booking?.barber?.profile?.name || review.booking?.barber?.business_name || 'Barber'} 
                           />
                           <AvatarFallback className="bg-secondary text-primary-foreground font-bebas text-xl">
                             {review.booking?.barber?.profile?.name || review.booking?.barber?.business_name?.charAt(0)}
@@ -606,7 +602,7 @@ export default function ClientPortfolio() {
                           ) : (
                             <div className="group relative">
                               <p className="text-foreground/90 text-sm leading-relaxed mb-4 italic">
-                                "{review.comment || 'No comment provided.'}"
+                                &quot;{review.comment || 'No comment provided.'}&quot;
                               </p>
                               <div className="flex items-center justify-between">
                                 <div className="text-xs text-muted-foreground">

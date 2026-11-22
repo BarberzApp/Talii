@@ -1,5 +1,4 @@
 "use client";
-import * as React from "react";
 import { Suspense } from "react";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -24,7 +23,7 @@ function ConfirmPage() {
   const { toast } = useToast();
   const [checking, setChecking] = useState(false);
   const [email, setEmail] = useState("");
-  const [autoCheck, setAutoCheck] = useState(true);
+  const autoCheck = true;
   const [resent, setResent] = useState(false);
 
   useEffect(() => {
@@ -55,10 +54,12 @@ function ConfirmPage() {
         toast({ title: "Email Confirmed!", description: "Redirecting..." });
         setTimeout(() => router.replace("/login"), 1200);
       } else {
-        toast({ title: "Not Confirmed Yet", description: "Please check your email and click the confirmation link first.", variant: "destructive" });
+        // The link may have been opened on another device or browser, which
+        // this page cannot see. Signing in tells us for sure.
+        router.replace("/login");
       }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to check confirmation status. Please try again.", variant: "destructive" });
+    } catch {
+      router.replace("/login");
     } finally {
       setChecking(false);
     }
@@ -74,8 +75,8 @@ function ConfirmPage() {
       if (error) throw error;
       setResent(true);
       toast({ title: "Email Sent", description: "We've sent another confirmation email. Please check your inbox." });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to resend confirmation email. Please try again.", variant: "destructive" });
+    } catch {
+      toast({ title: "Could not resend", description: "Please wait a minute and try again.", variant: "destructive" });
     }
   };
 
@@ -102,18 +103,17 @@ function ConfirmPage() {
                 className="w-full bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold rounded-xl h-12 text-lg font-bebas"
                 disabled={checking}
               >
-                {checking ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "I've Confirmed My Email"}
+                {checking ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "I've confirmed, sign me in"}
               </Button>
               <button
                 type="button"
                 onClick={handleResend}
-                className="text-primary text-center font-semibold hover:underline focus:underline outline-none"
-                tabIndex={0}
+                className="text-primary text-center font-semibold hover:underline focus-visible:underline"
                 disabled={resent}
               >
                 {resent ? "Email Sent!" : "Didn't receive an email? Resend"}
               </button>
-              <Link href="/login" className="text-muted-foreground text-center hover:underline focus:underline outline-none hover:text-foreground">
+              <Link href="/login" className="text-muted-foreground text-center hover:underline focus-visible:underline hover:text-foreground">
                 Already confirmed? Go to login
               </Link>
             </div>

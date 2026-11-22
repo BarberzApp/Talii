@@ -8,6 +8,9 @@ dotenv.config({ path: new URL('../../.env', import.meta.url) })
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Optional separate build folder (e.g. NEXT_DIST_DIR=.next-local) so two dev
+  // servers can run from this directory at once. Defaults to .next.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   images: {
     domains: [
       'localhost',
@@ -17,17 +20,13 @@ const nextConfig = {
       'images.unsplash.com'
     ],
   },
+  // `next build` fails on type or lint errors.
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has TypeScript errors.
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  // Copy service worker to public directory during build
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

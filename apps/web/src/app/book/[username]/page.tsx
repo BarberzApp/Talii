@@ -1,45 +1,50 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { api, errorMessage, hasErrorCode } from '@/shared/lib/api'
-import { formatCents, type PublicService } from '@barber-app/shared'
+import { formatCents, type BarberProfileResponse, type PublicService } from '@barber-app/shared'
 import { logger } from '@/shared/lib/logger'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
 import { Button } from '@/shared/components/ui/button'
 import { BookingForm } from '@/shared/components/booking/booking-form'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Badge } from '@/shared/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/shared/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
 import Link from 'next/link'
-import { 
-  Play, 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  Star, 
-  MapPin, 
-  Phone, 
-  Clock, 
+import {
+  Share2,
+  Star,
+  MapPin, Clock,
   Calendar,
-  ArrowLeft,
-  Sparkles,
-  Video,
-  Eye,
-  Grid3X3,
-  BookOpen,
-  Settings,
-  MoreHorizontal,
-  Instagram,
-  Twitter,
-  Facebook,
-  Mail,
-  Users,
-  Award,
-  CheckCircle
+  ArrowLeft, Music,
+  Eye, BookOpen, MoreHorizontal,
+  Instagram, Award, Flag, Ban
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/shared/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/components/ui/alert-dialog'
+import { Skeleton } from '@/shared/components/ui/skeleton'
+import { FeeNote } from '@/shared/components/booking/fee-note'
+import { ReportDialog } from '@/shared/components/safety/report-dialog'
+import { useAuth } from '@/shared/hooks/use-auth-zustand'
+import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
+import { storeRedirectUrl } from '@/shared/lib/redirect-utils'
+import { bookingLink } from '@/shared/lib/app-url'
 
 type Barber = {
   id: string
@@ -103,7 +108,7 @@ class ErrorBoundary extends React.Component<
                 </svg>
               </div>
               <h1 className="text-2xl font-bold mb-2 text-foreground dark:text-white">Something went wrong</h1>
-              <p className="text-gray-400 mb-6">An unexpected error occurred. Please try again.</p>
+              <p className="text-muted-foreground mb-6">An unexpected error occurred. Please try again.</p>
             </div>
             
             <div className="space-y-3">
@@ -128,25 +133,30 @@ class ErrorBoundary extends React.Component<
 
 function BookPageContent() {
   const params = useParams()
-  const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
+  const { push: safePush } = useSafeNavigation()
   const [barber, setBarber] = useState<Barber | null>(null)
+  /** The raw GET response, handed to the booking form so it does not fetch the barber again. */
+  const [profileData, setProfileData] = useState<BarberProfileResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [showBookingForm, setShowBookingForm] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('services')
   const [reviews, setReviews] = useState<Review[]>([])
-  const [loadingReviews, setLoadingReviews] = useState(false)
+  const [loadingReviews, setLoadingReviews] = useState(true)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportReviewId, setReportReviewId] = useState<string | null>(null)
+  const [blockOpen, setBlockOpen] = useState(false)
+  const [blocking, setBlocking] = useState(false)
 
   // Share functionality
   const handleShare = async () => {
     if (!barber) return
 
-    const shareUrl = `${window.location.origin}/book/${barber.username || barber.id}`
-    const shareText = `Book your next haircut with ${barber.name} on BOCM Style!`
+    const shareUrl = barber.username ? bookingLink(barber.username) : `${window.location.origin}/book/${barber.id}`
+    const shareText = `Book your next haircut with ${barber.name} on Talii`
 
     try {
       if (navigator.share) {
@@ -173,7 +183,7 @@ function BookPageContent() {
           title: 'Link copied!',
           description: 'Booking link copied to clipboard.',
         })
-      } catch (clipboardError) {
+      } catch {
         toast({
           title: 'Error',
           description: 'Failed to share or copy link.',
@@ -185,54 +195,6 @@ function BookPageContent() {
 
   // Safely extract identifier from params (could be username or barber ID)
   const identifier = params && params.username ? (Array.isArray(params.username) ? params.username[0] : params.username) : undefined;
-
-  // Add guard for params in BookPageContent
-  if (!identifier) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center max-w-md mx-auto">
-          <div className="mb-6">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold mb-2 text-foreground dark:text-white">Invalid Profile Link</h1>
-            <p className="text-gray-400 mb-6 text-sm sm:text-base">This profile link appears to be invalid or has expired.</p>
-          </div>
-          
-          <div className="space-y-3">
-            <Button asChild className="w-full rounded-full bg-secondary text-primary-foreground px-6 py-3 text-sm sm:text-base">
-              <Link href="/browse">Browse Available Barbers</Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full rounded-full text-sm sm:text-base">
-              <Link href="/">Go to Homepage</Link>
-            </Button>
-          </div>
-          
-          <p className="text-xs text-gray-500 mt-6">
-            If you believe this is an error, please contact the barber directly.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // Detect mobile device - Universal detection
-  useEffect(() => {
-    const checkMobile = () => {
-      // Universal mobile detection
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS|FxiOS/i.test(navigator.userAgent) ||
-        (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
-        window.matchMedia('(max-width: 768px)').matches;
-      
-      setIsMobile(isMobileDevice);
-    }
-    
-    checkMobile();
-  }, [])
-
-  // Note: PWA interference handling removed with PWA support.
 
   useEffect(() => {
     if (identifier) {
@@ -273,9 +235,11 @@ function BookPageContent() {
       }
 
       setBarber(barberObject)
-
-      await fetchReviews(data.barber.id)
+      setProfileData(data)
+      // Reviews load in the background: the profile shows as soon as it arrives.
+      void fetchReviews(data.barber.id)
     } catch (error) {
+      setLoadingReviews(false)
       logger.error('Error fetching barber details', error)
       setError(
         hasErrorCode(error, 'BARBER_NOT_FOUND', 'VALIDATION_ERROR')
@@ -303,12 +267,37 @@ function BookPageContent() {
           },
         }))
       )
-    } catch (error) {
-      logger.error('Error fetching reviews', error)
+    } catch (err) {
+      logger.error('Error fetching reviews', err)
     } finally {
       setLoadingReviews(false)
     }
   }
+
+  /** Report and block need an account; signed-out visitors go to sign in and come back. */
+  const requireSignIn = () => {
+    if (user) return true
+    storeRedirectUrl(window.location.pathname)
+    safePush('/login')
+    return false
+  }
+
+  const handleBlock = async () => {
+    if (!barber) return
+    setBlocking(true)
+    try {
+      await api.blocks.block(barber.userId)
+      setBlockOpen(false)
+      toast({ title: 'Blocked', description: `You will no longer see ${barber.name}, and they cannot see you. You can unblock them in Settings.` })
+      safePush('/browse')
+    } catch (err) {
+      toast({ title: 'Could not block', description: errorMessage(err, 'Please try again.'), variant: 'destructive' })
+    } finally {
+      setBlocking(false)
+    }
+  }
+
+  const isOwnProfile = !!user && !!barber && user.id === barber.userId
 
   const formatLocation = (location: string) => {
     if (!location) return '';
@@ -334,6 +323,38 @@ function BookPageContent() {
     }
   }
 
+  // Bad link (no username in the URL)
+  if (!identifier) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold mb-2 text-foreground dark:text-white">Invalid Profile Link</h1>
+            <p className="text-muted-foreground mb-6 text-sm sm:text-base">This profile link appears to be invalid or has expired.</p>
+          </div>
+          
+          <div className="space-y-3">
+            <Button asChild className="w-full rounded-full bg-secondary text-primary-foreground px-6 py-3 text-sm sm:text-base">
+              <Link href="/browse">Browse Available Barbers</Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full rounded-full text-sm sm:text-base">
+              <Link href="/">Go to Homepage</Link>
+            </Button>
+          </div>
+          
+          <p className="text-xs text-muted-foreground mt-6">
+            If you believe this is an error, please contact the barber directly.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   // Show error state
   if (error) {
     return (
@@ -346,7 +367,7 @@ function BookPageContent() {
               </svg>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold mb-2 text-foreground dark:text-white">Something went wrong</h1>
-            <p className="text-gray-400 mb-6 text-sm sm:text-base">{error}</p>
+            <p className="text-muted-foreground mb-6 text-sm sm:text-base">{error}</p>
           </div>
           
           <div className="space-y-3">
@@ -367,13 +388,20 @@ function BookPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary mx-auto mb-4"></div>
-          <p className="text-foreground dark:text-white text-sm sm:text-base">Loading profile...</p>
-          {isMobile && (
-            <p className="text-sm text-gray-400 mt-2">If this takes too long, try refreshing the page</p>
-          )}
+      <div className="bg-background pb-[140px] md:pb-0" data-skeleton aria-busy="true" aria-label="Loading barber profile">
+        <div className="sticky top-0 z-30 bg-black/5 dark:bg-white/5 backdrop-blur-xl border-b border-black/10 dark:border-white/10 h-[57px]" />
+        <Skeleton className="h-48 md:h-64 w-full rounded-none" />
+        <div className="px-4 -mt-16 flex flex-col items-center gap-3">
+          <Skeleton className="h-32 w-32 rounded-full border-4 border-background" />
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-10 w-full max-w-xs rounded-full mt-2" />
+        </div>
+        <div className="px-4 mt-8 space-y-3 max-w-3xl mx-auto">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
         </div>
       </div>
     )
@@ -390,7 +418,7 @@ function BookPageContent() {
               </svg>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold mb-2 text-foreground dark:text-white">Profile Not Found</h1>
-            <p className="text-gray-400 mb-6 text-sm sm:text-base">The barber you're looking for doesn't exist or has been removed from the platform.</p>
+            <p className="text-muted-foreground mb-6 text-sm sm:text-base">The barber you&apos;re looking for does not exist or has been removed from the platform.</p>
           </div>
           
           <div className="space-y-3">
@@ -402,7 +430,7 @@ function BookPageContent() {
             </Button>
           </div>
           
-          <p className="text-xs text-gray-500 mt-6">
+          <p className="text-xs text-muted-foreground mt-6">
             The barber may have deactivated their account or changed their profile link.
           </p>
         </div>
@@ -413,24 +441,46 @@ function BookPageContent() {
   return (
     <div className="bg-background pb-[140px] md:pb-0">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-black/5 dark:bg-white/5 backdrop-blur-xl border-b border-black/10 dark:border-white/10">
+      <div className="sticky top-0 z-30 bg-black/5 dark:bg-white/5 backdrop-blur-xl border-b border-black/10 dark:border-white/10">
         <div className="flex items-center justify-between px-4 py-3">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => window.history.back()}
-            className="text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10"
+            onClick={() => (window.history.length > 1 ? window.history.back() : safePush('/browse'))}
+            aria-label="Back"
+            className="text-foreground dark:text-white hover:bg-black/10 dark:hover:bg-white/10"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-bold text-foreground dark:text-white">@{barber.username || barber.name?.toLowerCase().replace(/\s+/g, '')}</h1>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10"
-          >
-            <MoreHorizontal className="h-5 w-5" />
-          </Button>
+          <p className="text-lg font-bold text-foreground dark:text-white truncate">{barber.username ? `@${barber.username}` : barber.name}</p>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="More options"
+                className="text-foreground dark:text-white hover:bg-black/10 dark:hover:bg-white/10"
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => void handleShare()}>
+                <Share2 className="h-4 w-4 mr-2" aria-hidden="true" /> Share profile
+              </DropdownMenuItem>
+              {!isOwnProfile && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => { if (requireSignIn()) setReportOpen(true) }}>
+                    <Flag className="h-4 w-4 mr-2" aria-hidden="true" /> Report
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-red-600 focus:text-red-700" onSelect={() => { if (requireSignIn()) setBlockOpen(true) }}>
+                    <Ban className="h-4 w-4 mr-2" aria-hidden="true" /> Block
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -457,7 +507,7 @@ function BookPageContent() {
       <div className="relative px-4 pb-4">
         {/* Avatar positioned over cover photo */}
         <div className="relative -mt-16 mb-4">
-          <Avatar className="h-32 w-32 mx-auto border-4 border-black shadow-xl">
+          <Avatar className="h-32 w-32 mx-auto border-4 border-background shadow-xl">
             <AvatarImage src={barber.avatar_url} alt={barber.name} className="object-cover w-full h-full" />
             <AvatarFallback className="text-4xl bg-secondary text-primary-foreground font-bold w-full h-full flex items-center justify-center">
               {barber.name && barber.name.length > 0 ? barber.name.charAt(0) : '?'}
@@ -497,7 +547,7 @@ function BookPageContent() {
                 {barber.average_rating?.toFixed(1)}
               </span>
               <span className="text-muted-foreground dark:text-white/60 text-sm">
-                ({barber.review_count || 0} reviews)
+                ({barber.review_count || 0} {barber.review_count === 1 ? 'review' : 'reviews'})
               </span>
             </div>
           ) : (
@@ -539,9 +589,10 @@ function BookPageContent() {
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-3 justify-center mb-6">
+          <div className="flex gap-3 justify-center mb-3">
             <Button
               onClick={() => setShowBookingForm(true)}
+              disabled={barber.services.length === 0 || isOwnProfile}
               className="flex-1 max-w-xs bg-secondary text-primary-foreground font-semibold rounded-full hover:bg-secondary/90"
             >
               <Calendar className="h-4 w-4 mr-2" />
@@ -550,11 +601,19 @@ function BookPageContent() {
             <Button
               onClick={handleShare}
               variant="outline"
-              className="border-black/20 dark:border-white/20 text-foreground dark:text-white hover:bg-black/10 dark:bg-white/10 rounded-full"
+              aria-label="Share profile"
+              className="border-black/20 dark:border-white/20 text-foreground dark:text-white hover:bg-black/10 dark:hover:bg-white/10 rounded-full"
             >
               <Share2 className="h-4 w-4" />
             </Button>
           </div>
+          {isOwnProfile ? (
+            <p className="text-sm text-muted-foreground mb-6">This is how clients see your page.</p>
+          ) : barber.services.length === 0 ? (
+            <p className="text-sm text-muted-foreground mb-6">This barber has no services to book yet.</p>
+          ) : (
+            <FeeNote className="justify-center text-left max-w-md mx-auto mb-6" />
+          )}
 
           {/* Social Links */}
           {(barber.instagram || barber.tiktok) && (
@@ -564,7 +623,8 @@ function BookPageContent() {
                   href={`https://instagram.com/${barber.instagram.replace(/^@/, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-500 rounded-full flex items-center justify-center text-foreground dark:text-white hover:scale-110 transition-transform"
+                  aria-label={`${barber.name} on Instagram`}
+                  className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-500 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
                 >
                   <Instagram className="h-5 w-5" />
                 </a>
@@ -574,9 +634,10 @@ function BookPageContent() {
                   href={`https://www.tiktok.com/@${barber.tiktok.replace(/^@/, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={`${barber.name} on TikTok`}
                   className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
                 >
-                  <Video className="h-5 w-5" />
+                  <Music className="h-5 w-5" />
                 </a>
               )}
             </div>
@@ -614,6 +675,7 @@ function BookPageContent() {
           <TabsContent value="services" className="mt-6">
             {barber.services && barber.services.length > 0 ? (
               <div className="space-y-3">
+                <FeeNote compact className="px-1" />
                 {barber.services.map((service) => (
                   <div
                     key={service.id}
@@ -631,6 +693,7 @@ function BookPageContent() {
                     </div>
                     <div className="text-right ml-4 flex-shrink-0">
                       <p className="font-bold text-secondary text-xl">{formatCents(service.price_cents, { compact: true })}</p>
+                      <p className="text-xs text-muted-foreground">in person</p>
                     </div>
                   </div>
                 ))}
@@ -648,9 +711,11 @@ function BookPageContent() {
             {barber.portfolio && barber.portfolio.length > 0 ? (
               <div className="grid grid-cols-3 gap-1">
                 {barber.portfolio.map((item, index) => (
-                  <div
+                  <button
+                    type="button"
                     key={index}
-                    className="group relative aspect-square bg-black/5 dark:bg-white/5 cursor-pointer"
+                    aria-label={`View photo ${index + 1}`}
+                    className="group relative aspect-square bg-black/5 dark:bg-white/5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => setSelectedImage(item)}
                   >
                     <img
@@ -662,10 +727,10 @@ function BookPageContent() {
                     {/* Overlay */}
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Eye className="h-6 w-6 text-foreground dark:text-white" />
+                        <Eye className="h-6 w-6 text-white" />
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             ) : (
@@ -715,9 +780,18 @@ function BookPageContent() {
                         {review.comment && (
                           <p className="text-muted-foreground dark:text-white/80 text-sm leading-relaxed">{review.comment}</p>
                         )}
-                        <p className="text-muted-foreground dark:text-white/50 text-xs mt-2">
-                          {new Date(review.created_at).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-muted-foreground dark:text-white/50 text-xs">
+                            {new Date(review.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => { if (requireSignIn()) setReportReviewId(review.id) }}
+                            className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                          >
+                            Report
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -727,7 +801,7 @@ function BookPageContent() {
               <div className="text-center py-12">
                 <Star className="h-12 w-12 text-muted-foreground dark:text-white/40 mx-auto mb-4" />
                 <p className="text-muted-foreground dark:text-white/60">No reviews yet</p>
-                <p className="text-muted-foreground dark:text-white/40 text-sm mt-2">Be the first to leave a review!</p>
+                <p className="text-muted-foreground dark:text-white/40 text-sm mt-2">Clients can review after a completed appointment.</p>
               </div>
             )}
           </TabsContent>
@@ -740,7 +814,8 @@ function BookPageContent() {
       {/* Image Dialog */}
       {selectedImage !== null && (
         <Dialog open={!!selectedImage} onOpenChange={open => !open && setSelectedImage(null)}>
-          <DialogContent className="max-w-2xl w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-0 flex flex-col items-center justify-center [&>button]:left-4 [&>button]:right-auto">
+          <DialogContent className="max-w-2xl w-full bg-background border border-border rounded-2xl shadow-2xl p-0 flex flex-col items-center justify-center [&>button]:left-4 [&>button]:right-auto">
+            <DialogTitle className="sr-only">Portfolio photo</DialogTitle>
             <div className="w-full flex items-center justify-between px-6 py-4 border-b border-black/10 dark:border-white/10">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-secondary/20">
@@ -777,18 +852,46 @@ function BookPageContent() {
           <BookingForm
             isOpen={showBookingForm}
             onClose={() => setShowBookingForm(false)}
-            selectedDate={selectedDate || new Date()}
-            barberId={barber!.id}
-            onBookingCreated={(booking) => {
-              setShowBookingForm(false)
-              toast({
-                title: 'Booking Created!',
-                description: 'Your appointment has been scheduled successfully.',
-              })
-            }}
+            selectedDate={new Date()}
+            barberId={barber.id}
+            profile={profileData ?? undefined}
+            onBookingCreated={() => setShowBookingForm(false)}
           />
         </ErrorBoundary>
       )}
+
+      <ReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        contentType="profile"
+        contentId={barber.userId}
+        subject={barber.name}
+      />
+
+      <ReportDialog
+        open={reportReviewId !== null}
+        onOpenChange={(next) => { if (!next) setReportReviewId(null) }}
+        contentType="review"
+        contentId={reportReviewId ?? ''}
+        subject="this review"
+      />
+
+      <AlertDialog open={blockOpen} onOpenChange={(next: boolean) => { if (!blocking) setBlockOpen(next) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Block {barber.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will not see each other on Talii, and you cannot book them while they are blocked. Bookings you already have are not cancelled. You can unblock them later in Settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={blocking}>Cancel</AlertDialogCancel>
+            <Button onClick={handleBlock} disabled={blocking} className="bg-red-600 text-white hover:bg-red-700">
+              {blocking ? 'Blocking...' : 'Block'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

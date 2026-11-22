@@ -48,6 +48,7 @@ barber-app.zip
 
 # Monorepo apps/package build artifacts
 apps/**/.next/
+apps/**/.next-local/
 apps/**/dist/
 apps/**/.expo/
 apps/**/web-build/

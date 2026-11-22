@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { StarRating } from "@/shared/components/ui/StarRating";
-import { MessageSquare, Loader2, AlertTriangle, Shield, CheckCircle, XCircle } from "lucide-react";
+import { MessageSquare, Loader2, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/shared/components/ui/use-toast";
 import { useAuth } from "@/shared/hooks/use-auth-zustand";
 import { api, isApiError } from "@/shared/lib/api";
@@ -13,6 +13,8 @@ import { logger } from "@/shared/lib/logger";
 interface WriteReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Called after a review is saved (e.g. to refresh the list). */
+  onReviewed?: () => void;
   barber: {
     id: string;
     name: string;
@@ -20,7 +22,7 @@ interface WriteReviewModalProps {
   };
 }
 
-export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalProps) {
+export function WriteReviewModal({ isOpen, onClose, barber, onReviewed }: WriteReviewModalProps) {
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,6 +94,7 @@ export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalPr
         description: `Your review for ${barber.name} has been submitted successfully.`,
       });
       
+      onReviewed?.();
       onClose();
       // Reset form
       setRating(0);

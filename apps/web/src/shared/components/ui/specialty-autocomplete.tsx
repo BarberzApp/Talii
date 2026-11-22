@@ -18,7 +18,7 @@ import {
   PopoverTrigger,
 } from '@/shared/components/ui/popover'
 import { Badge } from '@/shared/components/ui/badge'
-import { BARBER_SPECIALTIES, getFilteredSpecialties } from '@/shared/constants/specialties'
+import { getFilteredSpecialties } from '@/shared/constants/specialties'
 
 interface SpecialtyAutocompleteProps {
   value: string[]

@@ -20,15 +20,11 @@ import {
 import {
   Search,
   User,
-  Image as ImageIcon,
-  Trash2,
-  Loader2,
+  Image as ImageIcon, Loader2,
   X,
-  AlertTriangle,
-  CheckCircle,
-  Mail,
+  AlertTriangle, Mail,
   Phone,
-  Calendar,
+  Calendar
 } from 'lucide-react'
 import { api, errorMessage } from '@/shared/lib/api'
 import type { AdminUser } from '@barber-app/shared'

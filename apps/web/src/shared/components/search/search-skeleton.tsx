@@ -47,11 +47,6 @@ export function SearchSkeleton({ count = 6, className = '' }: SearchSkeletonProp
                 <Skeleton className="h-4 w-2/3" />
               </div>
 
-              {/* Price Range */}
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-5 w-24 rounded-full" />
-              </div>
-
               {/* Bio */}
               <div className="space-y-1">
                 <Skeleton className="h-4 w-full" />

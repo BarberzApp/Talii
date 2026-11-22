@@ -4,14 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Badge } from "@/shared/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { StarRating } from "@/shared/components/ui/StarRating";
-import { 
-  CheckCircle, 
-  XCircle, 
-  Edit, 
-  Eye, 
-  Loader2,
-  AlertTriangle,
-  Shield
+import {
+  CheckCircle,
+  XCircle,
+  Edit, Loader2, Shield
 } from "lucide-react";
 import { useToast } from "@/shared/components/ui/use-toast";
 import { api, errorMessage } from "@/shared/lib/api";

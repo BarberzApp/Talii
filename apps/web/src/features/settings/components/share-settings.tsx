@@ -7,11 +7,12 @@ import { Input } from '@/shared/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { Copy, Share2, Link, QrCode, ExternalLink, CheckCircle, AlertCircle, Loader2, Download, Sparkles, Globe } from 'lucide-react'
+import { Copy, Share2, QrCode, ExternalLink, CheckCircle, AlertCircle, Download, Sparkles } from 'lucide-react'
 import { api } from '@/shared/lib/api'
 import { Label } from '@/shared/components/ui/label'
 import QRCode from 'react-qr-code'
 import { Badge } from '@/shared/components/ui/badge'
+import { appBaseUrl } from '@/shared/lib/app-url'
 import { logger } from '@/shared/lib/logger'
 
 interface ProfileData {
@@ -56,9 +57,9 @@ export function ShareSettings() {
   }
 
   // Use username for the booking link if available, otherwise use barber ID as fallback
-  // Use production domain to ensure the link is publicly accessible
+  // NEXT_PUBLIC_APP_URL in production, the current origin otherwise
   const getBookingLink = () => {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bocmstyle.com'
+    const baseUrl = appBaseUrl()
     
     // Use username if available, as it's more user-friendly
     if (profileData.username) {
@@ -97,7 +98,7 @@ export function ShareSettings() {
         description: "Your booking link has been copied to clipboard.",
       })
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
+    } catch {
       toast({
         title: "Failed to copy",
         description: "Please try copying the link manually.",

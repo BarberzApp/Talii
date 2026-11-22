@@ -3,12 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/shared/components/ui/button'
 import { logger } from '@/shared/lib/logger'
-import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
-import { Card, CardContent } from '@/shared/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/shared/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/shared/components/ui/dialog'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -18,6 +15,7 @@ import {
   timeZoneAbbreviation,
   TOTAL_PRICE_CENTS,
   type AvailabilitySlot,
+  type BarberProfileResponse,
   type BookingRow,
   type PublicAddon,
   type PublicService,
@@ -25,17 +23,15 @@ import {
 import { api, bookingErrorMessage, errorMessage, hasErrorCode } from '@/shared/lib/api'
 import { storeRedirectUrl } from '@/shared/lib/redirect-utils'
 import { BookingPayment, paymentIntentStatus } from '@/shared/components/payment/booking-payment'
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
-import { CalendarIcon, Clock, User, CreditCard, Loader2, MapPin, Scissors, Star, ChevronLeft, ChevronRight, X, CheckCircle, ArrowRight, Sparkles } from 'lucide-react'
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek, startOfDay } from 'date-fns'
+import { CalendarIcon, Clock, CreditCard, Loader2, Scissors, ChevronLeft, ChevronRight, CheckCircle, ArrowRight, Sparkles } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { Badge } from '@/shared/components/ui/badge'
-import { Separator } from '@/shared/components/ui/separator'
 import { AddonSelector } from './addon-selector'
-import { motion, AnimatePresence } from 'framer-motion'
+import { FeeNote } from './fee-note'
+import { motion } from 'framer-motion'
 import { staggerContainer, staggerItem } from '@/shared/lib/animations'
 
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 interface BookingFormProps {
   isOpen: boolean
@@ -43,12 +39,14 @@ interface BookingFormProps {
   selectedDate: Date
   barberId: string
   onBookingCreated: (booking: BookingRow) => void
+  /** The barber's public profile when the page already has it (saves a second GET /api/barbers/:id). */
+  profile?: BarberProfileResponse
 }
 
 /** A pending booking waiting for the booking fee (POST /api/bookings returned a clientSecret). */
 type PendingPayment = { bookingId: string; clientSecret: string; amountCents: number }
 
-export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBookingCreated }: BookingFormProps) {
+export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBookingCreated, profile }: BookingFormProps) {
   const { user } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
@@ -81,7 +79,8 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
   }
   const [selectedService, setSelectedService] = useState<PublicService | null>(null)
   const [currentStep, setCurrentStep] = useState(1)
-  const totalSteps = 4
+  // Service, Time, Review (notes and, for signed-out visitors, the sign-in prompt live on Review).
+  const totalSteps = 3
 
   const selectedSlot = slots.find((s) => s.startsAt === formData.startsAt) || null
 
@@ -101,10 +100,10 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
 
   const fetchServices = async () => {
     try {
-      const profile = await api.barbers.get(barberId)
-      setServices(profile.services)
-      setAddons(profile.addons)
-      setTimezone(profile.barber.timezone)
+      const data = profile && profile.barber.id === barberId ? profile : await api.barbers.get(barberId)
+      setServices(data.services)
+      setAddons(data.addons)
+      setTimezone(data.barber.timezone)
     } catch (error) {
       logger.error('Error fetching services and add-ons', error)
       toast({
@@ -172,8 +171,8 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
       if (!clientSecret) {
         // Fee-exempt barber: the booking is already confirmed.
         toast({ title: "Booked!", description: "Your appointment is confirmed." })
-        onBookingCreated(booking)
         router.push(`/booking/success?booking_id=${encodeURIComponent(booking.id)}`)
+        onBookingCreated(booking)
         return
       }
 
@@ -237,9 +236,6 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
     return `${displayHour}:${minutes} ${ampm}`
   }
 
-  const getDayName = (date: Date) => DAYS[date.getDay()]
-  const getMonthName = (date: Date) => date.toLocaleDateString('en-US', { month: 'long' })
-
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
@@ -251,7 +247,6 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
       case 1: return !!formData.serviceId
       case 2: return !!formData.startsAt
       case 3: return !!user
-      case 4: return true
       default: return false
     }
   }
@@ -266,8 +261,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
     switch (currentStep) {
       case 1: return "Choose Your Service"
       case 2: return "Pick Your Time"
-      case 3: return "Your Information"
-      case 4: return "Review & Book"
+      case 3: return payment ? "Pay the Booking Fee" : "Review & Book"
       default: return ""
     }
   }
@@ -276,8 +270,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
     switch (currentStep) {
       case 1: return "Select the service you'd like to book"
       case 2: return "Choose your preferred appointment time"
-      case 3: return "Provide your contact information"
-      case 4: return "Review your booking details and confirm"
+      case 3: return payment ? "Your time is held while you pay" : "Check the details, add a note if you like, and book"
       default: return ""
     }
   }
@@ -305,7 +298,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
 
           {/* Step Indicators */}
           <div className="flex justify-between">
-            {[1, 2, 3, 4].map((step) => (
+            {[1, 2, 3].map((step) => (
               <div key={step} className="flex flex-col items-center">
                 <div className={cn(
                   "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300",
@@ -323,8 +316,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                 )}>
                   {step === 1 && "Service"}
                   {step === 2 && "Time"}
-                  {step === 3 && "Info"}
-                  {step === 4 && "Book"}
+                  {step === 3 && "Book"}
                 </span>
               </div>
             ))}
@@ -342,7 +334,11 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                 <h3 className="text-xl font-bold text-foreground mb-2">What service do you need?</h3>
                 <p className="text-muted-foreground">Choose from our available services</p>
               </div>
+              <FeeNote compact className="justify-center" />
 
+              {services.length === 0 && (
+                <p className="text-center text-muted-foreground py-6">This barber has no services to book yet. Check back soon.</p>
+              )}
               <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
                 {services.map((service) => (
                   <motion.div
@@ -368,14 +364,11 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                             <Clock className="h-4 w-4" />
                             <span>{service.duration_minutes} min</span>
                           </div>
-                          <Badge className="bg-secondary/20 text-secondary border-secondary/30">
-                            Popular
-                          </Badge>
                         </div>
                       </div>
                       <div className="text-right ml-4">
                         <div className="text-3xl font-bold text-secondary">{formatCents(service.price_cents, { compact: true })}</div>
-                        <div className="text-muted-foreground text-sm">per service</div>
+                        <div className="text-muted-foreground text-sm">paid in person</div>
                       </div>
                     </div>
                   </motion.div>
@@ -420,6 +413,8 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                   {/* Calendar Header */}
                   <div className="flex items-center justify-between mb-6 px-2">
                     <button
+                      type="button"
+                      aria-label="Previous month"
                       onClick={prevMonth}
                       className="p-2 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-foreground"
                     >
@@ -429,6 +424,8 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                       {format(currentMonth, 'MMMM yyyy')}
                     </h5>
                     <button
+                      type="button"
+                      aria-label="Next month"
                       onClick={nextMonth}
                       className="p-2 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-foreground"
                     >
@@ -452,15 +449,16 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                       const isTodayDate = isToday(day);
                       const isSelected = date && isSameDay(day, date);
                       
-                      // Disable logic
-                      const yesterday = new Date();
-                      yesterday.setDate(yesterday.getDate() - 1);
-                      const isDisabled = day < yesterday;
+                      // Past days cannot be booked (today stays selectable).
+                      const isDisabled = day < startOfDay(new Date());
 
                       return (
                         <button
                           key={idx}
+                          type="button"
                           disabled={isDisabled}
+                          aria-label={format(day, 'EEEE, MMMM d')}
+                          aria-pressed={!!isSelected}
                           onClick={() => setDate(day)}
                           className={cn(
                             "h-11 w-full rounded-xl flex items-center justify-center text-[15px] font-medium transition-all duration-300 relative overflow-hidden group",
@@ -525,62 +523,16 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                 ) : (
                   <div className="text-center py-12">
                       <Clock className="h-16 w-16 mx-auto text-foreground/30 mb-4" />
-                    <p className="text-muted-foreground font-semibold text-lg mb-2">No Available Slots</p>
-                    <p className="text-muted-foreground text-sm">This date appears to be fully booked</p>
+                    <p className="text-muted-foreground font-semibold text-lg mb-2">No times available</p>
+                    <p className="text-muted-foreground text-sm">The barber is closed or fully booked on this day. Try another date.</p>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-                     {/* Step 3: Guest Information */}
-           {currentStep === 3 && (
-             <div className="space-y-6 pb-8">
-               <div className="text-center mb-6">
-                 <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <User className="h-8 w-8 text-secondary" />
-                    </div>
-                 <h3 className="text-xl font-bold text-foreground mb-2">Tell us about yourself</h3>
-                 <p className="text-muted-foreground">We'll use this to confirm your booking</p>
-                  </div>
-                  
-               {!user ? (
-                   <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
-                     <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                       <X className="h-6 w-6 text-red-400" />
-                     </div>
-                     <h4 className="text-lg font-semibold text-foreground mb-2">Sign In Required</h4>
-                     <p className="text-muted-foreground mb-4">Please sign in to book with this barber</p>
-                     <Button asChild className="rounded-xl bg-secondary text-primary-foreground">
-                       <Link href="/login" onClick={() => storeRedirectUrl(window.location.pathname)}>Sign in</Link>
-                     </Button>
-                   </div>
-               ) : (
-                 <div className="bg-secondary/10 border border-secondary/20 rounded-2xl p-6 text-center">
-                   <div className="w-12 h-12 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <CheckCircle className="h-6 w-6 text-secondary" />
-                   </div>
-                   <h4 className="text-lg font-semibold text-foreground mb-2">Welcome back, {user.name}!</h4>
-                   <p className="text-muted-foreground">We'll use your account information for this booking</p>
-                </div>
-          )}
-
-          {/* Notes */}
-               <div>
-                 <Label htmlFor="notes" className="text-foreground font-medium mb-2 block">Additional Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement> ) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Any special requests or notes..."
-                  className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary focus:ring-2 focus:ring-secondary/20 ring-offset-background transition-all duration-300 rounded-xl min-h-[100px]"
-                />
-                          </div>
-                        </div>
-                      )}
-                      
                      {/* Step 4: Review & Payment */}
-           {currentStep === 4 && payment && (
+           {currentStep === 3 && payment && (
              <div className="space-y-6 pb-8">
                <div className="text-center mb-2">
                  <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -599,14 +551,14 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
              </div>
            )}
 
-           {currentStep === 4 && !payment && (
+           {currentStep === 3 && !payment && (
              <form onSubmit={handleSubmit} className="space-y-6 pb-8">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CreditCard className="h-8 w-8 text-secondary" />
                           </div>
                 <h3 className="text-xl font-bold text-foreground mb-2">Review Your Booking</h3>
-                <p className="text-muted-foreground">Confirm your details and complete payment</p>
+                <p className="text-muted-foreground">Check the details below, then book.</p>
                       </div>
                       
               {/* Booking Summary */}
@@ -655,29 +607,23 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                       {/* Platform Fee */}
                  <div className="flex items-center justify-between p-4 bg-white/70 dark:bg-white/5 backdrop-blur-xl rounded-xl">
                         <div>
-                          <p className="text-foreground font-medium">Platform Fee</p>
+                          <p className="text-foreground font-medium">Booking fee</p>
                      <p className="text-muted-foreground text-sm">
-                       Secure payment processing (waived by some barbers)
+                       Paid online to hold your time (some barbers waive it)
                      </p>
                         </div>
                         <div className="text-right">
                      <p className="text-lg font-bold text-secondary">
                        {formatCents(TOTAL_PRICE_CENTS)}
                      </p>
-                     <Badge className={cn(
-                       "text-xs",
-                       "bg-green-500/20 text-green-400 border-green-500/30"
-                     )}>
-                       Secure
-                          </Badge>
                         </div>
                       </div>
                       
                       {/* Total */}
                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-secondary/10 to-orange-500/10 border border-secondary/20 rounded-xl">
                         <div>
-                          <p className="text-foreground font-bold text-lg">Total</p>
-                          <p className="text-muted-foreground text-sm">Amount to be charged</p>
+                          <p className="text-foreground font-bold text-lg">Due now</p>
+                          <p className="text-muted-foreground text-sm">Service and add-ons are paid in person</p>
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold text-secondary">
@@ -687,13 +633,36 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                       </div>
 
                                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                   <p className="text-blue-400 text-sm">
-                     You pay the booking fee now to hold your slot; the service and any add-ons are paid to the barber at your appointment. If the barber waives the fee, your booking is confirmed straight away.
+                   <p className="text-blue-800 dark:text-blue-300 text-sm">
+                     You pay the booking fee now to hold your time; the service and any add-ons are paid to the barber at your appointment. If the barber waives the fee, your booking is confirmed straight away. Cancel more than 24 hours ahead and the fee is refunded.
                    </p>
                                  </div>
                </div>
 
-               {/* Navigation Buttons for Step 4 */}
+               {/* Notes (was its own step) */}
+               <div>
+                 <Label htmlFor="notes" className="text-foreground font-medium mb-2 block">Note for the barber (optional)</Label>
+                 <Textarea
+                   id="notes"
+                   value={formData.notes}
+                   maxLength={500}
+                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, notes: e.target.value })}
+                   placeholder="Anything they should know before you arrive"
+                   className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary focus:ring-2 focus:ring-secondary/20 ring-offset-background transition-all duration-300 rounded-xl min-h-[80px]"
+                 />
+               </div>
+
+               {!user && (
+                 <div className="bg-secondary/10 border border-secondary/20 rounded-2xl p-5 text-center">
+                   <h4 className="text-lg font-semibold text-foreground mb-1">Sign in to book</h4>
+                   <p className="text-muted-foreground mb-4 text-sm">You need a Talii account to book. You will come back here after signing in.</p>
+                   <Button asChild className="rounded-xl bg-secondary text-primary-foreground">
+                     <Link href="/login" onClick={() => storeRedirectUrl(window.location.pathname)}>Sign in</Link>
+                   </Button>
+                 </div>
+               )}
+
+               {/* Navigation Buttons for the Review step */}
                <div className="flex gap-3 pt-6 pb-4 border-t border-black/5 dark:border-white/10">
                  <Button 
                    type="button" 
@@ -707,7 +676,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                  
                  <Button 
                    type="submit" 
-                   disabled={loading || !canProceed()}
+                   disabled={loading || !user}
                    className="flex-1 bg-secondary text-primary-foreground font-semibold rounded-xl hover:bg-secondary/90 shadow-lg hover:shadow-secondary/30 transition-all tracking-wide"
                  >
                    {loading ? (
@@ -726,8 +695,8 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
              </form>
            )}
 
-          {/* Navigation Buttons for Steps 1-3 */}
-          {currentStep < 4 && (
+          {/* Navigation Buttons for Steps 1-2 */}
+          {currentStep < 3 && (
             <div className="flex gap-3 pt-6 pb-4 border-t border-black/5 dark:border-white/10">
               {currentStep > 1 && (
                 <Button 

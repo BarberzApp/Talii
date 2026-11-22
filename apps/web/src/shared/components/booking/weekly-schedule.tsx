@@ -8,8 +8,7 @@ import { Plus, Trash2, Save, Clock, Calendar, Sparkles, Loader2 } from 'lucide-r
 import { useToast } from '@/shared/components/ui/use-toast'
 import { api, errorMessage } from '@/shared/lib/api'
 import { logger } from '@/shared/lib/logger'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Badge } from '@/shared/components/ui/badge'
+import { Card, CardContent } from '@/shared/components/ui/card'
 import { cn } from '@/shared/lib/utils'
 
 interface Availability {
@@ -128,7 +127,6 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
     }
   }
 
-  const availableDays = schedule.filter(day => day.isAvailable).length;
 
   return (
     <div className="space-y-8">

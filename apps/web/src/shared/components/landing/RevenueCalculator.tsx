@@ -177,7 +177,7 @@ export function RevenueCalculator({
                   /month
                 </div>
                 <div className="text-base sm:text-lg text-muted-foreground mb-4">
-                  That's{" "}
+                  That&apos;s{" "}
                   <span className="font-bold text-secondary">
                     $
                     <NumberTicker

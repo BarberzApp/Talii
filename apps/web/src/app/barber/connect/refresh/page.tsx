@@ -47,7 +47,7 @@ export default function StripeConnectRefresh() {
           await refreshConnectStatus();
           
           // Try to open the mobile app with deep link
-          const mobileDeepLink = `bocm://stripe-connect/refresh?account_id=${accountId}`;
+          const mobileDeepLink = `talii://stripe-connect/refresh?account_id=${accountId}`;
           
           // Attempt to open mobile app
           window.location.href = mobileDeepLink;

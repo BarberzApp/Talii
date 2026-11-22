@@ -7,8 +7,8 @@ import { SpecialHoursManager, type SpecialHours } from './special-hours-manager'
 
 import { api, errorMessage } from '@/shared/lib/api'
 import { localDateInTimeZone, type SpecialHoursRow } from '@barber-app/shared'
-import { toast } from 'sonner'
-import { Loader2, Calendar, Clock, Settings, Sparkles } from 'lucide-react'
+import { toast as showToast } from '@/shared/components/ui/use-toast'
+import { Loader2, Calendar, Clock, Settings } from 'lucide-react'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { logger } from '@/shared/lib/logger'
 
@@ -64,7 +64,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
       setSpecialHours(overrides.map(toManagerRow))
     } catch (error) {
       logger.error('Error fetching availability', error)
-      toast.error(errorMessage(error, 'Failed to load availability settings'))
+      showToast({ title: 'Could not load your schedule', description: errorMessage(error, 'Please refresh the page.'), variant: 'destructive' })
     } finally {
       setLoading(false)
     }
@@ -85,16 +85,18 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
         )
       )
       if (result.bookingsOutsideHours.length > 0) {
-        toast.warning(
-          `${result.bookingsOutsideHours.length} existing booking(s) fall outside these hours and were kept. To cancel one, open it in your Calendar (the client's booking fee is refunded in full).`
-        )
+        showToast({
+          title: 'Special hours saved',
+          description: `${result.bookingsOutsideHours.length} existing booking(s) fall outside these hours and were kept. To cancel one, open it in your Calendar (the client's booking fee is refunded in full).`,
+          variant: 'warning',
+        })
       } else {
-        toast.success('Special hours saved')
+        showToast({ title: 'Special hours saved' })
       }
       onUpdate?.()
     } catch (error) {
       logger.error('Error adding special hours', error)
-      toast.error(errorMessage(error, 'Failed to add special hours'))
+      showToast({ title: 'Could not save special hours', description: errorMessage(error, 'Please try again.'), variant: 'destructive' })
     } finally {
       setLoading(false)
     }
@@ -107,11 +109,11 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
       setLoading(true)
       await api.schedule.deleteSpecialHours(entry.date)
       setSpecialHours((prev) => prev.filter((h) => h.id !== id))
-      toast.success('Special hours removed successfully')
+      showToast({ title: 'Special hours removed' })
       onUpdate?.()
     } catch (error) {
       logger.error('Error removing special hours', error)
-      toast.error(errorMessage(error, 'Failed to remove special hours'))
+      showToast({ title: 'Could not remove special hours', description: errorMessage(error, 'Please try again.'), variant: 'destructive' })
     } finally {
       setLoading(false)
     }
@@ -170,29 +172,29 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
               <TabsList className="grid w-full grid-cols-2 bg-transparent border-0 p-2 h-auto gap-2">
                 <TabsTrigger 
                   value="weekly" 
-                  className={`relative flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-200 text-sm font-semibold ${
+                  className={`relative flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-6 py-4 rounded-xl transition-all duration-200 text-sm font-semibold ${
                     activeTab === 'weekly' 
-                      ? 'bg-secondary text-primary shadow-lg' 
+                      ? 'bg-secondary text-secondary-foreground shadow-lg' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10'
                   }`}
                 >
                   <Calendar className="h-5 w-5" />
-                  <span className="hidden sm:inline">Weekly Schedule</span>
+                  <span>Weekly<span className="hidden sm:inline"> Schedule</span></span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="special-hours" 
-                  className={`relative flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-200 text-sm font-semibold ${
+                  className={`relative flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-6 py-4 rounded-xl transition-all duration-200 text-sm font-semibold ${
                     activeTab === 'special-hours' 
-                      ? 'bg-secondary text-primary shadow-lg' 
+                      ? 'bg-secondary text-secondary-foreground shadow-lg' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10'
                   }`}
                 >
                   <Clock className="h-5 w-5" />
-                  <span className="hidden sm:inline">Special Hours</span>
+                  <span>Special<span className="hidden sm:inline"> Hours</span></span>
                 </TabsTrigger>
               </TabsList>
             </div>
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
               <TabsContent value="weekly" className="m-0">
                 <WeeklySchedule
                   barberId={barberId}

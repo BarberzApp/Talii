@@ -73,6 +73,9 @@ describe('Button Component', () => {
   it('renders as different HTML elements', () => {
     const { rerender } = render(<Button asChild><a href="/test">Link</a></Button>)
     expect(screen.getByRole('link')).toBeInTheDocument()
+    // asChild renders the child itself, not a link nested inside a <button>
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByRole('link')).toHaveClass('inline-flex')
 
     rerender(<Button asChild><span>Span</span></Button>)
     expect(screen.getByText('Span')).toBeInTheDocument()

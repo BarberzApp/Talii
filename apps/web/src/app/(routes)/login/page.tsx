@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import Link from 'next/link'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { useToast } from '@/shared/components/ui/use-toast'
+import { useAuthStore } from '@/shared/stores/auth-store'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
@@ -16,6 +16,21 @@ import { clearPendingSignupRole, getAndClearRedirectUrl } from '@/shared/lib/red
 import { getRedirectPath } from '@/shared/hooks/use-auth-zustand'
 import { logger } from '@/shared/lib/logger'
 
+/** Turns Supabase's sign-in error into something a person can act on. */
+function loginErrorText(message: string | null): string {
+  const m = (message ?? '').toLowerCase()
+  if (m.includes('not confirmed')) {
+    return 'Please confirm your email first. Check your inbox for the link we sent when you signed up.'
+  }
+  if (m.includes('banned') || m.includes('disabled')) {
+    return 'This account has been disabled. Contact support if you think this is a mistake.'
+  }
+  if (m.includes('fetch') || m.includes('network')) {
+    return 'Could not reach Talii. Check your connection and try again.'
+  }
+  return 'Invalid email or password.'
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -23,8 +38,7 @@ export default function LoginPage() {
   const [redirecting, setRedirecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { push } = useSafeNavigation()
-  const { login, user, status, isInitialized } = useAuth()
-  const { toast } = useToast()
+  const { login, user, isInitialized } = useAuth()
 
   const redirectStarted = useRef(false)
 
@@ -87,7 +101,7 @@ export default function LoginPage() {
         logger.debug('Login successful')
       } else {
         logger.debug('Login failed')
-        setError('Invalid email or password')
+        setError(loginErrorText(useAuthStore.getState().loginError))
       }
     } catch (error) {
       logger.error('Login error', error)
@@ -151,7 +165,7 @@ export default function LoginPage() {
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <div className="text-foreground text-xl font-semibold mb-2">Redirecting...</div>
           {error && (
-            <div className="text-red-400 text-sm mt-2">
+            <div role="alert" className="text-red-600 dark:text-red-400 text-sm mt-2">
               {error}
             </div>
           )}
@@ -190,9 +204,9 @@ export default function LoginPage() {
           <CardContent>
             {/* Error Display */}
             {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
-                <p className="text-red-400 text-sm">{error}</p>
+              <div role="alert" className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
               </div>
             )}
             
@@ -203,6 +217,7 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   placeholder="name@example.com"
+                  autoComplete="email"
                   value={email}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                   required
@@ -213,7 +228,7 @@ export default function LoginPage() {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
                   <Link 
-                    href="/forgot-password" 
+                    href="/forgot-password"
                     className="text-sm text-primary hover:underline"
                   >
                     Forgot password?
@@ -222,6 +237,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   required

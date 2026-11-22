@@ -10,7 +10,7 @@ import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Switch } from '@/shared/components/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Loader2, Plus, Edit, Trash2, Package, AlertCircle, CheckCircle, DollarSign, Sparkles, ToggleLeft } from 'lucide-react'
+import { Loader2, Plus, Edit, Trash2, Package, AlertCircle, CheckCircle, DollarSign, Sparkles } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
 import { logger } from '@/shared/lib/logger'
 
@@ -119,10 +119,11 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     setValue('description', addon.description || '')
     setValue('price', addon.price_cents / 100)
     setValue('is_active', addon.is_active)
+    document.getElementById('addon-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this add-on?')) return
+    if (!confirm('Delete this add-on? If clients have booked it before, it is hidden instead so their history stays intact.')) return
 
     try {
       const result = await api.addons.remove(id)
@@ -195,7 +196,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
         </CardHeader>
 
         <CardContent className="p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form id="addon-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6 scroll-mt-24">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="addon-name" className="text-foreground font-semibold text-lg flex items-center gap-2">
@@ -270,7 +271,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
               </div>
               <Badge
                 variant="secondary"
-                className={`ml-auto ${isActive ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}
+                className={`ml-auto ${isActive ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' : 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30'}`}
               >
                 {isActive ? 'Active' : 'Inactive'}
               </Badge>
@@ -361,8 +362,8 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                         <Badge
                           variant={addon.is_active ? 'default' : 'secondary'}
                           className={addon.is_active
-                            ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                            : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}
+                            ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30'
+                            : 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30'}
                         >
                           {addon.is_active ? 'Active' : 'Inactive'}
                         </Badge>
@@ -372,10 +373,11 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                       )}
                     </div>
 
-                    <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="flex gap-1 sm:gap-3 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                       <Button
                         size="sm"
                         variant="ghost"
+                        aria-label={`Edit ${addon.name}`}
                         onClick={() => handleEdit(addon)}
                         className="text-foreground/70 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 rounded-xl p-3"
                       >
@@ -384,8 +386,9 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                       <Button
                         size="sm"
                         variant="ghost"
+                        aria-label={`Delete ${addon.name}`}
                         onClick={() => handleDelete(addon.id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl p-3"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded-xl p-3"
                       >
                         <Trash2 className="h-5 w-5" />
                       </Button>
@@ -410,7 +413,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
               <ul className="text-foreground/70 space-y-3">
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-base">Offer premium products clients can't easily get themselves</span>
+                  <span className="text-base">Offer premium products clients can&apos;t easily get themselves</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>
@@ -418,7 +421,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-base">Use descriptive names so clients know exactly what they're getting</span>
+                  <span className="text-base">Use descriptive names so clients know exactly what they&apos;re getting</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>

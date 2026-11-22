@@ -1,9 +1,9 @@
-// This file configures the initialization of Sentry on the client.
-// The config you add here will be used whenever a users loads a page in their browser.
+// Sentry in the browser. Next.js loads this file before the app starts
+// (it replaces sentry.client.config.ts).
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
-import packageJson from "./package.json";
+import packageJson from "../package.json";
 
 const release = `web@${packageJson.version}`;
 const environment = process.env.NODE_ENV || 'development';
@@ -36,7 +36,7 @@ Sentry.init({
   ],
 
   // Filter out sensitive data
-  beforeSend(event, hint) {
+  beforeSend(event) {
     // Remove sensitive data from request
     if (event.request) {
       // Remove cookies
@@ -127,3 +127,6 @@ Sentry.init({
 Sentry.setTag('platform', 'web');
 Sentry.setTag('release', release);
 Sentry.setTag('environment', environment);
+
+// Lets Sentry trace client-side navigations.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

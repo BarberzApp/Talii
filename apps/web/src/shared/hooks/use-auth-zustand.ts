@@ -102,17 +102,8 @@ export const useAuth = () => {
     businessName?: string,
     username?: string
   ): Promise<RegisterOutcome> => {
-    const outcome = await registerAction(name, email, password, role, businessName, username)
-    if (!outcome.ok) {
-      toast({
-        title: "Registration failed",
-        description: outcome.alreadyExists
-          ? "An account with this email already exists. Try signing in instead."
-          : outcome.errorMessage || "Failed to create account. Please try again.",
-        variant: "destructive",
-      })
-    }
-    return outcome
+    // The sign-up page shows failures inline.
+    return registerAction(name, email, password, role, businessName, username)
   }
 
   const logout = async () => {
@@ -122,7 +113,7 @@ export const useAuth = () => {
         title: "Logged out",
         description: "You have been successfully logged out",
       })
-    } catch (error) {
+    } catch {
       toast({
         title: "Logout failed",
         description: "There was an error logging out. Please try again.",

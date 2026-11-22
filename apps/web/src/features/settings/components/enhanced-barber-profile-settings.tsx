@@ -9,39 +9,27 @@ import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
-import { Badge } from '@/shared/components/ui/badge'
 import { Switch } from '@/shared/components/ui/switch'
 import { Separator } from '@/shared/components/ui/separator'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { api, errorMessage } from '@/shared/lib/api'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { 
-  MapPin, 
-  Scissors, 
-  DollarSign, 
-  Building2, 
-  Instagram,
-  Twitter,
-  Facebook,
-  Music,
+import {
+  MapPin,
+  Scissors, Building2,
+  Instagram, Music,
   AlertCircle,
   Loader2,
   User,
   Sparkles,
-  Save,
-  Info,
-  Phone,
-  Check,
-  X
+  Save
 } from 'lucide-react'
 // import { BrowseIntegrationGuide } from './browse-integration-guide' // Removed
-import { BARBER_SPECIALTIES } from '@/shared/constants/specialties'
 import { SpecialtyAutocomplete } from '@/shared/components/ui/specialty-autocomplete'
-import { cityStateOf, getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
+import { cityStateOf, getAddressSuggestionsDetailed, type GeocodeResult } from '@/shared/lib/geocode'
 import { logger } from '@/shared/lib/logger'
+import { bookingLinkLabel } from '@/shared/lib/app-url'
 
 const barberProfileSchema = z.object({
   // Basic Info
@@ -65,16 +53,8 @@ const barberProfileSchema = z.object({
 
 type BarberProfileFormData = z.infer<typeof barberProfileSchema>
 
-const PRICE_RANGES = [
-  { value: 'Budget ($15-$30)', label: 'Budget ($15-$30)', description: 'Budget ($15-$30) - Affordable services for everyone' },
-  { value: 'Mid-range ($30-$60)', label: 'Mid-range ($30-$60)', description: 'Mid-range ($30-$60) - Quality services at fair prices' },
-  { value: 'Premium ($60+)', label: 'Premium ($60+)', description: 'Premium ($60+) - High-end services and expertise' }
-]
-
 interface EnhancedBarberProfileSettingsProps {
   onSave?: () => void;
-  showPreview?: boolean;
-  showIntegrationGuide?: boolean;
 }
 
 // Utility function to extract handle from URL or return as-is if already a handle
@@ -101,12 +81,12 @@ function extractHandle(input: string): string {
   return '@' + input;
 }
 
-export function EnhancedBarberProfileSettings({ onSave, showPreview = true, showIntegrationGuide = true }: EnhancedBarberProfileSettingsProps) {
+export function EnhancedBarberProfileSettings({ onSave }: EnhancedBarberProfileSettingsProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [locationInput, setLocationInput] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<GeocodeResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -186,7 +166,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
   };
 
   // Handle suggestion select
-  const handleSuggestionSelect = (suggestion: any) => {
+  const handleSuggestionSelect = (suggestion: GeocodeResult) => {
     // Format: house_number road, city/town, state (e.g., '88 Doe Court, South Brunswick, NJ')
     const address = suggestion.address || {};
     const house = address.house_number || '';
@@ -194,33 +174,19 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
     const city = address.city || address.town || address.village || address.hamlet || '';
     const state = address.state || address.state_code || '';
     // Build the formatted string
-    let line1 = [house, road].filter(Boolean).join(' ');
-    let line2 = [city, state].filter(Boolean).join(', ');
-    let formatted = [line1, line2].filter(Boolean).join(', ');
+    const line1 = [house, road].filter(Boolean).join(' ');
+    const line2 = [city, state].filter(Boolean).join(', ');
+    const formatted = [line1, line2].filter(Boolean).join(', ');
     setLocationInput(formatted);
     setShowSuggestions(false);
     setLocationSuggestions([]); // Clear suggestions immediately
     form.setValue('location', formatted);
   };
 
-  // Validate location on blur
-  const handleLocationBlur = async () => {
-    // Add a small delay to allow clicking on suggestions
-    setTimeout(async () => {
-      if (!locationInput) return;
-      // Validate using Google Places API
-      const geoSuggestions = await getAddressSuggestionsDetailed(locationInput);
-      const geo = geoSuggestions && geoSuggestions.length > 0 ? { lat: parseFloat(geoSuggestions[0].lat), lon: parseFloat(geoSuggestions[0].lon) } : null;
-      if (!geo) {
-        toast({
-          title: 'Invalid location',
-          description: 'Please enter a valid place from the suggestions.',
-          variant: 'destructive',
-        });
-        setLocationInput('');
-        form.setValue('location', '');
-      }
-    }, 200);
+  // Hide suggestions once the field loses focus (after a click on one has landed).
+  // The location is checked when saving.
+  const handleLocationBlur = () => {
+    setTimeout(() => setShowSuggestions(false), 200);
   };
 
   const loadBarberProfile = async () => {
@@ -274,8 +240,8 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
     const { city, state } = cityStateOf(geoSuggestions[0] ?? data.location)
     if (!city || !state) {
       toast({
-        title: 'Invalid location',
-        description: 'Please enter a valid place from the suggestions.',
+        title: 'Check your location',
+        description: 'Enter your city and state, for example "Chicago, IL", or pick a suggestion.',
         variant: 'destructive',
       })
       return;
@@ -322,14 +288,6 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
     } finally {
       setLoading(false)
     }
-  }
-
-  const toggleSpecialty = (specialty: string) => {
-    const currentValue = form.getValues('specialties')
-    const newValue = currentValue.includes(specialty)
-      ? currentValue.filter(s => s !== specialty)
-      : [...currentValue, specialty]
-    form.setValue('specialties', newValue)
   }
 
   return (
@@ -385,7 +343,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                       <FormItem>
                         <FormLabel className="text-foreground font-semibold">Full Name *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your full name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                          <Input placeholder="Your full name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -399,10 +357,10 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                       <FormItem>
                         <FormLabel className="text-foreground font-semibold">Username *</FormLabel>
                         <FormControl>
-                          <Input placeholder="your_username" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                          <Input placeholder="your_username" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                         </FormControl>
                         <FormDescription className="text-foreground/60">
-                          Used in your booking link: bocmstyle.com/book/{field.value || 'your_username'}
+                          Used in your booking link: {bookingLinkLabel(field.value || 'your_username')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -417,7 +375,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     <FormItem>
                       <FormLabel className="text-foreground font-semibold">Business Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your business name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                        <Input placeholder="Your business name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -433,7 +391,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                       <FormControl>
                         <Textarea
                           placeholder="Tell clients about yourself, your experience, and what makes you unique..."
-                          className="min-h-[100px] bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200"
+                          className="min-h-[100px] bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200"
                           {...field}
                         />
                       </FormControl>
@@ -449,15 +407,15 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   <FormField
                     control={form.control}
                     name="location"
-                    render={({ field }) => (
+                    render={() => (
                       <FormItem className="relative">
                         <FormLabel className="text-foreground font-semibold">Location *</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-secondary" />
                             <Input
-                              placeholder="City, State or Zip Code"
-                              className="pl-10 bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200"
+                              placeholder="City, State (e.g. Chicago, IL)"
+                              className="pl-10 bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200"
                               value={locationInput ?? ''}
                               onChange={handleLocationChange}
                               onFocus={() => setShowSuggestions(true)}
@@ -487,7 +445,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                                     className="w-full text-left px-4 py-2 text-foreground hover:bg-secondary/20"
                                     onMouseDown={() => handleSuggestionSelect(s)}
                                   >
-                                    {s.display_name || s.name || 'Unknown location'}
+                                    {s.display_name || 'Unknown location'}
                                   </button>
                                 ))}
                               </div>
@@ -506,7 +464,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                       <FormItem>
                         <FormLabel className="text-foreground font-semibold">Phone Number *</FormLabel>
                         <FormControl>
-                          <Input placeholder="+1 (555) 123-4567" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                          <Input placeholder="+1 (555) 123-4567" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -577,7 +535,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                           Instagram
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                         </FormControl>
                         <FormDescription className="text-foreground/60">
                           Only your handle (e.g., @yourusername)
@@ -598,7 +556,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                           TikTok
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
+                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl" />
                         </FormControl>
                         <FormDescription className="text-foreground/60">
                           Only your handle (e.g., @yourusername)
@@ -648,7 +606,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   <Alert className="bg-red-900/30 border-red-400/30 text-foreground">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Your profile is currently private and won't appear in search results. Enable public profile to start receiving bookings from new clients.
+                      Your profile is currently private and won&apos;t appear in search results. Enable public profile to start receiving bookings from new clients.
                     </AlertDescription>
                   </Alert>
                 )}

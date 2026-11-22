@@ -2,17 +2,17 @@
 
 import Link from 'next/link'
 import { Button } from '@/shared/components/ui/button'
-import { Search, Scissors, User, Calendar, Settings, ArrowLeft, Home, AlertCircle } from 'lucide-react'
+import { Search, User, Calendar, Settings, ArrowLeft, Home, AlertCircle } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import { storeRedirectUrl } from '@/shared/lib/redirect-utils'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function NotFound() {
   const router = useRouter()
   const pathname = usePathname()
-  const { user, status } = useAuth()
+  const { user } = useAuth()
   const { push } = useSafeNavigation()
 
   const [smartSuggestions, setSmartSuggestions] = useState<Array<{

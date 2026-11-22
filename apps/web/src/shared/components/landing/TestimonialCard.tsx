@@ -96,7 +96,7 @@ export function TestimonialCard({
           </div>
         </div>
         <blockquote className="text-muted-foreground text-base leading-relaxed italic" cite={`${name}, ${role}`}>
-          "{quote}"
+          &quot;{quote}&quot;
         </blockquote>
       </CardContent>
     </Card>

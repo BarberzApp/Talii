@@ -24,7 +24,7 @@ Sentry.init({
   release,
 
   // Filter out sensitive data
-  beforeSend(event, hint) {
+  beforeSend(event) {
     // Remove sensitive data from request
     if (event.request) {
       // Remove cookies

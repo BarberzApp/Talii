@@ -44,6 +44,8 @@ interface AuthState {
   status: "loading" | "authenticated" | "unauthenticated"
   isInitialized: boolean
   showLoginModal: boolean
+  /** Supabase's message for the last failed password sign-in (null after success). */
+  loginError: string | null
 }
 
 interface AuthActions {
@@ -83,6 +85,7 @@ type AuthStore = AuthState & AuthActions
 
 const authAdapter = createWebAuthAdapter()
 let authSubscribed = false
+let initializing: Promise<void> | null = null
 const authController = new AuthController(authAdapter)
 
 function mapProfileToUser(profile: AuthProfile): User {
@@ -147,6 +150,7 @@ export const useAuthStore = create<AuthStore>()(
     status: "loading",
     isInitialized: false,
     showLoginModal: false,
+    loginError: null,
 
     // State setters
     setUser: (user) => set({ user }),
@@ -155,8 +159,11 @@ export const useAuthStore = create<AuthStore>()(
     setInitialized: (initialized) => set({ isInitialized: initialized }),
     setShowLoginModal: (show) => set({ showLoginModal: show }),
 
-    // Initialize auth state
+    // Initialize auth state. Many components call useAuth() on mount before the
+    // first initialize finishes; they share one run (one GET /api/me, not three).
     initialize: async () => {
+      if (initializing) return initializing
+      initializing = (async () => {
       try {
         logger.debug('[AUTH] initialize: starting')
         set({ isLoading: true, status: "loading" })
@@ -184,6 +191,8 @@ export const useAuthStore = create<AuthStore>()(
           isInitialized: true 
         })
       }
+      })().finally(() => { initializing = null })
+      return initializing
     },
 
     // Fetch user profile
@@ -208,6 +217,7 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, status: "loading" })
         const { state, result } = await authController.login(email, password)
         applySharedState(set, state)
+        set({ loginError: result.ok ? null : (result.errorMessage ?? null) })
         return result.ok
       } catch (error) {
         logger.error('Login process failed', error)

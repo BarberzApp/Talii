@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react'
 import { Checkbox } from '@/shared/components/ui/checkbox'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
-import { Package, DollarSign, Plus } from 'lucide-react'
+import { Package, DollarSign } from 'lucide-react'
 import { formatCents, type PublicAddon } from '@barber-app/shared'
 
 interface AddonSelectorProps {

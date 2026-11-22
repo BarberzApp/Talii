@@ -12,7 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar"
 import { ModeToggle } from "@/shared/components/theme/mode-toggle"
 import { MobileNav } from "@/shared/components/layout/mobile-nav"
 import { useMobile } from "@/shared/hooks/use-mobile"
@@ -20,16 +19,9 @@ import {
   User,
   LogOut,
   Settings,
-  Calendar,
-  Scissors,
-  Search,
-  UserCircle,
-  Video,
-  Compass,
-  Bell,
+  Calendar, Compass
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
-import { UpdatesBadge } from "@/shared/components/updates/updates-badge"
 import { useCurrentPathname } from "@/shared/hooks/use-current-pathname"
 
 export function Navbar() {

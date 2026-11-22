@@ -27,7 +27,7 @@ interface SpecialHoursManagerProps {
   barberId: string
 }
 
-export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, onRemove, barberId }: SpecialHoursManagerProps) {
+export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, onRemove }: SpecialHoursManagerProps) {
   const { toast } = useToast()
   const [isAdding, setIsAdding] = useState(false)
   const [newHours, setNewHours] = useState<Omit<SpecialHours, 'id'>>({
@@ -122,6 +122,8 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
               </Label>
               <Input
                 type="date"
+                aria-label="Date"
+                min={new Date().toLocaleDateString('en-CA')}
                 value={newHours.date}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, date: e.target.value })}
                 className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary focus:ring-1 focus:ring-secondary/50 rounded-xl h-12 text-base transition-all shadow-inner"
@@ -154,7 +156,7 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
               </div>
               <div>
                 <p className="font-bebas text-xl tracking-wide text-foreground">Closed for the day</p>
-                <p className="text-sm text-foreground/60">Toggle this if you're completely unavailable</p>
+                <p className="text-sm text-foreground/60">Toggle this if you&apos;re completely unavailable</p>
               </div>
             </div>
             <Switch
@@ -231,14 +233,14 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
                         <Calendar className="h-4 w-4 text-secondary" />
                       </div>
                       <div className="font-bebas text-xl tracking-wide text-foreground">
-                        {new Date(hours.date).toLocaleDateString('en-US', { 
+                        {new Date(`${hours.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', 
                           month: 'short', 
                           day: 'numeric', 
                           year: 'numeric' 
                         })}
                       </div>
                       {hours.is_closed ? (
-                        <span className="text-[10px] font-bold bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-tighter border border-red-500/20">
+                        <span className="text-[10px] font-bold bg-red-500/20 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full uppercase tracking-tighter border border-red-500/20">
                           Closed
                         </span>
                       ) : (
@@ -264,15 +266,18 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
 
                     {hours.reason && (
                       <div className="flex items-center gap-2 text-foreground/40 text-xs pl-9 italic">
-                        "{hours.reason}"
+                        &quot;{hours.reason}&quot;
                       </div>
                     )}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onRemove(hours.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20 hover:text-red-400 p-2 rounded-xl h-10 w-10"
+                    onClick={() => {
+                      if (window.confirm('Remove these special hours? Your regular weekly hours apply on that day again.')) onRemove(hours.id)
+                    }}
+                    aria-label={`Remove special hours on ${hours.date}`}
+                    className="sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity text-red-600 hover:bg-red-500/20 hover:text-red-700 p-2 rounded-xl h-10 w-10"
                   >
                     <Trash2 className="h-5 w-5" />
                   </Button>

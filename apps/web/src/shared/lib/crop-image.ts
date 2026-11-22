@@ -1,7 +1,7 @@
 // Utility to crop an image using canvas for react-easy-crop
 // Usage: getCroppedImg(imageSrc, croppedAreaPixels) => Promise<Blob>
 
-export default async function getCroppedImg(imageSrc: string, croppedAreaPixels: any): Promise<Blob> {
+export default async function getCroppedImg(imageSrc: string, croppedAreaPixels: { x: number; y: number; width: number; height: number }): Promise<Blob> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');

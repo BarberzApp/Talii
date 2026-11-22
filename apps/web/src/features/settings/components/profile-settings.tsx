@@ -4,26 +4,18 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { supabase } from '@/shared/lib/supabase'
 import { api, errorMessage } from '@/shared/lib/api'
-import { uploadImage } from '@/shared/lib/uploads'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Button } from '@/shared/components/ui/button'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { Loader2, Upload, CheckCircle, AlertCircle, User, Mail, Phone, MapPin, Building2, Instagram, Twitter, Facebook, Globe, Save, Camera, Sparkles, Info, Check } from 'lucide-react'
+import { Loader2, AlertCircle, User, Mail, Phone, MapPin, Save } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { useRouter } from 'next/navigation'
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
-import { Switch } from '@/shared/components/ui/switch'
-import { SpecialtyAutocomplete } from '@/shared/components/ui/specialty-autocomplete'
-import { Badge } from '@/shared/components/ui/badge'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { logger } from '@/shared/lib/logger'
-import { cityStateOf, getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
+import { bookingLinkLabel } from '@/shared/lib/app-url'
+import { cityStateOf, getAddressSuggestionsDetailed, type GeocodeResult } from '@/shared/lib/geocode'
 
 interface ProfileFormData {
   name: string
@@ -38,9 +30,7 @@ interface ProfileFormData {
   isPublic: boolean
   socialMedia: {
     instagram: string
-    twitter: string
     tiktok: string
-    facebook: string
   }
 }
 
@@ -68,7 +58,7 @@ function extractHandle(input: string): string {
 }
 
 // Timeout helper
-async function withTimeout(promise: Promise<any>, ms = 10000) {
+async function withTimeout<T>(promise: Promise<T>, ms = 10000) {
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
@@ -80,17 +70,16 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
   const [isBarber, setIsBarber] = useState(false)
   const [barberId, setBarberId] = useState<string | null>(null)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [, setAvatarUrl] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
   const { toast } = useToast()
   const { user, status } = useAuth()
-  const router = useRouter()
   const { push: safePush } = useSafeNavigation();
-  const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<ProfileFormData>()
+  const { register, handleSubmit, reset, watch } = useForm<ProfileFormData>()
 
   // Location autocomplete state
   const [locationInput, setLocationInput] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<GeocodeResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -187,7 +176,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     setAddressFields(prev => ({ ...prev, address: e.target.value, city: '' }));
   };
 
-  const handleLocationSelect = (suggestion: any) => {
+  const handleLocationSelect = (suggestion: GeocodeResult) => {
     const addr = suggestion.address || {};
     const house = addr.house_number || '';
     const road = addr.road || '';
@@ -258,9 +247,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
         isPublic: barber?.is_public ?? false,
         socialMedia: {
           instagram: barber?.instagram || '',
-          twitter: '',
           tiktok: barber?.tiktok || '',
-          facebook: '',
         },
       })
 
@@ -290,56 +277,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       fetchProfile()
     }
   }, [status, user, isInitialLoad, safePush])
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      if (!e.target.files || !e.target.files[0]) return
-      const file = e.target.files[0]
-      
-      // Validate file type and size
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: 'Invalid file type',
-          description: 'Please select an image file.',
-          variant: 'destructive',
-        })
-        return
-      }
-
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({
-          title: 'File too large',
-          description: 'Please select an image smaller than 5MB.',
-          variant: 'destructive',
-        })
-        return
-      }
-
-      setIsLoading(true)
-      await withTimeout((async () => {
-        const publicUrl = await uploadImage(file, 'avatars')
-        await api.me.update({ avatarUrl: publicUrl })
-        setAvatarUrl(publicUrl)
-        toast({
-          title: 'Success',
-          description: 'Avatar updated successfully!',
-        })
-      })(), 10000)
-    } catch (error: any) {
-      if (error.message === 'timeout') {
-        toast({ title: 'Timeout', description: 'Avatar upload took too long. Please try again.', variant: 'destructive' })
-      } else {
-        logger.error('Error uploading avatar', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to upload avatar. Please try again.',
-          variant: 'destructive',
-        })
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!validateForm(data)) {
@@ -383,8 +320,8 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
         })
         onUpdate?.()
       })(), 10000)
-    } catch (error: any) {
-      if (error.message === 'timeout') {
+    } catch (error) {
+      if (error instanceof Error && error.message === 'timeout') {
         toast({ title: 'Timeout', description: 'Profile update took too long. Please try again.', variant: 'destructive' })
       } else {
         logger.error('Error updating profile', error)
@@ -398,15 +335,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       setIsLoading(false)
     }
   }
-
-  // Only show quick stats for clients
-  const isClient = user?.role !== 'barber';
-  // Example stats (replace with real data if available)
-  const quickStats = [
-    { label: 'Total Bookings', value: 0, icon: <CheckCircle className="h-6 w-6 text-secondary" /> },
-    { label: 'Favorite Barbers', value: 0, icon: <Sparkles className="h-6 w-6 text-secondary" /> },
-    { label: 'Member Since', value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently', icon: <User className="h-6 w-6 text-secondary" /> },
-  ];
 
   if (isInitialLoad) {
     return (
@@ -494,7 +422,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     placeholder="Enter your full name"
                   />
                   {validationErrors.name && (
-                    <p className="text-sm text-red-400 flex items-center gap-1">
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       {validationErrors.name}
                     </p>
@@ -513,14 +441,16 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     placeholder="your_username"
                   />
                   {validationErrors.username && (
-                    <p className="text-sm text-red-400 flex items-center gap-1">
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       {validationErrors.username}
                     </p>
                   )}
-                  <p className="text-xs text-foreground/60">
-                    Booking link: bocmstyle.com/book/{watch('username') || 'your_username'}
-                  </p>
+                  {isBarber && (
+                    <p className="text-xs text-muted-foreground">
+                      Booking link: {bookingLinkLabel(watch('username') || 'your_username')}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -545,7 +475,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     placeholder="Enter your email address"
                   />
                   {validationErrors.email && (
-                    <p className="text-sm text-red-400 flex items-center gap-1">
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       {validationErrors.email}
                     </p>
@@ -564,7 +494,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     placeholder="(555) 123-4567"
                   />
                   {validationErrors.phone && (
-                    <p className="text-sm text-red-400 flex items-center gap-1">
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       {validationErrors.phone}
                     </p>
@@ -573,6 +503,8 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               </div>
             </div>
 
+            {/* Location and bio belong to a barber's listing; client profiles have neither. */}
+            {isBarber && (<>
             {/* Location */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -620,7 +552,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                           className="w-full text-left px-4 py-2.5 text-foreground hover:bg-secondary/20 text-sm transition-colors"
                           onMouseDown={() => handleLocationSelect(s)}
                         >
-                          <span className="font-medium">{s.display_name || s.name || 'Unknown location'}</span>
+                          <span className="font-medium">{s.display_name || 'Unknown location'}</span>
                         </button>
                       ))}
                     </div>
@@ -646,12 +578,13 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 placeholder="Tell us about yourself..."
               />
               {validationErrors.bio && (
-                <p className="text-sm text-red-400 flex items-center gap-1">
+                <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {validationErrors.bio}
                 </p>
               )}
             </div>
+            </>)}
 
             {/* Save Button */}
             <div className="flex justify-end pt-2">

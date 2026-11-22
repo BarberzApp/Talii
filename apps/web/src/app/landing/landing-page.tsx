@@ -73,34 +73,33 @@ export default function LandingPage() {
   const features: Feature[] = [
     {
       number: "01",
-      title: "Social Media Integration",
+      title: "Your Own Booking Page",
       description:
-        "Connect your Instagram, Twitter, and Facebook to showcase your best work, share your portfolio, and attract new clients directly from your profile.",
+        "Show your services, add-ons, photos and reviews on one page, link your Instagram and TikTok, and share your booking link anywhere.",
       icon: Star,
       iconColor: "bg-secondary/20 text-secondary",
     },
     {
       number: "02",
-      title: "Revenue Optimization",
+      title: "Services and Add-ons",
       description:
-        "Boost your earnings with smart pricing, service add-ons, and analytics that help you maximize every booking.",
+        "Set your own prices and durations, offer add-ons, and see what you have earned from every booking.",
       icon: DollarSign,
       iconColor: "bg-secondary/20 text-secondary",
     },
     {
       number: "03",
-      title: "Reach System",
+      title: "Get Discovered",
       description:
-        "Get discovered by clients through our on-demand marketplace—customers browse, book, and you get paid for every service delivered.",
+        "Clients search for barbers near them, pick an open time from your hours, and book in a few taps.",
       icon: Zap,
       iconColor: "bg-secondary/20 text-secondary",
-      badge: "Alpha",
     },
     {
       number: "04",
-      title: "Client Management",
+      title: "Calendar and Walk-ins",
       description:
-        "Easily manage client profiles, preferences, and booking history to deliver a personalized experience every time.",
+        "See every booking in your time zone, add walk-ins, block off days, and mark appointments completed or missed.",
       icon: Users,
       iconColor: "bg-secondary/20 text-secondary",
     },
@@ -196,7 +195,7 @@ export default function LandingPage() {
         features={features}
         columns={3}
         title="Everything You Need to Scale"
-        subtitle="From booking automation to revenue optimization, Talii gives you the tools to transform your cosmetology business."
+        subtitle="From your booking page to your calendar and payouts, Talii gives you the tools to run your business."
       />
 
       {/* Testimonials Section */}
@@ -230,16 +229,19 @@ export default function LandingPage() {
           <div className="text-center space-y-6">
             {/* Support Button */}
             <div className="flex justify-center">
-              <Link href="/support">
-                <Button className="bg-muted border border-border text-foreground hover:bg-muted/80 hover:border-primary/30 transition-all duration-300 rounded-xl px-6 py-3 font-semibold">
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Need Help? Contact Support
-                </Button>
-              </Link>
+              <Button href="/support" className="bg-muted border border-border text-foreground hover:bg-muted/80 hover:border-primary/30 transition-all duration-300 rounded-xl px-6 py-3 font-semibold">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Need Help? Contact Support
+              </Button>
             </div>
 
+            <nav aria-label="Legal" className="flex justify-center gap-6 text-sm">
+              <Link href="/privacy" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">Privacy</Link>
+              <Link href="/terms" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">Terms</Link>
+            </nav>
+
             <p className="text-muted-foreground text-sm">
-              © 2025 Talii. All rights reserved. The future of booking.
+              © {new Date().getFullYear()} Talii. All rights reserved.
             </p>
           </div>
         </div>

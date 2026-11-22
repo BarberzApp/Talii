@@ -2,18 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { logger } from '@/shared/lib/logger'
-import { Button } from '@/shared/components/ui/button'
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  Plus
-} from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { api, bookingErrorMessage } from '@/shared/lib/api'
-import { formatBookingTime, formatCents, localDateInTimeZone, type BookingListItem } from '@barber-app/shared'
+import { formatBookingTime, formatCents, formatInTimeZone, localDateInTimeZone, timeZoneAbbreviation, type BookingListItem } from '@barber-app/shared'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek } from 'date-fns'
 import { EnhancedCalendarHeader } from './enhanced-calendar-header'
 import { EnhancedCalendarGrid } from './enhanced-calendar-grid'
 import { EnhancedCalendarEventsPanel } from './enhanced-calendar-events-panel'
@@ -271,6 +265,14 @@ const CALENDAR_STYLES = `
             .calendar-grid, .weekdays-header { gap: 0.5rem; }
             .calendar-day { min-height: 60px; border-radius: 1rem; }
           }
+
+          /* Phones: keep all seven columns inside the card. */
+          @media (max-width: 480px) {
+            .calendar-container { padding: 0.75rem !important; border-radius: 1.5rem; }
+            .calendar-grid, .weekdays-header { gap: 0.25rem; padding: 0; }
+            .calendar-day { min-height: 44px; min-width: 0; border-radius: 0.75rem; }
+            .calendar-title { font-size: 1.5rem; }
+          }
         `
 
 export interface CalendarEvent {
@@ -312,6 +314,14 @@ export interface EnhancedCalendarProps {
   onEventsLoaded?: (count: number) => void
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Awaiting payment',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  no_show: 'Missed',
+  cancelled: 'Cancelled',
+}
+
 const PAGE_SIZE = 100
 const MAX_PAGES = 10
 
@@ -321,13 +331,17 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [showEventDialog, setShowEventDialog] = useState(false)
-  const [gotoDate, setGotoDate] = useState('')
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [isMarkingMissed, setIsMarkingMissed] = useState(false)
   const [actionPending, setActionPending] = useState<null | 'complete' | 'cancel'>(null)
-  const [isBarber, setIsBarber] = useState(false)
+  const [, setIsBarber] = useState(false)
   const { user } = useAuth()
+  /** Barbers open on today's agenda; the month grid is one tap away. Clients open on the month. */
+  const [mode, setMode] = useState<'today' | 'month'>(user?.role === 'barber' ? 'today' : 'month')
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
   const { toast } = useToast()
 
   // Minimum swipe distance (in px)
@@ -342,6 +356,20 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
     logger.debug('EnhancedCalendar: Fetching bookings for user', { userId: user.id })
     fetchBookings()
   }, [user?.id, currentDate.getFullYear(), currentDate.getMonth()])
+
+  // The role may only be known once auth has loaded; pick the default view then (once).
+  const [defaultModeSet, setDefaultModeSet] = useState(!!user)
+  useEffect(() => {
+    if (!user || defaultModeSet) return
+    setMode(user.role === 'barber' ? 'today' : 'month')
+    setDefaultModeSet(true)
+  }, [user, defaultModeSet])
+
+  // Keep "next appointment" and past/upcoming styling current.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   // Touch gesture handlers for mobile swipe navigation
   const onTouchStart = (e: React.TouchEvent) => {
@@ -373,6 +401,7 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
    * expired are left out. Refetched when the month changes.
    */
   const fetchBookings = async () => {
+    setLoadError(null)
     try {
       const barberView = user?.role === 'barber'
       setIsBarber(barberView)
@@ -435,9 +464,11 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
           }
         })
       setEvents(mapped)
+      setLoaded(true)
       onEventsLoaded?.(mapped.length)
     } catch (error) {
       logger.error('EnhancedCalendar: Error fetching bookings', error)
+      setLoadError(bookingErrorMessage(error, 'Could not load your bookings.'))
     }
   }
 
@@ -453,9 +484,6 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
     return events.filter(event => event.extendedProps.localDate === day)
   }
 
-  const hasEvents = (date: Date) => {
-    return getEventsForDate(date).length > 0
-  }
 
   const hasPastEvents = (date: Date) => {
     const eventsForDate = getEventsForDate(date)
@@ -564,11 +592,115 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
 
   const calendarDays = getCalendarDays()
 
+  // Today's agenda, in the barber's time zone (every event of a barber shares it).
+  const agendaZone = events[0]?.extendedProps.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  const todayLocal = localDateInTimeZone(new Date(now), agendaZone)
+  const todayEvents = events
+    .filter((e) => e.extendedProps.localDate === todayLocal && e.extendedProps.status !== 'cancelled')
+    .sort((a, b) => a.start.localeCompare(b.start))
+  const nextEvent = todayEvents.find(
+    (e) => Date.parse(e.end) > now && (e.extendedProps.status === 'confirmed' || e.extendedProps.status === 'pending')
+  )
+  const cancelledToday = events.filter((e) => e.extendedProps.localDate === todayLocal && e.extendedProps.status === 'cancelled').length
+
+  const showToday = () => {
+    setMode('today')
+    const today = new Date()
+    if (today.getMonth() !== currentDate.getMonth() || today.getFullYear() !== currentDate.getFullYear()) setCurrentDate(today)
+  }
+
   return (
     <div className={cn("w-full", className)}>
       {/* Custom Styles */}
       <style dangerouslySetInnerHTML={{ __html: CALENDAR_STYLES }} />
 
+      {/* View switch: Today (agenda) | Month */}
+      <div className="flex justify-center px-4 pt-4" role="tablist" aria-label="Calendar view">
+        <div className="inline-flex rounded-xl border border-border bg-muted p-1">
+          {(['today', 'month'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={mode === m}
+              onClick={() => (m === 'today' ? showToday() : setMode('month'))}
+              className={cn(
+                'px-5 py-2 rounded-lg text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                mode === m ? 'bg-secondary text-secondary-foreground shadow' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {m === 'today' ? 'Today' : 'Month'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loadError && (
+        <div role="alert" className="mx-4 mt-4 rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/40 dark:border-red-900 p-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-red-700 dark:text-red-300">{loadError}</p>
+          <button type="button" onClick={() => void fetchBookings()} className="text-sm font-semibold text-red-700 dark:text-red-300 underline">
+            Try again
+          </button>
+        </div>
+      )}
+
+      {mode === 'today' && (
+        <section className="p-4 sm:p-6" aria-labelledby="today-heading">
+          <h2 id="today-heading" className="text-foreground font-bebas text-3xl tracking-wide">
+            Today · {formatInTimeZone(new Date(now), agendaZone, { weekday: 'long', month: 'short', day: 'numeric' })}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">Times in {timeZoneAbbreviation(agendaZone, new Date(now))}. Tap an appointment to complete, mark missed or cancel.</p>
+          {!loaded && !loadError ? (
+            <div className="space-y-3" aria-busy="true">
+              <div className="h-20 rounded-2xl bg-muted animate-pulse" />
+              <div className="h-20 rounded-2xl bg-muted animate-pulse" />
+            </div>
+          ) : todayEvents.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-6 text-center">
+              <p className="font-semibold text-foreground">No appointments today</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {cancelledToday > 0 ? `${cancelledToday} cancelled. ` : ''}Switch to Month to see what is coming up.
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {todayEvents.map((event) => {
+                const isNext = event.id === nextEvent?.id
+                const done = event.extendedProps.status === 'completed' || event.extendedProps.status === 'no_show'
+                return (
+                  <li key={event.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleEventClick(event)}
+                      className={cn(
+                        'w-full text-left rounded-2xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        isNext ? 'border-secondary bg-secondary/10 shadow-md' : 'border-border bg-card hover:bg-muted',
+                        done && 'opacity-70'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          {isNext && <span className="inline-block mb-1 text-[11px] font-bold uppercase tracking-wider text-secondary">Next</span>}
+                          <p className="font-semibold text-foreground">{formatTime(event)} · {event.extendedProps.clientName}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {[event.extendedProps.serviceName, ...event.extendedProps.addonNames].join(' + ')}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-semibold text-foreground">{formatCents(Math.round(event.extendedProps.price * 100))}</p>
+                          <p className="text-xs text-muted-foreground">{STATUS_LABELS[event.extendedProps.status] ?? event.extendedProps.status}</p>
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {mode === 'month' && (
       <div 
         className="calendar-container p-6"
         onTouchStart={onTouchStart}
@@ -611,6 +743,7 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
           />
         )}
       </div>
+      )}
 
       <EnhancedCalendarEventDialog
         open={showEventDialog}

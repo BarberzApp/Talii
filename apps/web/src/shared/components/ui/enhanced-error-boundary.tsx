@@ -5,7 +5,6 @@ import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug } from 'lucide-react'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
-import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { logger } from '@/shared/lib/logger'
 import * as Sentry from '@sentry/nextjs'
 
@@ -31,7 +30,7 @@ interface ErrorBoundaryProps {
 }
 
 export class EnhancedErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  private retryTimeout?: NodeJS.Timeout
+  private retryTimeout?: ReturnType<typeof setTimeout>
 
   constructor(props: ErrorBoundaryProps) {
     super(props)
@@ -172,10 +171,10 @@ function DefaultErrorFallback({
   retryCount, 
   maxRetries, 
   onRetry, 
-  onReset 
+  onReset: _onReset 
 }: DefaultErrorFallbackProps) {
   const { push, back } = useSafeNavigation()
-  const { status } = useAuth()
+
   const [showDetails, setShowDetails] = useState(false)
 
   // Auto-retry for auth-related errors
