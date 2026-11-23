@@ -213,7 +213,7 @@ export function Navbar() {
             <Link href="/login" className="text-muted-foreground hover:text-primary transition-all duration-300 font-medium px-4 py-2 rounded-xl hover:bg-muted">
               Login
             </Link>
-            <Link href="/register" className="bg-secondary text-primary-foreground px-6 py-2 rounded-xl font-semibold hover:bg-secondary/90 shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-primary/20">
+            <Link href="/register" className="bg-button text-button-foreground px-6 py-2 rounded-xl font-semibold hover:bg-button/90 shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-primary/20">
               Get Started
             </Link>
           </nav>

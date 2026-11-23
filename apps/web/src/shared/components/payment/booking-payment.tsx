@@ -117,7 +117,7 @@ function PaymentForm({
         <Button
           type="submit"
           disabled={!stripe || !elements || submitting}
-          className="flex-1 bg-secondary text-primary-foreground font-semibold rounded-xl hover:bg-secondary/90"
+          className="flex-1 bg-button text-button-foreground font-semibold rounded-xl hover:bg-button/90"
         >
           {submitting ? (
             <>

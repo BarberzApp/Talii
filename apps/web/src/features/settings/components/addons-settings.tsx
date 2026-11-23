@@ -281,7 +281,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                className="bg-button hover:bg-button/90 text-button-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -333,7 +333,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                 </div>
                 <Button
                   onClick={() => document.getElementById('addon-name')?.focus()}
-                  className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  className="bg-button hover:bg-button/90 text-button-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Add Your First Add-on

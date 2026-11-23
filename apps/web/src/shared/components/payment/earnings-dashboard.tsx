@@ -63,6 +63,7 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
   const [isLoading, setIsLoading] = useState(!preview)
   const [isSettingUp, setIsSettingUp] = useState(false)
   const [hasStripeAccount, setHasStripeAccount] = useState(false)
+  const [feeExempt, setFeeExempt] = useState(false)
 
   useEffect(() => {
     if (preview) return
@@ -70,7 +71,18 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
     logger.debug('EarningsDashboard mounted', { barberId })
     loadEarnings()
     checkStripeAccount()
+    checkFeeExempt()
   }, [barberId, preview])
+
+  /** Fee-exempt barbers (GET /api/me billing.fee_exempt) take no online payments, so there is no Stripe setup. */
+  const checkFeeExempt = async () => {
+    try {
+      const me = await api.me.get()
+      setFeeExempt(!!me.billing?.fee_exempt)
+    } catch (error) {
+      logger.error('Error checking fee exemption', error)
+    }
+  }
 
   /** GET /api/stripe/connect/status (refreshes the flags from Stripe). */
   const checkStripeAccount = async () => {
@@ -261,7 +273,15 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
           </div>
 
           {/* Payment Setup Section - hidden in preview */}
-          {!preview && !hasStripeAccount && (
+          {!preview && feeExempt && (
+            <div className={cn("text-center border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
+              <p className={cn("text-base", descCls)}>
+                You don&apos;t pay booking fees, so there&apos;s nothing to set up. Clients pay you in person.
+              </p>
+            </div>
+          )}
+
+          {!preview && !feeExempt && !hasStripeAccount && (
             <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
               <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl backdrop-blur-md"}>
                 <p className={cn("mb-6 text-lg", descCls)}>
@@ -270,7 +290,7 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
                 <Button
                   onClick={handleSetupPayments}
                   disabled={isSettingUp}
-                  className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-bold shadow-xl rounded-xl px-10 py-6 text-lg transition-all duration-300 hover:scale-105 active:scale-95"
+                  className="bg-button hover:bg-button/90 text-button-foreground font-bold shadow-xl rounded-xl px-10 py-6 text-lg transition-all duration-300 hover:scale-105 active:scale-95"
                 >
                   {isSettingUp ? (
                     <Loader2 className="h-5 w-5 animate-spin mr-3" />
@@ -284,7 +304,7 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
           )}
 
           {/* Stripe Dashboard Access - hidden in preview */}
-          {!preview && hasStripeAccount && (
+          {!preview && !feeExempt && hasStripeAccount && (
             <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
               <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl backdrop-blur-md"}>
                 <Button

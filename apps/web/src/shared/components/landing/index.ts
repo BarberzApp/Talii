@@ -7,12 +7,6 @@ export type { LandingSectionProps } from "./LandingSection";
 export { FeatureGrid } from "./FeatureGrid";
 export type { FeatureGridProps, Feature } from "./FeatureGrid";
 
-export { TestimonialCard } from "./TestimonialCard";
-export type { TestimonialCardProps } from "./TestimonialCard";
-
-export { TestimonialSection } from "./TestimonialSection";
-export type { TestimonialSectionProps } from "./TestimonialSection";
-
 export { RevenueCalculator } from "./RevenueCalculator";
 export type { RevenueCalculatorProps } from "./RevenueCalculator";
 

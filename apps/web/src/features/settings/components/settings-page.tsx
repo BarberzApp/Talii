@@ -325,7 +325,7 @@ export function SettingsPage() {
                       value="profile" 
                       className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                         activeTab === 'profile' 
-                          ? 'bg-secondary text-secondary-foreground shadow-xl' 
+                          ? 'bg-button text-button-foreground shadow-xl' 
                           : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                       }`}
                     >
@@ -339,7 +339,7 @@ export function SettingsPage() {
                           value="services" 
                           className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'services' 
-                              ? 'bg-secondary text-secondary-foreground shadow-xl' 
+                              ? 'bg-button text-button-foreground shadow-xl' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
@@ -351,7 +351,7 @@ export function SettingsPage() {
                           value="earnings" 
                           className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'earnings' 
-                              ? 'bg-secondary text-secondary-foreground shadow-xl' 
+                              ? 'bg-button text-button-foreground shadow-xl' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
@@ -362,7 +362,7 @@ export function SettingsPage() {
                           value="addons" 
                           className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'addons' 
-                              ? 'bg-secondary text-secondary-foreground shadow-xl' 
+                              ? 'bg-button text-button-foreground shadow-xl' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
@@ -374,7 +374,7 @@ export function SettingsPage() {
                           value="availability" 
                           className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'availability' 
-                              ? 'bg-secondary text-secondary-foreground shadow-xl' 
+                              ? 'bg-button text-button-foreground shadow-xl' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >

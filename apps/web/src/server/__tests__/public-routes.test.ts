@@ -6,7 +6,6 @@ import { TEST_ENV, TOKENS, request, seedMarketplace } from '@/server/testing/fix
 import { limiters } from '@/server/rate-limit'
 import { GET as geocode } from '@/app/api/geocode/route'
 import { POST as support } from '@/app/api/support/route'
-import { POST as waitlist } from '@/app/api/waitlist/route'
 import { GET as health } from '@/app/api/health/route'
 
 let mockDb: FakeDb
@@ -19,16 +18,11 @@ const fetchMock = jest.fn()
 
 beforeEach(() => {
   mockDb = seedMarketplace()
-  mockDb.constraints.waitlist = (c, others) =>
-    others.some((o) => String(o.email).toLowerCase() === String(c.email).toLowerCase())
-      ? { code: '23505', message: 'duplicate' }
-      : null
   mockEnv = { ...TEST_ENV, GOOGLE_MAPS_API_KEY: 'test-maps-key', SLACK_WEBHOOK_URL: 'https://hooks.slack.test/abc' }
   fetchMock.mockReset()
   global.fetch = fetchMock as unknown as typeof fetch
   limiters.geocode.reset()
   limiters.support.reset()
-  limiters.waitlist.reset()
 })
 
 function withIp(req: Request, ip: string): Request {
@@ -167,24 +161,6 @@ describe('POST /api/support', () => {
     fetchMock.mockResolvedValue({ ok: true })
     for (let i = 0; i < 5; i++) await support(withIp(request('/api/support', { method: 'POST', body }), '3.3.3.3'))
     expect((await support(withIp(request('/api/support', { method: 'POST', body }), '3.3.3.3'))).status).toBe(429)
-  })
-})
-
-describe('POST /api/waitlist', () => {
-  it('stores the email and answers the same for duplicates', async () => {
-    const first = await json(await waitlist(request('/api/waitlist', { method: 'POST', body: { email: ' Pat@Example.com ' } })))
-    expect(first).toEqual({ status: 200, body: { success: true } })
-    expect(mockDb.table('waitlist')).toEqual([expect.objectContaining({ email: 'pat@example.com' })])
-
-    const dup = await json(await waitlist(request('/api/waitlist', { method: 'POST', body: { email: 'PAT@example.com' } })))
-    expect(dup).toEqual(first)
-    expect(mockDb.table('waitlist')).toHaveLength(1)
-  })
-
-  it('validates the email and surfaces other database errors', async () => {
-    expect((await waitlist(request('/api/waitlist', { method: 'POST', body: { email: 'x' } }))).status).toBe(400)
-    mockDb.failNext('waitlist', 'insert', { code: '08006', message: 'connection lost' })
-    expect((await waitlist(request('/api/waitlist', { method: 'POST', body: { email: 'a@b.co' } }))).status).toBe(500)
   })
 })
 

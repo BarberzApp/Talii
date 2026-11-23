@@ -54,7 +54,7 @@ export function CTASection({
               <Button
                 href={primaryCta.href}
                 size="lg"
-                className="bg-secondary text-primary-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-secondary/25"
+                className="bg-button text-button-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:bg-button/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-secondary/25"
               >
                 {primaryCta.label}
                 <ArrowRight className="inline ml-2 h-5 w-5" />
@@ -95,7 +95,7 @@ export function CTASection({
               <Button
                 href={primaryCta.href}
                 size="lg"
-                className="bg-secondary text-primary-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-secondary/25"
+                className="bg-button text-button-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:bg-button/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-secondary/25"
               >
                 {primaryCta.label}
                 <ArrowRight className="inline ml-2 h-5 w-5" />

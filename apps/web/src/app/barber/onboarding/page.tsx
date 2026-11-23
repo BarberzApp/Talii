@@ -948,7 +948,7 @@ export default function BarberOnboardingPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center pb-8 pt-2">
-                  <Button asChild className="bg-secondary text-primary-foreground font-bebas font-bold rounded-xl px-8 py-3 mt-4 hover:bg-secondary/90 shadow-md text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-black">
+                  <Button asChild className="bg-button text-button-foreground font-bebas font-bold rounded-xl px-8 py-3 mt-4 hover:bg-button/90 shadow-md text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-black">
                     <Link href="/profile">Go to Profile</Link>
                   </Button>
                 </CardContent>
@@ -987,7 +987,7 @@ export default function BarberOnboardingPage() {
             </Button>
             <Button
               type="button"
-              className="bg-secondary text-primary-foreground font-bebas font-bold rounded-xl px-8 py-3 hover:bg-secondary/90 shadow-md text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-black"
+              className="bg-button text-button-foreground font-bebas font-bold rounded-xl px-8 py-3 hover:bg-button/90 shadow-md text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-black"
               onClick={async () => {
                 if (await validateStep(currentStep)) {
                   if (currentStep < steps.length - 1) {

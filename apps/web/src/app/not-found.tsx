@@ -181,7 +181,7 @@ export default function NotFound() {
             
             <Button 
               asChild 
-              className="h-14 px-8 rounded-xl bg-gradient-to-r from-secondary to-[#FF8C00] text-primary-foreground font-bold text-lg transition-all duration-300 shadow-lg shadow-secondary/30 hover:shadow-secondary/50 hover:scale-105"
+              className="h-14 px-8 rounded-xl bg-gradient-to-r from-secondary to-[#FF8C00] text-button-foreground font-bold text-lg transition-all duration-300 shadow-lg shadow-secondary/30 hover:shadow-secondary/50 hover:scale-105"
             >
               <Link href="/landing">
                 <Home className="mr-2 h-5 w-5" />
@@ -216,7 +216,7 @@ export default function NotFound() {
                     className="group block p-4 rounded-2xl bg-white/50 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-white dark:hover:bg-white/10 hover:border-secondary/50 transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.02]"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-xl bg-secondary/10 dark:bg-secondary/20 text-secondary group-hover:bg-secondary group-hover:text-primary-foreground transition-colors duration-300">
+                      <div className="p-3 rounded-xl bg-button/10 dark:bg-button/20 text-secondary group-hover:bg-button group-hover:text-button-foreground transition-colors duration-300">
                         {suggestion.icon}
                       </div>
                       <div>

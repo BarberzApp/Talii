@@ -246,7 +246,7 @@ export default function LoginPage() {
               </div>
               <Button 
                 type="submit" 
-                className="w-full bg-secondary text-primary-foreground font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-secondary/90 transition-all text-lg font-bebas" 
+                className="w-full bg-button text-button-foreground font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-button/90 transition-all text-lg font-bebas" 
                 disabled={isLoading}
               >
                 {isLoading ? (

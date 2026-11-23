@@ -335,10 +335,6 @@ export function createApiClient(options: ApiClientOptions) {
       send: (body: SupportBody) => send<{ sent: true }>('POST', '/api/support', body, 'none'),
     },
 
-    waitlist: {
-      join: (email: string) => send<{ success: true }>('POST', '/api/waitlist', { email }, 'none'),
-    },
-
     health: () => get<{ status: string; timestamp: string }>('/api/health', undefined, 'none'),
 
     admin: {

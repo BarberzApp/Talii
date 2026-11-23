@@ -314,7 +314,7 @@ export default function ClientPortfolio() {
             </Avatar>
             <Button
               size="icon"
-              className="absolute bottom-2 right-2 h-10 w-10 rounded-full bg-secondary text-primary-foreground hover:bg-secondary/90 shadow-lg border-4 border-background z-20 group-hover/avatar:scale-110 transition-transform"
+              className="absolute bottom-2 right-2 h-10 w-10 rounded-full bg-button text-button-foreground hover:bg-button/90 shadow-lg border-4 border-background z-20 group-hover/avatar:scale-110 transition-transform"
               onClick={() => avatarFileInputRef.current?.click()}
               disabled={avatarLoading}
             >
@@ -369,21 +369,21 @@ export default function ClientPortfolio() {
             <TabsList className="grid grid-cols-3 w-full max-w-lg h-14 items-center rounded-2xl bg-white/5 border border-white/10 p-1.5 backdrop-blur-2xl shadow-2xl">
               <TabsTrigger
                 value="appointments"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-button data-[state=active]:text-button-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
               >
                 <Calendar className="h-4 w-4" />
                 <span className="uppercase">Appointments</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="past-barbers" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-button data-[state=active]:text-button-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
               >
                 <Users className="h-4 w-4" />
                 <span className="uppercase">Stylists</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="bookings" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-button data-[state=active]:text-button-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2"
               >
                 <Star className="h-4 w-4" />
                 <span className="uppercase">Reviews</span>
@@ -412,7 +412,7 @@ export default function ClientPortfolio() {
                 <p className="text-muted-foreground mb-6 px-4">Find a barber and pick a time. Your bookings show up here, and you can cancel them here too.</p>
                 <Button
                   onClick={() => window.location.href = '/browse'}
-                  className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
+                  className="bg-button text-button-foreground font-bold hover:bg-button/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
                 >
                   Find a Stylist
                 </Button>
@@ -473,7 +473,7 @@ export default function ClientPortfolio() {
                 </p>
                 <Button
                   onClick={() => window.location.href = '/browse'}
-                  className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
+                  className="bg-button text-button-foreground font-bold hover:bg-button/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
                 >
                   Find a Stylist
                 </Button>
@@ -515,7 +515,7 @@ export default function ClientPortfolio() {
                 </p>
                 <Button
                   onClick={() => window.location.href = '/browse'}
-                  className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
+                  className="bg-button text-button-foreground font-bold hover:bg-button/90 px-8 py-6 h-auto rounded-xl shadow-lg hover:scale-105 transition-transform"
                 >
                   Explore Stylists
                 </Button>
@@ -591,7 +591,7 @@ export default function ClientPortfolio() {
                                 </Button>
                                 <Button 
                                   size="sm" 
-                                  className="bg-secondary text-primary-foreground hover:bg-secondary/90 shadow-lg px-6"
+                                  className="bg-button text-button-foreground hover:bg-button/90 shadow-lg px-6"
                                   onClick={() => handleSaveReview(review.id)}
                                   disabled={updatingReview}
                                 >

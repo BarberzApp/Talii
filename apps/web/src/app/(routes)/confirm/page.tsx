@@ -86,7 +86,7 @@ function ConfirmPage() {
         <Card className="bg-card border border-border shadow-xl rounded-3xl">
           <CardHeader className="text-center">
             <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="h-8 w-8 text-primary-foreground" />
+              <Mail className="h-8 w-8 text-button-foreground" />
             </div>
             <CardTitle className="text-3xl font-bebas text-foreground mb-2">Check Your Email</CardTitle>
             <CardDescription className="text-muted-foreground mb-2">We&apos;ve sent a confirmation link to your email</CardDescription>
@@ -100,7 +100,7 @@ function ConfirmPage() {
             <div className="w-full flex flex-col gap-4">
               <Button
                 onClick={handleCheck}
-                className="w-full bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold rounded-xl h-12 text-lg font-bebas"
+                className="w-full bg-button hover:bg-button/90 text-button-foreground font-bold rounded-xl h-12 text-lg font-bebas"
                 disabled={checking}
               >
                 {checking ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "I've confirmed, sign me in"}

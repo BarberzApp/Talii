@@ -591,7 +591,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-secondary-foreground font-semibold shadow-lg rounded-xl px-8 py-3 text-lg"
+                className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-button-foreground font-semibold shadow-lg rounded-xl px-8 py-3 text-lg"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />

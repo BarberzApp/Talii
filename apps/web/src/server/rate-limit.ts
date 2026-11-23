@@ -60,6 +60,4 @@ export const limiters = {
   geocode: createRateLimiter({ windowMs: 60_000, max: 30 }),
   /** POST /api/support: 5 per 15 minutes. */
   support: createRateLimiter({ windowMs: 15 * 60_000, max: 5 }),
-  /** POST /api/waitlist: 10 per hour. */
-  waitlist: createRateLimiter({ windowMs: 60 * 60_000, max: 10 }),
 }

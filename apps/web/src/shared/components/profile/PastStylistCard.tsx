@@ -62,7 +62,7 @@ export function PastStylistCard({ barber, lastVisit, canReview = false, onReview
               <div className="flex items-center justify-center gap-2">
                 <Button 
                   size="default" 
-                  className="bg-secondary text-primary-foreground font-bold hover:bg-secondary/90 px-6 h-11 rounded-xl shadow-lg transition-all active:scale-95"
+                  className="bg-button text-button-foreground font-bold hover:bg-button/90 px-6 h-11 rounded-xl shadow-lg transition-all active:scale-95"
                   onClick={handleBookAgain}
                 >
                   Book Again

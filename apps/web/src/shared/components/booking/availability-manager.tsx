@@ -174,7 +174,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   value="weekly" 
                   className={`relative flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-6 py-4 rounded-xl transition-all duration-200 text-sm font-semibold ${
                     activeTab === 'weekly' 
-                      ? 'bg-secondary text-secondary-foreground shadow-lg' 
+                      ? 'bg-button text-button-foreground shadow-lg' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10'
                   }`}
                 >
@@ -185,7 +185,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
                   value="special-hours" 
                   className={`relative flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-6 py-4 rounded-xl transition-all duration-200 text-sm font-semibold ${
                     activeTab === 'special-hours' 
-                      ? 'bg-secondary text-secondary-foreground shadow-lg' 
+                      ? 'bg-button text-button-foreground shadow-lg' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10'
                   }`}
                 >

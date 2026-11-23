@@ -617,7 +617,7 @@ export function EnhancedBarberProfileSettings({ onSave }: EnhancedBarberProfileS
                 <Button 
                   type="submit" 
                   disabled={loading} 
-                  className="min-w-[140px] bg-secondary text-primary-foreground font-semibold rounded-xl px-8 py-3 hover:bg-secondary/90 shadow-lg text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-darkpurple"
+                  className="min-w-[140px] bg-button text-button-foreground font-semibold rounded-xl px-8 py-3 hover:bg-button/90 shadow-lg text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-darkpurple"
                 >
                   {loading ? (
                     <>

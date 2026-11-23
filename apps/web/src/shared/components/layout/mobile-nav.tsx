@@ -98,8 +98,8 @@ export function MobileNav() {
             <div className="absolute inset-0 rounded-3xl bg-primary/30 blur-xl opacity-60" />
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/20 to-transparent" />
             
-            <centerItem.icon className="h-6 w-6 mb-1 text-primary-foreground drop-shadow-lg relative z-10 group-hover:scale-110 transition-transform duration-300" />
-            <span className="text-xs font-bold text-primary-foreground drop-shadow flex items-center relative z-10 tracking-wide">
+            <centerItem.icon className="h-6 w-6 mb-1 text-button-foreground drop-shadow-lg relative z-10 group-hover:scale-110 transition-transform duration-300" />
+            <span className="text-xs font-bold text-button-foreground drop-shadow flex items-center relative z-10 tracking-wide">
               {centerItem.name}
             </span>
           </Link>

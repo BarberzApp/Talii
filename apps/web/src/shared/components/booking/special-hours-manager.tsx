@@ -198,7 +198,7 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
           <Button
             onClick={handleAdd}
             disabled={isAdding || !newHours.date}
-            className="w-full bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold shadow-xl rounded-xl h-14 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full bg-button hover:bg-button/90 text-button-foreground font-bold shadow-xl rounded-xl h-14 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
           >
             {isAdding ? <Loader2 className="h-6 w-6 animate-spin mr-3" /> : <Plus className="h-6 w-6 mr-3" />}
             {isAdding ? "Saving..." : "Set Special Hours"}

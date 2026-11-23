@@ -12,12 +12,8 @@ import { api, isApiError } from '@/shared/lib/api'
 import type { SupportCategory } from '@barber-app/shared'
 import { logger } from '@/shared/lib/logger'
 import { 
-  Mail, 
   MessageCircle, 
   HelpCircle, 
-  Phone, 
-  Clock,
-  CheckCircle,
   Send
 } from 'lucide-react'
 
@@ -94,7 +90,7 @@ export default function SupportPage() {
 
       toast({
         title: "Message Sent!",
-        description: "We've received your message and will reply by email, usually within 24 hours.",
+        description: "We've received your message and will reply by email.",
       })
 
       // Reset form
@@ -110,7 +106,7 @@ export default function SupportPage() {
       toast({
         title: "Error",
         description: isApiError(error) && error.status === 503
-          ? "Our message form is not available right now. Please email support@talii.com instead."
+          ? "Our message form is not available right now. Please try again later."
           : isApiError(error) || error instanceof Error ? error.message : "Failed to send your message. Please try again.",
         variant: "destructive"
       })
@@ -144,12 +140,6 @@ export default function SupportPage() {
             <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto mb-6">
               We&apos;re here to help! Get in touch with our support team or browse our frequently asked questions.
             </p>
-            <div className="flex items-center justify-center gap-3">
-              <div className="flex items-center bg-muted backdrop-blur-sm rounded-xl px-4 py-2 border border-border">
-                <Clock className="w-4 h-4 text-primary mr-2" />
-                <span className="text-sm text-foreground font-medium">Response within 24 hours</span>
-              </div>
-            </div>
           </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -163,7 +153,7 @@ export default function SupportPage() {
                 Contact Support
               </CardTitle>
               <CardDescription className="text-muted-foreground text-base">
-                Send us a message and we&apos;ll get back to you within 24 hours
+                Send us a message and we&apos;ll get back to you
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -237,7 +227,7 @@ export default function SupportPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-14 text-lg font-semibold bg-secondary hover:bg-secondary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl" 
+                  className="w-full h-14 text-lg font-semibold bg-button hover:bg-button/90 text-button-foreground shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl" 
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -258,47 +248,6 @@ export default function SupportPage() {
 
           {/* Contact Info & FAQ */}
           <div className="space-y-8">
-            {/* Contact Information */}
-            <Card className="bg-card border border-border shadow-xl backdrop-blur-xl rounded-3xl p-6 sm:p-8">
-              <CardHeader className="pb-6">
-                <CardTitle className="flex items-center gap-3 text-2xl font-bold text-foreground">
-                  <div className="p-3 bg-primary/20 rounded-xl">
-                    <Phone className="h-6 w-6 text-primary" />
-                  </div>
-                  Get in Touch
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 space-y-4">
-                <div className="flex items-center gap-4 p-4 bg-muted rounded-xl border border-border">
-                  <div className="p-3 bg-primary/20 rounded-full">
-                    <Mail className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Email Support</p>
-                    <p className="text-muted-foreground">support@talii.com</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-4 bg-muted rounded-xl border border-border">
-                  <div className="p-3 bg-primary/20 rounded-full">
-                    <Clock className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Response Time</p>
-                    <p className="text-muted-foreground">Within 24 hours</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-4 bg-muted rounded-xl border border-border">
-                  <div className="p-3 bg-primary/20 rounded-full">
-                    <CheckCircle className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Availability</p>
-                    <p className="text-muted-foreground">Monday - Friday, 9 AM - 6 PM</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* FAQ Section */}
             <Card className="bg-card border border-border shadow-xl backdrop-blur-xl rounded-3xl p-6 sm:p-8">
               <CardHeader className="pb-6">

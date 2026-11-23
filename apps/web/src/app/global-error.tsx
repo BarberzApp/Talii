@@ -33,7 +33,7 @@ export default function GlobalError({
             <button
               type="button"
               onClick={() => reset()}
-              className="rounded-xl bg-secondary px-5 py-2.5 font-semibold text-secondary-foreground hover:bg-secondary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+              className="rounded-xl bg-button px-5 py-2.5 font-semibold text-button-foreground hover:bg-button/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
             >
               Try again
             </button>

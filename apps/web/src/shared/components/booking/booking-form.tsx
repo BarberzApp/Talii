@@ -303,7 +303,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                 <div className={cn(
                   "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300",
                   step < currentStep 
-                    ? "bg-secondary text-primary-foreground" 
+                    ? "bg-button text-button-foreground" 
                     : step === currentStep 
                     ? "bg-secondary/10 dark:bg-secondary/20 text-secondary border-2 border-secondary shadow-[0_0_15px_rgba(238,109,35,0.4)] scale-110" 
                     : "bg-black/5 dark:bg-white/10 text-foreground/40"
@@ -467,7 +467,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                             !isDisabled && !isSelected && "hover:bg-secondary/10 hover:text-secondary hover:shadow-sm hover:scale-105",
                             isCurrentMonth && !isDisabled && !isSelected && !isTodayDate && "text-foreground bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5",
                             isTodayDate && !isSelected && "text-secondary font-bold bg-secondary/10 border-2 border-secondary",
-                            isSelected && "bg-gradient-to-br from-secondary to-[#FF8C00] text-primary-foreground font-bold shadow-lg shadow-secondary/40 scale-110 border-none z-10"
+                            isSelected && "bg-gradient-to-br from-secondary to-[#FF8C00] text-button-foreground font-bold shadow-lg shadow-secondary/40 scale-110 border-none z-10"
                           )}
                         >
                           <span className="relative z-10">{format(day, 'd')}</span>
@@ -656,7 +656,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                  <div className="bg-secondary/10 border border-secondary/20 rounded-2xl p-5 text-center">
                    <h4 className="text-lg font-semibold text-foreground mb-1">Sign in to book</h4>
                    <p className="text-muted-foreground mb-4 text-sm">You need a Talii account to book. You will come back here after signing in.</p>
-                   <Button asChild className="rounded-xl bg-secondary text-primary-foreground">
+                   <Button asChild className="rounded-xl bg-button text-button-foreground">
                      <Link href="/login" onClick={() => storeRedirectUrl(window.location.pathname)}>Sign in</Link>
                    </Button>
                  </div>
@@ -677,7 +677,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                  <Button 
                    type="submit" 
                    disabled={loading || !user}
-                   className="flex-1 bg-secondary text-primary-foreground font-semibold rounded-xl hover:bg-secondary/90 shadow-lg hover:shadow-secondary/30 transition-all tracking-wide"
+                   className="flex-1 bg-button text-button-foreground font-semibold rounded-xl hover:bg-button/90 shadow-lg hover:shadow-secondary/30 transition-all tracking-wide"
                  >
                    {loading ? (
                      <>
@@ -714,7 +714,7 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
                 type="button" 
                 onClick={handleNextStep}
                 disabled={!canProceed()}
-                className="flex-1 bg-gradient-to-r from-secondary to-[#FF8C42] text-primary-foreground font-bold rounded-xl shadow-lg ring-1 ring-black/5 hover:scale-[1.02] hover:shadow-secondary/30 relative z-10 transition-all duration-300"
+                className="flex-1 bg-gradient-to-r from-secondary to-[#FF8C42] text-button-foreground font-bold rounded-xl shadow-lg ring-1 ring-black/5 hover:scale-[1.02] hover:shadow-secondary/30 relative z-10 transition-all duration-300"
               >
                 Continue
                 <ArrowRight className="h-4 w-4 ml-2" />

@@ -79,7 +79,7 @@ test('public routes never send the token', async () => {
   const { fn, calls } = fakeFetch(() => json(200, { success: true }))
   const api = createApiClient({ baseUrl: '', getAccessToken: () => 'secret-token', fetch: fn })
 
-  await api.waitlist.join('a@b.co')
+  await api.health()
   assert.equal(headersOf(calls[0]).Authorization, undefined)
 })
 

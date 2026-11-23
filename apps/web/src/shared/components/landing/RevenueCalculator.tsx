@@ -268,7 +268,7 @@ export function RevenueCalculator({
                 <Button
                   href={ctaHref}
                   onClick={onCtaClick}
-                  className="w-full px-6 sm:px-8 py-3 sm:py-4 bg-secondary text-primary-foreground rounded-xl font-semibold text-base sm:text-lg hover:bg-secondary/90 transition-colors"
+                  className="w-full px-6 sm:px-8 py-3 sm:py-4 bg-button text-button-foreground rounded-xl font-semibold text-base sm:text-lg hover:bg-button/90 transition-colors"
                 >
                   {ctaLabel}
                 </Button>

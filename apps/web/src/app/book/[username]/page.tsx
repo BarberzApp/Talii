@@ -114,7 +114,7 @@ class ErrorBoundary extends React.Component<
             <div className="space-y-3">
               <Button 
                 onClick={() => window.location.reload()} 
-                className="w-full rounded-full bg-secondary text-primary-foreground px-6 py-3"
+                className="w-full rounded-full bg-button text-button-foreground px-6 py-3"
               >
                 Reload Page
               </Button>
@@ -339,7 +339,7 @@ function BookPageContent() {
           </div>
           
           <div className="space-y-3">
-            <Button asChild className="w-full rounded-full bg-secondary text-primary-foreground px-6 py-3 text-sm sm:text-base">
+            <Button asChild className="w-full rounded-full bg-button text-button-foreground px-6 py-3 text-sm sm:text-base">
               <Link href="/browse">Browse Available Barbers</Link>
             </Button>
             <Button asChild variant="outline" className="w-full rounded-full text-sm sm:text-base">
@@ -373,7 +373,7 @@ function BookPageContent() {
           <div className="space-y-3">
             <Button 
               onClick={() => window.location.reload()} 
-              className="w-full rounded-full bg-secondary text-primary-foreground px-6 py-3 text-sm sm:text-base"
+              className="w-full rounded-full bg-button text-button-foreground px-6 py-3 text-sm sm:text-base"
             >
               Try Again
             </Button>
@@ -422,7 +422,7 @@ function BookPageContent() {
           </div>
           
           <div className="space-y-3">
-            <Button asChild className="w-full rounded-full bg-secondary text-primary-foreground px-6 py-3 text-sm sm:text-base">
+            <Button asChild className="w-full rounded-full bg-button text-button-foreground px-6 py-3 text-sm sm:text-base">
               <Link href="/browse">Browse Available Barbers</Link>
             </Button>
             <Button asChild variant="outline" className="w-full rounded-full text-sm sm:text-base">
@@ -593,7 +593,7 @@ function BookPageContent() {
             <Button
               onClick={() => setShowBookingForm(true)}
               disabled={barber.services.length === 0 || isOwnProfile}
-              className="flex-1 max-w-xs bg-secondary text-primary-foreground font-semibold rounded-full hover:bg-secondary/90"
+              className="flex-1 max-w-xs bg-button text-button-foreground font-semibold rounded-full hover:bg-button/90"
             >
               <Calendar className="h-4 w-4 mr-2" />
               Book Now

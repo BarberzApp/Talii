@@ -193,7 +193,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => setRole('client')}
                 className={`w-1/2 py-2 rounded-full text-base font-semibold transition-all duration-150
-                  ${role === 'client' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-transparent text-foreground hover:bg-muted/80'}`}
+                  ${role === 'client' ? 'bg-button text-button-foreground shadow-md' : 'bg-transparent text-foreground hover:bg-muted/80'}`}
                 aria-pressed={role === 'client'}
               >
                 Client
@@ -202,7 +202,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => setRole('barber')}
                 className={`w-1/2 py-2 rounded-full text-base font-semibold transition-all duration-150
-                  ${role === 'barber' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-transparent text-foreground hover:bg-muted/80'}`}
+                  ${role === 'barber' ? 'bg-button text-button-foreground shadow-md' : 'bg-transparent text-foreground hover:bg-muted/80'}`}
                 aria-pressed={role === 'barber'}
               >
                 Barber
@@ -294,7 +294,7 @@ export default function RegisterPage() {
               </div>
               <Button 
                 type="submit" 
-                className="w-full bg-secondary text-primary-foreground font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-secondary/90 transition-all text-lg font-bebas"
+                className="w-full bg-button text-button-foreground font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-button/90 transition-all text-lg font-bebas"
                 disabled={loading}
               >
                 {loading ? (

@@ -662,7 +662,7 @@ export default function BrowsePage() {
                           <div className="pt-6 space-y-3">
                             <Button 
                               onClick={() => setShowFilters(false)}
-                              className="w-full bg-secondary text-primary-foreground font-bebas font-bold text-lg rounded-xl h-12 shadow-lg shadow-secondary/20"
+                              className="w-full bg-button text-button-foreground font-bebas font-bold text-lg rounded-xl h-12 shadow-lg shadow-secondary/20"
                             >
                               Apply Filters
                             </Button>

@@ -251,7 +251,7 @@ export function WriteReviewModal({ isOpen, onClose, barber, onReviewed }: WriteR
           
           <div className="flex flex-col sm:flex-row gap-4 mt-12 pt-8 border-t border-white/5">
             <Button
-              className="flex-[2] bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold h-16 rounded-2xl shadow-xl shadow-secondary/10 transition-all active:scale-95 disabled:opacity-30"
+              className="flex-[2] bg-button hover:bg-button/90 text-button-foreground font-bold h-16 rounded-2xl shadow-xl shadow-secondary/10 transition-all active:scale-95 disabled:opacity-30"
               onClick={handleSubmit}
               disabled={!rating || !reviewText.trim() || isSubmitting || moderationStatus === 'flagged' || !isContentValid}
             >

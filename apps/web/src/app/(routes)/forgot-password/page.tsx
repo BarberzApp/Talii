@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
               <Button
                 type="submit"
                 disabled={sending}
-                className="w-full bg-secondary text-primary-foreground font-bold py-4 rounded-xl hover:bg-secondary/90 text-lg font-bebas"
+                className="w-full bg-button text-button-foreground font-bold py-4 rounded-xl hover:bg-button/90 text-lg font-bebas"
               >
                 {sending ? (
                   <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Sending...</span>

@@ -119,7 +119,7 @@ export default function ResetPasswordPage() {
             <div className="flex justify-center py-4"><CheckCircle className="h-8 w-8 text-green-600" aria-hidden="true" /></div>
           )}
           {phase === 'invalid' && (
-            <Button href="/forgot-password" className="w-full bg-secondary text-primary-foreground font-bold py-4 rounded-xl hover:bg-secondary/90 text-lg font-bebas">
+            <Button href="/forgot-password" className="w-full bg-button text-button-foreground font-bold py-4 rounded-xl hover:bg-button/90 text-lg font-bebas">
               Request a new link
             </Button>
           )}
@@ -159,7 +159,7 @@ export default function ResetPasswordPage() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="w-full bg-secondary text-primary-foreground font-bold py-4 rounded-xl hover:bg-secondary/90 text-lg font-bebas"
+                className="w-full bg-button text-button-foreground font-bold py-4 rounded-xl hover:bg-button/90 text-lg font-bebas"
               >
                 {saving ? (
                   <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving...</span>

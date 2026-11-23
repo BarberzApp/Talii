@@ -13,7 +13,7 @@ import { logger } from '@/shared/lib/logger'
 export const getRedirectPath = async (_userId?: string): Promise<string> => {
   try {
     const me = await api.me.get()
-    if (me.isAdmin) return '/super-admin'
+    if (me.isAdmin) return '/admin'
     if (me.profile.role === 'barber') {
       return me.barber?.onboarding_complete ? '/calendar' : '/barber/onboarding'
     }

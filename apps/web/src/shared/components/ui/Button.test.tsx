@@ -13,7 +13,7 @@ describe('Button Component', () => {
 
   it('renders with different variants', () => {
     const { rerender } = render(<Button variant="default">Default</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-primary')
+    expect(screen.getByRole('button')).toHaveClass('bg-button')
 
     rerender(<Button variant="destructive">Destructive</Button>)
     expect(screen.getByRole('button')).toHaveClass('bg-destructive')
@@ -22,7 +22,7 @@ describe('Button Component', () => {
     expect(screen.getByRole('button')).toHaveClass('border border-input')
 
     rerender(<Button variant="secondary">Secondary</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-secondary')
+    expect(screen.getByRole('button')).toHaveClass('bg-button')
 
     rerender(<Button variant="ghost">Ghost</Button>)
     expect(screen.getByRole('button')).toHaveClass('hover:bg-accent')

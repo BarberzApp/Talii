@@ -538,21 +538,21 @@ export default function ProfilePortfolio() {
             <TabsList className="grid grid-cols-3 w-full max-w-lg h-14 items-center rounded-2xl bg-white/5 border border-white/10 p-1.5 backdrop-blur-2xl shadow-2xl">
               <TabsTrigger 
                 value="portfolio" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-button data-[state=active]:text-button-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
               >
                 <ImageIcon className="h-4 w-4" />
                 Gallery
               </TabsTrigger>
               <TabsTrigger 
                 value="services" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-button data-[state=active]:text-button-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
               >
                 <Star className="h-4 w-4" />
                 Services
               </TabsTrigger>
               <TabsTrigger 
                 value="reviews" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-2 sm:px-8 py-3 text-xs sm:text-sm font-bold tracking-wider sm:tracking-widest transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-button data-[state=active]:text-button-foreground data-[state=active]:shadow-lg text-muted-foreground hover:text-foreground gap-2 uppercase"
               >
                 <MessageCircle className="h-4 w-4" />
                 Reviews
@@ -569,7 +569,7 @@ export default function ProfilePortfolio() {
                   onClick={() => setOpenDialog('portfolio-upload')}
                   size="sm"
                   disabled={uploading}
-                  className="bg-secondary text-primary-foreground hover:bg-secondary/90"
+                  className="bg-button text-button-foreground hover:bg-button/90"
                 >
                   {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                   {uploading ? 'Uploading...' : 'Add photo'}
@@ -650,7 +650,7 @@ export default function ProfilePortfolio() {
                   <Button
                     href="/settings?tab=services"
                     size="sm"
-                    className="bg-secondary text-secondary-foreground font-bold hover:bg-secondary/90 rounded-full px-6 h-10 shadow-lg shadow-secondary/20"
+                    className="bg-button text-button-foreground font-bold hover:bg-button/90 rounded-full px-6 h-10 shadow-lg shadow-secondary/20"
                   >
                     <Pencil className="h-4 w-4" aria-hidden="true" />
                     Services
@@ -662,10 +662,10 @@ export default function ProfilePortfolio() {
             {/* Sub-tabs for Services and Add-ons */}
             <Tabs defaultValue="services" className="w-full">
               <TabsList className="w-full h-14 flex bg-white/5 border border-white/5 p-1 rounded-2xl mb-8 backdrop-blur-xl">
-                <TabsTrigger value="services" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground transition-all">
+                <TabsTrigger value="services" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-button data-[state=active]:text-button-foreground transition-all">
                   Services ({services.length})
                 </TabsTrigger>
-                <TabsTrigger value="addons" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground transition-all">
+                <TabsTrigger value="addons" className="flex-1 rounded-xl text-xs font-bold uppercase tracking-widest data-[state=active]:bg-button data-[state=active]:text-button-foreground transition-all">
                   Add-ons ({addons.length})
                 </TabsTrigger>
               </TabsList>
@@ -692,7 +692,7 @@ export default function ProfilePortfolio() {
                       {isOwner && (
                         <Button
                           href="/settings?tab=services"
-                          className="bg-secondary text-secondary-foreground font-bold h-12 px-8 rounded-full hover:bg-secondary/90 shadow-lg shadow-secondary/20"
+                          className="bg-button text-button-foreground font-bold h-12 px-8 rounded-full hover:bg-button/90 shadow-lg shadow-secondary/20"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add First Service
@@ -748,7 +748,7 @@ export default function ProfilePortfolio() {
                       {isOwner && (
                         <Button
                           href="/settings?tab=addons"
-                          className="bg-secondary text-primary-foreground hover:bg-secondary/90"
+                          className="bg-button text-button-foreground hover:bg-button/90"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add First Add-on
@@ -877,7 +877,7 @@ export default function ProfilePortfolio() {
           )}
           <div className="flex gap-3 mt-4">
             <Button onClick={() => setCropDialogOpen(false)} variant="outline" className="flex-1">Cancel</Button>
-            <Button onClick={handleCropSave} disabled={avatarLoading} className="flex-1 bg-secondary text-secondary-foreground font-bold">{avatarLoading ? 'Saving...' : 'Save'}</Button>
+            <Button onClick={handleCropSave} disabled={avatarLoading} className="flex-1 bg-button text-button-foreground font-bold">{avatarLoading ? 'Saving...' : 'Save'}</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -906,7 +906,7 @@ export default function ProfilePortfolio() {
           )}
           <div className="flex gap-3 mt-4">
             <Button onClick={() => setCoverCropDialogOpen(false)} variant="outline" className="flex-1">Cancel</Button>
-            <Button onClick={handleCoverCropSave} disabled={coverSaving} className="flex-1 bg-secondary text-primary-foreground font-bold">{coverSaving ? 'Saving...' : 'Save Cover'}</Button>
+            <Button onClick={handleCoverCropSave} disabled={coverSaving} className="flex-1 bg-button text-button-foreground font-bold">{coverSaving ? 'Saving...' : 'Save Cover'}</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -942,7 +942,7 @@ export default function ProfilePortfolio() {
                 />
                 <Button
                   onClick={() => document.getElementById('portfolio-upload')?.click()}
-                  className="bg-secondary text-primary-foreground font-bold rounded-xl px-8 py-3 mb-4"
+                  className="bg-button text-button-foreground font-bold rounded-xl px-8 py-3 mb-4"
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Choose photo

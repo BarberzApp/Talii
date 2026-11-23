@@ -172,7 +172,7 @@ export function LandingNavbar({
           <ModeToggle />
           <Button
             href={ctaHref}
-            className="bg-secondary text-primary-foreground px-6 py-2 rounded-xl font-semibold hover:bg-secondary/90 transition-colors"
+            className="bg-button text-button-foreground px-6 py-2 rounded-xl font-semibold hover:bg-button/90 transition-colors"
           >
             {ctaLabel}
           </Button>

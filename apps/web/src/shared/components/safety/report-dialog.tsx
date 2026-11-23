@@ -109,7 +109,7 @@ export function ReportDialog({
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>Cancel</Button>
-          <Button onClick={submit} disabled={sending} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+          <Button onClick={submit} disabled={sending} className="bg-button text-button-foreground hover:bg-button/90">
             {sending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
             Send report
           </Button>

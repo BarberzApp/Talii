@@ -626,7 +626,7 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
               onClick={() => (m === 'today' ? showToday() : setMode('month'))}
               className={cn(
                 'px-5 py-2 rounded-lg text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                mode === m ? 'bg-secondary text-secondary-foreground shadow' : 'text-muted-foreground hover:text-foreground'
+                mode === m ? 'bg-button text-button-foreground shadow' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               {m === 'today' ? 'Today' : 'Month'}

@@ -249,7 +249,7 @@ export function ShareSettings() {
           <Button
             onClick={shareLink}
             disabled={!isLinkValid}
-            className="flex-1 bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-lg"
+            className="flex-1 bg-button hover:bg-button/90 text-button-foreground font-semibold shadow-lg"
           >
             <Share2 className="h-4 w-4 mr-2" />
             Share Link

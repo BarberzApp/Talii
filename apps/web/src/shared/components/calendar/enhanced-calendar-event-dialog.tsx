@@ -295,7 +295,7 @@ export function EnhancedCalendarEventDialog({
         <DialogFooter className="pt-6 flex-shrink-0">
           <Button
             onClick={() => onOpenChange(false)}
-            className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90 font-bold py-7 rounded-2xl text-lg shadow-xl shadow-secondary/20 transition-all active:scale-95"
+            className="w-full bg-button text-button-foreground hover:bg-button/90 font-bold py-7 rounded-2xl text-lg shadow-xl shadow-secondary/20 transition-all active:scale-95"
           >
             Close
           </Button>

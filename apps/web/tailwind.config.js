@@ -27,6 +27,10 @@ module.exports = {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
         },
+        button: {
+          DEFAULT: "hsl(var(--button) / <alpha-value>)",
+          foreground: "hsl(var(--button-foreground) / <alpha-value>)",
+        },
         secondary: {
           DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
           foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",

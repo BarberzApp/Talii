@@ -5,7 +5,6 @@ import { useTheme } from "next-themes";
 import {
   HeroSection,
   FeatureGrid,
-  TestimonialSection,
   RevenueCalculator,
   CTASection,
   LandingNavbar,
@@ -65,7 +64,6 @@ export default function LandingPage() {
   const navItems = [
     { href: "#calculator", label: "Calculator" },
     { href: "#features", label: "Features" },
-    { href: "#testimonials", label: "Success Stories" },
     { href: "/browse", label: "Browse" },
     { href: "/login", label: "Login" },
   ];
@@ -97,34 +95,11 @@ export default function LandingPage() {
     },
     {
       number: "04",
-      title: "Calendar and Walk-ins",
+      title: "Your Calendar",
       description:
-        "See every booking in your time zone, add walk-ins, block off days, and mark appointments completed or missed.",
+        "See every booking in your time zone, block off days, and mark appointments completed or missed. Add walk-ins from the Talii app.",
       icon: Users,
       iconColor: "bg-secondary/20 text-secondary",
-    },
-  ];
-
-  const testimonials = [
-    {
-      name: "Chance Robenson",
-      role: "Barber",
-      location: "Princeton, NJ",
-      revenue: "$50K/year",
-      quote:
-        "Talii made running my business so much easier. My clients love the booking experience, and I've seen my revenue grow every month.",
-      rating: 5,
-      metric: "+300% Revenue Growth",
-    },
-    {
-      name: "Caleb Bock",
-      role: "Barber",
-      location: "Blacksburg, VA",
-      revenue: "$65K/year",
-      quote:
-        "Since switching to Talii, I spend less time on admin and more time with my clients. The reminders and scheduling are a game changer!",
-      rating: 5,
-      metric: "95% Booking Rate",
     },
   ];
 
@@ -172,10 +147,9 @@ export default function LandingPage() {
           href: "/register",
         }}
         secondaryCta={{
-          label: "See Real Results",
-          href: "#testimonials",
+          label: "See Features",
+          href: "#features",
         }}
-        proof="Loved by independent stylists and barbers across the country"
         visual={heroVisual}
       />
 
@@ -198,19 +172,10 @@ export default function LandingPage() {
         subtitle="From your booking page to your calendar and payouts, Talii gives you the tools to run your business."
       />
 
-      {/* Testimonials Section */}
-      <TestimonialSection
-        id="testimonials"
-        testimonials={testimonials}
-        title="Success Stories"
-        subtitle="See how cosmetologists are transforming their businesses with Talii."
-        columns={2}
-      />
-
       {/* Final CTA Section */}
       <CTASection
         title="Ready to Transform Your Business?"
-        subtitle="Join cosmetologists who are already growing their business with Talii. Start your journey today."
+        subtitle="Set up your booking page and start taking bookings with Talii."
         primaryCta={{
           label: "Get Started Free",
           href: "/register",
@@ -219,7 +184,6 @@ export default function LandingPage() {
           label: "Browse Stylists",
           href: "/browse",
         }}
-        guarantee="30-day money-back guarantee • No setup fees • Cancel anytime"
         variant="card"
       />
 

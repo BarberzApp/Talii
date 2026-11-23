@@ -169,7 +169,7 @@ export function BarberCard({ barber, className }: BarberCardProps) {
               <div className="pt-4">
                 <Button
                   asChild
-                  className="w-full bg-secondary text-primary-foreground font-semibold hover:bg-secondary/90 rounded-xl py-3"
+                  className="w-full bg-button text-button-foreground font-semibold hover:bg-button/90 rounded-xl py-3"
                 >
                   <Link 
                     href={`/book/${barber.username}`} 
