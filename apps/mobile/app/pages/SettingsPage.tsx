@@ -1,49 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Text,
-  StatusBar,
-} from 'react-native';
+import { View, SafeAreaView, ScrollView, Alert, ActivityIndicator, Text, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
 import { RootStackParamList } from '../shared/types';
-import { supabase } from '../shared/lib/supabase';
+import { api } from '../shared/lib/api';
+import { fetchConnectStatus, isStripeReady } from '../shared/lib/stripeConnect';
 import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
-import { useTheme } from '../shared/components/theme';
+import { useTheme, ThemeToggle } from '../shared/components/theme';
 import Input from '../shared/components/ui/Input';
-import { ThemeToggle } from '../shared/components/theme';
 import { ProfileSettings } from '../shared/components/settings/ProfileSettings';
 import { ServicesSettings } from '../shared/components/settings/ServicesSettings';
 import { AddonsSettings } from '../shared/components/settings/AddonsSettings';
 import { ShareSettings } from '../shared/components/settings/ShareSettings';
 import { AvailabilityManager } from '../shared/components/settings/AvailabilityManager';
 import { EarningsDashboard } from '../shared/components/settings/EarningsDashboard';
-import { Button, Card, CardContent } from '../shared/components/ui';
 import { GlassyCard } from '../shared/components/ui/GlassyCard';
 import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
-import { 
-  User, 
-  Scissors, 
-  Package, 
-  Share2, 
-  Calendar, 
-  DollarSign, 
-  Settings as SettingsIcon,
-  AlertCircle,
-  LogOut,
-  CheckCircle,
-  RefreshCw,
-  FileText,
-  Shield
-} from 'lucide-react-native';
+import { User, Scissors, Package, Calendar, DollarSign, Settings as SettingsIcon, AlertCircle, LogOut, CheckCircle, FileText, Shield } from 'lucide-react-native';
 import type { Tab, SettingsData } from '../shared/types/settings.types';
 import { useAccountDeletionHelper } from '../shared/helpers/accountDeletionHelper';
 
@@ -59,11 +35,9 @@ export default function SettingsPage() {
     profileComplete: false,
     servicesComplete: false,
     availabilityComplete: false,
-    stripeConnected: false,
-    notificationsConfigured: false
+    stripeConnected: false
   });
   const [barberId, setBarberId] = useState<string>('');
-  const [showVerifyBanner, setShowVerifyBanner] = useState(true);
 
   const isBarber = userProfile?.role === 'barber';
   const {
@@ -74,12 +48,13 @@ export default function SettingsPage() {
     requestDelete,
     deleteAccount,
     isConfirmed,
-  } = useAccountDeletionHelper({ barberId });
+  } = useAccountDeletionHelper();
 
   useEffect(() => {
     if (user) {
       loadSettingsData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [user]);
 
   const loadSettingsData = async () => {
@@ -88,62 +63,30 @@ export default function SettingsPage() {
     try {
       setIsLoading(true);
       
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      const me = await api.me.get();
+      const profileComplete = !!(me.profile.name && me.profile.email);
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        logger.error('Error fetching profile:', profileError);
-      }
+      if (isBarber && me.barber) {
+        setBarberId(me.barber.id);
 
-      if (isBarber) {
-        const { data: barber, error: barberError } = await supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+        const [servicesRes, weekRes, connect] = await Promise.all([
+          api.services.list().catch(() => ({ services: [] })),
+          api.schedule.getWeek().catch(() => ({ availability: [] })),
+          fetchConnectStatus(),
+        ]);
 
-        if (barberError && barberError.code !== 'PGRST116') {
-          logger.error('Error fetching barber data:', barberError);
-        }
-
-        if (barber) {
-          setBarberId(barber.id);
-          
-          const { data: services } = await supabase
-            .from('services')
-            .select('id')
-            .eq('barber_id', barber.id);
-
-          const { data: availability } = await supabase
-            .from('availability')
-            .select('id')
-            .eq('barber_id', barber.id);
-
-          const profileComplete = !!(profile?.name && profile?.email);
-          const servicesComplete = !!(services && services.length > 0);
-          const availabilityComplete = !!(availability && availability.length > 0);
-          const stripeConnected = barber?.stripe_account_status === 'active';
-          const notificationsConfigured = true;
-
-          setSettingsData({
-            profileComplete,
-            servicesComplete,
-            availabilityComplete,
-            stripeConnected,
-            notificationsConfigured
-          });
-        }
+        setSettingsData({
+          profileComplete,
+          servicesComplete: servicesRes.services.some((s) => s.is_active),
+          availabilityComplete: weekRes.availability.length > 0,
+          stripeConnected: isStripeReady(connect),
+        });
       } else {
-        const profileComplete = !!(profile?.name && profile?.email);
         setSettingsData({
           profileComplete,
           servicesComplete: false,
           availabilityComplete: false,
-          stripeConnected: false,
-          notificationsConfigured: true
+          stripeConnected: false
         });
       }
     } catch (error) {

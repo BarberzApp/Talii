@@ -11,21 +11,13 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-import { supabase } from '../../lib/supabase';
+import { centsToDollarInput, dollarsToCents, formatCents, type AddonRow } from '@barber-app/shared';
+import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
-import { Button, Card, CardContent, LoadingSpinner } from '../ui';
+import { Card, CardContent, LoadingSpinner } from '../ui';
 import Input from '../ui/Input';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Package, 
-  DollarSign,
-  AlertCircle,
-  CheckCircle,
-  Sparkles
-} from 'lucide-react-native';
+import { Edit, Trash2, Package, DollarSign } from 'lucide-react-native';
 import type { ServiceAddon } from '../../types/settings.types';
 
 interface AddonsSettingsProps {
@@ -35,119 +27,73 @@ interface AddonsSettingsProps {
 export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const [addons, setAddons] = useState<ServiceAddon[]>([]);
+  const [addons, setAddons] = useState<AddonRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [editingAddon, setEditingAddon] = useState<ServiceAddon | null>(null);
-  const [barberId, setBarberId] = useState<string | null>(null);
+  const [editingAddon, setEditingAddon] = useState<AddonRow | null>(null);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [formData, setFormData] = useState<ServiceAddon>({
     name: '',
     description: '',
-    price: 0,
+    price: '',
     is_active: true
   });
 
   useEffect(() => {
     if (user) {
-      loadBarberId();
+      loadAddons();
     }
   }, [user]);
 
-  const loadBarberId = async () => {
+  /** GET /api/me/addons: the caller's add-ons, active and inactive. */
+  const loadAddons = async () => {
     try {
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error) throw error;
-      if (data) {
-        setBarberId(data.id);
-        loadAddons(data.id);
-      }
-    } catch (error) {
-      logger.error('Error loading barber ID:', error);
-      Alert.alert('Error', 'Failed to load barber information.');
-    }
-  };
-
-  const loadAddons = async (barberId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('service_addons')
-        .select('*')
-        .eq('barber_id', barberId)
-        .order('name');
-
-      if (error) throw error;
-      setAddons(data || []);
+      const { addons: rows } = await api.addons.list();
+      setAddons([...rows].sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error) {
       logger.error('Error loading add-ons:', error);
-      Alert.alert('Error', 'Failed to load add-ons.');
+      Alert.alert('Error', errorMessage(error, 'Failed to load add-ons.'));
     }
   };
 
   const validateForm = (): boolean => {
     const errors: {[key: string]: string} = {};
-    
+
     if (!formData.name?.trim()) errors.name = 'Add-on name is required';
-    if (formData.price < 0) errors.price = 'Price must be at least $0';
-    
+    if (dollarsToCents(formData.price) === null) errors.price = 'Enter a price like 25 or 25.50';
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSave = async () => {
-    if (!barberId) {
-      Alert.alert('Error', 'Barber information not found.');
-      return;
-    }
-
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please fix the errors before saving.');
       return;
     }
 
+    const body = {
+      name: formData.name.trim(),
+      description: formData.description?.trim() || null,
+      priceCents: dollarsToCents(formData.price) ?? 0,
+      isActive: formData.is_active,
+    };
+
     try {
       setIsLoading(true);
       if (editingAddon) {
-        // Update existing add-on
-        const { error } = await supabase
-          .from('service_addons')
-          .update({
-            name: formData.name,
-            description: formData.description,
-            price: formData.price,
-            is_active: formData.is_active,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingAddon.id);
-
-        if (error) throw error;
+        await api.addons.update(editingAddon.id, body);
         Alert.alert('Success', 'Add-on updated successfully');
       } else {
-        // Add new add-on
-        const { error } = await supabase
-          .from('service_addons')
-          .insert({
-            barber_id: barberId,
-            name: formData.name,
-            description: formData.description,
-            price: formData.price,
-            is_active: formData.is_active,
-          });
-
-        if (error) throw error;
+        await api.addons.create(body);
         Alert.alert('Success', 'Add-on added successfully');
       }
-      
-      await loadAddons(barberId);
+
+      await loadAddons();
       resetForm();
       onUpdate?.();
     } catch (error) {
       logger.error('Error saving add-on:', error);
-      Alert.alert('Error', 'Failed to save add-on.');
+      Alert.alert('Error', errorMessage(error, 'Failed to save add-on.'));
     } finally {
       setIsLoading(false);
     }
@@ -164,19 +110,19 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase
-                .from('service_addons')
-                .delete()
-                .eq('id', addonId);
-
-              if (error) throw error;
-
-              Alert.alert('Success', 'Add-on deleted successfully');
-              await loadAddons(barberId!);
+              // An add-on that bookings reference is deactivated instead of deleted.
+              const result = await api.addons.remove(addonId);
+              Alert.alert(
+                'Success',
+                result.deactivated
+                  ? 'This add-on has bookings, so it was turned off instead of deleted.'
+                  : 'Add-on deleted successfully'
+              );
+              await loadAddons();
               onUpdate?.();
             } catch (error) {
               logger.error('Error deleting add-on:', error);
-              Alert.alert('Error', 'Failed to delete add-on.');
+              Alert.alert('Error', errorMessage(error, 'Failed to delete add-on.'));
             }
           },
         },
@@ -184,12 +130,12 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     );
   };
 
-  const handleEdit = (addon: ServiceAddon) => {
+  const handleEdit = (addon: AddonRow) => {
     setEditingAddon(addon);
     setFormData({
       name: addon.name,
       description: addon.description || '',
-      price: addon.price,
+      price: centsToDollarInput(addon.price_cents),
       is_active: addon.is_active
     });
   };
@@ -199,7 +145,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     setFormData({
       name: '',
       description: '',
-      price: 0,
+      price: '',
       is_active: true
     });
     setValidationErrors({});
@@ -247,10 +193,10 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
 
             <Input
               label="Price ($) *"
-              value={formData.price.toString()}
-              onChangeText={(text) => setFormData({ ...formData, price: parseFloat(text) || 0 })}
+              value={formData.price}
+              onChangeText={(text) => setFormData({ ...formData, price: text })}
               placeholder="5.00"
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               error={validationErrors.price}
             />
 
@@ -352,7 +298,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                         <View style={tw`flex-row items-center`}>
                           <DollarSign size={16} color={colors.primary} />
                           <Text style={[tw`font-semibold`, { color: colors.primary }]}>
-                            {addon.price.toFixed(2)}
+                            {formatCents(addon.price_cents).replace('$', '')}
                           </Text>
                         </View>
                       </View>
@@ -365,7 +311,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                           <Edit size={18} color={colors.foreground} />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          onPress={() => handleDelete(addon.id!)}
+                          onPress={() => handleDelete(addon.id)}
                           style={[tw`p-2 rounded-xl`, { backgroundColor: colors.primarySubtle }]}
                         >
                           <Trash2 size={18} color={colors.destructive} />

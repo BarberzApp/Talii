@@ -6,15 +6,14 @@ import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Plus, Trash2, Save, Clock, Calendar, Sparkles, Loader2 } from 'lucide-react'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
 import { logger } from '@/shared/lib/logger'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Badge } from '@/shared/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { Card, CardContent } from '@/shared/components/ui/card'
+import { cn } from '@/shared/lib/utils'
 
 interface Availability {
   id?: string
-  barber_id: string
+  barber_id?: string
   day_of_week: number
   start_time: string
   end_time: string
@@ -29,127 +28,105 @@ interface WeeklyScheduleProps {
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+type TimeWindow = { start_time: string; end_time: string }
+type DaySchedule = { day_of_week: number; isAvailable: boolean; windows: TimeWindow[] }
+
+const DEFAULT_WINDOW: TimeWindow = { start_time: '09:00', end_time: '17:00' }
+
+/**
+ * Weekly hours: any number of windows per day (e.g. a split shift). Saving
+ * replaces the whole week (PUT /api/me/availability); an empty week is allowed.
+ */
 export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklyScheduleProps) {
   const { toast } = useToast()
-  const [schedule, setSchedule] = useState<Availability[]>([])
+  const [schedule, setSchedule] = useState<DaySchedule[]>([])
   const [isSaving, setIsSaving] = useState(false)
 
-  // Initialize schedule when component mounts or initialSchedule changes
   useEffect(() => {
-    if (initialSchedule && initialSchedule.length > 0) {
-      // Map the initial schedule to include isAvailable property
-      const mappedSchedule = DAYS.map((_, index) => {
-        const existingDay = initialSchedule.find(day => day.day_of_week === index)
-        return {
-          barber_id: barberId,
-          day_of_week: index,
-          start_time: existingDay?.start_time || '',
-          end_time: existingDay?.end_time || '',
-          isAvailable: !!(existingDay?.start_time && existingDay?.end_time)
-        }
+    const rows = initialSchedule ?? []
+    setSchedule(
+      DAYS.map((_, index) => {
+        const windows = rows
+          .filter((r) => r.day_of_week === index && r.start_time && r.end_time)
+          .map((r) => ({ start_time: r.start_time.slice(0, 5), end_time: r.end_time.slice(0, 5) }))
+          .sort((a, b) => a.start_time.localeCompare(b.start_time))
+        return { day_of_week: index, isAvailable: windows.length > 0, windows }
       })
-      setSchedule(mappedSchedule)
-    } else {
-      // Set default schedule if no initial data
-      const defaultSchedule = DAYS.map((_, index) => ({
-        barber_id: barberId,
-        day_of_week: index,
-        start_time: '',
-        end_time: '',
-        isAvailable: false
-      }))
-      setSchedule(defaultSchedule)
-    }
+    )
   }, [initialSchedule, barberId])
 
+  const updateDay = (day: number, change: (d: DaySchedule) => DaySchedule) =>
+    setSchedule((prev) => prev.map((d) => (d.day_of_week === day ? change(d) : d)))
+
   const handleToggleDay = (dayOfWeek: number) => {
-    setSchedule(schedule.map(item => 
-      item.day_of_week === dayOfWeek 
-        ? { 
-            ...item, 
-            isAvailable: !item.isAvailable,
-            start_time: item.isAvailable ? '' : '09:00',
-            end_time: item.isAvailable ? '' : '17:00'
-          } 
-        : item
-    ))
+    updateDay(dayOfWeek, (d) =>
+      d.isAvailable
+        ? { ...d, isAvailable: false }
+        : { ...d, isAvailable: true, windows: d.windows.length > 0 ? d.windows : [{ ...DEFAULT_WINDOW }] }
+    )
   }
 
-  const handleTimeChange = (day: number, field: 'start_time' | 'end_time', value: string) => {
-    if (!value) return; // Don't update if value is empty
-    
-    setSchedule(prev => 
-      prev.map(slot => 
-        slot.day_of_week === day 
-          ? { ...slot, [field]: value }
-          : slot
-      )
-    );
+  const handleTimeChange = (day: number, index: number, field: keyof TimeWindow, value: string) => {
+    if (!value) return // Don't update if value is empty
+    updateDay(day, (d) => ({ ...d, windows: d.windows.map((w, i) => (i === index ? { ...w, [field]: value } : w)) }))
+  }
+
+  const addWindow = (day: number) => {
+    updateDay(day, (d) => {
+      const last = d.windows[d.windows.length - 1]
+      const next = last && last.end_time < '23:00' ? { start_time: last.end_time, end_time: '23:59' } : { ...DEFAULT_WINDOW }
+      return { ...d, windows: [...d.windows, next] }
+    })
+  }
+
+  const removeWindow = (day: number, index: number) => {
+    updateDay(day, (d) => {
+      const windows = d.windows.filter((_, i) => i !== index)
+      return { ...d, windows, isAvailable: windows.length > 0 && d.isAvailable }
+    })
   }
 
   const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      // Validate time slots
-      const validSlots = schedule.filter(day => {
-        if (!day.isAvailable) return false;
-        if (!day.start_time || !day.end_time) {
-          toast({
-            title: "Error",
-            description: `Please set both start and end times for ${DAYS[day.day_of_week]}`,
-            variant: "destructive",
-          });
-          return false;
-        }
-        return true;
-      });
+    const windows = schedule
+      .filter((d) => d.isAvailable)
+      .flatMap((d) => d.windows.map((w) => ({ day: d.day_of_week, ...w })))
 
-      if (validSlots.length === 0) {
-        toast({
-          title: "Error",
-          description: "Please set at least one day's availability",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Delete existing availability first
-      await supabase.from('availability').delete().eq('barber_id', barberId)
-
-      // Insert new availability
-      const { error } = await supabase
-        .from('availability')
-        .insert(
-          validSlots.map(slot => ({
-            barber_id: barberId,
-            day_of_week: slot.day_of_week,
-            start_time: slot.start_time,
-            end_time: slot.end_time
-          }))
-        );
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Weekly schedule updated successfully",
-      });
-      
-      // Call onUpdate to refresh settings data
-      onUpdate?.();
-    } catch (error) {
-      logger.error('Error saving availability', error);
+    const bad = windows.find((w) => !w.start_time || !w.end_time || w.start_time >= w.end_time)
+    if (bad) {
       toast({
         title: "Error",
-        description: "Failed to save schedule",
+        description: `Each window on ${DAYS[bad.day]} needs a start time before its end time.`,
         variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+      })
+      return
     }
-  };
+    if (windows.length === 0 && !window.confirm('Save an empty week? Clients will not be able to book you until you add hours again.')) {
+      return
+    }
 
-  const availableDays = schedule.filter(day => day.isAvailable).length;
+    try {
+      setIsSaving(true)
+      // PUT /api/me/availability replaces the whole week in one transaction.
+      await api.schedule.replaceWeek(
+        windows.map((w) => ({ dayOfWeek: w.day, startTime: w.start_time.slice(0, 5), endTime: w.end_time.slice(0, 5) }))
+      )
+      toast({
+        title: "Success",
+        description: windows.length === 0 ? "Weekly schedule cleared" : "Weekly schedule updated successfully",
+      })
+      onUpdate?.()
+    } catch (error) {
+      logger.error('Error saving availability', error)
+      toast({
+        title: "Error",
+        description: errorMessage(error, "Failed to save schedule"),
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
 
   return (
     <div className="space-y-8">
@@ -209,34 +186,57 @@ export function WeeklySchedule({ barberId, initialSchedule, onUpdate }: WeeklySc
                 </div>
               </div>
               {slot.isAvailable && (
-                <div className="flex flex-col sm:flex-row items-center gap-6 w-full md:w-auto">
-                  <div className="space-y-2 w-full sm:w-auto">
-                    <Label htmlFor={`start-${slot.day_of_week}`} className="text-foreground/60 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                      <Clock className="h-3 w-3 text-secondary" />
-                      Start
-                    </Label>
-                    <Input
-                      id={`start-${slot.day_of_week}`}
-                      type="time"
-                      value={slot.start_time}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, 'start_time', e.target.value)}
-                      className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl h-11 text-base transition-all"
-                    />
-                  </div>
-                  <div className="h-8 w-px bg-white/10 hidden sm:block mt-6" />
-                  <div className="space-y-2 w-full sm:w-auto">
-                    <Label htmlFor={`end-${slot.day_of_week}`} className="text-foreground/60 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                      <Clock className="h-3 w-3 text-secondary" />
-                      End
-                    </Label>
-                    <Input
-                      id={`end-${slot.day_of_week}`}
-                      type="time"
-                      value={slot.end_time}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, 'end_time', e.target.value)}
-                      className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl h-11 text-base transition-all"
-                    />
-                  </div>
+                <div className="flex flex-col gap-3 w-full md:w-auto">
+                  {slot.windows.map((w, i) => (
+                    <div key={i} className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                      <div className="space-y-2 w-full sm:w-auto">
+                        <Label htmlFor={`start-${slot.day_of_week}-${i}`} className="text-foreground/60 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                          <Clock className="h-3 w-3 text-secondary" />
+                          Start
+                        </Label>
+                        <Input
+                          id={`start-${slot.day_of_week}-${i}`}
+                          type="time"
+                          value={w.start_time}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, i, 'start_time', e.target.value)}
+                          className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl h-11 text-base transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2 w-full sm:w-auto">
+                        <Label htmlFor={`end-${slot.day_of_week}-${i}`} className="text-foreground/60 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                          <Clock className="h-3 w-3 text-secondary" />
+                          End
+                        </Label>
+                        <Input
+                          id={`end-${slot.day_of_week}-${i}`}
+                          type="time"
+                          value={w.end_time}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleTimeChange(slot.day_of_week, i, 'end_time', e.target.value)}
+                          className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl h-11 text-base transition-all"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="mt-6 text-foreground/50 hover:text-red-500"
+                        onClick={() => removeWindow(slot.day_of_week, i)}
+                        aria-label={`Remove hours ${w.start_time}–${w.end_time} on ${DAYS[slot.day_of_week]}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="self-start text-secondary"
+                    onClick={() => addWindow(slot.day_of_week)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add hours
+                  </Button>
                 </div>
               )}
             </div>

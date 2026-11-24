@@ -1,29 +1,48 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/shared/lib/supabase'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import { logger } from '@/shared/lib/logger'
+import { api, hasErrorCode } from '@/shared/lib/api'
+import { browserTimeZone, takePendingSignupRole } from '@/shared/lib/redirect-utils'
+import { useAuthStore } from '@/shared/stores/auth-store'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
   const [status, setStatus] = useState<'verifying' | 'completing' | 'redirecting' | 'error'>('verifying')
   const [error, setError] = useState<string | null>(null)
   const { replace: safeReplace } = useSafeNavigation();
+  const started = useRef(false)
 
   useEffect(() => {
+    // The code can be exchanged only once (React strict mode runs effects twice).
+    if (started.current) return
+    started.current = true
     const handleAuthCallback = async () => {
       try {
         setStatus('verifying')
-        logger.debug('Starting Google OAuth callback process')
+        logger.debug('Starting OAuth / email-link callback')
 
-        // Step 1: Get session and validate
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const params = new URLSearchParams(window.location.search)
+        const oauthError = params.get('error_description') || params.get('error')
+        if (oauthError) throw new Error(oauthError)
+
+        // Step 1: PKCE exchange in the browser (the code verifier lives in this
+        // browser's storage). supabase-js usually exchanges ?code= itself while
+        // initialising (detectSessionInUrl); getSession() waits for that.
+        let { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        const code = params.get('code')
+        if (!session && code) {
+          const exchanged = await supabase.auth.exchangeCodeForSession(code)
+          session = exchanged.data.session
+          sessionError = exchanged.error
+        }
         if (sessionError || !session?.user) {
           throw sessionError || new Error('No session found')
         }
@@ -31,80 +50,30 @@ export default function AuthCallbackPage() {
         const userId = session.user.id
         logger.debug('Session validated', { userId })
 
-        // Step 2: Fetch profile with retry mechanism
+        // Step 2: the profile (created by the database at sign-up) via GET /api/me.
         setStatus('completing')
-        let profile = null
-        let profileError = null
-        let retries = 3
-
-        while (retries > 0) {
-          logger.debug(`Fetching profile - Attempt ${4 - retries}/3`)
-          const { data, error } = await supabase
-          .from('profiles')
-            .select('role, username, location, email, business_name')
-          .eq('id', userId)
-          .single()
-
-          if (data) {
-            profile = data
-            logger.debug('Profile fetched successfully', { userId, role: profile.role })
-            break
-          }
-
-          profileError = error
-          logger.debug('Profile fetch attempt failed', { error: profileError?.message })
-          retries--
-          if (retries > 0) {
+        let me = null
+        for (let attempt = 1; attempt <= 3 && !me; attempt++) {
+          try {
+            me = await api.me.get()
+          } catch (error) {
+            if (!hasErrorCode(error, 'NO_PROFILE', 'AUTH_UNAVAILABLE', 'NETWORK_ERROR') || attempt === 3) throw error
             await new Promise(resolve => setTimeout(resolve, 1000))
           }
         }
+        if (!me) throw new Error('Failed to load your profile')
 
-        if (profileError || !profile) {
-          throw profileError || new Error('Failed to fetch profile after multiple attempts')
+        // Step 3: a barber sign-up through Google: the trigger made a client
+        // profile (OAuth carries no role), so turn it into a barber now.
+        // Honoured only for a brand-new account created within minutes of choosing
+        // the role; read and cleared either way.
+        const pendingRole = takePendingSignupRole(me.profile.created_at)
+        if (pendingRole === 'barber' && me.profile.role !== 'barber') {
+          await api.me.becomeBarber({ timezone: browserTimeZone() })
         }
 
-        // Step 3: Check if profile needs completion
-        if (!profile.role || !profile.username) {
-          logger.debug('Profile incomplete, redirecting to completion page')
-          safeReplace('/register/complete')
-          return
-        }
-
-        // Step 4: Ensure barber row exists if user is a barber
-        if (profile.role === 'barber') {
-          logger.debug('Checking for barber row')
-          const { data: existingBarber, error: barberCheckError } = await supabase
-            .from('barbers')
-            .select('id')
-            .eq('user_id', userId)
-            .maybeSingle()
-
-          if (barberCheckError) {
-            logger.error('Error checking barber row', barberCheckError)
-            throw barberCheckError
-          }
-
-          if (!existingBarber) {
-            logger.debug('Creating barber row')
-            const { error: insertError } = await supabase
-              .from('barbers')
-              .insert({
-                user_id: userId,
-                business_name: profile.business_name || '',
-                status: 'pending',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              })
-
-            if (insertError) {
-              logger.error('Failed to create barber row', insertError)
-              throw insertError
-            }
-            logger.debug('Barber row created successfully')
-          } else {
-            logger.debug('Barber row already exists')
-          }
-        }
+        // Make the auth store pick up the (possibly new) role.
+        await useAuthStore.getState().fetchUserProfile(userId)
 
         // Step 5: Determine redirect path using identical logic to standard login
         setStatus('redirecting')
@@ -115,8 +84,8 @@ export default function AuthCallbackPage() {
         
         // Step 6: Show success message and redirect
         toast({
-          title: "Welcome back!",
-          description: "Successfully signed in with Google.",
+          title: "You're signed in",
+          description: "Welcome to Talii.",
         })
 
         // Small delay to show success state
@@ -166,35 +135,35 @@ export default function AuthCallbackPage() {
     switch (status) {
       case 'verifying':
       case 'completing':
-        return <Loader2 className="h-8 w-8 animate-spin text-saffron" />
+        return <Loader2 className="h-8 w-8 animate-spin text-primary" />
       case 'redirecting':
         return <CheckCircle className="h-8 w-8 text-green-500" />
       case 'error':
         return <AlertCircle className="h-8 w-8 text-red-500" />
       default:
-        return <Loader2 className="h-8 w-8 animate-spin text-saffron" />
+        return <Loader2 className="h-8 w-8 animate-spin text-primary" />
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center space-y-6 p-8">
         {getStatusIcon()}
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-white">
+          <h1 className="text-2xl font-semibold text-foreground">
             {status === 'error' ? 'Authentication Failed' : 'Completing Sign-In'}
           </h1>
-          <p className="text-white/60 max-w-md">
+          <p className="text-muted-foreground max-w-md">
             {getStatusMessage()}
           </p>
           {error && (
-            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
+            <div role="alert" className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
         </div>
         {status === 'error' && (
-          <div className="text-sm text-white/40">
+          <div className="text-sm text-muted-foreground">
             Redirecting to login in 3 seconds...
           </div>
         )}

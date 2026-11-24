@@ -1,18 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { StarRating } from "@/shared/components/ui/StarRating";
-import { MessageSquare, Loader2, AlertTriangle, Shield, CheckCircle, XCircle } from "lucide-react";
+import { MessageSquare, Loader2, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/shared/components/ui/use-toast";
 import { useAuth } from "@/shared/hooks/use-auth-zustand";
-import { supabase } from "@/shared/lib/supabase";
-import { validateContent, moderateContentWithAI, getModerationStatus } from "@/shared/lib/contentModeration";
+import { api, isApiError } from "@/shared/lib/api";
+import { validateContent, getModerationStatus } from "@barber-app/shared";
 import { logger } from "@/shared/lib/logger";
 
 interface WriteReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Called after a review is saved (e.g. to refresh the list). */
+  onReviewed?: () => void;
   barber: {
     id: string;
     name: string;
@@ -20,7 +22,7 @@ interface WriteReviewModalProps {
   };
 }
 
-export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalProps) {
+export function WriteReviewModal({ isOpen, onClose, barber, onReviewed }: WriteReviewModalProps) {
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,102 +63,38 @@ export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalPr
     setModerationStatus('checking');
     
     try {
-      // Check if user is authenticated
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        throw new Error('You must be logged in to submit a review');
-      }
-
-      logger.debug('User session', { userId: session.user.id, email: session.user.email });
-
-      // Final validation check
+      // Final validation check (the API applies the same word filter)
       const validation = validateContent(reviewText);
       if (!validation.isValid) {
         throw new Error(`Content validation failed: ${validation.issues.join(', ')}`);
       }
 
-      // AI moderation
-      const moderation = await moderateContentWithAI(reviewText);
-      if (!moderation.isAppropriate) {
-        setModerationStatus('flagged');
-        throw new Error(`Content flagged as inappropriate: ${moderation.flags.join(', ')}`);
-      }
-
       setModerationStatus('clean');
 
-      logger.debug('Checking for completed booking', { userId: user.id, barberId: barber.id });
-
-      // First, find the most recent completed booking between this client and barber
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .select('id, barber_id, status')
-        .eq('client_id', user.id)
-        .eq('barber_id', barber.id)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      logger.debug('Completed booking query result', { booking, bookingError });
-
-      if (bookingError || !booking) {
-        logger.debug('No completed booking found, checking for any booking');
-        
-        // Check if there are any bookings with this barber at all
-        const { data: anyBooking, error: anyBookingError } = await supabase
-          .from('bookings')
-          .select('id, status')
-          .eq('client_id', user.id)
-          .eq('barber_id', barber.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        logger.debug('Any booking query result', { anyBooking, anyBookingError });
-
-        if (anyBookingError || !anyBooking) {
-          throw new Error('You haven\'t booked any appointments with this barber yet. You can only review barbers you\'ve had appointments with.');
-        } else {
-          throw new Error(`You have a ${anyBooking.status} appointment with this barber, but you can only review completed appointments. Please wait until your appointment is completed.`);
-        }
+      // Review the most recent completed booking with this barber that has no review yet.
+      const [{ bookings }, { reviews }] = await Promise.all([
+        api.bookings.list({ as: 'client', status: ['completed'], order: 'desc', limit: 100 }),
+        api.reviews.listOwn(),
+      ]);
+      const reviewed = new Set(reviews.map((r) => r.booking_id));
+      const withBarber = bookings.filter((b) => b.barber_id === barber.id);
+      const booking = withBarber.find((b) => !reviewed.has(b.id));
+      if (!booking) {
+        throw new Error(
+          withBarber.length > 0
+            ? 'You have already reviewed your appointments with this barber.'
+            : 'You can only review barbers after a completed appointment with them.'
+        );
       }
 
-      // Check if a review already exists for this booking
-      const { data: existingReview, error: existingError } = await supabase
-        .from('reviews')
-        .select('id')
-        .eq('booking_id', booking.id)
-        .single();
-
-      if (existingReview) {
-        throw new Error('You have already reviewed this appointment');
-      }
-
-      // Save the review to the database
-      const { error: reviewError } = await supabase
-        .from('reviews')
-        .insert({
-          booking_id: booking.id,
-          barber_id: barber.id,
-          client_id: user.id,
-          rating: rating,
-          comment: reviewText.trim(),
-          is_verified: true, // Since it's from a verified booking
-          is_public: true,
-          is_moderated: moderation.isAppropriate // Use AI moderation result
-        });
-
-      if (reviewError) {
-        throw reviewError;
-      }
-
-      // Note: Barber stats are automatically updated by the database trigger
+      await api.reviews.create({ bookingId: booking.id, rating, comment: reviewText.trim() });
 
       toast({
         title: "Review submitted!",
         description: `Your review for ${barber.name} has been submitted successfully.`,
       });
       
+      onReviewed?.();
       onClose();
       // Reset form
       setRating(0);
@@ -166,7 +104,7 @@ export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalPr
       logger.error('Error submitting review', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit review. Please try again.",
+        description: isApiError(error) || error instanceof Error ? error.message : "Failed to submit review. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -313,7 +251,7 @@ export function WriteReviewModal({ isOpen, onClose, barber }: WriteReviewModalPr
           
           <div className="flex flex-col sm:flex-row gap-4 mt-12 pt-8 border-t border-white/5">
             <Button
-              className="flex-[2] bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold h-16 rounded-2xl shadow-xl shadow-secondary/10 transition-all active:scale-95 disabled:opacity-30"
+              className="flex-[2] bg-button hover:bg-button/90 text-button-foreground font-bold h-16 rounded-2xl shadow-xl shadow-secondary/10 transition-all active:scale-95 disabled:opacity-30"
               onClick={handleSubmit}
               disabled={!rating || !reviewText.trim() || isSubmitting || moderationStatus === 'flagged' || !isContentValid}
             >

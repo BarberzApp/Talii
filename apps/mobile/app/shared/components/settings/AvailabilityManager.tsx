@@ -6,23 +6,16 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-import { supabase } from '../../lib/supabase';
+import { api, errorMessage } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { logger } from '../../lib/logger';
 import { Card, CardContent, LoadingSpinner } from '../ui';
-import { 
-  Calendar,
-  Clock,
-  Save,
-  AlertCircle,
-  CheckCircle,
-  Loader2,
-  RefreshCw
-} from 'lucide-react-native';
+import { Calendar, Save, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react-native';
 
 interface TimeSlot {
   start: string;
@@ -89,6 +82,29 @@ const generateTimeOptions = () => {
 
 const TIME_OPTIONS = generateTimeOptions();
 
+/**
+ * The first problem with a week of windows, or null: end after start, and no
+ * overlapping windows on a day (touching is fine). The server enforces the same.
+ */
+export function findScheduleProblem(
+  windows: { dayOfWeek: number; startTime: string; endTime: string }[]
+): string | null {
+  for (const w of windows) {
+    if (w.startTime >= w.endTime) {
+      return `${NUMBER_TO_DAY[w.dayOfWeek]}: the end time must be after the start time.`;
+    }
+  }
+  for (let day = 0; day < 7; day += 1) {
+    const sorted = windows.filter(w => w.dayOfWeek === day).sort((a, b) => a.startTime.localeCompare(b.startTime));
+    for (let i = 1; i < sorted.length; i += 1) {
+      if (sorted[i].startTime < sorted[i - 1].endTime) {
+        return `${NUMBER_TO_DAY[day]}: ${sorted[i - 1].startTime}-${sorted[i - 1].endTime} and ${sorted[i].startTime}-${sorted[i].endTime} overlap.`;
+      }
+    }
+  }
+  return null;
+}
+
 export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerProps) {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -101,35 +117,33 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  /** Set when the saved week could not be loaded: saving then would replace it with an empty week. */
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (barberId) {
+    if (user) {
       loadAvailability();
     }
-  }, [barberId]);
+  }, [user]);
 
+  /** GET /api/me/availability: weekly windows, local times in the barber's time zone. */
   const loadAvailability = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('availability')
-        .select('*')
-        .eq('barber_id', barberId);
+      setLoadError(null);
+      const { availability } = await api.schedule.getWeek();
 
-      if (error) throw error;
-
-      if (data && data.length > 0) {
+      if (availability.length > 0) {
         const loadedSchedule = DAYS_OF_WEEK.map(day => {
-          const dayNumber = DAY_TO_NUMBER[day];
-          const dayData = data.find(d => d.day_of_week === dayNumber);
-          if (dayData) {
+          const windows = availability
+            .filter(w => w.day_of_week === DAY_TO_NUMBER[day])
+            .sort((a, b) => a.start_time.localeCompare(b.start_time));
+          if (windows.length > 0) {
+            // Every window of the day is shown and editable (e.g. a split shift).
             return {
               day,
               enabled: true,
-              slots: [{
-                start: dayData.start_time.slice(0, 5),
-                end: dayData.end_time.slice(0, 5)
-              }]
+              slots: windows.map(w => ({ start: w.start_time.slice(0, 5), end: w.end_time.slice(0, 5) })),
             };
           }
           return {
@@ -142,47 +156,35 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
       }
     } catch (error) {
       logger.error('Error loading availability:', error);
-      Alert.alert('Error', 'Failed to load availability');
+      setLoadError(errorMessage(error, 'Failed to load availability'));
     } finally {
       setIsLoading(false);
     }
   };
 
+  /** PUT /api/me/availability replaces the whole week in one transaction. */
   const handleSave = async () => {
+    if (loadError) return; // never replace a week we could not read
+    const windows = schedule
+      .filter(day => day.enabled)
+      .flatMap(day =>
+        day.slots.map(slot => ({ dayOfWeek: DAY_TO_NUMBER[day.day], startTime: slot.start, endTime: slot.end }))
+      );
+
+    const problem = findScheduleProblem(windows);
+    if (problem) {
+      Alert.alert('Invalid hours', problem);
+      return;
+    }
+
     try {
       setIsSaving(true);
-
-      // Delete existing availability
-      const { error: deleteError } = await supabase
-        .from('availability')
-        .delete()
-        .eq('barber_id', barberId);
-
-      if (deleteError) throw deleteError;
-
-      // Insert new availability
-      const availabilityData = schedule
-        .filter(day => day.enabled)
-        .map(day => ({
-          barber_id: barberId,
-          day_of_week: DAY_TO_NUMBER[day.day],
-          start_time: day.slots[0].start + ':00',
-          end_time: day.slots[0].end + ':00'
-        }));
-
-      if (availabilityData.length > 0) {
-        const { error: insertError } = await supabase
-          .from('availability')
-          .insert(availabilityData);
-
-        if (insertError) throw insertError;
-      }
-
+      await api.schedule.replaceWeek(windows);
       Alert.alert('Success', 'Availability updated successfully');
       onUpdate?.();
     } catch (error) {
       logger.error('Error saving availability:', error);
-      Alert.alert('Error', 'Failed to save availability');
+      Alert.alert('Error', errorMessage(error, 'Failed to save availability'));
     } finally {
       setIsSaving(false);
     }
@@ -194,11 +196,59 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
     setSchedule(newSchedule);
   };
 
-  const updateTimeSlot = (dayIndex: number, field: 'start' | 'end', value: string) => {
-    const newSchedule = [...schedule];
-    newSchedule[dayIndex].slots[0][field] = value;
-    setSchedule(newSchedule);
+  const updateTimeSlot = (dayIndex: number, slotIndex: number, field: 'start' | 'end', value: string) => {
+    setSchedule(prev =>
+      prev.map((day, i) =>
+        i !== dayIndex
+          ? day
+          : { ...day, slots: day.slots.map((slot, j) => (j === slotIndex ? { ...slot, [field]: value } : slot)) }
+      )
+    );
   };
+
+  /** Adds a window after the day's last one (e.g. the afternoon of a split shift). */
+  const addTimeSlot = (dayIndex: number) => {
+    setSchedule(prev =>
+      prev.map((day, i) => {
+        if (i !== dayIndex) return day;
+        const lastEnd = day.slots[day.slots.length - 1]?.end ?? '09:00';
+        const start = lastEnd < '22:00' ? lastEnd : '09:00';
+        const [h, m] = start.split(':').map(Number);
+        const endMinutes = Math.min(h * 60 + m + 120, 23 * 60 + 30); // two hours, at most 11:30 PM
+        const end = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
+        return { ...day, slots: [...day.slots, { start, end }] };
+      })
+    );
+  };
+
+  const removeTimeSlot = (dayIndex: number, slotIndex: number) => {
+    setSchedule(prev =>
+      prev.map((day, i) =>
+        i !== dayIndex || day.slots.length <= 1 ? day : { ...day, slots: day.slots.filter((_, j) => j !== slotIndex) }
+      )
+    );
+  };
+
+  const renderTimePicker = (dayIndex: number, slotIndex: number, field: 'start' | 'end', value: string) => (
+    <View style={tw`flex-1`}>
+      <Text style={[tw`text-sm mb-2`, { color: colors.mutedForeground }]}>
+        {field === 'start' ? 'Start Time' : 'End Time'}
+      </Text>
+      <View style={[tw`rounded-xl overflow-hidden`, { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }]}>
+        <Picker
+          testID={`${field}-${dayIndex}-${slotIndex}`}
+          selectedValue={value}
+          onValueChange={(v) => updateTimeSlot(dayIndex, slotIndex, field, v)}
+          style={{ color: colors.foreground }}
+          itemStyle={{ color: colors.foreground }}
+        >
+          {TIME_OPTIONS.map((option) => (
+            <Picker.Item key={option.value} label={option.label} value={option.value} color={colors.foreground} />
+          ))}
+        </Picker>
+      </View>
+    </View>
+  );
 
   const getAvailableDaysCount = () => {
     return schedule.filter(day => day.enabled).length;
@@ -208,10 +258,31 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
     return (
       <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
         <CardContent style={tw`p-6 items-center`}>
-          <Loader2 size={32} color={colors.primary} style={tw`mb-3`} />
+          <ActivityIndicator size="large" color={colors.primary} style={tw`mb-3`} />
           <Text style={[tw`text-base`, { color: colors.mutedForeground }]}>
             Loading availability...
           </Text>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Card style={[{ backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+        <CardContent style={tw`p-6 items-center`}>
+          <AlertCircle size={28} color={colors.destructive} style={tw`mb-3`} />
+          <Text testID="availability-load-error" style={[tw`text-base text-center mb-4`, { color: colors.foreground }]}>
+            {loadError}. Your saved hours were not changed.
+          </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={loadAvailability}
+            style={[tw`px-5 py-3 rounded-xl flex-row items-center`, { backgroundColor: colors.primary }]}
+          >
+            <RefreshCw size={16} color={colors.primaryForeground} style={tw`mr-2`} />
+            <Text style={[tw`font-semibold`, { color: colors.primaryForeground }]}>Retry</Text>
+          </TouchableOpacity>
         </CardContent>
       </Card>
     );
@@ -263,58 +334,25 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
               </View>
 
               {day.enabled && (
-                <View style={tw`flex-row items-center gap-3`}>
-                  <View style={tw`flex-1`}>
-<Text style={[tw`text-sm mb-2`, { color: colors.mutedForeground }]}>
-                    Start Time
-                    </Text>
-                    <View style={[
-                      tw`rounded-xl overflow-hidden`,
-                      { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }
-                    ]}>
-                      <Picker
-                        selectedValue={day.slots[0].start}
-                        onValueChange={(value) => updateTimeSlot(index, 'start', value)}
-                        style={{ color: colors.foreground }}
-                        itemStyle={{ color: colors.foreground }}
-                      >
-                        {TIME_OPTIONS.map((option) => (
-                          <Picker.Item 
-                            key={option.value} 
-                            label={option.label} 
-                            value={option.value} 
-                            color={colors.foreground}
-                          />
-                        ))}
-                      </Picker>
+                <View style={tw`gap-3`}>
+                  {day.slots.map((slot, slotIndex) => (
+                    <View key={slotIndex} style={tw`flex-row items-end gap-3`}>
+                      {renderTimePicker(index, slotIndex, 'start', slot.start)}
+                      {renderTimePicker(index, slotIndex, 'end', slot.end)}
+                      {day.slots.length > 1 && (
+                        <TouchableOpacity
+                          accessibilityLabel={`Remove ${day.day} hours ${slotIndex + 1}`}
+                          onPress={() => removeTimeSlot(index, slotIndex)}
+                          style={tw`pb-3`}
+                        >
+                          <Text style={[tw`text-sm`, { color: colors.destructive }]}>Remove</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
-                  </View>
-
-                  <View style={tw`flex-1`}>
-<Text style={[tw`text-sm mb-2`, { color: colors.mutedForeground }]}>
-                    End Time
-                    </Text>
-                    <View style={[
-                      tw`rounded-xl overflow-hidden`,
-                      { backgroundColor: colors.glass, borderWidth: 1, borderColor: colors.glassBorder }
-                    ]}>
-                      <Picker
-                        selectedValue={day.slots[0].end}
-                        onValueChange={(value) => updateTimeSlot(index, 'end', value)}
-                        style={{ color: colors.foreground }}
-                        itemStyle={{ color: colors.foreground }}
-                      >
-                        {TIME_OPTIONS.map((option) => (
-                          <Picker.Item 
-                            key={option.value} 
-                            label={option.label} 
-                            value={option.value} 
-                            color={colors.foreground}
-                          />
-                        ))}
-                      </Picker>
-                    </View>
-                  </View>
+                  ))}
+                  <TouchableOpacity onPress={() => addTimeSlot(index)} accessibilityRole="button">
+                    <Text style={[tw`text-sm font-medium`, { color: colors.primary }]}>+ Add hours</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </CardContent>
@@ -338,7 +376,7 @@ export function AvailabilityManager({ barberId, onUpdate }: AvailabilityManagerP
       <TouchableOpacity
         style={[tw`mt-6 py-4 rounded-xl flex-row items-center justify-center`, { backgroundColor: colors.primary }]}
         onPress={handleSave}
-        disabled={isSaving}
+        disabled={isSaving || !!loadError}
       >
         {isSaving ? (
           <LoadingSpinner color={colors.primaryForeground} />

@@ -1,18 +1,13 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { logger } from '@/shared/lib/logger'
-import { Button } from '@/shared/components/ui/button'
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  Plus
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { supabase } from '@/shared/lib/supabase'
+import { cn } from '@/shared/lib/utils'
+import { api, bookingErrorMessage } from '@/shared/lib/api'
+import { formatBookingTime, formatCents, formatInTimeZone, localDateInTimeZone, timeZoneAbbreviation, type BookingListItem } from '@barber-app/shared'
+import { useToast } from '@/shared/components/ui/use-toast'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns'
-import { addToGoogleCalendar, addMultipleToGoogleCalendar, downloadICalFile } from '@/shared/lib/google-calendar-utils'
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek } from 'date-fns'
 import { EnhancedCalendarHeader } from './enhanced-calendar-header'
 import { EnhancedCalendarGrid } from './enhanced-calendar-grid'
 import { EnhancedCalendarEventsPanel } from './enhanced-calendar-events-panel'
@@ -270,6 +265,14 @@ const CALENDAR_STYLES = `
             .calendar-grid, .weekdays-header { gap: 0.5rem; }
             .calendar-day { min-height: 60px; border-radius: 1rem; }
           }
+
+          /* Phones: keep all seven columns inside the card. */
+          @media (max-width: 480px) {
+            .calendar-container { padding: 0.75rem !important; border-radius: 1.5rem; }
+            .calendar-grid, .weekdays-header { gap: 0.25rem; padding: 0; }
+            .calendar-day { min-height: 44px; min-width: 0; border-radius: 0.75rem; }
+            .calendar-title { font-size: 1.5rem; }
+          }
         `
 
 export interface CalendarEvent {
@@ -293,6 +296,13 @@ export interface CalendarEvent {
     guestEmail: string
     guestPhone: string
     isBarberView: boolean
+    startsAt?: string
+    /** IANA zone the appointment is shown in (the barber's). */
+    timeZone: string
+    /** "YYYY-MM-DD" of the start in that zone, for placing it on the grid. */
+    localDate: string
+    bookingFeeCents: number
+    paymentStatus: string
   }
 }
 
@@ -300,33 +310,62 @@ export interface EnhancedCalendarProps {
   className?: string
   onEventClick?: (event: CalendarEvent) => void
   onDateSelect?: (date: Date) => void
+  /** Called with the number of bookings in the visible range after each load. */
+  onEventsLoaded?: (count: number) => void
 }
 
-export function EnhancedCalendar({ className, onEventClick, onDateSelect }: EnhancedCalendarProps) {
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Awaiting payment',
+  confirmed: 'Confirmed',
+  completed: 'Completed',
+  no_show: 'Missed',
+  cancelled: 'Cancelled',
+}
+
+const PAGE_SIZE = 100
+const MAX_PAGES = 10
+
+export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEventsLoaded }: EnhancedCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [showEventDialog, setShowEventDialog] = useState(false)
-  const [gotoDate, setGotoDate] = useState('')
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [isMarkingMissed, setIsMarkingMissed] = useState(false)
-  const [isBarber, setIsBarber] = useState(false)
+  const [actionPending, setActionPending] = useState<null | 'complete' | 'cancel'>(null)
+  const [, setIsBarber] = useState(false)
   const { user } = useAuth()
+  const userId = user?.id
+  const userRole = user?.role
+  const onEventsLoadedRef = useRef(onEventsLoaded)
+  onEventsLoadedRef.current = onEventsLoaded
+  /** Barbers open on today's agenda; the month grid is one tap away. Clients open on the month. */
+  const [mode, setMode] = useState<'today' | 'month'>(user?.role === 'barber' ? 'today' : 'month')
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
+  const viewYear = currentDate.getFullYear()
+  const viewMonth = currentDate.getMonth()
+  const { toast } = useToast()
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
 
+  // The role may only be known once auth has loaded; pick the default view then (once).
+  const [defaultModeSet, setDefaultModeSet] = useState(!!user)
   useEffect(() => {
-    logger.debug('EnhancedCalendar: User changed', { userId: user?.id })
-    if (!user) {
-      logger.debug('EnhancedCalendar: No user, skipping fetch')
-      return
-    }
-    logger.debug('EnhancedCalendar: Fetching bookings for user', { userId: user.id })
-    fetchBookings()
-  }, [user])
+    if (!user || defaultModeSet) return
+    setMode(user.role === 'barber' ? 'today' : 'month')
+    setDefaultModeSet(true)
+  }, [user, defaultModeSet])
+
+  // Keep "next appointment" and past/upcoming styling current.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   // Touch gesture handlers for mobile swipe navigation
   const onTouchStart = (e: React.TouchEvent) => {
@@ -352,183 +391,93 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     }
   }
 
-  const fetchBookings = async () => {
+  /**
+   * GET /api/bookings for the visible grid (with a day of margin either side for
+   * time zones), every status, paged until complete. Unpaid holds that already
+   * expired are left out. Refetched when the month changes.
+   */
+  const fetchBookings = useCallback(async () => {
+    setLoadError(null)
     try {
-      logger.debug('EnhancedCalendar: Starting fetchBookings for user', { userId: user?.id })
-      
-      // Check if user is a barber or client
-      const { data: barberData, error: barberError } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single()
+      const monthDate = new Date(viewYear, viewMonth, 1)
+      const barberView = userRole === 'barber'
+      setIsBarber(barberView)
+      const gridStart = startOfWeek(startOfMonth(monthDate))
+      const gridEnd = endOfWeek(endOfMonth(monthDate))
+      const from = new Date(gridStart.getTime() - 86_400_000).toISOString()
+      const to = new Date(gridEnd.getTime() + 2 * 86_400_000).toISOString()
 
-      logger.debug('EnhancedCalendar: Barber data', { barberData, error: barberError })
-      
-      // Update isBarber state based on barberData
-      setIsBarber(!!barberData)
-      
-      let bookingsQuery;
-      
-      if (barberData) {
-        // User is a barber - fetch their bookings
-        logger.debug('EnhancedCalendar: User is a barber, fetching barber bookings')
-        bookingsQuery = supabase
-          .from('bookings')
-          .select(`
-            *,
-            booking_addons (
-              id,
-              price,
-              service_addons (
-                id,
-                name,
-                price
-              )
-            )
-          `)
-          .eq('barber_id', barberData.id)
-          .eq('payment_status', 'succeeded') // Only show successful payments
-          .order('date', { ascending: true })
-      } else {
-        // User is a client - fetch their bookings
-        logger.debug('EnhancedCalendar: User is a client, fetching client bookings')
-        bookingsQuery = supabase
-          .from('bookings')
-          .select(`
-            *,
-            barbers:barber_id(
-              id,
-              user_id,
-              profiles:user_id(name, avatar_url)
-            ),
-            services:service_id(name, duration, price),
-            booking_addons (
-              id,
-              price,
-              service_addons (
-                id,
-                name,
-                price
-              )
-            )
-          `)
-          .eq('client_id', user?.id)
-          .eq('payment_status', 'succeeded') // Only show successful payments
-          .order('date', { ascending: true })
-      }
-
-      const { data: bookings, error } = await bookingsQuery
-
-      logger.debug('EnhancedCalendar: Bookings data', { bookings, error })
-      
-      if (error || !bookings) {
-        logger.debug('EnhancedCalendar: No bookings found or error', { error })
-        return
-      }
-
-      const events = await Promise.all(bookings.map(async (booking) => {
-        logger.debug('EnhancedCalendar: Processing booking', { bookingId: booking.id })
-        
-        // For barber view, we need to fetch service and client separately
-        // For client view, service and barber info are already included in the query
-        let service = booking.services
-        let client = null
-        let barber = null
-        
-        if (barberData) {
-          // Barber view - fetch service and client info
-          if (!service) {
-            const { data: serviceData } = await supabase
-              .from('services')
-              .select('name, duration, price')
-              .eq('id', booking.service_id)
-              .single()
-            service = serviceData
-          }
-          
-          if (booking.client_id) {
-            const { data: clientData } = await supabase
-              .from('profiles')
-              .select('name')
-              .eq('id', booking.client_id)
-              .single()
-            client = clientData
-          }
-        } else {
-          // Client view - barber info is already included
-          barber = booking.barbers
-        }
-
-        const startDate = new Date(booking.date)
-        const endDate = new Date(startDate.getTime() + (service?.duration || 60) * 60000)
-
-        // Calculate values in dollars
-        const basePrice = service?.price || 0
-        const addonTotal = booking.addon_total || 0
-        const platformFee = booking.platform_fee || 0
-        const barberPayout = typeof booking.barber_payout === 'number'
-          ? booking.barber_payout
-          : basePrice + addonTotal + (platformFee * 0.40)
-        
-        logger.debug('EnhancedCalendar: Price calculation for booking', {
-          bookingId: booking.id,
-          servicePrice: service?.price,
-          bookingPrice: booking.price,
-          basePrice,
-          addonTotal,
-          platformFee,
-          barberPayout,
-          addonNames: booking.booking_addons?.map((addon: any) => addon.service_addons?.name)
+      const rows: BookingListItem[] = []
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const { bookings, pagination } = await api.bookings.list({
+          as: barberView ? 'barber' : 'client',
+          from,
+          to,
+          order: 'asc',
+          limit: PAGE_SIZE,
+          offset: page * PAGE_SIZE,
         })
+        rows.push(...bookings)
+        if (rows.length >= pagination.total || bookings.length < PAGE_SIZE) break
+      }
 
-        // Get add-on names for display
-        const addonNames = booking.booking_addons?.map((addon: any) => 
-          addon.service_addons?.name || 'Unknown Add-on'
-        ) || []
-
-        // Create title based on user role
-        let title
-        if (barberData) {
-          // Barber view: "Service - Client Name"
-          title = `${service?.name || 'Service'} - ${client?.name || booking.guest_name || 'Guest'}`
-        } else {
-          // Client view: "Service with Barber Name"
-          title = `${service?.name || 'Service'} with ${barber?.profiles?.name || 'Barber'}`
-        }
-
-        return {
-          id: booking.id,
-          title,
-          start: startDate.toISOString(),
-          end: endDate.toISOString(),
-          backgroundColor: barberData ? '#ffc107' : '#3b82f6', // Yellow for barber, blue for client
-          borderColor: barberData ? '#ff8c00' : '#1d4ed8',
-          textColor: '#FFFFFF',
-          extendedProps: {
-            status: booking.status,
-            serviceName: service?.name || '',
-            clientName: client?.name || booking.guest_name || 'Guest',
-            barberName: barber?.profiles?.name || 'Barber',
-            price: barberPayout,
-            basePrice: basePrice,
-            addonTotal: addonTotal,
-            addonNames: addonNames,
-            isGuest: !client,
-            guestEmail: booking.guest_email,
-            guestPhone: booking.guest_phone,
-            isBarberView: !!barberData
+      const now = Date.now()
+      const visible = rows.filter(
+        (b) => !(b.status === 'pending' && b.hold_expires_at && Date.parse(b.hold_expires_at) <= now)
+      )
+      const mapped = visible.map((booking): CalendarEvent => {
+          const serviceName = booking.service?.name || 'Service'
+          const clientName = booking.client?.name || booking.customer_name || 'Walk-in'
+          const barberName = booking.barber?.profile?.name || booking.barber?.business_name || 'Barber'
+          const timeZone = booking.barber?.timezone || 'America/New_York'
+          return {
+            id: booking.id,
+            title: barberView ? `${serviceName} - ${clientName}` : `${serviceName} with ${barberName}`,
+            start: booking.starts_at,
+            end: booking.ends_at,
+            backgroundColor: barberView ? '#ffc107' : '#3b82f6',
+            borderColor: barberView ? '#ff8c00' : '#1d4ed8',
+            textColor: '#FFFFFF',
+            extendedProps: {
+              status: booking.status,
+              serviceName,
+              clientName,
+              barberName,
+              // Dollars for display; paid in person (the booking fee is separate).
+              price: (booking.service_price_cents + booking.addon_total_cents) / 100,
+              basePrice: booking.service_price_cents / 100,
+              addonTotal: booking.addon_total_cents / 100,
+              addonNames: booking.addons.map((a) => a.name),
+              isGuest: !booking.client_id,
+              guestEmail: '',
+              guestPhone: '',
+              isBarberView: barberView,
+              startsAt: booking.starts_at,
+              timeZone,
+              localDate: localDateInTimeZone(booking.starts_at, timeZone),
+              bookingFeeCents: booking.booking_fee_cents,
+              paymentStatus: booking.payment_status,
+            },
           }
-        }
-      }))
-
-        logger.debug('EnhancedCalendar: Final events', { eventCount: events.length })
-        logger.debug('EnhancedCalendar: Sample booking with addons', { booking: bookings[0] })
-        setEvents(events)
+        })
+      setEvents(mapped)
+      setLoaded(true)
+      onEventsLoadedRef.current?.(mapped.length)
     } catch (error) {
       logger.error('EnhancedCalendar: Error fetching bookings', error)
+      setLoadError(bookingErrorMessage(error, 'Could not load your bookings.'))
     }
-  }
+  }, [userRole, viewYear, viewMonth])
+
+  useEffect(() => {
+    logger.debug('EnhancedCalendar: User changed', { userId })
+    if (!userId) {
+      logger.debug('EnhancedCalendar: No user, skipping fetch')
+      return
+    }
+    logger.debug('EnhancedCalendar: Fetching bookings for user', { userId })
+    fetchBookings()
+  }, [userId, fetchBookings])
 
   const getCalendarDays = () => {
     const start = startOfWeek(startOfMonth(currentDate))
@@ -536,16 +485,12 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     return eachDayOfInterval({ start, end })
   }
 
+  /** Events whose start falls on this calendar day in the barber's time zone. */
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => {
-      const eventDate = new Date(event.start)
-      return isSameDay(eventDate, date)
-    })
+    const day = format(date, 'yyyy-MM-dd')
+    return events.filter(event => event.extendedProps.localDate === day)
   }
 
-  const hasEvents = (date: Date) => {
-    return getEventsForDate(date).length > 0
-  }
 
   const hasPastEvents = (date: Date) => {
     const eventsForDate = getEventsForDate(date)
@@ -589,60 +534,180 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
     onEventClick?.(event)
   }
 
+  const replaceSelected = (status: string) => {
+    setSelectedEvent(prev => prev ? { ...prev, extendedProps: { ...prev.extendedProps, status } } : null)
+  }
+
+  /** PATCH /api/bookings/:id { action: 'no_show' }: confirmed bookings, after the start time. */
   const handleMarkAsMissed = async () => {
     if (!selectedEvent) return
-    
+
     setIsMarkingMissed(true)
     try {
-      // Update the booking status in the database
-      const { error } = await supabase
-        .from('bookings')
-        .update({ 
-          status: 'cancelled', // Using 'cancelled' instead of 'missed' due to DB constraint
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedEvent.id)
-
-      if (error) {
-        logger.error('Error marking booking as missed', error)
-        throw error
-      }
-
-      // Update the local event state
-      setSelectedEvent(prev => prev ? {
-        ...prev,
-        extendedProps: {
-          ...prev.extendedProps,
-          status: 'cancelled'
-        }
-      } : null)
-
-      // Refresh the events to update the calendar
+      await api.bookings.noShow(selectedEvent.id)
+      replaceSelected('no_show')
       await fetchBookings()
-
-      logger.debug('Booking marked as missed successfully')
     } catch (error) {
       logger.error('Failed to mark booking as missed', error)
+      toast({ title: 'Could not mark as missed', description: bookingErrorMessage(error), variant: 'destructive' })
     } finally {
       setIsMarkingMissed(false)
     }
   }
 
-  const formatTime = (date: Date) => {
-    return format(date, 'h:mm a')
+  /** PATCH /api/bookings/:id { action: 'complete' }: confirmed bookings, after the start time. */
+  const handleMarkCompleted = async () => {
+    if (!selectedEvent) return
+    setActionPending('complete')
+    try {
+      await api.bookings.complete(selectedEvent.id)
+      replaceSelected('completed')
+      toast({ title: 'Marked completed' })
+      await fetchBookings()
+    } catch (error) {
+      logger.error('Failed to mark booking completed', error)
+      toast({ title: 'Could not mark completed', description: bookingErrorMessage(error), variant: 'destructive' })
+    } finally {
+      setActionPending(null)
+    }
   }
 
-  const formatDate = (date: Date) => {
-    return format(date, 'MMM d, yyyy')
+  /** PATCH /api/bookings/:id { action: 'cancel' }: pending or confirmed, before the start time. */
+  const handleCancel = async () => {
+    if (!selectedEvent) return
+    setActionPending('cancel')
+    try {
+      const result = await api.bookings.cancel(selectedEvent.id)
+      replaceSelected('cancelled')
+      toast({
+        title: 'Booking cancelled',
+        description: result.refund
+          ? `${formatCents(result.refund.amountCents)} booking fee refunded to the client.`
+          : 'No booking fee needed refunding.',
+      })
+      await fetchBookings()
+    } catch (error) {
+      logger.error('Failed to cancel booking', error)
+      toast({ title: 'Could not cancel', description: bookingErrorMessage(error), variant: 'destructive' })
+    } finally {
+      setActionPending(null)
+    }
   }
+
+  /** An event's start time in its barber's time zone. */
+  const formatTime = (event: CalendarEvent) => formatBookingTime(event.start, event.extendedProps.timeZone)
 
   const calendarDays = getCalendarDays()
+
+  // Today's agenda, in the barber's time zone (every event of a barber shares it).
+  const agendaZone = events[0]?.extendedProps.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  const todayLocal = localDateInTimeZone(new Date(now), agendaZone)
+  const todayEvents = events
+    .filter((e) => e.extendedProps.localDate === todayLocal && e.extendedProps.status !== 'cancelled')
+    .sort((a, b) => a.start.localeCompare(b.start))
+  const nextEvent = todayEvents.find(
+    (e) => Date.parse(e.end) > now && (e.extendedProps.status === 'confirmed' || e.extendedProps.status === 'pending')
+  )
+  const cancelledToday = events.filter((e) => e.extendedProps.localDate === todayLocal && e.extendedProps.status === 'cancelled').length
+
+  const showToday = () => {
+    setMode('today')
+    const today = new Date()
+    if (today.getMonth() !== currentDate.getMonth() || today.getFullYear() !== currentDate.getFullYear()) setCurrentDate(today)
+  }
 
   return (
     <div className={cn("w-full", className)}>
       {/* Custom Styles */}
       <style dangerouslySetInnerHTML={{ __html: CALENDAR_STYLES }} />
 
+      {/* View switch: Today (agenda) | Month */}
+      <div className="flex justify-center px-4 pt-4" role="tablist" aria-label="Calendar view">
+        <div className="inline-flex rounded-xl border border-border bg-muted p-1">
+          {(['today', 'month'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={mode === m}
+              onClick={() => (m === 'today' ? showToday() : setMode('month'))}
+              className={cn(
+                'px-5 py-2 rounded-lg text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                mode === m ? 'bg-button text-button-foreground shadow' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {m === 'today' ? 'Today' : 'Month'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loadError && (
+        <div role="alert" className="mx-4 mt-4 rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/40 dark:border-red-900 p-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-red-700 dark:text-red-300">{loadError}</p>
+          <button type="button" onClick={() => void fetchBookings()} className="text-sm font-semibold text-red-700 dark:text-red-300 underline">
+            Try again
+          </button>
+        </div>
+      )}
+
+      {mode === 'today' && (
+        <section className="p-4 sm:p-6" aria-labelledby="today-heading">
+          <h2 id="today-heading" className="text-foreground font-bebas text-3xl tracking-wide">
+            Today · {formatInTimeZone(new Date(now), agendaZone, { weekday: 'long', month: 'short', day: 'numeric' })}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">Times in {timeZoneAbbreviation(agendaZone, new Date(now))}. Tap an appointment to complete, mark missed or cancel.</p>
+          {!loaded && !loadError ? (
+            <div className="space-y-3" aria-busy="true">
+              <div className="h-20 rounded-2xl bg-muted animate-pulse" />
+              <div className="h-20 rounded-2xl bg-muted animate-pulse" />
+            </div>
+          ) : todayEvents.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-6 text-center">
+              <p className="font-semibold text-foreground">No appointments today</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {cancelledToday > 0 ? `${cancelledToday} cancelled. ` : ''}Switch to Month to see what is coming up.
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {todayEvents.map((event) => {
+                const isNext = event.id === nextEvent?.id
+                const done = event.extendedProps.status === 'completed' || event.extendedProps.status === 'no_show'
+                return (
+                  <li key={event.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleEventClick(event)}
+                      className={cn(
+                        'w-full text-left rounded-2xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        isNext ? 'border-secondary bg-secondary/10 shadow-md' : 'border-border bg-card hover:bg-muted',
+                        done && 'opacity-70'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          {isNext && <span className="inline-block mb-1 text-[11px] font-bold uppercase tracking-wider text-secondary">Next</span>}
+                          <p className="font-semibold text-foreground">{formatTime(event)} · {event.extendedProps.clientName}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {[event.extendedProps.serviceName, ...event.extendedProps.addonNames].join(' + ')}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-semibold text-foreground">{formatCents(Math.round(event.extendedProps.price * 100))}</p>
+                          <p className="text-xs text-muted-foreground">{STATUS_LABELS[event.extendedProps.status] ?? event.extendedProps.status}</p>
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {mode === 'month' && (
       <div 
         className="calendar-container p-6"
         onTouchStart={onTouchStart}
@@ -685,6 +750,7 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
           />
         )}
       </div>
+      )}
 
       <EnhancedCalendarEventDialog
         open={showEventDialog}
@@ -692,6 +758,9 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect }: Enha
         selectedEvent={selectedEvent}
         onMarkAsMissed={handleMarkAsMissed}
         isMarkingMissed={isMarkingMissed}
+        onMarkCompleted={handleMarkCompleted}
+        onCancel={handleCancel}
+        actionPending={actionPending}
         user={user}
       />
 

@@ -18,12 +18,10 @@ export default function PrivacyPage() {
 
       <div className="max-w-4xl mx-auto px-4 py-12 sm:py-20 relative z-10">
         <div className="mb-8">
-          <Link href="/">
-            <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
+          <Button href="/" variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
               <ChevronLeft className="w-4 h-4" />
               Back to Home
             </Button>
-          </Link>
         </div>
 
         <Card className="bg-card/50 backdrop-blur-xl border-border shadow-2xl rounded-3xl overflow-hidden">
@@ -38,7 +36,7 @@ export default function PrivacyPage() {
           <CardContent className="p-8 sm:p-12 space-y-10 text-foreground/90 leading-relaxed">
             <section className="space-y-4">
               <p>
-                Welcome to Talii. We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and related services (collectively, the "Services").
+                Welcome to Talii. We respect your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application, website, and related services (collectively, the &quot;Services&quot;).
               </p>
               <p>
                 By using our Services, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree with our policies and practices, do not use our Services.
@@ -136,7 +134,7 @@ export default function PrivacyPage() {
                   </p>
                   <ul className="list-disc pl-5 mt-3 space-y-2 text-sm text-muted-foreground">
                     <li><strong>In-App Deletion:</strong> You can delete your account by logging into the Talii app and navigating to Settings &gt; Delete Account.</li>
-                    <li><strong>Email Request:</strong> Alternatively, you can email us at support@talii.com with the subject "Account Deletion Request".</li>
+                    <li><strong>Email Request:</strong> Alternatively, you can email us at support@talii.com with the subject &quot;Account Deletion Request&quot;.</li>
                   </ul>
                   <p className="text-sm text-muted-foreground mt-3">
                     Upon initiating deletion, we will promptly remove your profile, bookings, and uploaded photos from our active databases, except where we are legally required to retain certain transactional records.

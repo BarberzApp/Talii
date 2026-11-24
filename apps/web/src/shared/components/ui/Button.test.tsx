@@ -13,7 +13,7 @@ describe('Button Component', () => {
 
   it('renders with different variants', () => {
     const { rerender } = render(<Button variant="default">Default</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-primary')
+    expect(screen.getByRole('button')).toHaveClass('bg-button')
 
     rerender(<Button variant="destructive">Destructive</Button>)
     expect(screen.getByRole('button')).toHaveClass('bg-destructive')
@@ -22,7 +22,7 @@ describe('Button Component', () => {
     expect(screen.getByRole('button')).toHaveClass('border border-input')
 
     rerender(<Button variant="secondary">Secondary</Button>)
-    expect(screen.getByRole('button')).toHaveClass('bg-secondary')
+    expect(screen.getByRole('button')).toHaveClass('bg-button')
 
     rerender(<Button variant="ghost">Ghost</Button>)
     expect(screen.getByRole('button')).toHaveClass('hover:bg-accent')
@@ -64,14 +64,6 @@ describe('Button Component', () => {
     expect(handleClick).not.toHaveBeenCalled()
   })
 
-  it('shows loading state', () => {
-    render(<Button loading>Loading</Button>)
-    
-    const button = screen.getByRole('button')
-    expect(button).toBeDisabled()
-    expect(button).toHaveClass('opacity-50')
-  })
-
   it('renders with custom className', () => {
     render(<Button className="custom-class">Custom</Button>)
     
@@ -81,6 +73,9 @@ describe('Button Component', () => {
   it('renders as different HTML elements', () => {
     const { rerender } = render(<Button asChild><a href="/test">Link</a></Button>)
     expect(screen.getByRole('link')).toBeInTheDocument()
+    // asChild renders the child itself, not a link nested inside a <button>
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByRole('link')).toHaveClass('inline-flex')
 
     rerender(<Button asChild><span>Span</span></Button>)
     expect(screen.getByText('Span')).toBeInTheDocument()

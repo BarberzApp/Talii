@@ -3,25 +3,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Button } from '@/shared/components/ui/button'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { Loader2, Upload, CheckCircle, AlertCircle, User, Mail, Phone, MapPin, Building2, Instagram, Twitter, Facebook, Globe, Save, Camera, Sparkles, Info, Check } from 'lucide-react'
+import { Loader2, AlertCircle, User, Mail, Phone, MapPin, Save } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { useRouter } from 'next/navigation'
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar'
-import { Switch } from '@/shared/components/ui/switch'
-import { SpecialtyAutocomplete } from '@/shared/components/ui/specialty-autocomplete'
-import { Badge } from '@/shared/components/ui/badge'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/shared/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { logger } from '@/shared/lib/logger'
-import { getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
+import { bookingLinkLabel } from '@/shared/lib/app-url'
+import { cityStateOf, getAddressSuggestionsDetailed, type GeocodeResult } from '@/shared/lib/geocode'
 
 interface ProfileFormData {
   name: string
@@ -36,12 +30,8 @@ interface ProfileFormData {
   isPublic: boolean
   socialMedia: {
     instagram: string
-    twitter: string
     tiktok: string
-    facebook: string
   }
-  carrier: string
-  sms_notifications: boolean
 }
 
 interface ProfileSettingsProps {
@@ -68,42 +58,28 @@ function extractHandle(input: string): string {
 }
 
 // Timeout helper
-async function withTimeout(promise: Promise<any>, ms = 10000) {
+async function withTimeout<T>(promise: Promise<T>, ms = 10000) {
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
   ])
 }
 
-const CARRIER_OPTIONS = [
-  { value: 'verizon', label: 'Verizon' },
-  { value: 'att', label: 'AT&T' },
-  { value: 'tmobile', label: 'T-Mobile' },
-  { value: 'sprint', label: 'Sprint' },
-  { value: 'boost', label: 'Boost Mobile' },
-  { value: 'uscellular', label: 'US Cellular' },
-  { value: 'cricket', label: 'Cricket' },
-  { value: 'metro', label: 'MetroPCS' },
-  { value: 'googlefi', label: 'Google Fi' },
-];
-
 export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isBarber, setIsBarber] = useState(false)
   const [barberId, setBarberId] = useState<string | null>(null)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [, setAvatarUrl] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
   const { toast } = useToast()
   const { user, status } = useAuth()
-  const router = useRouter()
   const { push: safePush } = useSafeNavigation();
-  const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<ProfileFormData>()
-  const [isDeveloper, setIsDeveloper] = useState(false)
+  const { register, handleSubmit, reset, watch } = useForm<ProfileFormData>()
 
   // Location autocomplete state
   const [locationInput, setLocationInput] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<GeocodeResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const locationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,7 +176,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     setAddressFields(prev => ({ ...prev, address: e.target.value, city: '' }));
   };
 
-  const handleLocationSelect = (suggestion: any) => {
+  const handleLocationSelect = (suggestion: GeocodeResult) => {
     const addr = suggestion.address || {};
     const house = addr.house_number || '';
     const road = addr.road || '';
@@ -230,7 +206,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     if (data.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(data.phone.replace(/\s/g, ''))) {
       errors.phone = 'Please enter a valid phone number'
     }
-    if (!data.carrier?.trim()) errors.carrier = 'Carrier is required';
     if (isBarber && !data.businessName?.trim()) {
       errors.businessName = 'Business name is required for barbers'
     }
@@ -246,109 +221,38 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     if (!user) return
 
     try {
-      // Fetch profile data
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError) throw profileError
-
-      // Check if user is a barber
-      if (profile?.role === 'barber') {
-        setIsBarber(true)
-        const { data: barber, error: barberError } = await supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
-
-        if (barberError) {
-          logger.error('Error fetching barber profile', barberError)
-          safePush('/barber/onboarding');
-          return;
-        }
-        if (barber) {
-          setBarberId(barber.id)
-          // Use barber's bio if available, otherwise use profile's bio
-          // Parse location into separate fields
-          const parsedLocation = parseLocation(profile.location || '');
-          setAddressFields(parsedLocation);
-          
-          // Get carrier and phone from localStorage for autofill
-          const storedCarrier = typeof window !== 'undefined' ? localStorage.getItem('sms_carrier') : null;
-          const storedPhone = typeof window !== 'undefined' ? localStorage.getItem('sms_phone') : null;
-          
-          reset({
-            name: profile.name || '',
-            username: profile.username || '',
-            email: profile.email || '',
-            phone: profile.phone || storedPhone || '',
-            bio: barber.bio || profile.bio || '',
-            location: profile.location || '',
-            description: profile.description || '',
-            specialties: barber.specialties || [],
-            businessName: barber.business_name || '',
-            isPublic: profile.is_public || false,
-            socialMedia: {
-              instagram: barber.instagram || '',
-              twitter: barber.twitter || '',
-              tiktok: barber.tiktok || '',
-              facebook: barber.facebook || ''
-            },
-            carrier: profile.carrier || storedCarrier || '',
-            sms_notifications: profile.sms_notifications || false,
-          })
-        }
-      } else {
-        // For non-barbers, just use profile data
-        // Parse location into separate fields
-        const parsedLocation = parseLocation(profile.location || '');
-        setAddressFields(parsedLocation);
-        
-                  // Get carrier and phone from localStorage for autofill
-          const storedCarrier = typeof window !== 'undefined' ? localStorage.getItem('sms_carrier') : null;
-          const storedPhone = typeof window !== 'undefined' ? localStorage.getItem('sms_phone') : null;
-          
-          reset({
-            name: profile.name || '',
-            username: profile.username || '',
-            email: profile.email || '',
-            phone: profile.phone || storedPhone || '',
-          bio: profile.bio || '',
-          location: profile.location || '',
-          description: profile.description || '',
-          specialties: [],
-          businessName: '',
-          isPublic: profile.is_public || false,
-          socialMedia: {
-            instagram: '',
-            twitter: '',
-            tiktok: '',
-            facebook: ''
-          },
-          carrier: profile.carrier || storedCarrier || '',
-          sms_notifications: profile.sms_notifications || false,
-        })
+      const me = await api.me.get()
+      const profile = me.profile
+      const barber = profile.role === 'barber' ? me.barber : null
+      if (profile.role === 'barber' && !barber) {
+        safePush('/barber/onboarding')
+        return
       }
+      setIsBarber(!!barber)
+      setBarberId(barber?.id ?? null)
+      // Barbers have a city/state on their listing; profiles have no location.
+      const location = barber ? [barber.city, barber.state].filter(Boolean).join(', ') : ''
+      setAddressFields(parseLocation(location))
 
-      // Set avatar URL if exists
+      reset({
+        name: profile.name || '',
+        username: profile.username || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        bio: barber?.bio || '',
+        location,
+        description: '',
+        specialties: barber?.specialties || [],
+        businessName: barber?.business_name || '',
+        isPublic: barber?.is_public ?? false,
+        socialMedia: {
+          instagram: barber?.instagram || '',
+          tiktok: barber?.tiktok || '',
+        },
+      })
+
       if (profile.avatar_url) {
         setAvatarUrl(profile.avatar_url)
-      }
-
-      // Fetch is_developer from barbers table
-      if (user?.role === 'barber') {
-        const { data } = await supabase
-          .from('barbers')
-          .select('is_developer')
-          .eq('user_id', user.id)
-          .single()
-
-        if (data && typeof data.is_developer === 'boolean') {
-          setIsDeveloper(data.is_developer)
-        }
       }
     } catch (error) {
       logger.error('Error fetching profile', error)
@@ -372,72 +276,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     if (user && isInitialLoad) {
       fetchProfile()
     }
-  }, [status, user, isInitialLoad, safePush])
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      if (!e.target.files || !e.target.files[0]) return
-      const file = e.target.files[0]
-      
-      // Validate file type and size
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: 'Invalid file type',
-          description: 'Please select an image file.',
-          variant: 'destructive',
-        })
-        return
-      }
-
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({
-          title: 'File too large',
-          description: 'Please select an image smaller than 5MB.',
-          variant: 'destructive',
-        })
-        return
-      }
-
-      setIsLoading(true)
-      // Upload to Supabase Storage with timeout
-      await withTimeout((async () => {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${user?.id}-${Date.now()}.${fileExt}`
-        const { data, error } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, file)
-        if (error) throw error
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(fileName)
-        // Update profile with new avatar URL
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ avatar_url: publicUrl })
-          .eq('id', user?.id)
-        if (updateError) throw updateError
-        setAvatarUrl(publicUrl)
-        toast({
-          title: 'Success',
-          description: 'Avatar updated successfully!',
-        })
-      })(), 10000)
-    } catch (error: any) {
-      if (error.message === 'timeout') {
-        toast({ title: 'Timeout', description: 'Avatar upload took too long. Please try again.', variant: 'destructive' })
-      } else {
-        logger.error('Error uploading avatar', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to upload avatar. Please try again.',
-          variant: 'destructive',
-        })
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  }, [status, user, isInitialLoad, safePush, fetchProfile])
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!validateForm(data)) {
@@ -452,38 +291,28 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     try {
       setIsLoading(true)
       await withTimeout((async () => {
-        // Update profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            name: data.name,
-            username: data.username,
-            email: data.email,
-            phone: data.phone,
-            bio: data.bio,
-            location: combineAddressFields(addressFields), // Combine address fields
-            description: data.description,
-            is_public: data.isPublic,
-            carrier: data.carrier,
-            sms_notifications: data.sms_notifications,
-          })
-          .eq('id', user?.id)
-        if (profileError) throw profileError
-        // Update barber data if user is a barber
-        if (isBarber && barberId) {
-          const { error: barberError } = await supabase
-            .from('barbers')
-            .update({
-              business_name: data.businessName,
-              bio: data.bio,
-              specialties: data.specialties,
-              instagram: extractHandle(data.socialMedia.instagram),
-              twitter: extractHandle(data.socialMedia.twitter),
-              tiktok: extractHandle(data.socialMedia.tiktok),
-              facebook: extractHandle(data.socialMedia.facebook),
-            })
-            .eq('id', barberId)
-          if (barberError) throw barberError
+        const handle = (v: string) => (v ? extractHandle(v).replace(/^@/, '') : null)
+        const { city, state } = cityStateOf(locationInput || combineAddressFields(addressFields))
+        await api.me.update({
+          name: data.name,
+          username: data.username,
+          phone: data.phone || null,
+          ...(isBarber && barberId
+            ? {
+                businessName: data.businessName || null,
+                bio: data.bio || null,
+                specialties: data.specialties,
+                instagram: handle(data.socialMedia.instagram),
+                tiktok: handle(data.socialMedia.tiktok),
+                ...(city && state ? { city, state } : {}),
+              }
+            : {}),
+        })
+        // The email is an auth setting: Supabase sends a confirmation link to the new address.
+        if (data.email && user?.email && data.email.trim().toLowerCase() !== user.email.toLowerCase()) {
+          const { error: emailError } = await supabase.auth.updateUser({ email: data.email.trim() })
+          if (emailError) throw emailError
+          toast({ title: 'Check your inbox', description: 'Confirm your new email address with the link we sent.' })
         }
         toast({
           title: 'Success',
@@ -491,14 +320,14 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
         })
         onUpdate?.()
       })(), 10000)
-    } catch (error: any) {
-      if (error.message === 'timeout') {
+    } catch (error) {
+      if (error instanceof Error && error.message === 'timeout') {
         toast({ title: 'Timeout', description: 'Profile update took too long. Please try again.', variant: 'destructive' })
       } else {
         logger.error('Error updating profile', error)
         toast({
           title: 'Error',
-          description: 'Failed to update profile. Please try again.',
+          description: errorMessage(error, 'Failed to update profile. Please try again.'),
           variant: 'destructive',
         })
       }
@@ -506,25 +335,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       setIsLoading(false)
     }
   }
-
-  const handleDeveloperToggle = async (checked: boolean) => {
-    setIsDeveloper(checked)
-    if (user?.role === 'barber') {
-      await supabase
-        .from('barbers')
-        .update({ is_developer: checked })
-        .eq('user_id', user.id)
-    }
-  }
-
-  // Only show quick stats for clients
-  const isClient = user?.role !== 'barber';
-  // Example stats (replace with real data if available)
-  const quickStats = [
-    { label: 'Total Bookings', value: 0, icon: <CheckCircle className="h-6 w-6 text-secondary" /> },
-    { label: 'Favorite Barbers', value: 0, icon: <Sparkles className="h-6 w-6 text-secondary" /> },
-    { label: 'Member Since', value: user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently', icon: <User className="h-6 w-6 text-secondary" /> },
-  ];
 
   if (isInitialLoad) {
     return (
@@ -612,7 +422,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     placeholder="Enter your full name"
                   />
                   {validationErrors.name && (
-                    <p className="text-sm text-red-400 flex items-center gap-1">
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       {validationErrors.name}
                     </p>
@@ -631,14 +441,16 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     placeholder="your_username"
                   />
                   {validationErrors.username && (
-                    <p className="text-sm text-red-400 flex items-center gap-1">
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       {validationErrors.username}
                     </p>
                   )}
-                  <p className="text-xs text-foreground/60">
-                    Booking link: bocmstyle.com/book/{watch('username') || 'your_username'}
-                  </p>
+                  {isBarber && (
+                    <p className="text-xs text-muted-foreground">
+                      Booking link: {bookingLinkLabel(watch('username') || 'your_username')}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -663,7 +475,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     placeholder="Enter your email address"
                   />
                   {validationErrors.email && (
-                    <p className="text-sm text-red-400 flex items-center gap-1">
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       {validationErrors.email}
                     </p>
@@ -682,7 +494,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                     placeholder="(555) 123-4567"
                   />
                   {validationErrors.phone && (
-                    <p className="text-sm text-red-400 flex items-center gap-1">
+                    <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       {validationErrors.phone}
                     </p>
@@ -691,6 +503,8 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               </div>
             </div>
 
+            {/* Location and bio belong to a barber's listing; client profiles have neither. */}
+            {isBarber && (<>
             {/* Location */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -738,7 +552,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                           className="w-full text-left px-4 py-2.5 text-foreground hover:bg-secondary/20 text-sm transition-colors"
                           onMouseDown={() => handleLocationSelect(s)}
                         >
-                          <span className="font-medium">{s.display_name || s.name || 'Unknown location'}</span>
+                          <span className="font-medium">{s.display_name || 'Unknown location'}</span>
                         </button>
                       ))}
                     </div>
@@ -764,73 +578,20 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 placeholder="Tell us about yourself..."
               />
               {validationErrors.bio && (
-                <p className="text-sm text-red-400 flex items-center gap-1">
+                <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {validationErrors.bio}
                 </p>
               )}
             </div>
-
-            {/* SMS Notifications */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-5 bg-secondary rounded-full"></div>
-                <h4 className="text-foreground font-semibold text-sm uppercase tracking-widest">SMS Notifications</h4>
-              </div>
-              <div className="space-y-3">
-                <Label htmlFor="carrier" className="text-foreground font-semibold text-base flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-secondary" />
-                  Carrier *
-                  <span title="We need your carrier to send you free SMS reminders. If you're unsure, check your phone bill or carrier app.">
-                    <Info className="h-4 w-4 text-secondary cursor-pointer" />
-                  </span>
-                </Label>
-                <Select
-                  value={watch('carrier')}
-                  onValueChange={(value: string) => setValue('carrier', value)}
-                >
-                  <SelectTrigger className={`h-12 px-4 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl backdrop-blur-sm transition-all duration-200 ${validationErrors.carrier ? 'border-red-400' : ''}`}>
-                    <SelectValue placeholder="Select your carrier…" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gradient-to-br from-white/10 to-white/5 dark:from-white/10 dark:to-white/5 backdrop-blur-2xl border-black/10 dark:border-white/20 rounded-2xl shadow-2xl p-2 text-foreground">
-                    {CARRIER_OPTIONS.map((carrier) => (
-                      <SelectItem key={carrier.value} value={carrier.value} className="flex items-center justify-between px-4 py-2 hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer mb-1 last:mb-0">
-                        <span className="font-medium text-base">{carrier.label}</span>
-                        {watch('carrier') === carrier.value && <Check className="h-4 w-4 text-secondary ml-2" />}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {validationErrors.carrier && (
-                  <p className="text-sm text-red-400 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.carrier}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Button
-                  type="button"
-                  className={!watch('sms_notifications') 
-                    ? "bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-secondary-foreground font-semibold shadow-lg rounded-xl px-6 py-2 text-base transition-all" 
-                    : "bg-green-600/20 border border-green-500/30 text-green-400 hover:text-green-300 font-semibold rounded-xl px-6 py-2 text-base flex items-center gap-2 hover:bg-green-600/30 transition-all"}
-                  onClick={() => setValue('sms_notifications', !watch('sms_notifications'))}
-                >
-                  {!watch('sms_notifications') ? (
-                    "Enable SMS Notifications"
-                  ) : (
-                    <><Check className="h-4 w-4" /> SMS Notifications Enabled</>
-                  )}
-                </Button>
-              </div>
-            </div>
+            </>)}
 
             {/* Save Button */}
             <div className="flex justify-end pt-2">
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-secondary-foreground font-semibold shadow-lg rounded-xl px-8 py-3 text-lg"
+                className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-button-foreground font-semibold shadow-lg rounded-xl px-8 py-3 text-lg"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />

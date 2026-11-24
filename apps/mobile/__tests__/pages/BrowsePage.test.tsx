@@ -18,17 +18,31 @@ jest.mock('@/hooks/useAuth', () => ({
   }),
 }));
 
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      in: jest.fn().mockReturnThis(),
-      range: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockResolvedValue({ data: [], error: null }),
-    })),
+const mockCard = {
+  id: 'barber-1',
+  user_id: 'user-1',
+  business_name: 'Fade Co',
+  bio: 'Clean fades',
+  specialties: ['Barber'],
+  city: 'Austin',
+  state: 'TX',
+  name: 'Ann',
+  username: 'ann',
+  avatar_url: null,
+  distance_miles: null,
+  rating: { review_count: 2, average_rating: 4.5 },
+};
+
+jest.mock('@/lib/api', () => ({
+  api: {
+    barbers: {
+      list: jest.fn(() => Promise.resolve({ barbers: [mockCard], pagination: { limit: 10, offset: 0, hasMore: false } })),
+      reviews: jest.fn(),
+    },
+    bookings: { list: jest.fn() },
+    reviews: { listOwn: jest.fn() },
   },
+  errorMessage: (_e: unknown, fallback: string) => fallback,
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -49,20 +63,14 @@ jest.mock('lucide-react-native', () => ({
   MapPin: 'MapPin',
   Filter: 'Filter',
   X: 'X',
-  Grid3X3: 'Grid3X3',
-  Heart: 'Heart',
   Scissors: 'Scissors',
   Star: 'Star',
 }));
 
-jest.mock('@/components/StaircaseGrid', () => 'StaircaseGrid');
 jest.mock('@/components/BookingForm', () => 'BookingForm');
 jest.mock('@/pages/ProfilePreview', () => 'ProfilePreview');
 jest.mock('@/components/ReviewCard', () => ({ ReviewCard: 'ReviewCard' }));
 jest.mock('@/components/ReviewForm', () => ({ ReviewForm: 'ReviewForm' }));
-jest.mock('@/hooks/useReviews', () => ({
-  useReviews: () => ({ stats: null, loading: false }),
-}));
 jest.mock('@/components/ui', () => ({ Avatar: 'Avatar' }));
 
 describe('BrowsePage - Basic Tests', () => {
@@ -100,9 +108,38 @@ describe('BrowsePage - Basic Tests', () => {
     expect(getByText('Loading stylists...')).toBeTruthy();
   });
 
-  it('should render cosmetologists view mode button', () => {
-    const { getByText } = render(<BrowsePage />);
-    expect(getByText('Cosmetologists')).toBeTruthy();
+  it('has no view toggle (only the stylist list remains)', () => {
+    const { queryByText } = render(<BrowsePage />);
+    expect(queryByText('Cosmetologists')).toBeNull();
+  });
+
+  it('shows an error with Try again when the list fails to load', async () => {
+    const { api } = require('@/lib/api');
+    api.barbers.list.mockImplementationOnce(() => Promise.reject(new Error('offline')));
+    const { findByText, getByText } = render(<BrowsePage />);
+    expect(await findByText('Could not load stylists')).toBeTruthy();
+    fireEvent.press(getByText('Try again'));
+    expect(await findByText('Fade Co')).toBeTruthy();
+  });
+
+  it('lists barbers from GET /api/barbers with their rating', async () => {
+    const { api } = require('@/lib/api');
+    const { findByText } = render(<BrowsePage />);
+    expect(await findByText('Austin, TX')).toBeTruthy();
+    expect(api.barbers.list).toHaveBeenCalledWith({ q: undefined, limit: 10, offset: 0 });
+    expect(await findByText('4.5 (2)')).toBeTruthy();
+  });
+
+  it('sends the debounced search text to the server as q and starts from page 0', async () => {
+    const { api } = require('@/lib/api');
+    const screen = render(<BrowsePage />);
+    await screen.findByText('Austin, TX');
+    api.barbers.list.mockClear();
+
+    fireEvent.changeText(screen.getByPlaceholderText('Search stylists...'), '  fade ');
+    await waitFor(() => expect(api.barbers.list).toHaveBeenCalledWith({ q: 'fade', limit: 10, offset: 0 }), {
+      timeout: 2000,
+    });
+    expect(api.barbers.list).toHaveBeenCalledTimes(1);
   });
 });
-

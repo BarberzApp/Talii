@@ -1,5 +1,5 @@
 import { format, isSameDay, isSameMonth, isToday } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import type { CalendarEvent } from './enhanced-calendar'
 
 interface EnhancedCalendarGridProps {

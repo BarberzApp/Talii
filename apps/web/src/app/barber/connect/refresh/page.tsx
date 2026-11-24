@@ -4,6 +4,22 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/shared/lib/supabase';
 import { logger } from '@/shared/lib/logger';
+import { api, isApiError } from '@/shared/lib/api';
+
+/**
+ * Asks the API to re-read the Stripe account and store its status. Only works
+ * when this browser has a web session (mobile users opening this page from the
+ * app usually do not; the app refreshes the status itself after the deep link).
+ */
+async function refreshConnectStatus() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    await api.connect.status();
+  } catch (error) {
+    logger.warn('Stripe status refresh failed', { code: isApiError(error) ? error.code : 'UNKNOWN' });
+  }
+}
 
 export default function StripeConnectRefresh() {
   const router = useRouter();
@@ -27,65 +43,11 @@ export default function StripeConnectRefresh() {
           logger.debug('Stripe connect refresh', { accountId });
           setStatus('retry');
           
-          // Find the barber with this Stripe account ID and update their status
-          try {
-            const { data: barbers, error: findError } = await supabase
-              .from('barbers')
-              .select('id, stripe_account_id')
-              .eq('stripe_account_id', accountId);
-
-            if (findError) {
-              logger.error('Error finding barber', findError);
-            } else if (barbers && barbers.length > 0) {
-              // Update the barber's status
-              const { error: updateError } = await supabase
-                .from('barbers')
-                .update({
-                  stripe_account_status: 'active',
-                  stripe_account_ready: true,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('stripe_account_id', accountId);
-
-              if (updateError) {
-                logger.error('Error updating barber status', updateError);
-              } else {
-                logger.debug('Successfully updated barber status for account', { accountId });
-              }
-            } else {
-              // If no barber found with this account ID, try to find by pending status
-              const { data: pendingBarbers, error: pendingError } = await supabase
-                .from('barbers')
-                .select('id')
-                .eq('stripe_account_status', 'pending')
-                .is('stripe_account_id', null)
-                .limit(1);
-
-              if (!pendingError && pendingBarbers && pendingBarbers.length > 0) {
-                // Update the first pending barber with this account ID
-                const { error: updateError } = await supabase
-                  .from('barbers')
-                  .update({
-                    stripe_account_id: accountId,
-                    stripe_account_status: 'active',
-                    stripe_account_ready: true,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq('id', pendingBarbers[0].id);
-
-                if (updateError) {
-                  logger.error('Error updating pending barber', updateError);
-                } else {
-                  logger.debug('Successfully updated pending barber with account ID', { accountId });
-                }
-              }
-            }
-          } catch (dbError) {
-            logger.error('Database update error', dbError);
-          }
+          // The page never writes to the database; the API reads the status from Stripe.
+          await refreshConnectStatus();
           
           // Try to open the mobile app with deep link
-          const mobileDeepLink = `bocm://stripe-connect/refresh?account_id=${accountId}`;
+          const mobileDeepLink = `talii://stripe-connect/refresh?account_id=${accountId}`;
           
           // Attempt to open mobile app
           window.location.href = mobileDeepLink;

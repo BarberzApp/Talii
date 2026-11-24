@@ -86,7 +86,7 @@ BARBER (Mobile)        NEXT.js / EDGE          STRIPE API
 - **[apps/web/](apps/web)**: Next.js 15.3 Web application & API Gateway (React 19)
 - **[apps/mobile/](apps/mobile)**: Expo SDK 53 / React Native mobile client (React 19)
 - **[packages/shared/](packages/shared)**: Shared TypeScript types, constants, and domain logic
-- **[supabase/](supabase)**: Database migrations, seed scripts, and Deno Edge Functions
+- **[supabase/](supabase)**: Database migration, seed script and pgTAP tests
 - **[scripts/](scripts)**: Administrative scripts (type generation, diagnostics)
 
 ## Getting Started
@@ -158,7 +158,7 @@ npm run test:shared
 
 ## Key Documentation
 
-- **[Consolidation Analysis](docs/refactoring/BACKEND_CONSOLIDATION_ANALYSIS.md)**: The master plan for alignment between Web and Mobile, tracking recent architectural changes.
+- **[Backend Rebuild Plan](docs/BACKEND_REBUILD_PLAN.md)**: The current plan for consolidating the backend, with decisions, feature cuts and phase status.
 - **[Environment Variable Contract](docs/development/ENV.md)**: Full contract specifying public client environment variables and server secrets.
 - **[App Breakdown](docs/development/APP_BREAKDOWN.md)**: High-level overview of main flows (onboarding, booking, payments).
 - **[Local Development Guide](docs/development/LOCAL_DEVELOPMENT.md)**: Detailed setup for Stripe Connect, ngrok, and troubleshooting.

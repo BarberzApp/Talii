@@ -249,25 +249,6 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 /**
- * Throttle function calls
- * Useful for rate limiting
- */
-export function throttle<T extends (...args: any[]) => any>(
-  fn: T,
-  limit: number
-): (...args: Parameters<T>) => void {
-  let inThrottle: boolean;
-
-  return (...args: Parameters<T>) => {
-    if (!inThrottle) {
-      fn(...args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
-  };
-}
-
-/**
  * Safe JSON parse with fallback
  */
 export function safeJsonParse<T>(json: string, fallback: T): T {
@@ -277,50 +258,5 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
     logger.warn('JSON parse failed, using fallback', error);
     return fallback;
   }
-}
-
-/**
- * Batch multiple operations with a delay between each
- * Prevents overwhelming the server
- */
-export async function batchWithDelay<T>(
-  items: T[],
-  operation: (item: T) => Promise<void>,
-  delayMs: number = 100
-): Promise<void> {
-  for (let i = 0; i < items.length; i++) {
-    await operation(items[i]);
-    if (i < items.length - 1) {
-      await sleep(delayMs);
-    }
-  }
-}
-
-/**
- * Parallel execution with concurrency limit
- */
-export async function parallelLimit<T, R>(
-  items: T[],
-  operation: (item: T) => Promise<R>,
-  limit: number = 3
-): Promise<R[]> {
-  const results: R[] = [];
-  const executing: Promise<void>[] = [];
-
-  for (const item of items) {
-    const promise = operation(item).then((result) => {
-      results.push(result);
-      executing.splice(executing.indexOf(promise), 1);
-    });
-
-    executing.push(promise);
-
-    if (executing.length >= limit) {
-      await Promise.race(executing);
-    }
-  }
-
-  await Promise.all(executing);
-  return results;
 }
 

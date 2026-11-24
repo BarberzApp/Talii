@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme } from "next-themes";
 import { Button } from "@/shared/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/shared/components/ui/sheet";
@@ -50,7 +51,6 @@ export function LandingNavbar({
   // Avoid hydration mismatch: only use theme for logo after mount (server and initial client both use light)
   const isDark = mounted && resolvedTheme === "dark";
   const logoSrc = isDark ? logoDark : logo;
-  const logoAlt = isDark ? `${logoText} Logo (Dark)` : `${logoText} Logo`;
 
   useEffect(() => {
     setMounted(true);
@@ -89,10 +89,11 @@ export function LandingNavbar({
           >
             {logoSrc ? (
               <span className="inline-block h-12 w-[140px] sm:h-14 sm:w-[160px] items-center">
-                <img
+                <Image
                   src={logoSrc}
                   alt={`${logoText} Logo`}
-                  className="max-h-full max-w-full w-full object-contain object-left"
+                  className="max-h-full max-w-full w-full h-auto object-contain object-left"
+                  priority
                   width={160}
                   height={56}
                 />
@@ -124,7 +125,7 @@ export function LandingNavbar({
                   <div className="flex items-center justify-center mb-8 pt-2">
                     {logoSrc ? (
                       <span className="inline-flex h-14 w-[180px] items-center justify-center">
-                        <img
+                        <Image
                           src={logoSrc}
                           alt={`${logoText} Logo`}
                           className="max-h-full max-w-full object-contain"
@@ -173,7 +174,7 @@ export function LandingNavbar({
           <ModeToggle />
           <Button
             href={ctaHref}
-            className="bg-secondary text-primary-foreground px-6 py-2 rounded-xl font-semibold hover:bg-secondary/90 transition-colors"
+            className="bg-button text-button-foreground px-6 py-2 rounded-xl font-semibold hover:bg-button/90 transition-colors"
           >
             {ctaLabel}
           </Button>

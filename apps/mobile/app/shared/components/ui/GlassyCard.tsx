@@ -49,7 +49,3 @@ export function GlassyCard({
     </View>
   );
 }
-
-export function GlassyCardContent({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[tw`p-6`, style]}>{children}</View>;
-}

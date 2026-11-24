@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../lib/supabase';
+import type { DeleteMeConflict } from '@barber-app/shared';
+import { api, errorMessage, hasErrorCode } from '../lib/api';
 import { useToast } from '../components/ui/use-toast';
 import { useAuth } from '../hooks/useAuth';
 
 interface AccountDeletionHelperOptions {
+  /** @deprecated Not needed: the server finds the caller's barber listing. */
   barberId?: string;
 }
 
@@ -12,9 +14,9 @@ interface AccountDeletionHelperOptions {
  * Encapsulates account deletion flow so the page stays small.
  * Flow:
  * 1) requestDelete -> shows warning toast and reveals confirmation input.
- * 2) user types "YES" (all caps) -> deleteAccount executes destructive cleanup.
+ * 2) user types "YES" (all caps) -> deleteAccount calls DELETE /api/me { confirm: true }.
  */
-export const useAccountDeletionHelper = ({ barberId }: AccountDeletionHelperOptions = {}) => {
+export const useAccountDeletionHelper = (_options: AccountDeletionHelperOptions = {}) => {
   const navigation = useNavigation();
   const { user, logout } = useAuth();
   const { toast } = useToast();
@@ -57,25 +59,16 @@ export const useAccountDeletionHelper = ({ barberId }: AccountDeletionHelperOpti
     setIsDeleting(true);
 
     try {
-      // Clean up barber-owned data first (if applicable)
-      if (barberId) {
-        await supabase.from('services').delete().eq('barber_id', barberId);
-        await supabase.from('availability').delete().eq('barber_id', barberId);
-        await supabase.from('service_addons').delete().eq('barber_id', barberId);
-        await supabase.from('barbers').delete().eq('id', barberId);
-        await supabase.from('bookings').delete().eq('barber_id', barberId);
-      }
+      // DELETE /api/me cancels future bookings (normal refund policy), scrubs the
+      // profile and listing, removes uploads and blocks sign-in. Booking and
+      // payment history is kept on the server.
+      await api.me.delete();
 
-      // Remove client-side bookings and profile
-      await supabase.from('bookings').delete().eq('client_id', user.id);
-      await supabase.from('profiles').delete().eq('id', user.id);
-
-      // Sign out locally
       await logout();
 
       toast({
         title: 'Account deleted',
-        description: 'Your account and data have been removed.',
+        description: 'Your account has been deleted.',
         variant: 'success',
       });
 
@@ -83,18 +76,33 @@ export const useAccountDeletionHelper = ({ barberId }: AccountDeletionHelperOpti
         index: 0,
         routes: [{ name: 'Login' as never }],
       });
-    } catch (error: any) {
-      toast({
-        title: 'Delete failed',
-        description: error?.message ?? 'Could not delete your account.',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      if (hasErrorCode(error, 'HAS_UPCOMING_BOOKINGS')) {
+        const details = error.details as Partial<DeleteMeConflict> | undefined;
+        const remaining = details?.bookings?.length ?? 0;
+        const cancelled = details?.cancelledBookings?.length ?? 0;
+        toast({
+          title: 'Account not deleted',
+          description:
+            `${remaining} upcoming booking${remaining === 1 ? '' : 's'} could not be cancelled` +
+            (cancelled ? ` (${cancelled} other${cancelled === 1 ? ' was' : 's were'} cancelled)` : '') +
+            '. Cancel them from your calendar, then try again.',
+          variant: 'destructive',
+          duration: 8000,
+        });
+      } else {
+        toast({
+          title: 'Delete failed',
+          description: errorMessage(error, 'Could not delete your account.'),
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsDeleting(false);
       setIsConfirming(false);
       setConfirmText('');
     }
-  }, [barberId, isConfirmed, logout, navigation, toast, user]);
+  }, [isConfirmed, logout, navigation, toast, user]);
 
   return {
     isConfirming,

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import * as Font from 'expo-font';
 import * as Linking from 'expo-linking';
-import { notificationService } from './app/shared/lib/notifications';
 import { initSentry } from './app/shared/lib/sentry';
 import { logger } from './app/shared/lib/logger';
 import tw from 'twrnc';
@@ -10,6 +9,7 @@ import { AppNavigator } from './app/navigation/AppNavigator';
 import { AuthProvider } from './app/shared/hooks/useAuth';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { Toaster, useToast } from './app/shared/components/ui';
+import { STRIPE_CONNECT_DEEP_LINK, fetchConnectStatus, isConnectSessionOpen } from './app/shared/lib/stripeConnect';
 import { ThemeProvider, useTheme } from './app/shared/components/theme';
 // Initialize Sentry as early as possible (using secure configuration from sentry.ts)
 // The initSentry() function handles proper configuration with data privacy protections
@@ -17,7 +17,6 @@ initSentry();
 
 const App = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadFonts() {
@@ -35,20 +34,6 @@ const App = () => {
     loadFonts();
   }, []);
 
-  useEffect(() => {
-    // Initialize notifications with error handling
-    (async () => {
-      try {
-        await notificationService.initialize();
-      } catch (error) {
-        logger.error('Error initializing notifications:', error);
-        // Don't crash the app - notifications are not critical for startup
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, []);
-
   // Handle deep links
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
@@ -60,75 +45,25 @@ const App = () => {
           return;
         }
         
-        // Handle Stripe connect redirects
-        if (event.url.includes('bocm://stripe-connect/')) {
+        // Stripe Connect: the website's /barber/connect/return and /refresh pages
+        // send the barber here. Read the account status from Stripe through the
+        // API (it stores the flags); screens re-read it when they come into focus.
+        // While the in-app Stripe session is open, that flow handles the return itself.
+        if (event.url.startsWith(`${STRIPE_CONNECT_DEEP_LINK}/`) && !isConnectSessionOpen()) {
           if (event.url.includes('/return')) {
-            // User completed Stripe onboarding
-            logger.log('Stripe onboarding completed via deep link');
-            
-            // Extract account_id if present
-            try {
-              const urlParams = new URL(event.url);
-              const accountId = urlParams.searchParams.get('account_id');
-              logger.log('Account ID from deep link:', accountId);
-              
-              // Show a success message immediately
-              logger.log('Stripe onboarding completed successfully - account ID:', accountId);
-            } catch (urlError) {
-              logger.error('Error parsing Stripe connect return URL:', urlError);
-              // Continue without account_id
-            }
-            
-            // You could add a global state or navigation here to show success
-            // For now, we'll rely on the focus effect in the onboarding page
+            fetchConnectStatus().then((status) => {
+              if (status) logger.log('Stripe Connect status refreshed after return');
+            });
           } else if (event.url.includes('/refresh')) {
-            // User needs to refresh/retry Stripe onboarding
-            logger.log('Stripe onboarding refresh via deep link');
-            
-            // Extract account_id if present
-            try {
-              const urlParams = new URL(event.url);
-              const accountId = urlParams.searchParams.get('account_id');
-              logger.log('Account ID from refresh deep link:', accountId);
-            } catch (urlError) {
-              logger.error('Error parsing Stripe connect refresh URL:', urlError);
-              // Continue without account_id
-            }
-          }
-        }
-        
-        // Handle booking payment redirects
-        if (event.url.includes('bocm://booking/')) {
-          if (event.url.includes('/success')) {
-            // User completed payment successfully
-            logger.log('Booking payment completed via deep link');
-            
-            // Extract session_id if present
-            try {
-              const urlParams = new URL(event.url);
-              const sessionId = urlParams.searchParams.get('session_id');
-              logger.log('Session ID from deep link:', sessionId);
-              
-              // Legacy flow removed: there is no longer a create-booking-after-checkout edge function.
-              // Current flow: PaymentIntent confirmation triggers the Stripe webhook which creates the booking.
-            } catch (urlError) {
-              logger.error('Error parsing booking success URL:', urlError);
-              Alert.alert(
-                'Error',
-                'Unable to process booking confirmation. Please check your bookings.',
-                [{ text: 'OK' }]
-              );
-            }
-          } else if (event.url.includes('/cancel')) {
-            // User cancelled payment
-            logger.log('Booking payment cancelled via deep link');
             Alert.alert(
-              'Payment Cancelled',
-              'Your payment was not completed. Please try again.',
-              [{ text: 'OK' }]
+              'Continue Stripe Setup',
+              'Your Stripe setup link expired. Open Settings > Earnings and tap Connect Stripe to continue.'
             );
           }
         }
+
+        // Stripe PaymentSheet redirects (3-D Secure, bank apps) come back on
+        // talii://stripe-redirect; the Stripe SDK handles them.
       } catch (error) {
         logger.error('Error handling deep link:', error);
         // Don't crash the app - just log the error
@@ -168,12 +103,12 @@ const App = () => {
 
   return (
     <ThemeProvider>
-      {!fontsLoaded || isLoading ? (
+      {!fontsLoaded ? (
         <AppLoadingScreen />
       ) : !stripePublishableKey ? (
         <AppConfigErrorScreen />
       ) : (
-        <StripeProvider publishableKey={stripePublishableKey}>
+        <StripeProvider publishableKey={stripePublishableKey} urlScheme="talii">
           <AuthProvider>
             <AppNavigator />
             <Toaster toasts={toasts} onDismiss={dismiss} />

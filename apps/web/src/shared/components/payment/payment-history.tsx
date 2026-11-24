@@ -1,98 +1,47 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
-import { Loader2, Calendar, DollarSign, User, Clock, TrendingUp, TrendingDown, Sparkles } from 'lucide-react'
+import { Loader2, Calendar, DollarSign, User, Clock, TrendingUp, TrendingDown } from 'lucide-react'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { LoadingSpinner } from '@/shared/components/ui/loading-spinner'
-import { GlassyCard } from '@/shared/components/ui/glassy-card'
-import { format } from 'date-fns'
 import { logger } from '@/shared/lib/logger'
+import { api, errorMessage } from '@/shared/lib/api'
+import { formatBookingDate, formatBookingTime, formatCents, type EarningsResponse } from '@barber-app/shared'
 
 interface PaymentHistoryProps {
   barberId: string
 }
 
-interface PaymentRecord {
-  id: string
-  barber_id: string
-  client_id: string | null
-  service_id: string
-  date: string
-  status: string
-  payment_status: string
-  payment_intent_id: string
-  price: number
-  platform_fee: number
-  barber_payout: number
-  notes: string | null
-  guest_name: string | null
-  guest_email: string | null
-  guest_phone: string | null
-  created_at: string
-  updated_at: string
-  services: {
-    id: string
-    name: string
-    description: string | null
-    duration: number
-    price: number
-  } | null
-  profiles: {
-    id: string
-    name: string
-    email: string
-  } | null
-  payment_details: {
-    id: string
-    payment_intent_id: string
-    amount: number
-    currency: string
-    status: string
-    barber_stripe_account_id: string
-    platform_fee: number
-    barber_payout: number
-    booking_id: string
-    created_at: string
-    updated_at: string
-  } | null
-}
+type PaymentRecord = EarningsResponse['bookings'][number]
 
-interface PaymentHistoryResponse {
-  payments: PaymentRecord[]
-  totals: {
-    totalRevenue: number
-    totalPlatformFees: number
-    totalBarberPayout: number
-    totalBookings: number
-  }
-  pagination: {
-    limit: number
-    offset: number
-    total: number
-  }
+interface Totals {
+  totalBarberPayout: number // cents: net booking-fee share + completed service revenue
+  totalBookings: number
 }
 
 interface EarningsData {
-  current: number
-  previous: number
   trend: 'up' | 'down'
   percentage: number
 }
 
+/** The last year of bookings with their money, from GET /api/earnings. */
+const RANGE_DAYS = 365
+
 export function PaymentHistory({ barberId }: PaymentHistoryProps) {
   const [payments, setPayments] = useState<PaymentRecord[]>([])
-  const [totals, setTotals] = useState<PaymentHistoryResponse['totals'] | null>(null)
+  const [totals, setTotals] = useState<Totals | null>(null)
   const [earningsData, setEarningsData] = useState<EarningsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
   const { toast } = useToast()
+  const [timeZone, setTimeZone] = useState('America/New_York')
 
-  const loadPayments = async (pageNum: number = 0) => {
+  const loadPayments = useCallback(async (pageNum: number = 0) => {
     try {
       setLoading(true)
       setError(null)
@@ -100,58 +49,62 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
       const limit = 20
       const offset = pageNum * limit
 
-      const response = await fetch(`/api/payments/barber-payments?barberId=${barberId}&limit=${limit}&offset=${offset}`)
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch payments')
-      }
+      const to = new Date()
+      const from = new Date(to.getTime() - RANGE_DAYS * 86_400_000)
+      const data = await api.earnings.get({ from: from.toISOString(), to: to.toISOString(), limit, offset })
 
-      const data: PaymentHistoryResponse = await response.json()
-      
       if (pageNum === 0) {
-        setPayments(data.payments)
-        setTotals(data.totals)
+        setPayments(data.bookings)
+        setTotals({
+          totalBarberPayout: data.totals.netFeeShareCents + data.totals.serviceRevenueCents,
+          totalBookings: data.totals.completedBookings,
+        })
       } else {
-        setPayments(prev => [...prev, ...data.payments])
+        setPayments(prev => [...prev, ...data.bookings])
       }
 
-      setHasMore(data.payments.length === limit)
+      setHasMore(offset + data.bookings.length < data.pagination.total)
       setPage(pageNum)
     } catch (error) {
       logger.error('Error loading payments', error)
-      setError(error instanceof Error ? error.message : 'Failed to load payments')
+      setError(errorMessage(error, 'Failed to load payments'))
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to load payment history',
+        description: errorMessage(error, 'Failed to load payment history'),
         variant: 'destructive',
       })
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   const loadEarningsData = async () => {
     try {
-      const response = await fetch(`/api/earnings/monthly?barberId=${barberId}`)
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch earnings')
-      }
-      
-      const data = await response.json()
-      setEarningsData(data)
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const [cur, prev] = await Promise.all([
+        api.earnings.get({ from: monthStart.toISOString(), to: now.toISOString(), limit: 1 }),
+        api.earnings.get({ from: prevStart.toISOString(), to: monthStart.toISOString(), limit: 1 }),
+      ])
+      const a = cur.totals.netFeeShareCents + cur.totals.serviceRevenueCents
+      const b = prev.totals.netFeeShareCents + prev.totals.serviceRevenueCents
+      const change = b > 0 ? Math.round(((a - b) / b) * 100) : a > 0 ? 100 : 0
+      setEarningsData({ trend: change >= 0 ? 'up' : 'down', percentage: Math.abs(change) })
     } catch (error) {
       logger.error('Error loading earnings data', error)
-      // Don't show error toast for earnings data as it's secondary
+      // Secondary; no toast.
     }
   }
 
   useEffect(() => {
+    api.me
+      .get()
+      .then((me) => me.barber?.timezone && setTimeZone(me.barber.timezone))
+      .catch(() => undefined)
     loadPayments()
     loadEarningsData()
-  }, [barberId])
+  }, [barberId, loadPayments])
 
   const loadMore = () => {
     if (!loading && hasMore) {
@@ -159,20 +112,11 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount) // Amount is already in dollars
-  }
+  const formatCurrency = (cents: number) => formatCents(cents)
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'MMM dd, yyyy')
-  }
-
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), 'h:mm a')
-  }
+  // Appointment times in the barber's time zone (barbers.timezone).
+  const formatDate = (iso: string) => formatBookingDate(iso, timeZone)
+  const formatTime = (iso: string) => formatBookingTime(iso, timeZone)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -182,6 +126,8 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
         return <Badge variant="glassy-secondary" className="bg-blue-500/20 text-blue-400 border-blue-500/30">Completed</Badge>
       case 'cancelled':
         return <Badge variant="glassy-secondary" className="bg-red-500/20 text-red-400 border-red-500/30">Cancelled</Badge>
+      case 'no_show':
+        return <Badge variant="glassy-secondary" className="bg-red-500/20 text-red-400 border-red-500/30">No-show</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -273,7 +219,7 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-bebas tracking-wide text-foreground">
-                      {payment.services?.name || 'Unknown Service'}
+                      {payment.serviceName || 'Unknown Service'}
                     </h3>
                     {getStatusBadge(payment.status)}
                   </div>
@@ -281,34 +227,27 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
                   <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm text-foreground/60">
                     <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
                       <Calendar className="h-3 w-3 text-secondary" />
-                      {formatDate(payment.date)}
+                      {formatDate(payment.startsAt)}
                     </div>
                     <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
                       <Clock className="h-3 w-3 text-secondary" />
-                      {formatTime(payment.date)}
+                      {formatTime(payment.startsAt)}
                     </div>
                     <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">
                       <User className="h-3 w-3 text-secondary" />
-                      {payment.profiles?.name || payment.guest_name || 'Guest'}
+                      {payment.customerName || 'Client'}
                     </div>
                   </div>
                 </div>
                 
                 <div className="text-right">
-                  <div className="text-xl font-bebas tracking-wide text-foreground mb-1">{formatCurrency(payment.price)}</div>
+                  <div className="text-xl font-bebas tracking-wide text-foreground mb-1">{formatCurrency(payment.servicePriceCents + payment.addonTotalCents)}</div>
                   <div className="text-xs font-semibold text-secondary uppercase tracking-widest bg-secondary/10 px-2 py-1 rounded-lg inline-block">
-                    Earned: {formatCurrency(payment.barber_payout)}
+                    Fee share: {formatCurrency(payment.feeShareCents)}
                   </div>
                 </div>
               </div>
               
-              {payment.notes && (
-                <div className="text-sm text-foreground/60 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl p-4 mt-4 relative overflow-hidden group/note">
-                  <div className="absolute left-0 top-0 w-1 h-full bg-secondary/30 group-hover/note:bg-secondary transition-colors" />
-                  <span className="font-semibold text-foreground/80 block mb-1">Notes:</span>
-                  {payment.notes}
-                </div>
-              )}
             </div>
           ))}
         </div>

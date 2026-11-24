@@ -1,14 +1,16 @@
 import { format } from 'date-fns'
+import { formatCents } from '@barber-app/shared'
 import { Calendar as CalendarIcon, Clock } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import type { CalendarEvent } from './enhanced-calendar'
 
 interface EnhancedCalendarEventsPanelProps {
   selectedDate: Date
   events: CalendarEvent[]
   onEventClick: (event: CalendarEvent) => void
-  formatTime: (date: Date) => string
+  /** Start time of an event, in its barber's time zone. */
+  formatTime: (event: CalendarEvent) => string
 }
 
 export function EnhancedCalendarEventsPanel({
@@ -32,7 +34,6 @@ export function EnhancedCalendarEventsPanel({
             const eventEnd = new Date(event.end)
             const now = new Date()
             const isPast = eventEnd < now
-            const isUpcoming = new Date(event.start) > now
             const isMissed = event.extendedProps.status === 'cancelled'
 
             return (
@@ -58,16 +59,16 @@ export function EnhancedCalendarEventsPanel({
                     <h4 className="text-foreground font-bold text-base mb-1 tracking-tight group-hover/item:text-secondary transition-colors duration-300">
                       {event.extendedProps.serviceName}
                     </h4>
-                    <p className="text-foreground/50 text-xs mb-3 font-medium italic">
+                    <p className="text-muted-foreground text-xs mb-3 font-medium">
                       {event.extendedProps.clientName}
                     </p>
                     <div
                       className={cn(
                         'flex items-center text-xs',
                         isMissed
-                          ? 'text-red-400'
+                          ? 'text-red-600 dark:text-red-400'
                           : isPast
-                            ? 'text-green-400'
+                            ? 'text-green-700 dark:text-green-400'
                             : 'text-secondary',
                       )}
                     >
@@ -75,14 +76,14 @@ export function EnhancedCalendarEventsPanel({
                         className={cn(
                           'w-3 h-3 mr-1',
                           isMissed
-                            ? 'text-red-400'
+                            ? 'text-red-600 dark:text-red-400'
                             : isPast
-                              ? 'text-green-400'
+                              ? 'text-green-700 dark:text-green-400'
                               : 'text-secondary',
                         )}
                       />
                       <span className="font-medium">
-                        {formatTime(new Date(event.start))}
+                        {formatTime(event)}
                       </span>
                     </div>
                   </div>
@@ -92,13 +93,13 @@ export function EnhancedCalendarEventsPanel({
                       className={cn(
                         'text-xs font-semibold',
                         isMissed
-                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          ? 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
                           : isPast
-                            ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                            ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30'
                             : 'bg-secondary/20 text-secondary border-secondary/30',
                       )}
                     >
-                      ${event.extendedProps.basePrice}
+                      {formatCents(Math.round(event.extendedProps.price * 100))}
                     </Badge>
                   </div>
                 </div>
@@ -111,7 +112,7 @@ export function EnhancedCalendarEventsPanel({
               <CalendarIcon className="w-12 h-12 text-foreground" />
             </div>
             <p className="text-foreground font-medium italic text-sm">
-              No events scheduled for this date
+              No appointments on this day
             </p>
           </div>
         )}

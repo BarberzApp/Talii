@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import SettingsPage from '@/pages/SettingsPage';
 
 // Mock twrnc
@@ -10,30 +10,41 @@ jest.mock('twrnc', () => {
 });
 
 // Mock dependencies
-jest.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({
+// Stable references: SettingsPage re-fetches when `user` changes identity, so a fresh object per render loops forever.
+jest.mock('@/hooks/useAuth', () => {
+  const value = {
     user: { id: 'test-user', email: 'test@example.com' },
     userProfile: { name: 'Test User', role: 'client' },
     logout: jest.fn(),
-  }),
-}));
+  };
+  return { useAuth: () => value };
+});
 
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn((table) => ({
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ 
-        data: { id: 'test-user', name: 'Test User', email: 'test@example.com' }, 
-        error: null 
+jest.mock('@/lib/api', () => ({
+  api: {
+    me: {
+      get: jest.fn().mockResolvedValue({
+        user: { id: 'test-user', email: 'test@example.com' },
+        profile: { id: 'test-user', role: 'client', name: 'Test User', email: 'test@example.com' },
+        barber: null,
       }),
-    })),
+      delete: jest.fn(),
+    },
   },
+  errorMessage: (_e: unknown, fallback: string) => fallback,
+  hasErrorCode: () => false,
 }));
 
+jest.mock('@/lib/stripeConnect', () => ({
+  fetchConnectStatus: jest.fn().mockResolvedValue(null),
+  isStripeReady: () => false,
+}));
+
+const mockReset = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     navigate: jest.fn(),
+    reset: mockReset,
   }),
 }));
 
@@ -50,6 +61,11 @@ jest.mock('lucide-react-native', () => ({
   LogOut: 'LogOut',
   CheckCircle: 'CheckCircle',
   RefreshCw: 'RefreshCw',
+  FileText: 'FileText',
+  Shield: 'Shield',
+  Sun: 'Sun',
+  Moon: 'Moon',
+  Smartphone: 'Smartphone',
 }));
 
 // Mock settings components
@@ -99,16 +115,27 @@ describe('SettingsPage - Basic Tests', () => {
     }).not.toThrow();
   });
 
-  it('should use useAuth hook', () => {
-    // If component renders without error, useAuth is working
+  it('loads settings from GET /api/me', async () => {
+    const { api } = require('@/lib/api');
     render(<SettingsPage />);
-    expect(true).toBe(true);
+    await waitFor(() => expect(api.me.get).toHaveBeenCalled());
   });
 
-  it('should accept navigation prop', () => {
-    // useNavigation is mocked, component should use it
-    render(<SettingsPage />);
-    expect(true).toBe(true);
+  it('deletes the account with DELETE /api/me only after YES is typed', async () => {
+    const { api } = require('@/lib/api');
+    api.me.delete.mockResolvedValue({ deleted: true, cancelledBookings: [], removedFiles: 0, signInBlocked: true });
+    const screen = render(<SettingsPage />);
+
+    fireEvent.press(await screen.findByText('Delete My Account'));
+    const confirm = screen.getByPlaceholderText('Type YES to confirm');
+    fireEvent.changeText(confirm, 'NO');
+    fireEvent.press(screen.getByText('Confirm Delete'));
+    expect(api.me.delete).not.toHaveBeenCalled();
+
+    fireEvent.changeText(confirm, 'YES');
+    fireEvent.press(screen.getByText('Confirm Delete'));
+    await waitFor(() => expect(api.me.delete).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Login' }] }));
   });
 });
 

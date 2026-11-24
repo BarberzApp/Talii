@@ -5,9 +5,31 @@ import dotenv from 'dotenv'
 // Load env from repo root (../../.env) so existing local setups keep working.
 dotenv.config({ path: new URL('../../.env', import.meta.url) })
 
+// User uploads (avatars, covers, portfolio) are served from Supabase Storage's public
+// buckets. Derive the allowed origin from the same env var the app uses, so the local
+// stack (http://127.0.0.1:54321) and hosted projects (https://<ref>.supabase.co) both work.
+function supabaseImagePatterns() {
+  try {
+    const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '')
+    return [
+      {
+        protocol: url.protocol.replace(':', ''),
+        hostname: url.hostname,
+        ...(url.port ? { port: url.port } : {}),
+        pathname: '/storage/v1/object/public/**',
+      },
+    ]
+  } catch {
+    return []
+  }
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Optional separate build folder (e.g. NEXT_DIST_DIR=.next-local) so two dev
+  // servers can run from this directory at once. Defaults to .next.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   images: {
     domains: [
       'localhost',
@@ -16,18 +38,15 @@ const nextConfig = {
       'avatars.githubusercontent.com',
       'images.unsplash.com'
     ],
+    remotePatterns: supabaseImagePatterns(),
   },
+  // `next build` fails on type or lint errors.
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has TypeScript errors.
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
-  // Copy service worker to public directory during build
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

@@ -1,21 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { StarRating } from "@/shared/components/ui/StarRating";
-import { 
-  CheckCircle, 
-  XCircle, 
-  Edit, 
-  Eye, 
-  Loader2,
-  AlertTriangle,
-  Shield
+import {
+  CheckCircle,
+  XCircle,
+  Edit, Loader2, Shield
 } from "lucide-react";
 import { useToast } from "@/shared/components/ui/use-toast";
-import { supabase } from "@/shared/lib/supabase";
-import { sanitizeContent } from "@/shared/lib/contentModeration";
+import { api, errorMessage } from "@/shared/lib/api";
+import { sanitizeContent } from "@barber-app/shared";
 import { logger } from "@/shared/lib/logger";
 
 interface Review {
@@ -23,7 +19,6 @@ interface Review {
   rating: number;
   comment: string;
   is_public: boolean;
-  is_moderated: boolean;
   created_at: string;
   client: {
     name: string;
@@ -42,136 +37,71 @@ export function ReviewModeration() {
   const [editingComment, setEditingComment] = useState("");
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchPendingReviews();
-  }, []);
-
-  const fetchPendingReviews = async () => {
+  /**
+   * GET /api/admin/reviews. Reviews are public as soon as they pass the word
+   * filter; moderation is hiding or restoring them (PATCH /api/admin/reviews/:id).
+   */
+  const fetchPendingReviews = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('reviews')
-        .select(`
-          id,
-          rating,
-          comment,
-          is_public,
-          is_moderated,
-          created_at,
-          client:profiles!client_id(
-            name,
-            avatar_url
-          ),
-          barber:profiles!barber_id(
-            name,
-            avatar_url
-          )
-        `)
-        .eq('is_moderated', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setReviews((data || []) as unknown as Review[]);
+      const { reviews: rows } = await api.admin.listReviews({ limit: 100 });
+      setReviews(
+        rows.map((r) => ({
+          id: r.id,
+          rating: r.rating,
+          comment: r.comment ?? '',
+          is_public: !r.is_hidden,
+          created_at: r.created_at,
+          client: { name: r.reviewer_username ?? 'Deleted user' },
+          barber: { name: r.barber_business_name ?? 'Barber' },
+        }))
+      );
     } catch (error) {
-      logger.error('Error fetching pending reviews', error);
+      logger.error('Error fetching reviews', error);
       toast({
         title: "Error",
-        description: "Failed to load pending reviews",
+        description: errorMessage(error, "Failed to load reviews"),
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const approveReview = async (reviewId: string) => {
+  useEffect(() => {
+    fetchPendingReviews();
+  }, [fetchPendingReviews]);
+
+  const setHidden = async (reviewId: string, hidden: boolean) => {
     try {
-      const { error } = await supabase
-        .from('reviews')
-        .update({ 
-          is_moderated: true,
-          is_public: true 
-        })
-        .eq('id', reviewId);
-
-      if (error) throw error;
-
+      await api.admin.setReviewHidden(reviewId, hidden);
+      setReviews((prev) => prev.map((r) => (r.id === reviewId ? { ...r, is_public: !hidden } : r)));
       toast({
-        title: "Review Approved",
-        description: "The review has been approved and is now public",
+        title: hidden ? "Review Hidden" : "Review Visible",
+        description: hidden ? "The review is no longer public" : "The review is public",
       });
-
-      // Remove from list
-      setReviews(reviews.filter(r => r.id !== reviewId));
     } catch (error) {
-      logger.error('Error approving review', error);
+      logger.error('Error updating review visibility', error);
       toast({
         title: "Error",
-        description: "Failed to approve review",
+        description: errorMessage(error, "Failed to update review"),
         variant: "destructive",
       });
     }
   };
 
-  const rejectReview = async (reviewId: string) => {
-    try {
-      const { error } = await supabase
-        .from('reviews')
-        .update({ 
-          is_moderated: true,
-          is_public: false 
-        })
-        .eq('id', reviewId);
+  const approveReview = (reviewId: string) => setHidden(reviewId, false);
+  const rejectReview = (reviewId: string) => setHidden(reviewId, true);
 
-      if (error) throw error;
-
-      toast({
-        title: "Review Rejected",
-        description: "The review has been rejected and is not public",
-      });
-
-      // Remove from list
-      setReviews(reviews.filter(r => r.id !== reviewId));
-    } catch (error) {
-      logger.error('Error rejecting review', error);
-      toast({
-        title: "Error",
-        description: "Failed to reject review",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const editReview = async (reviewId: string, newComment: string) => {
-    try {
-      const { error } = await supabase
-        .from('reviews')
-        .update({ 
-          comment: newComment,
-          is_moderated: true,
-          is_public: true 
-        })
-        .eq('id', reviewId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Review Updated",
-        description: "The review has been edited and approved",
-      });
-
-      // Remove from list
-      setReviews(reviews.filter(r => r.id !== reviewId));
-      setSelectedReview(null);
-      setEditingComment("");
-    } catch (error) {
-      logger.error('Error editing review', error);
-      toast({
-        title: "Error",
-        description: "Failed to edit review",
-        variant: "destructive",
-      });
-    }
+  /** The API cannot rewrite a client's words; hide the review instead. */
+  const editReview = async (reviewId: string, _newComment: string) => {
+    toast({
+      title: "Editing not supported",
+      description: "Reviews cannot be edited by admins. The review was hidden instead.",
+    });
+    await setHidden(reviewId, true);
+    setSelectedReview(null);
+    setEditingComment("");
   };
 
   const sanitizeAndEdit = async (reviewId: string) => {
@@ -196,7 +126,7 @@ export function ReviewModeration() {
           <p className="text-white/60">Manage and moderate user reviews</p>
         </div>
         <Badge variant="secondary" className="text-sm">
-          {reviews.length} pending reviews
+          {reviews.filter((r) => r.is_public).length} visible / {reviews.length} reviews
         </Badge>
       </div>
 

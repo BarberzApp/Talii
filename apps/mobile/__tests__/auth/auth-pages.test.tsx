@@ -78,8 +78,7 @@ describe('LoginPage', () => {
       register: jest.fn(),
       logout: jest.fn(),
       updateProfile: jest.fn(),
-      addToFavorites: jest.fn(),
-      removeFromFavorites: jest.fn(),
+      refreshProfile: jest.fn(),
     })
   })
 
@@ -97,13 +96,6 @@ describe('LoginPage', () => {
     expect(root).toBeTruthy()
   })
 
-  it('should use authentication', () => {
-    const { root } = render(<LoginPage />)
-    
-    // Just verify it renders and uses auth
-    expect(root).toBeTruthy()
-    expect(mockUseAuth).toHaveBeenCalled()
-  })
 })
 
 describe('SignUpPage', () => {
@@ -116,11 +108,10 @@ describe('SignUpPage', () => {
       userProfile: null,
       loading: false,
       login: jest.fn(),
-      register: jest.fn().mockResolvedValue(true),
+      register: jest.fn().mockResolvedValue({ ok: true }),
       logout: jest.fn(),
       updateProfile: jest.fn(),
-      addToFavorites: jest.fn(),
-      removeFromFavorites: jest.fn(),
+      refreshProfile: jest.fn(),
     })
   })
 

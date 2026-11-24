@@ -18,7 +18,6 @@ export const linking: LinkingOptions<any> = {
         screens: {
           Browse: 'browse',
           Calendar: 'calendar',
-          // Cuts: 'reels', // Commented out - TikTok-style feed disabled
           Profile: 'profile',
           Settings: 'settings',
         },
@@ -50,59 +49,6 @@ export const linking: LinkingOptions<any> = {
     };
   },
 };
-
-// Deep link URL patterns aligned with Next.js routes
-export const deepLinkPatterns = {
-  // Auth patterns
-  login: 'bocm://login',
-  register: 'bocm://register',
-  confirm: 'bocm://confirm',
-  terms: 'bocm://terms',
-  
-  // Main app patterns
-  browse: 'bocm://browse',
-  calendar: 'bocm://calendar',
-  // reels: 'bocm://reels', // Commented out - TikTok-style feed disabled
-  profile: 'bocm://profile',
-  settings: 'bocm://settings',
-  
-  // Booking patterns
-  book: (barberId?: string) => barberId ? `bocm://book/${barberId}` : 'bocm://book',
-  bookingSuccess: 'bocm://booking/success',
-  
-  // Barber patterns
-  barberOnboarding: 'bocm://barber/onboarding',
-  
-  // Admin patterns
-  superAdmin: 'bocm://super-admin',
-  
-  // Web app equivalent patterns (for cross-platform linking)
-  webBrowse: 'https://bocm.app/browse',
-  webCalendar: 'https://bocm.app/calendar',
-  // webReels: 'https://bocm.app/reels', // Commented out - TikTok-style feed disabled
-  webProfile: 'https://bocm.app/profile',
-  webSettings: 'https://bocm.app/settings',
-  webBook: (barberId?: string) => barberId ? `https://bocm.app/book/${barberId}` : 'https://bocm.app/book',
-  webBarberOnboarding: 'https://bocm.app/barber/onboarding',
-  webSuperAdmin: 'https://bocm.app/super-admin',
-};
-
-// Function to generate deep link URLs
-export function generateDeepLink(route: string, params?: Record<string, string>): string {
-  const baseUrl = deepLinkPatterns[route as keyof typeof deepLinkPatterns];
-  
-  if (typeof baseUrl === 'function') {
-    return baseUrl(params?.barberId);
-  }
-  
-  if (baseUrl) {
-    return baseUrl;
-  }
-  
-  // Fallback to generic pattern
-  const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
-  return `bocm://${route}${queryString}`;
-}
 
 // Function to handle incoming deep links
 export function handleDeepLink(url: string) {
@@ -145,7 +91,6 @@ export function handleDeepLink(url: string) {
     '/terms': 'Terms',
     '/browse': 'Browse',
     '/calendar': 'Calendar',
-    // '/reels': 'Cuts', // Commented out - TikTok-style feed disabled
     '/profile': 'Profile',
     '/settings': 'Settings',
     '/book': 'BookingCalendar',
@@ -163,14 +108,3 @@ export function handleDeepLink(url: string) {
     url,
   };
 }
-
-// Function to share deep links
-export function shareDeepLink(route: string, params?: Record<string, string>) {
-  const deepLink = generateDeepLink(route, params);
-  
-  // In a real implementation, you would use a sharing library
-  // For now, we'll just log the deep link
-  logger.log('📤 Sharing deep link:', deepLink);
-  
-  return deepLink;
-} 

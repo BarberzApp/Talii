@@ -103,7 +103,7 @@ export function useLoading() {
 }
 
 // Hook for automatic loading state management
-export function useAutoLoading<T extends any[], R>(
+export function useAutoLoading<T extends unknown[], R>(
   asyncFunction: (...args: T) => Promise<R>,
   loadingMessage: string = 'Loading...',
   isGlobal: boolean = false

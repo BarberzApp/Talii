@@ -4,7 +4,7 @@ import { Calendar as CalendarIcon, Clock } from 'lucide-react-native';
 import { format } from 'date-fns';
 import tw from 'twrnc';
 import { useTheme } from '../../../shared/components/theme';
-import { logger } from '../../../shared/lib/logger';
+import { formatCents } from '@barber-app/shared';
 import type { CalendarEvent } from '../../../shared/lib/calendar';
 
 type Props = {
@@ -13,7 +13,8 @@ type Props = {
   userRole: 'client' | 'barber' | null;
   barberViewMode: 'appointments' | 'bookings';
   onEventClick: (event: CalendarEvent) => void;
-  formatTime: (date: Date) => string;
+  /** Formats an instant in the given (barber's) time zone. */
+  formatTime: (date: Date, timeZone: string) => string;
 };
 
 export default function EventsPanel({
@@ -59,7 +60,7 @@ export default function EventsPanel({
               const eventEnd = new Date(event.end);
               const now = new Date();
               const isPast = eventEnd < now;
-              const isMissed = event.extendedProps.status === 'cancelled';
+              const isMissed = event.extendedProps.status === 'cancelled' || event.extendedProps.status === 'no_show';
 
               return (
                 <TouchableOpacity
@@ -81,10 +82,10 @@ export default function EventsPanel({
                 >
                   <View style={tw`flex-row items-center justify-between`}>
                     <View style={tw`flex-1`}>
-                      <Text style={[tw`font-semibold text-sm mb-1`, { color: colors.foreground }]}>
+                      <Text style={[tw`font-semibold text-sm mb-1`, { color: colors.foreground }]} numberOfLines={1}>
                         {event.extendedProps.serviceName}
                       </Text>
-                      <Text style={[tw`text-xs mb-2`, { color: colors.mutedForeground }]}>
+                      <Text style={[tw`text-xs mb-2`, { color: colors.mutedForeground }]} numberOfLines={1}>
                         {event.extendedProps.clientName}
                       </Text>
                       <View style={tw`flex-row items-center`}>
@@ -92,7 +93,7 @@ export default function EventsPanel({
                         <Text style={[tw`text-xs font-medium`, {
                           color: isMissed ? colors.destructive : isPast ? colors.success : colors.primary
                         }]}>
-                          {formatTime(new Date(event.start))}
+                          {formatTime(new Date(event.start), event.extendedProps.timeZone)}
                         </Text>
                       </View>
                     </View>
@@ -112,29 +113,12 @@ export default function EventsPanel({
                       <Text style={[tw`text-xs font-semibold`, {
                         color: isMissed ? colors.destructive : isPast ? colors.success : colors.primary
                       }]}>
-                        ${(() => {
-                          if (userRole === 'client') {
-                            let basePrice = event.extendedProps.basePrice || 0;
-                            const addons = event.extendedProps.addonTotal || 0;
-                            let platformFee = event.extendedProps.platformFee || 0;
-                            const storedTotal = event.extendedProps.totalCharged || 0;
-
-                            if (basePrice > 0) {
-                              const recalculatedTotal = basePrice + addons + platformFee;
-                              return recalculatedTotal.toFixed(2);
-                            } else {
-                              logger.warn('Calendar event missing basePrice, using stored totalCharged', {
-                                eventId: event.id,
-                                storedTotal,
-                                platformFee,
-                                addons
-                              });
-                              return storedTotal.toFixed(2);
-                            }
-                          } else {
-                            return event.extendedProps.barberPayout.toFixed(2);
-                          }
-                        })()}
+                        {formatCents(
+                          // Service and add-ons are paid at the appointment; the client also paid the booking fee.
+                          event.extendedProps.servicePriceCents +
+                            event.extendedProps.addonTotalCents +
+                            (userRole === 'client' || barberViewMode === 'bookings' ? event.extendedProps.bookingFeeCents : 0)
+                        )}
                       </Text>
                     </View>
                   </View>

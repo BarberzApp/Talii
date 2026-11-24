@@ -2,11 +2,9 @@ import React from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Shield } from 'lucide-react-native';
 import { useTheme } from '../shared/components/theme';
-import { theme } from '../shared/lib/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 
 const privacyPolicy = `TALII PRIVACY POLICY

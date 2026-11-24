@@ -3,7 +3,6 @@ import { logger } from './logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 // Check for required environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -42,23 +41,5 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   }
 })
 
-// Create a Supabase client with the service role key for admin operations
-// In production, this client MUST have the service role key to bypass RLS.
-// We throw an error if it's missing to avoid silent failures of admin tasks.
-if (!supabaseServiceKey && process.env.NODE_ENV === 'production') {
-  logger.error('CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing in production!')
-  // We don't throw here to avoid crashing the whole app, but admin calls will fail with the fallback anon key.
-}
-
-export const supabaseAdmin = createClient(
-  supabaseUrl || '', 
-  supabaseServiceKey || supabaseAnonKey || '', 
-  {
-    auth: {
-      persistSession: false, // Don't persist session for admin client
-      autoRefreshToken: false,
-      detectSessionInUrl: false
-    }
-  }
-)
- 
+// Server code uses getSupabaseAdmin() from '@/server/clients' (service role); there is no
+// service-role client in this browser-safe module.

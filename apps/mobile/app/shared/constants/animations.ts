@@ -15,10 +15,3 @@ export const SPRING_CONFIG = {
   LOOSE: { tension: 80, friction: 18 }, // Faster
   BOUNCE: { tension: 400, friction: 8 }, // Faster bounce
 };
-
-export const EASING = {
-  EASE_IN_OUT: 'easeInOut',
-  EASE_OUT: 'easeOut',
-  EASE_IN: 'easeIn',
-  LINEAR: 'linear',
-};

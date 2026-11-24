@@ -20,6 +20,7 @@ import tw from 'twrnc';
 import { useTheme } from './theme/ThemeProvider';
 import { reportingService } from '../services/reportingService';
 import { logger } from '../lib/logger';
+import { errorMessage } from '../lib/api';
 import type { ReportType, ReportReason } from '../types/reporting.types';
 
 interface ReportContentModalProps {
@@ -27,6 +28,7 @@ interface ReportContentModalProps {
   onClose: () => void;
   contentType: ReportType;
   contentId: string;
+  /** @deprecated Ignored: the server derives the reported user. */
   reportedUserId?: string;
   contentDescription?: string; // For display purposes (e.g., user name, review preview)
 }
@@ -84,7 +86,6 @@ export function ReportContentModal({
   onClose,
   contentType,
   contentId,
-  reportedUserId,
   contentDescription,
 }: ReportContentModalProps) {
   const { colors } = useTheme();
@@ -109,7 +110,6 @@ export function ReportContentModal({
       await reportingService.submitReport({
         contentType,
         contentId,
-        reportedUserId,
         reason: selectedReason,
         description: description.trim() || undefined,
       });
@@ -127,12 +127,12 @@ export function ReportContentModal({
           },
         ]
       );
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Error submitting report:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Error',
-        error.message || 'Failed to submit report. Please try again later.'
+        errorMessage(error, 'Failed to submit report. Please try again later.')
       );
     } finally {
       setIsSubmitting(false);
@@ -152,12 +152,8 @@ export function ReportContentModal({
         return 'this profile';
       case 'review':
         return 'this review';
-      case 'video':
-        return 'this video';
       case 'image':
         return 'this image';
-      case 'comment':
-        return 'this comment';
       default:
         return 'this content';
     }

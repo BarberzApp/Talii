@@ -9,8 +9,8 @@
  */
 
 import { theme } from '../theme';
+import { formatCents, formatClockTime, localDateInTimeZone, type BookingListItem } from '@barber-app/shared';
 import type { CalendarEvent } from './calendarDataService';
-import { getBarberBookingDetails, getClientBookingDetails } from '../bookingDetailsHelper';
 
 /**
  * Get color scheme for booking status
@@ -42,7 +42,7 @@ export function getStatusColors(status: string): {
         borderColor: theme.colors.warning || '#ef4444',
         textColor: '#FFFFFF'
       };
-    case 'missed':
+    case 'no_show':
       return {
         backgroundColor: '#6b7280',
         borderColor: '#6b7280',
@@ -58,98 +58,48 @@ export function getStatusColors(status: string): {
 }
 
 /**
- * Transform booking data to calendar event
- * 
- * @param booking - Raw booking data
- * @param service - Service details
- * @param client - Client profile (optional)
- * @param barber - Barber profile (optional)
- * @param addonTotal - Total addon cost
- * @param addonNames - Array of addon names
+ * Transform a booking from GET /api/bookings into a calendar event.
+ *
+ * @param booking - Booking with its service, add-ons, barber and client
  * @param userRole - Current user's role
  * @param barberViewMode - Barber's view mode (appointments or bookings)
- * @returns Calendar event object
  */
 export function transformBookingToEvent(
-  booking: any,
-  service: any,
-  client: any | null,
-  barber: any | null,
-  addonTotal: number,
-  addonNames: string[],
+  booking: BookingListItem,
   userRole: 'client' | 'barber',
   barberViewMode?: 'appointments' | 'bookings'
 ): CalendarEvent {
-  const startDate = new Date(booking.date);
-  const endDate = new Date(startDate.getTime() + (service?.duration || 60) * 60000);
+  const serviceName = booking.service?.name || 'Service';
+  const barberName =
+    booking.barber?.business_name || booking.barber?.profile?.name || booking.barber?.profile?.username || 'Barber';
+  const clientName =
+    booking.client?.name || booking.client?.username || booking.customer_name || (booking.source === 'manual' ? 'Walk-in' : 'Client');
 
-  // Create title based on role and view mode
-  let title = '';
-  if (userRole === 'client') {
-    title = `${service?.name || 'Service'} with ${barber?.name || 'Barber'}`;
-  } else if (userRole === 'barber') {
-    if (barberViewMode === 'appointments') {
-      title = `${service?.name || 'Service'} - ${client?.name || booking.guest_name || 'Guest'}`;
-    } else {
-      title = `${service?.name || 'Service'} with ${barber?.name || 'Barber'}`;
-    }
-  }
-
-  // Use stored addon total for consistency with booking details
-  const storedAddonTotal = typeof booking.addon_total === 'number' ? booking.addon_total : addonTotal;
-
-  // Use historical service price from booking (not current service price)
-  const historicalServicePrice = booking.service_price || 0;
-
-  // Compute monetary fields using role-specific helpers
-  const isClientView =
-    userRole === 'client' || (userRole === 'barber' && barberViewMode === 'bookings');
-
-  const breakdown = isClientView
-    ? getClientBookingDetails(
-        {
-          price: booking.price,
-          platform_fee: booking.platform_fee,
-          barber_payout: booking.barber_payout,
-          addon_total: storedAddonTotal,
-        },
-        historicalServicePrice
-      )
-    : getBarberBookingDetails(
-        {
-          price: booking.price,
-          platform_fee: booking.platform_fee,
-          barber_payout: booking.barber_payout,
-          addon_total: storedAddonTotal,
-        },
-        historicalServicePrice
-      );
+  const asBarber = userRole === 'barber' && barberViewMode !== 'bookings';
+  const title = asBarber ? `${serviceName} - ${clientName}` : `${serviceName} with ${barberName}`;
+  const colors = getStatusColors(booking.status);
 
   return {
     id: booking.id,
     title,
-    start: startDate.toISOString(),
-    end: endDate.toISOString(),
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-    textColor: '#FFFFFF',
+    start: booking.starts_at,
+    end: booking.ends_at,
+    ...colors,
     extendedProps: {
       status: booking.status,
-      serviceName: service?.name || 'Unknown Service',
-      clientName: client?.name || booking.guest_name || 'Guest',
-      barberName: barber?.name || 'Unknown Barber',
+      paymentStatus: booking.payment_status,
+      source: booking.source,
+      serviceName,
+      clientName,
+      barberName,
       barberId: booking.barber_id,
-      price: breakdown.total,
-      basePrice: breakdown.servicePrice,
-      addonTotal: breakdown.addons,
-      platformFee: breakdown.platformFee,
-      barberPayout: breakdown.barberPayout || 0,
-      totalCharged: breakdown.total,
-      addonNames,
-      isGuest: !client,
-      guestEmail: booking.guest_email || '',
-      guestPhone: booking.guest_phone || ''
-    }
+      timeZone: booking.barber?.timezone || 'America/New_York',
+      servicePriceCents: booking.service_price_cents,
+      addonTotalCents: booking.addon_total_cents,
+      bookingFeeCents: booking.booking_fee_cents,
+      addonNames: booking.addons.map((addon) => addon.name),
+      notes: booking.notes,
+    },
   };
 }
 
@@ -168,44 +118,46 @@ export function filterEventsByStatus(events: CalendarEvent[], status: string): C
 }
 
 /**
- * Get events for a specific date
- * 
- * @param events - Array of calendar events
- * @param date - Date to filter by
- * @returns Events on the specified date
+ * The calendar day a grid cell stands for ("YYYY-MM-DD" on the device calendar;
+ * grid dates are local midnights).
+ */
+export function dayKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/** A device-local Date for a calendar day "YYYY-MM-DD" (for the grid and date pickers). */
+export function dateFromDayKey(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** The day an event falls on in the barber's time zone, matching the times shown. */
+export function eventDayKey(event: CalendarEvent): string {
+  return localDateInTimeZone(event.start, event.extendedProps.timeZone);
+}
+
+/**
+ * Get events for a calendar day (grouped in each booking's barber time zone).
  */
 export function getEventsForDate(events: CalendarEvent[], date: Date): CalendarEvent[] {
-  const dateStr = date.toISOString().split('T')[0];
-  return events.filter(event => {
-    const eventDateStr = new Date(event.start).toISOString().split('T')[0];
-    return eventDateStr === dateStr;
-  });
+  const key = dayKey(date);
+  return events.filter(event => eventDayKey(event) === key);
 }
 
 /**
- * Format time slot for display (24-hour to 12-hour)
- * 
- * @param time - Time in HH:mm format
- * @returns Formatted time (e.g., "2:30 PM")
+ * Format a local "HH:MM" time for display (e.g. "2:30 PM").
  */
 export function formatTimeSlot(time: string): string {
-  const [hours, minutes] = time.split(':');
-  const hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${minutes} ${ampm}`;
+  return formatClockTime(time);
 }
 
 /**
- * Calculate total revenue from events
- * 
- * @param events - Array of calendar events
- * @returns Total revenue
+ * Service revenue (service + add-ons, paid at the appointment) of completed events, in cents.
  */
 export function calculateTotalRevenue(events: CalendarEvent[]): number {
   return events.reduce((total, event) => {
-    if (event.extendedProps.status !== 'cancelled') {
-      return total + event.extendedProps.price;
+    if (event.extendedProps.status === 'completed') {
+      return total + event.extendedProps.servicePriceCents + event.extendedProps.addonTotalCents;
     }
     return total;
   }, 0);
@@ -238,33 +190,15 @@ export function getPastEvents(events: CalendarEvent[]): CalendarEvent[] {
 }
 
 /**
- * Group events by date
- * 
- * @param events - Array of calendar events
- * @returns Map of date string to events array
+ * Group events by their day in the barber's time zone ("YYYY-MM-DD").
  */
 export function groupEventsByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
   const grouped = new Map<string, CalendarEvent[]>();
-  
   events.forEach(event => {
-    const dateStr = new Date(event.start).toISOString().split('T')[0];
-    const existing = grouped.get(dateStr) || [];
-    existing.push(event);
-    grouped.set(dateStr, existing);
+    const key = eventDayKey(event);
+    grouped.set(key, [...(grouped.get(key) || []), event]);
   });
-  
   return grouped;
-}
-
-/**
- * Check if a date has any events
- * 
- * @param events - Array of calendar events
- * @param date - Date to check
- * @returns True if date has events
- */
-export function hasEventsOnDate(events: CalendarEvent[], date: Date): boolean {
-  return getEventsForDate(events, date).length > 0;
 }
 
 /**
@@ -278,7 +212,7 @@ export function getEventCountsByStatus(events: CalendarEvent[]): Record<string, 
     confirmed: 0,
     completed: 0,
     cancelled: 0,
-    missed: 0
+    no_show: 0
   };
   
   events.forEach(event => {
@@ -292,117 +226,57 @@ export function getEventCountsByStatus(events: CalendarEvent[]): Record<string, 
 }
 
 /**
- * Calculate completion rate
- * 
- * @param events - Array of calendar events
- * @returns Completion rate as percentage (0-100)
- */
-export function calculateCompletionRate(events: CalendarEvent[]): number {
-  const pastEvents = getPastEvents(events);
-  if (pastEvents.length === 0) return 0;
-  
-  const completedCount = pastEvents.filter(
-    e => e.extendedProps.status === 'completed'
-  ).length;
-  
-  return Math.round((completedCount / pastEvents.length) * 100);
-}
-
-/**
  * Validate manual appointment data
- * 
- * @param data - Appointment form data
+ *
+ * @param data - Appointment form data (startsAt is the chosen slot)
  * @returns Object with isValid and error message
  */
 export function validateManualAppointment(data: {
   clientName: string;
   serviceId: string;
-  time: string;
-  price: string;
+  startsAt: string;
 }): { isValid: boolean; error?: string } {
   if (!data.clientName.trim()) {
     return { isValid: false, error: 'Client name is required' };
   }
-  
+
   if (!data.serviceId) {
     return { isValid: false, error: 'Please select a service' };
   }
-  
-  if (!data.time) {
+
+  if (!data.startsAt) {
     return { isValid: false, error: 'Please select a time slot' };
   }
-  
-  const price = parseFloat(data.price);
-  if (isNaN(price) || price <= 0) {
-    return { isValid: false, error: 'Please enter a valid price' };
-  }
-  
+
   return { isValid: true };
 }
 
 /**
- * Format currency for display
- * 
- * @param amount - Amount in dollars
- * @returns Formatted currency string (e.g., "$45.00")
+ * Format cents for display (e.g. 4500 -> "$45.00")
  */
-export function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(2)}`;
+export function formatCurrency(cents: number): string {
+  return formatCents(cents);
 }
 
 /**
- * Check if booking can be cancelled
- * 
- * @param booking - Calendar event
- * @returns True if booking can be cancelled
+ * Check if booking can be cancelled: pending or confirmed, before its start
+ * (the server refuses later cancellations).
  */
-export function canCancelBooking(booking: CalendarEvent): boolean {
-  const startTime = new Date(booking.start);
-  const now = new Date();
+export function canCancelBooking(booking: CalendarEvent, now: Date = new Date()): boolean {
   const status = booking.extendedProps.status;
-  
-  // Can cancel if:
-  // 1. Not already cancelled or completed
-  // 2. Booking is in the future
-  return (
-    status !== 'cancelled' &&
-    status !== 'completed' &&
-    startTime > now
-  );
+  return (status === 'pending' || status === 'confirmed') && new Date(booking.start) > now;
 }
 
 /**
- * Check if booking can be marked as completed
- * 
- * @param booking - Calendar event
- * @returns True if booking can be marked completed
+ * Check if booking can be marked as completed: confirmed and started.
  */
-export function canMarkCompleted(booking: CalendarEvent): boolean {
-  const status = booking.extendedProps.status;
-  
-  // Can mark completed if not already completed or cancelled
-  return status !== 'completed' && status !== 'cancelled';
+export function canMarkCompleted(booking: CalendarEvent, now: Date = new Date()): boolean {
+  return booking.extendedProps.status === 'confirmed' && new Date(booking.start) <= now;
 }
 
 /**
- * Check if booking can be marked as missed
- * 
- * @param booking - Calendar event
- * @returns True if booking can be marked missed
+ * Check if booking can be marked as a no-show: confirmed and started.
  */
-export function canMarkMissed(booking: CalendarEvent): boolean {
-  const startTime = new Date(booking.start);
-  const now = new Date();
-  const status = booking.extendedProps.status;
-  
-  // Can mark missed if:
-  // 1. Not already completed, cancelled, or missed
-  // 2. Booking is in the past
-  return (
-    status !== 'completed' &&
-    status !== 'cancelled' &&
-    status !== 'missed' &&
-    startTime < now
-  );
+export function canMarkMissed(booking: CalendarEvent, now: Date = new Date()): boolean {
+  return booking.extendedProps.status === 'confirmed' && new Date(booking.start) <= now;
 }
-

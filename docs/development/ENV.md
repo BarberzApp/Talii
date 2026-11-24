@@ -35,7 +35,7 @@ This document details the environment variables required to run the Talii platfo
 ## 2. Server-Only Secrets
 
 > [!WARNING]
-> These keys must only be read in secure execution contexts (Next.js server-side, Supabase Edge Functions, or CI/CD).
+> These keys must only be read in secure execution contexts (Next.js server-side or CI/CD).
 > They must **never** have the `NEXT_PUBLIC_` or `EXPO_PUBLIC_` prefix.
 
 ### Stripe & Database Integrations
@@ -44,6 +44,7 @@ This document details the environment variables required to run the Talii platfo
 | :--- | :--- | :--- |
 | `STRIPE_SECRET_KEY` | Next.js API | Privileged Stripe operations (creating Intents, Transfers) |
 | `STRIPE_WEBHOOK_SECRET` | Next.js API | Validates authenticity of incoming Stripe webhook calls |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | Next.js API | Optional: signing secret of a separate Connect webhook endpoint (connected-account events such as `account.updated`) pointing at the same URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Next.js API / CI | Bypasses database Row Level Security (RLS) for gateway transactions |
 | `OPENAI_API_KEY` | Next.js API | Used for profile and review content moderation |
 
@@ -51,7 +52,8 @@ This document details the environment variables required to run the Talii platfo
 
 | Variable Name | Read By | Purpose / Context |
 | :--- | :--- | :--- |
-| `SLACK_WEBHOOK_URL` | Next.js API | Posts critical platform errors to Slack |
+| `SLACK_WEBHOOK_URL` | Next.js API | Optional. Incoming webhook `POST /api/support` posts support requests to; without it that route returns 503 |
+| `GOOGLE_MAPS_API_KEY` | Next.js API | Optional. Google Geocoding + Places for `GET /api/geocode` (signed-in users only) and the server-side geocoding of a barber's city/state in `PATCH /api/me`; without it `/api/geocode` returns 503 and listings are saved without coordinates. **In Google Cloud, restrict the key** to the Geocoding API and Places API (API restrictions; it is a server key, so no HTTP-referrer restriction) **and set a daily quota** on both APIs so a bug or abuse cannot run up an unbounded bill. |
 | `GMAIL_USER` | Next.js API | SMTP mail username for transactional emails |
 | `GMAIL_PASS` | Next.js API | SMTP app password |
 

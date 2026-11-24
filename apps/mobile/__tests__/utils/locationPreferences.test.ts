@@ -66,7 +66,7 @@ describe('locationPreferences', () => {
       
       await saveLocationPreferences(prefs);
       expect(mockedAsyncStorage.setItem).toHaveBeenCalledWith(
-        '@bocm_location_preferences',
+        '@talii_location_preferences',
         JSON.stringify(prefs)
       );
     });
@@ -87,7 +87,7 @@ describe('locationPreferences', () => {
       
       await setLocationEnabled(true);
       expect(mockedAsyncStorage.setItem).toHaveBeenCalledWith(
-        '@bocm_location_preferences',
+        '@talii_location_preferences',
         expect.stringContaining('"locationEnabled":true')
       );
     });
@@ -173,7 +173,7 @@ describe('locationPreferences', () => {
     it('should remove preferences from AsyncStorage', async () => {
       mockedAsyncStorage.removeItem.mockResolvedValue();
       await clearLocationPreferences();
-      expect(mockedAsyncStorage.removeItem).toHaveBeenCalledWith('@bocm_location_preferences');
+      expect(mockedAsyncStorage.removeItem).toHaveBeenCalledWith('@talii_location_preferences');
     });
   });
 });

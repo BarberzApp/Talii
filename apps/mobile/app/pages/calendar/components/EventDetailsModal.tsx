@@ -3,7 +3,9 @@ import { ActivityIndicator, Modal, Text, TouchableOpacity, View } from 'react-na
 import { Calendar, Clock, X } from 'lucide-react-native';
 import tw from 'twrnc';
 import { useTheme } from '../../../shared/components/theme';
+import { formatCents } from '@barber-app/shared';
 import type { CalendarEvent } from '../../../shared/lib/calendar';
+import { canCancelBooking, canMarkCompleted } from '../../../shared/lib/calendar/calendarUtils';
 
 type Props = {
   visible: boolean;
@@ -17,8 +19,9 @@ type Props = {
   onLeaveReview: () => void;
   isMarkingCompleted: boolean;
   isMarkingMissed: boolean;
-  formatDate: (date: Date) => string;
-  formatTime: (date: Date) => string;
+  /** Format an instant in the given (barber's) time zone. */
+  formatDate: (date: Date, timeZone: string) => string;
+  formatTime: (date: Date, timeZone: string) => string;
 };
 
 export default function EventDetailsModal({
@@ -106,7 +109,7 @@ export default function EventDetailsModal({
                     <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>Date</Text>
                   </View>
                   <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
-                    {formatDate(new Date(selectedEvent.start))}
+                    {formatDate(new Date(selectedEvent.start), selectedEvent.extendedProps.timeZone)}
                   </Text>
                 </View>
 
@@ -116,7 +119,7 @@ export default function EventDetailsModal({
                     <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>Time</Text>
                   </View>
                   <Text style={[tw`font-semibold`, { color: colors.foreground }]}>
-                    {formatTime(new Date(selectedEvent.start))}
+                    {formatTime(new Date(selectedEvent.start), selectedEvent.extendedProps.timeZone)}
                   </Text>
                 </View>
               </View>
@@ -132,90 +135,60 @@ export default function EventDetailsModal({
                     ? { backgroundColor: '#10b981', shadowColor: '#10b981', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
                     : selectedEvent.extendedProps.status === 'cancelled'
                     ? { backgroundColor: '#ef4444', shadowColor: '#ef4444', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
-                    : selectedEvent.extendedProps.status === 'missed'
+                    : selectedEvent.extendedProps.status === 'no_show'
                     ? { backgroundColor: '#f59e0b', shadowColor: '#f59e0b', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
                     : { backgroundColor: colors.primary, shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }
                 ]}>
                   <Text style={[tw`text-xs font-semibold capitalize`, { color: 'white' }]}>
-                    {selectedEvent.extendedProps.status}
+                    {selectedEvent.extendedProps.status === 'no_show' ? 'no-show' : selectedEvent.extendedProps.status}
                   </Text>
                 </View>
               </View>
 
-              {/* Pricing Section */}
+              {/* Pricing Section (integer cents stored on the booking) */}
               {(() => {
-                const breakdown = userRole === 'client'
-                  ? {
-                      servicePrice: selectedEvent.extendedProps.basePrice,
-                      addons: selectedEvent.extendedProps.addonTotal,
-                      platformFee: selectedEvent.extendedProps.platformFee,
-                      total: selectedEvent.extendedProps.totalCharged,
-                    }
-                  : {
-                      servicePrice: selectedEvent.extendedProps.basePrice,
-                      addons: selectedEvent.extendedProps.addonTotal,
-                      platformFee: selectedEvent.extendedProps.platformFee,
-                      total: selectedEvent.extendedProps.totalCharged,
-                      barberPayout: selectedEvent.extendedProps.barberPayout,
-                    };
-
+                const p = selectedEvent.extendedProps;
+                const clientView = userRole === 'client' || (userRole === 'barber' && barberViewMode === 'bookings');
+                const atAppointment = p.servicePriceCents + p.addonTotalCents;
+                const row = (label: string, value: string, strong = false) => (
+                  <View key={label} style={tw`flex-row items-center justify-between mb-1`}>
+                    <Text style={[strong ? tw`font-bold text-lg` : tw`text-sm`, { color: strong ? colors.foreground : colors.mutedForeground }]}>
+                      {label}
+                    </Text>
+                    <Text style={[strong ? tw`font-bold text-lg` : tw`text-sm`, { color: strong ? colors.primary : colors.foreground }]}>
+                      {value}
+                    </Text>
+                  </View>
+                );
                 return (
-                  <>
-                    {/* Total Section */}
-                    <View style={tw`mb-4`}>
-                      {userRole === 'client' || (userRole === 'barber' && barberViewMode === 'bookings') ? (
-                        <>
-                          <View style={tw`flex-row items-center justify-between`}>
-                            <Text style={[tw`font-bold text-lg`, { color: colors.foreground }]}>
-                              Total Charged
-                            </Text>
-                            <Text style={[tw`font-bold text-lg`, { color: colors.primary }]}>
-                              ${breakdown.total.toFixed(2)}
-                            </Text>
-                          </View>
-                          <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
-                            Total amount charged to you
-                          </Text>
-                        </>
-                      ) : (
-                        <>
-                          <View style={tw`flex-row items-center justify-between`}>
-                            <Text style={[tw`font-bold text-lg`, { color: colors.foreground }]}>
-                              Your Payout
-                            </Text>
-                            <Text style={[tw`font-bold text-lg`, { color: colors.primary }]}>
-                              ${breakdown.barberPayout?.toFixed(2) || '0.00'}
-                            </Text>
-                          </View>
-                          <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
-                            Amount you&apos;ll receive for this appointment
-                          </Text>
-                        </>
-                      )}
-                    </View>
-                  </>
+                  <View style={tw`mb-4`}>
+                    {row('Service', formatCents(p.servicePriceCents))}
+                    {p.addonTotalCents > 0 && row(`Add-ons${p.addonNames.length ? ` (${p.addonNames.join(', ')})` : ''}`, formatCents(p.addonTotalCents))}
+                    {p.source === 'app' && row(clientView ? 'Booking fee (paid in app)' : 'Booking fee paid by client', formatCents(p.bookingFeeCents))}
+                    {clientView
+                      ? row('Total', formatCents(atAppointment + p.bookingFeeCents), true)
+                      : row('Due at appointment', formatCents(atAppointment), true)}
+                    <Text style={[tw`text-xs mt-1`, { color: colors.mutedForeground }]}>
+                      {clientView
+                        ? 'The service and add-ons are paid to the barber at the appointment.'
+                        : p.source === 'manual'
+                          ? 'Walk-in added by you; nothing was charged in the app.'
+                          : 'Your share of booking fees is shown under Earnings.'}
+                    </Text>
+                  </View>
                 );
               })()}
 
-              {/* Guest Information (if applicable) */}
-              {selectedEvent.extendedProps.isGuest && (
+              {/* Notes */}
+              {selectedEvent.extendedProps.notes ? (
                 <View style={tw`mb-4`}>
-                  <Text style={[tw`text-sm font-semibold mb-2`, { color: colors.foreground }]}>
-                    Guest Information
-                  </Text>
-                  <View style={tw`space-y-1`}>
-                    <Text style={[tw`text-sm`, { color: colors.foreground }]}>
-                      Email: {selectedEvent.extendedProps.guestEmail}
-                    </Text>
-                    <Text style={[tw`text-sm`, { color: colors.foreground }]}>
-                      Phone: {selectedEvent.extendedProps.guestPhone}
-                    </Text>
-                  </View>
+                  <Text style={[tw`text-sm font-semibold mb-2`, { color: colors.foreground }]}>Notes</Text>
+                  <Text style={[tw`text-sm`, { color: colors.foreground }]}>{selectedEvent.extendedProps.notes}</Text>
                 </View>
-              )}
+              ) : null}
 
               {/* Action Buttons */}
-              {selectedEvent.extendedProps.status === 'pending' && (
+              {userRole === 'barber' && barberViewMode === 'appointments' && canMarkCompleted(selectedEvent) && (
                 <View style={tw`flex-row gap-3 mt-6`}>
                   <TouchableOpacity
                     onPress={onMarkCompleted}
@@ -250,17 +223,14 @@ export default function EventDetailsModal({
                     {isMarkingMissed ? (
                       <ActivityIndicator color="white" size="small" />
                     ) : (
-                      <Text style={tw`font-semibold text-white`}>Mark as Missed</Text>
+                      <Text style={tw`font-semibold text-white`}>Mark as No-Show</Text>
                     )}
                   </TouchableOpacity>
                 </View>
               )}
 
               {/* Cancel Button - for future appointments/bookings that aren't cancelled */}
-              {selectedEvent.extendedProps.status !== 'cancelled' &&
-               selectedEvent.extendedProps.status !== 'completed' &&
-               selectedEvent.extendedProps.status !== 'missed' &&
-               new Date(selectedEvent.start) > new Date() && (
+              {canCancelBooking(selectedEvent) && (
                 <View style={tw`mt-6`}>
                   <TouchableOpacity
                     onPress={onCancelBooking}

@@ -1,6 +1,6 @@
 'use client'
 
-import { Instagram, Twitter, Facebook, Share2, Copy, Check } from 'lucide-react'
+import { Instagram, Share2, Copy, Check } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { cn } from '@/shared/lib/utils'
 import { useState } from 'react'
@@ -8,9 +8,7 @@ import { useCustomToast } from '@/shared/hooks/use-custom-toast'
 
 interface SocialMediaLinksProps {
   instagram?: string
-  twitter?: string
   tiktok?: string
-  facebook?: string
   className?: string
   size?: 'sm' | 'md' | 'lg'
   variant?: 'default' | 'outline' | 'ghost'
@@ -29,13 +27,8 @@ function getSocialMediaUrl(handle: string, platform: string): string {
   switch (platform) {
     case 'instagram':
       return `https://instagram.com/${cleanHandle}`;
-    case 'twitter':
-      return `https://twitter.com/${cleanHandle}`;
     case 'tiktok':
       return `https://tiktok.com/@${cleanHandle}`;
-    case 'facebook':
-      // Facebook can be either a page name or username
-      return `https://facebook.com/${cleanHandle}`;
     default:
       return handle; // Return as-is if unknown platform
   }
@@ -43,9 +36,7 @@ function getSocialMediaUrl(handle: string, platform: string): string {
 
 export function SocialMediaLinks({
   instagram,
-  twitter,
   tiktok,
-  facebook,
   className,
   size = 'md',
   variant = 'ghost',
@@ -86,7 +77,7 @@ export function SocialMediaLinks({
         setCopied(true)
         toast.success('Link copied!', 'The booking link has been copied to your clipboard.')
         setTimeout(() => setCopied(false), 2000)
-      } catch (err) {
+      } catch {
         toast.error('Failed to copy', 'Please copy the link manually.')
       }
     }
@@ -99,7 +90,7 @@ export function SocialMediaLinks({
           title: shareTitle,
           url: shareUrl,
         })
-      } catch (err) {
+      } catch {
         // User cancelled or share failed, fall back to copy
         handleCopyLink()
       }
@@ -116,20 +107,6 @@ export function SocialMediaLinks({
       icon: Instagram,
       color: 'hover:text-social-instagram',
       label: 'Instagram'
-    },
-    {
-      platform: 'twitter',
-      url: getSocialMediaUrl(twitter || '', 'twitter'),
-      icon: Twitter,
-      color: 'hover:text-social-twitter',
-      label: 'Twitter'
-    },
-    {
-      platform: 'facebook',
-      url: getSocialMediaUrl(facebook || '', 'facebook'),
-      icon: Facebook,
-      color: 'hover:text-social-facebook',
-      label: 'Facebook'
     }
   ].filter(link => link.url)
 
@@ -137,7 +114,7 @@ export function SocialMediaLinks({
     socialLinks.push({
       platform: 'tiktok',
       url: getSocialMediaUrl(tiktok, 'tiktok'),
-      icon: TikTokIcon as any, // Type assertion to avoid interface mismatch
+      icon: TikTokIcon as unknown as typeof Instagram,
       color: 'hover:text-social-tiktok',
       label: 'TikTok'
     })

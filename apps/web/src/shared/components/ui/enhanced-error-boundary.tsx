@@ -5,8 +5,6 @@ import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { AlertTriangle, RefreshCw, Home, ArrowLeft, Bug } from 'lucide-react'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
-import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { reportReactError } from '@/shared/utils/error-reporter'
 import { logger } from '@/shared/lib/logger'
 import * as Sentry from '@sentry/nextjs'
 
@@ -32,7 +30,7 @@ interface ErrorBoundaryProps {
 }
 
 export class EnhancedErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  private retryTimeout?: NodeJS.Timeout
+  private retryTimeout?: ReturnType<typeof setTimeout>
 
   constructor(props: ErrorBoundaryProps) {
     super(props)
@@ -72,8 +70,6 @@ export class EnhancedErrorBoundary extends React.Component<ErrorBoundaryProps, E
       })
     }
     
-    // Report error with SMS notification
-    reportReactError(error, errorInfo, this.state.retryCount)
     
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo)
@@ -175,10 +171,10 @@ function DefaultErrorFallback({
   retryCount, 
   maxRetries, 
   onRetry, 
-  onReset 
+  onReset: _onReset 
 }: DefaultErrorFallbackProps) {
   const { push, back } = useSafeNavigation()
-  const { status } = useAuth()
+
   const [showDetails, setShowDetails] = useState(false)
 
   // Auto-retry for auth-related errors
@@ -305,9 +301,9 @@ export function useErrorHandler() {
 
   const handleError = React.useCallback((error: Error) => {
     logger.error('Error caught by useErrorHandler', error)
-    reportReactError(error, undefined, retryCount)
+    Sentry.captureException(error)
     setError(error)
-  }, [retryCount])
+  }, [])
 
   const retryError = React.useCallback(() => {
     setRetryCount(prev => prev + 1)

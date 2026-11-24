@@ -8,31 +8,29 @@ import { Switch } from '@/shared/components/ui/switch'
 import { Plus, Trash2, Calendar, Clock, AlertCircle, Sparkles, Loader2, Info } from 'lucide-react'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/lib/utils'
 
-interface SpecialHours {
+export interface SpecialHours {
   id: string
-  barber_id: string
   date: string
   start_time: string
   end_time: string
   is_closed: boolean
   reason: string
-  created_at: string
-  updated_at: string
 }
 
 interface SpecialHoursManagerProps {
   specialHours: SpecialHours[]
-  onAdd: (hours: Omit<SpecialHours, 'id' | 'barber_id' | 'created_at' | 'updated_at'>) => void
+  /** Creates or replaces the override for that date (PUT /api/me/special-hours). Closed days replace time off. */
+  onAdd: (hours: Omit<SpecialHours, 'id'>) => void | Promise<void>
   onRemove: (id: string) => void
   barberId: string
 }
 
-export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, onRemove, barberId }: SpecialHoursManagerProps) {
+export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, onRemove }: SpecialHoursManagerProps) {
   const { toast } = useToast()
   const [isAdding, setIsAdding] = useState(false)
-  const [newHours, setNewHours] = useState<Omit<SpecialHours, 'id' | 'barber_id' | 'created_at' | 'updated_at'>>({
+  const [newHours, setNewHours] = useState<Omit<SpecialHours, 'id'>>({
     date: '',
     start_time: '09:00',
     end_time: '17:00',
@@ -124,6 +122,8 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
               </Label>
               <Input
                 type="date"
+                aria-label="Date"
+                min={new Date().toLocaleDateString('en-CA')}
                 value={newHours.date}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewHours({ ...newHours, date: e.target.value })}
                 className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary focus:ring-1 focus:ring-secondary/50 rounded-xl h-12 text-base transition-all shadow-inner"
@@ -156,7 +156,7 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
               </div>
               <div>
                 <p className="font-bebas text-xl tracking-wide text-foreground">Closed for the day</p>
-                <p className="text-sm text-foreground/60">Toggle this if you're completely unavailable</p>
+                <p className="text-sm text-foreground/60">Toggle this if you&apos;re completely unavailable</p>
               </div>
             </div>
             <Switch
@@ -198,7 +198,7 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
           <Button
             onClick={handleAdd}
             disabled={isAdding || !newHours.date}
-            className="w-full bg-secondary hover:bg-secondary/90 text-primary-foreground font-bold shadow-xl rounded-xl h-14 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full bg-button hover:bg-button/90 text-button-foreground font-bold shadow-xl rounded-xl h-14 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
           >
             {isAdding ? <Loader2 className="h-6 w-6 animate-spin mr-3" /> : <Plus className="h-6 w-6 mr-3" />}
             {isAdding ? "Saving..." : "Set Special Hours"}
@@ -233,14 +233,14 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
                         <Calendar className="h-4 w-4 text-secondary" />
                       </div>
                       <div className="font-bebas text-xl tracking-wide text-foreground">
-                        {new Date(hours.date).toLocaleDateString('en-US', { 
+                        {new Date(`${hours.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', 
                           month: 'short', 
                           day: 'numeric', 
                           year: 'numeric' 
                         })}
                       </div>
                       {hours.is_closed ? (
-                        <span className="text-[10px] font-bold bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full uppercase tracking-tighter border border-red-500/20">
+                        <span className="text-[10px] font-bold bg-red-500/20 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full uppercase tracking-tighter border border-red-500/20">
                           Closed
                         </span>
                       ) : (
@@ -266,15 +266,18 @@ export function SpecialHoursManager({ specialHours: specialHoursEntries, onAdd, 
 
                     {hours.reason && (
                       <div className="flex items-center gap-2 text-foreground/40 text-xs pl-9 italic">
-                        "{hours.reason}"
+                        &quot;{hours.reason}&quot;
                       </div>
                     )}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onRemove(hours.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20 hover:text-red-400 p-2 rounded-xl h-10 w-10"
+                    onClick={() => {
+                      if (window.confirm('Remove these special hours? Your regular weekly hours apply on that day again.')) onRemove(hours.id)
+                    }}
+                    aria-label={`Remove special hours on ${hours.date}`}
+                    className="sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity text-red-600 hover:bg-red-500/20 hover:text-red-700 p-2 rounded-xl h-10 w-10"
                   >
                     <Trash2 className="h-5 w-5" />
                   </Button>

@@ -7,8 +7,6 @@ import { TooltipProvider } from "@/shared/components/ui/tooltip"
 
 import { EnhancedErrorBoundary } from "@/shared/components/ui/enhanced-error-boundary"
 import { LoadingProvider } from "@/shared/components/ui/loading-provider"
-import { SMSPopupWrapper } from "@/shared/components/ui/sms-popup-wrapper"
-import { ErrorReportingProvider } from "@/shared/components/error-reporting-provider"
 import { cn } from "@/shared/lib/utils"
 import React from 'react'
 
@@ -16,21 +14,16 @@ import dynamic from 'next/dynamic'
 
 const inter = Inter({ subsets: ['latin'] })
 
+// No maximumScale: people must be able to pinch-zoom (WCAG 1.4.4).
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  themeColor: '#EE6D23',
 }
 
 export const metadata: Metadata = {
   title: 'Talii',
   description: 'Book your next haircut with ease',
-  themeColor: '#EE6D23',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1
-  }
 }
 
 // Use next/dynamic instead of React.lazy for better App Router compatibility
@@ -48,7 +41,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className={cn(inter.className, "bg-background min-h-screen")}> 
-        <ErrorReportingProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <TooltipProvider>
             <EnhancedErrorBoundary>
@@ -57,12 +49,10 @@ export default function RootLayout({
                 <ClientNavWrapper>{children}</ClientNavWrapper>
               </React.Suspense>
               <Toaster />
-              <SMSPopupWrapper />
               </LoadingProvider>
             </EnhancedErrorBoundary>
             </TooltipProvider>
           </ThemeProvider>
-        </ErrorReportingProvider>
       </body>
     </html>
   )

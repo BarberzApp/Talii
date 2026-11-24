@@ -15,7 +15,7 @@ import { Star, Send, X } from 'lucide-react-native';
 import tw from 'twrnc';
 import { useReviews } from '../hooks/useReviews';
 import { logger } from '../lib/logger';
-import { validateReviewContent, sanitizeText } from '../lib/contentModeration';
+import { sanitizeContent, validateContent } from '@barber-app/shared';
 import { useTheme } from './theme';
 
 interface ReviewFormProps {
@@ -84,55 +84,34 @@ export function ReviewForm({
       return;
     }
 
+    // Shared word filter (the same rules the website uses).
     const trimmedComment = comment.trim();
     if (trimmedComment) {
-      const validation = validateReviewContent(trimmedComment);
+      const validation = validateContent(trimmedComment);
       if (!validation.isValid) {
         Alert.alert(
-          'Content Not Allowed',
-          validation.reason || 'Your review contains inappropriate content. Please revise your review.',
+          'Please revise your review',
+          validation.issues.join('\n') || 'Your review contains content that is not allowed.',
           [{ text: 'OK' }]
         );
         return;
       }
-      
-      const sanitizedComment = sanitizeText(trimmedComment);
-      
-      try {
-        if (isEditing && reviewId) {
-          await updateReview(reviewId, { rating, comment: sanitizedComment });
-        } else {
-          await submitReview({
-            barberId,
-            bookingId,
-            rating,
-            comment: sanitizedComment || undefined,
-          });
-        }
-        
-        onSuccess?.();
-        onClose();
-      } catch (error) {
-        logger.error('Error submitting review:', error);
+    }
+    const finalComment = trimmedComment ? sanitizeContent(trimmedComment) : null;
+
+    try {
+      if (isEditing && reviewId) {
+        await updateReview(reviewId, { rating, comment: finalComment });
+      } else if (bookingId) {
+        await submitReview({ bookingId, rating, comment: finalComment ?? undefined });
+      } else {
+        Alert.alert('Review not available', 'You can review a barber after a completed appointment.');
+        return;
       }
-    } else {
-      try {
-        if (isEditing && reviewId) {
-          await updateReview(reviewId, { rating, comment: '' });
-        } else {
-          await submitReview({
-            barberId,
-            bookingId,
-            rating,
-            comment: undefined,
-          });
-        }
-        
-        onSuccess?.();
-        onClose();
-      } catch (error) {
-        logger.error('Error submitting review:', error);
-      }
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      logger.error('Error submitting review:', error);
     }
   };
 

@@ -9,39 +9,27 @@ import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/shared/components/ui/form'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
-import { Badge } from '@/shared/components/ui/badge'
 import { Switch } from '@/shared/components/ui/switch'
 import { Separator } from '@/shared/components/ui/separator'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { 
-  MapPin, 
-  Scissors, 
-  DollarSign, 
-  Building2, 
-  Instagram,
-  Twitter,
-  Facebook,
-  Music,
+import {
+  MapPin,
+  Scissors, Building2,
+  Instagram, Music,
   AlertCircle,
   Loader2,
   User,
   Sparkles,
-  Save,
-  Info,
-  Phone,
-  Check,
-  X
+  Save
 } from 'lucide-react'
 // import { BrowseIntegrationGuide } from './browse-integration-guide' // Removed
-import { BARBER_SPECIALTIES } from '@/shared/constants/specialties'
 import { SpecialtyAutocomplete } from '@/shared/components/ui/specialty-autocomplete'
-import { geocodeAddress, getAddressSuggestionsDetailed } from '@/shared/lib/geocode'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
+import { cityStateOf, getAddressSuggestionsDetailed, type GeocodeResult } from '@/shared/lib/geocode'
 import { logger } from '@/shared/lib/logger'
+import { bookingLinkLabel } from '@/shared/lib/app-url'
 
 const barberProfileSchema = z.object({
   // Basic Info
@@ -50,21 +38,14 @@ const barberProfileSchema = z.object({
   businessName: z.string().min(2, 'Business name must be at least 2 characters'),
   bio: z.string().max(500, 'Bio must be less than 500 characters'),
   location: z.string().min(2, 'Location is required'),
-  phone: z.string().min(10, 'Please enter a valid phone number'),
-  carrier: z.string().min(2, 'Carrier is required'),
-  sms_notifications: z.boolean().default(false),
+  phone: z.string().min(7, 'Please enter a valid phone number'),
   
   // Professional Info
   specialties: z.array(z.string()).min(1, 'Select at least one specialty'),
-  priceRange: z.enum(['Budget ($15-$30)', 'Mid-range ($30-$60)', 'Premium ($60+)'], {
-    required_error: 'Please select a price range'
-  }),
   
   // Social Media
   instagram: z.string().optional().or(z.literal('')),
-  twitter: z.string().optional().or(z.literal('')),
   tiktok: z.string().optional().or(z.literal('')),
-  facebook: z.string().optional().or(z.literal('')),
   
   // Visibility
   isPublic: z.boolean(),
@@ -72,28 +53,8 @@ const barberProfileSchema = z.object({
 
 type BarberProfileFormData = z.infer<typeof barberProfileSchema>
 
-const PRICE_RANGES = [
-  { value: 'Budget ($15-$30)', label: 'Budget ($15-$30)', description: 'Budget ($15-$30) - Affordable services for everyone' },
-  { value: 'Mid-range ($30-$60)', label: 'Mid-range ($30-$60)', description: 'Mid-range ($30-$60) - Quality services at fair prices' },
-  { value: 'Premium ($60+)', label: 'Premium ($60+)', description: 'Premium ($60+) - High-end services and expertise' }
-]
-
-const CARRIER_OPTIONS = [
-  { value: 'verizon', label: 'Verizon' },
-  { value: 'att', label: 'AT&T' },
-  { value: 'tmobile', label: 'T-Mobile' },
-  { value: 'sprint', label: 'Sprint' },
-  { value: 'boost', label: 'Boost Mobile' },
-  { value: 'uscellular', label: 'US Cellular' },
-  { value: 'cricket', label: 'Cricket' },
-  { value: 'metro', label: 'MetroPCS' },
-  { value: 'googlefi', label: 'Google Fi' },
-];
-
 interface EnhancedBarberProfileSettingsProps {
   onSave?: () => void;
-  showPreview?: boolean;
-  showIntegrationGuide?: boolean;
 }
 
 // Utility function to extract handle from URL or return as-is if already a handle
@@ -120,12 +81,12 @@ function extractHandle(input: string): string {
   return '@' + input;
 }
 
-export function EnhancedBarberProfileSettings({ onSave, showPreview = true, showIntegrationGuide = true }: EnhancedBarberProfileSettingsProps) {
+export function EnhancedBarberProfileSettings({ onSave }: EnhancedBarberProfileSettingsProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [locationInput, setLocationInput] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<GeocodeResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -139,23 +100,13 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
       bio: '',
       location: '',
       phone: '',
-      carrier: '',
       specialties: [],
-      priceRange: 'Mid-range ($30-$60)',
       instagram: '',
-      twitter: '',
       tiktok: '',
-      facebook: '',
       isPublic: true,
-      sms_notifications: false,
     },
   })
 
-  useEffect(() => {
-    if (user) {
-      loadBarberProfile()
-    }
-  }, [user])
 
   // Debounced fetch suggestions
   const debouncedFetchSuggestions = useCallback(async (query: string) => {
@@ -210,7 +161,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
   };
 
   // Handle suggestion select
-  const handleSuggestionSelect = (suggestion: any) => {
+  const handleSuggestionSelect = (suggestion: GeocodeResult) => {
     // Format: house_number road, city/town, state (e.g., '88 Doe Court, South Brunswick, NJ')
     const address = suggestion.address || {};
     const house = address.house_number || '';
@@ -218,92 +169,52 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
     const city = address.city || address.town || address.village || address.hamlet || '';
     const state = address.state || address.state_code || '';
     // Build the formatted string
-    let line1 = [house, road].filter(Boolean).join(' ');
-    let line2 = [city, state].filter(Boolean).join(', ');
-    let formatted = [line1, line2].filter(Boolean).join(', ');
+    const line1 = [house, road].filter(Boolean).join(' ');
+    const line2 = [city, state].filter(Boolean).join(', ');
+    const formatted = [line1, line2].filter(Boolean).join(', ');
     setLocationInput(formatted);
     setShowSuggestions(false);
     setLocationSuggestions([]); // Clear suggestions immediately
     form.setValue('location', formatted);
   };
 
-  // Validate location on blur
-  const handleLocationBlur = async () => {
-    // Add a small delay to allow clicking on suggestions
-    setTimeout(async () => {
-      if (!locationInput) return;
-      // Validate using Google Places API
-      const geoSuggestions = await getAddressSuggestionsDetailed(locationInput);
-      const geo = geoSuggestions && geoSuggestions.length > 0 ? { lat: parseFloat(geoSuggestions[0].lat), lon: parseFloat(geoSuggestions[0].lon) } : null;
-      if (!geo) {
-        toast({
-          title: 'Invalid location',
-          description: 'Please enter a valid place from the suggestions.',
-          variant: 'destructive',
-        });
-        setLocationInput('');
-        form.setValue('location', '');
-      }
-    }, 200);
+  // Hide suggestions once the field loses focus (after a click on one has landed).
+  // The location is checked when saving.
+  const handleLocationBlur = () => {
+    setTimeout(() => setShowSuggestions(false), 200);
   };
 
-  const loadBarberProfile = async () => {
+  const { reset: resetForm } = form
+
+  const loadBarberProfile = useCallback(async () => {
     if (!user) return
 
     try {
       setLoading(true)
       logger.debug('Loading barber profile for user', { userId: user.id })
 
-      // Fetch profile data
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+      const me = await api.me.get()
+      const profile = me.profile
+      const barber = me.barber
+      if (!barber) throw new Error('No barber profile')
+      const location = [barber.city, barber.state].filter(Boolean).join(', ')
 
-      if (profileError) {
-        logger.error('Profile fetch error', profileError)
-        throw profileError
-      }
-
-      logger.debug('Profile data loaded', { userId: profile?.id })
-
-      // Fetch barber data
-      const { data: barber, error: barberError } = await supabase
-        .from('barbers')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-
-      if (barberError) {
-        logger.error('Barber fetch error', barberError)
-        throw barberError
-      }
-
-      logger.debug('Barber data loaded', { barberId: barber?.id })
-
-      // Update form with fetched data
       const formData = {
         name: profile.name || '',
         username: profile.username || '',
         businessName: barber.business_name || '',
-        bio: barber.bio || profile.bio || '',
-        location: profile.location || '',
+        bio: barber.bio || '',
+        location,
         phone: profile.phone || '',
-        carrier: profile.carrier || '',
         specialties: barber.specialties || [],
-        priceRange: barber.price_range || 'Mid-range ($30-$60)',
         instagram: barber.instagram || '',
-        twitter: barber.twitter || '',
         tiktok: barber.tiktok || '',
-        facebook: barber.facebook || '',
-        isPublic: profile.is_public ?? true,
-        sms_notifications: profile.sms_notifications ?? false,
+        isPublic: barber.is_public,
       }
 
       logger.debug('Setting form data', { hasData: !!formData.name })
-      form.reset(formData)
-      setLocationInput(profile.location || '');
+      resetForm(formData)
+      setLocationInput(location);
 
     } catch (error) {
       logger.error('Error loading barber profile', error)
@@ -315,114 +226,58 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, resetForm, toast])
+
+  useEffect(() => {
+    if (user) {
+      loadBarberProfile()
+    }
+  }, [user, loadBarberProfile])
 
   const onSubmit = async (data: BarberProfileFormData) => {
     if (!user) return
 
-    // Validate location before submit
-    // Validate and geocode via Google Places API
+    // City and state from the chosen suggestion (or the typed "City, ST"); the
+    // API geocodes them for nearby search.
     const geoSuggestions = await getAddressSuggestionsDetailed(data.location);
-    const geo = geoSuggestions && geoSuggestions.length > 0 ? { lat: parseFloat(geoSuggestions[0].lat), lon: parseFloat(geoSuggestions[0].lon) } : null;
-    if (!geo) {
+    const { city, state } = cityStateOf(geoSuggestions[0] ?? data.location)
+    if (!city || !state) {
       toast({
-        title: 'Invalid location',
-        description: 'Please enter a valid place from the suggestions.',
+        title: 'Check your location',
+        description: 'Enter your city and state, for example "Chicago, IL", or pick a suggestion.',
         variant: 'destructive',
       })
       return;
     }
-    let lat = geo.lat, lon = geo.lon
 
     try {
       setLoading(true)
 
-      // If the location is not already formatted, reformat it from the geo suggestion
-      let formattedLocation = data.location;
-      if (geoSuggestions && geoSuggestions.length > 0) {
-        const address = geoSuggestions[0].address || {};
-        const house = address.house_number || '';
-        const road = address.road || '';
-        const city = address.city || address.town || address.village || address.hamlet || '';
-        const state = address.state || address.state_code || '';
-        const line1 = [house, road].filter(Boolean).join(' ');
-        const line2 = [city, state].filter(Boolean).join(', ');
-        formattedLocation = [line1, line2].filter(Boolean).join(', ');
+      const result = await api.me.update({
+        name: data.name,
+        username: data.username,
+        phone: data.phone,
+        businessName: data.businessName,
+        bio: data.bio,
+        specialties: data.specialties,
+        instagram: extractHandle(data.instagram || '') || null,
+        tiktok: extractHandle(data.tiktok || '') || null,
+        city,
+        state,
+        isPublic: data.isPublic,
+      })
+      if (result.location && !result.location.geocoded) {
+        toast({
+          title: 'Location not found',
+          description: 'Saved, but we could not place your city on the map, so you will not appear in nearby search yet.',
+          variant: 'destructive',
+        })
       }
-      // Update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          sms_notifications: data.sms_notifications,
-          carrier: data.carrier,
-          phone: data.phone,
-          is_public: data.isPublic,
-          location: formattedLocation,
-          name: data.name,
-          username: data.username,
-        })
-        .eq('id', user.id)
-
-      if (profileError) throw profileError
-
-      // Update barber profile
-      const { error: barberError } = await supabase
-        .from('barbers')
-        .update({
-          business_name: data.businessName,
-          bio: data.bio,
-          specialties: data.specialties,
-          price_range: data.priceRange,
-          instagram: extractHandle(data.instagram || ''),
-          twitter: extractHandle(data.twitter || ''),
-          tiktok: extractHandle(data.tiktok || ''),
-          facebook: extractHandle(data.facebook || ''),
-          latitude: lat,
-          longitude: lon,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
-
-      if (barberError) throw barberError
 
       toast({
         title: 'Success',
         description: 'Profile updated successfully! Your changes will be visible in search results.',
       })
-
-      // After successful save, send test SMS if enabled
-      if (data.sms_notifications && data.phone && data.carrier) {
-        try {
-          const res = await fetch('/api/bookings/send-sms', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              phoneNumber: data.phone,
-              carrier: data.carrier,
-              message: 'Thank you for enabling SMS notifications! You will now receive important updates by text.'
-            })
-          });
-          if (res.ok) {
-            toast({
-              title: 'Test SMS sent',
-              description: 'A test SMS was sent to your phone to confirm notifications are enabled.'
-            });
-          } else {
-            const err = await res.json();
-            toast({
-              title: 'SMS failed',
-              description: err.error || 'Failed to send test SMS. Please check your carrier and phone number.',
-              variant: 'destructive',
-            });
-          }
-        } catch (e) {
-          toast({
-            title: 'SMS failed',
-            description: 'Could not send test SMS. Please check your connection.',
-            variant: 'destructive',
-          });
-        }
-      }
 
       if (onSave) onSave();
 
@@ -430,20 +285,12 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
       logger.error('Error updating profile', error)
       toast({
         title: 'Error',
-        description: 'Failed to update profile',
+        description: errorMessage(error, 'Failed to update profile'),
         variant: 'destructive',
       })
     } finally {
       setLoading(false)
     }
-  }
-
-  const toggleSpecialty = (specialty: string) => {
-    const currentValue = form.getValues('specialties')
-    const newValue = currentValue.includes(specialty)
-      ? currentValue.filter(s => s !== specialty)
-      : [...currentValue, specialty]
-    form.setValue('specialties', newValue)
   }
 
   return (
@@ -499,7 +346,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                       <FormItem>
                         <FormLabel className="text-foreground font-semibold">Full Name *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Your full name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                          <Input placeholder="Your full name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -513,10 +360,10 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                       <FormItem>
                         <FormLabel className="text-foreground font-semibold">Username *</FormLabel>
                         <FormControl>
-                          <Input placeholder="your_username" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                          <Input placeholder="your_username" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                         </FormControl>
                         <FormDescription className="text-foreground/60">
-                          Used in your booking link: bocmstyle.com/book/{field.value || 'your_username'}
+                          Used in your booking link: {bookingLinkLabel(field.value || 'your_username')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -531,7 +378,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     <FormItem>
                       <FormLabel className="text-foreground font-semibold">Business Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your business name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                        <Input placeholder="Your business name" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -547,7 +394,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                       <FormControl>
                         <Textarea
                           placeholder="Tell clients about yourself, your experience, and what makes you unique..."
-                          className="min-h-[100px] bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200"
+                          className="min-h-[100px] bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200"
                           {...field}
                         />
                       </FormControl>
@@ -563,15 +410,15 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   <FormField
                     control={form.control}
                     name="location"
-                    render={({ field }) => (
+                    render={() => (
                       <FormItem className="relative">
                         <FormLabel className="text-foreground font-semibold">Location *</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-secondary" />
                             <Input
-                              placeholder="City, State or Zip Code"
-                              className="pl-10 bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200"
+                              placeholder="City, State (e.g. Chicago, IL)"
+                              className="pl-10 bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200"
                               value={locationInput ?? ''}
                               onChange={handleLocationChange}
                               onFocus={() => setShowSuggestions(true)}
@@ -601,7 +448,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                                     className="w-full text-left px-4 py-2 text-foreground hover:bg-secondary/20"
                                     onMouseDown={() => handleSuggestionSelect(s)}
                                   >
-                                    {s.display_name || s.name || 'Unknown location'}
+                                    {s.display_name || 'Unknown location'}
                                   </button>
                                 ))}
                               </div>
@@ -620,63 +467,13 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                       <FormItem>
                         <FormLabel className="text-foreground font-semibold">Phone Number *</FormLabel>
                         <FormControl>
-                          <Input placeholder="+1 (555) 123-4567" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                          <Input placeholder="+1 (555) 123-4567" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="carrier"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        Carrier *
-                        <span title="We need your carrier to send you free SMS reminders. If you’re unsure, check your phone bill or carrier app.">
-                          <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                        </span>
-                      </FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className={`bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-foreground placeholder:text-foreground/40 focus:border-secondary focus:ring-secondary/20 rounded-xl flex items-center gap-2 backdrop-blur-sm transition-all duration-200 ${form.formState.errors.carrier ? 'border-red-400' : ''}`}>
-                          <Phone className="h-4 w-4 text-secondary mr-2" />
-                          <SelectValue placeholder="Select your carrier…" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gradient-to-br from-white/10 to-white/5 dark:from-white/10 dark:to-white/5 backdrop-blur-2xl border-black/10 dark:border-white/20 rounded-2xl shadow-2xl p-2 text-foreground">
-                          {CARRIER_OPTIONS.map((carrier) => (
-                            <SelectItem key={carrier.value} value={carrier.value} className="flex items-center justify-between px-4 py-2 hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer mb-1 last:mb-0">
-                              <span className="font-medium text-base">{carrier.label}</span>
-                              {field.value === carrier.value && <Check className="h-4 w-4 text-secondary ml-2" />}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="sms_notifications"
-                  render={({ field }) => (
-                    <FormItem className="mt-2">
-                      <Button
-                        size="sm"
-                        className={
-                         field.value
-                            ? 'bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-xl px-6 py-2.5 shadow-lg flex items-center gap-2 hover:opacity-90 transition-all duration-300'
-                            : 'bg-gradient-to-r from-secondary to-secondary/90 text-primary font-bold rounded-xl px-6 py-2.5 shadow-lg hover:shadow-secondary/20 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300'
-                        }
-                        onClick={() => field.onChange(!field.value)}
-                      >
-                        {field.value ? <><Check className="h-4 w-4" /> SMS Notifications Enabled</> : <>Enable SMS Notifications</>}
-                      </Button>
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <Separator className="bg-white/20" />
@@ -713,36 +510,6 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="priceRange"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-foreground font-semibold">Price Range *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200">
-                            <SelectValue placeholder="Select your price range" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-gradient-to-br from-white/10 to-white/5 dark:from-white/10 dark:to-white/5 backdrop-blur-2xl border-black/10 dark:border-white/20 rounded-2xl shadow-2xl p-2 text-foreground">
-                          {PRICE_RANGES.map((range) => (
-                            <SelectItem key={range.value} value={range.value} className="flex items-center justify-between px-4 py-3 hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer mb-1 last:mb-0">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-base">{range.label}</span>
-                                <span className="text-xs text-foreground/50 font-medium">Standard pricing for this tier</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        This helps clients understand your pricing tier and appears in search filters.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               <Separator className="bg-white/20" />
@@ -771,7 +538,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                           Instagram
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
+                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
                         </FormControl>
                         <FormDescription className="text-foreground/60">
                           Only your handle (e.g., @yourusername)
@@ -781,25 +548,6 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="twitter"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-foreground font-semibold">
-                          <Twitter className="h-4 w-4 text-[#1DA1F2]" />
-                          Twitter/X
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-white/40 focus:border-secondary rounded-xl backdrop-blur-sm transition-all duration-200" />
-                        </FormControl>
-                        <FormDescription className="text-foreground/60">
-                          Only your handle (e.g., @yourusername)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <FormField
                     control={form.control}
@@ -811,7 +559,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                           TikTok
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
+                          <Input placeholder="@yourusername" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder:text-muted-foreground focus:border-secondary rounded-xl" />
                         </FormControl>
                         <FormDescription className="text-foreground/60">
                           Only your handle (e.g., @yourusername)
@@ -821,25 +569,6 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="facebook"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2 text-foreground font-semibold">
-                          <Facebook className="h-4 w-4 text-[#1877F3]" />
-                          Facebook
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="yourpagename" {...field} className="bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-foreground placeholder-white/40 focus:border-secondary rounded-xl" />
-                        </FormControl>
-                        <FormDescription className="text-foreground/60">
-                          Only your page name (e.g., yourpagename)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
               </div>
 
@@ -880,7 +609,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                   <Alert className="bg-red-900/30 border-red-400/30 text-foreground">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Your profile is currently private and won't appear in search results. Enable public profile to start receiving bookings from new clients.
+                      Your profile is currently private and won&apos;t appear in search results. Enable public profile to start receiving bookings from new clients.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -891,7 +620,7 @@ export function EnhancedBarberProfileSettings({ onSave, showPreview = true, show
                 <Button 
                   type="submit" 
                   disabled={loading} 
-                  className="min-w-[140px] bg-secondary text-primary-foreground font-semibold rounded-xl px-8 py-3 hover:bg-secondary/90 shadow-lg text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-darkpurple"
+                  className="min-w-[140px] bg-button text-button-foreground font-semibold rounded-xl px-8 py-3 hover:bg-button/90 shadow-lg text-lg transition-all duration-200 hover:scale-105 active:scale-100 focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-darkpurple"
                 >
                   {loading ? (
                     <>

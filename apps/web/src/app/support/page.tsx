@@ -8,14 +8,12 @@ import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { useToast } from '@/shared/components/ui/use-toast'
+import { api, isApiError } from '@/shared/lib/api'
+import type { SupportCategory } from '@barber-app/shared'
 import { logger } from '@/shared/lib/logger'
 import { 
-  Mail, 
   MessageCircle, 
   HelpCircle, 
-  Phone, 
-  Clock,
-  CheckCircle,
   Send
 } from 'lucide-react'
 
@@ -35,19 +33,19 @@ const gradientAnimation = `
 const faqData = [
   {
     question: "How do I book an appointment?",
-    answer: "Simply browse our barbers, select your preferred time slot, and complete the booking process. You'll receive a confirmation via SMS and email."
+    answer: "Simply browse our barbers, select your preferred time slot, and complete the booking process. You'll see it under Appointments on your profile."
   },
   {
     question: "Can I cancel or reschedule my appointment?",
-    answer: "Yes! You can cancel or reschedule your appointment up to 2 hours before your scheduled time through your booking confirmation or profile page."
+    answer: "You can cancel any time before your appointment starts, from Appointments on your profile. If you cancel more than 24 hours ahead, the $3.40 booking fee is refunded in full; closer than that it is not. If the barber cancels, the fee is always refunded. To change the time, cancel and book a new one."
   },
   {
     question: "What payment methods do you accept?",
-    answer: "We accept all major credit cards, debit cards, and digital payment methods through our secure payment system."
+    answer: "The booking fee is paid online by credit or debit card (or Link) through Stripe. The service itself is paid to your barber in person."
   },
   {
     question: "How do I become a barber on the platform?",
-    answer: "Click on 'Become a Barber' in the main menu, complete the registration process, and our team will review your application within 24-48 hours."
+    answer: "Sign up and choose Barber, then follow the setup steps: your profile, services, Stripe payouts and weekly hours. Your booking page goes live when they are done."
   },
   {
     question: "Is my personal information secure?",
@@ -87,22 +85,12 @@ export default function SupportPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/api/support', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
+      if (!formData.category) throw new Error('Please choose a category.')
+      await api.support.send({ ...formData, category: formData.category as SupportCategory })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to send message')
-      }
-      
       toast({
         title: "Message Sent!",
-        description: "We've received your support request and will get back to you within 5 days.",
+        description: "We've received your message and will reply by email.",
       })
 
       // Reset form
@@ -117,7 +105,9 @@ export default function SupportPage() {
       logger.error('Support form error', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send your message. Please try again.",
+        description: isApiError(error) && error.status === 503
+          ? "Our message form is not available right now. Please try again later."
+          : isApiError(error) || error instanceof Error ? error.message : "Failed to send your message. Please try again.",
         variant: "destructive"
       })
     } finally {
@@ -150,12 +140,6 @@ export default function SupportPage() {
             <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto mb-6">
               We&apos;re here to help! Get in touch with our support team or browse our frequently asked questions.
             </p>
-            <div className="flex items-center justify-center gap-3">
-              <div className="flex items-center bg-muted backdrop-blur-sm rounded-xl px-4 py-2 border border-border">
-                <Clock className="w-4 h-4 text-primary mr-2" />
-                <span className="text-sm text-foreground font-medium">Response within 24 hours</span>
-              </div>
-            </div>
           </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -169,7 +153,7 @@ export default function SupportPage() {
                 Contact Support
               </CardTitle>
               <CardDescription className="text-muted-foreground text-base">
-                Send us a message and we&apos;ll get back to you within 24 hours
+                Send us a message and we&apos;ll get back to you
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -243,7 +227,7 @@ export default function SupportPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-14 text-lg font-semibold bg-secondary hover:bg-secondary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl" 
+                  className="w-full h-14 text-lg font-semibold bg-button hover:bg-button/90 text-button-foreground shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl" 
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -264,47 +248,6 @@ export default function SupportPage() {
 
           {/* Contact Info & FAQ */}
           <div className="space-y-8">
-            {/* Contact Information */}
-            <Card className="bg-card border border-border shadow-xl backdrop-blur-xl rounded-3xl p-6 sm:p-8">
-              <CardHeader className="pb-6">
-                <CardTitle className="flex items-center gap-3 text-2xl font-bold text-foreground">
-                  <div className="p-3 bg-primary/20 rounded-xl">
-                    <Phone className="h-6 w-6 text-primary" />
-                  </div>
-                  Get in Touch
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 space-y-4">
-                <div className="flex items-center gap-4 p-4 bg-muted rounded-xl border border-border">
-                  <div className="p-3 bg-primary/20 rounded-full">
-                    <Mail className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Email Support</p>
-                    <p className="text-muted-foreground">support@talii.com</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-4 bg-muted rounded-xl border border-border">
-                  <div className="p-3 bg-primary/20 rounded-full">
-                    <Clock className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Response Time</p>
-                    <p className="text-muted-foreground">Within 24 hours</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-4 bg-muted rounded-xl border border-border">
-                  <div className="p-3 bg-primary/20 rounded-full">
-                    <CheckCircle className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Availability</p>
-                    <p className="text-muted-foreground">Monday - Friday, 9 AM - 6 PM</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* FAQ Section */}
             <Card className="bg-card border border-border shadow-xl backdrop-blur-xl rounded-3xl p-6 sm:p-8">
               <CardHeader className="pb-6">

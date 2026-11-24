@@ -1,5 +1,5 @@
 // Custom hook for managing location-based features
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import * as Location from 'expo-location';
 import { Alert, Linking } from 'react-native';
 import { getLocationPreferences, setLocationEnabled, getLastLocation, updateLastLocation } from '../lib/locationPreferences';

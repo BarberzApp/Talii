@@ -15,7 +15,6 @@
     "types:generate:local": "SUPABASE_GEN_MODE=local npx --yes tsx scripts/generate-types.ts",
     "types:generate:auto": "node scripts/types-generate-auto.js",
     "webhook:check-config": "node scripts/check-webhook-config.js",
-    "webhook:manual-booking": "node scripts/manually-create-booking-from-payment.js",
     "security:audit": "npm audit",
     "security:fix": "npm audit fix",
     "security:check": "npm audit --audit-level=moderate",
@@ -34,9 +33,6 @@
     "test:components": "jest --testPathPattern=components",
     "test:utils": "jest --testPathPattern=utils",
     "test:integration": "jest --testPathPattern=integration"
-  },
-  "dependencies": {
-    "radix-ui": "^1.4.3"
   },
   "overrides": {
     "react": "19.0.0",

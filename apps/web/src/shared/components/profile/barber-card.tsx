@@ -4,12 +4,11 @@ import { Card, CardContent } from "@/shared/components/ui/card"
 import { Button } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar"
-import { MapPin, DollarSign, Scissors, TrendingUp, Globe, Heart } from "lucide-react"
+import { MapPin, Scissors, Globe, Star } from "lucide-react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
-import { useAuth } from "@/shared/hooks/use-auth-zustand"
-import { useRouter } from "next/navigation"
+import { isOptimizableImage } from '@/shared/lib/image'
 import { SocialMediaLinks } from "@/shared/components/social-media-links"
 
 type BarberCardBarber = {
@@ -22,15 +21,11 @@ type BarberCardBarber = {
   bio?: string
   specialties: string[]
   portfolio?: string[]
-  trending?: boolean
-  openToHire?: boolean
-  priceRange?: string
-  totalLikes?: number
   distance?: number
+  rating?: number
+  reviewCount?: number
   instagram?: string
-  twitter?: string
   tiktok?: string
-  facebook?: string
 }
 
 interface BarberCardProps {
@@ -39,33 +34,6 @@ interface BarberCardProps {
 }
 
 export function BarberCard({ barber, className }: BarberCardProps) {
-  const { user } = useAuth()
-  const router = useRouter()
-
-  const getPriceRangeColor = (priceRange?: string) => {
-    switch (priceRange) {
-      case 'Budget':
-        return 'bg-green-500/20 text-green-400 border-green-500/30'
-      case 'Premium':
-        return 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-      case 'Mid-range':
-      default:
-        return 'bg-primary/20 text-primary border-primary/30'
-    }
-  }
-
-  const getPriceRangeIcon = (priceRange?: string) => {
-    switch (priceRange) {
-      case 'Budget':
-        return <DollarSign className="h-3 w-3" />
-      case 'Premium':
-        return <DollarSign className="h-3 w-3" />
-      case 'Mid-range':
-      default:
-        return <DollarSign className="h-3 w-3" />
-    }
-  }
-
   return (
     <motion.div 
       whileHover={{ y: -8 }} 
@@ -83,21 +51,6 @@ export function BarberCard({ barber, className }: BarberCardProps) {
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-border rounded-full"></div>
               </div>
               
-              {/* Status badges */}
-              <div className="absolute top-3 left-3 flex gap-2">
-                {barber.trending && (
-                  <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs backdrop-blur-sm">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    Trending
-                  </Badge>
-                )}
-                {barber.openToHire && (
-                  <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs backdrop-blur-sm">
-                    Open to Offers
-                  </Badge>
-                )}
-              </div>
-
               {/* Portfolio preview (if available) */}
               {barber.portfolio && barber.portfolio.length > 0 && (
                 <div className="absolute bottom-3 right-3 flex gap-1">
@@ -105,6 +58,7 @@ export function BarberCard({ barber, className }: BarberCardProps) {
                     <div key={index} className="h-8 w-8 rounded-md overflow-hidden border-2 border-border shadow-lg backdrop-blur-sm">
                       <Image
                         src={image || "/placeholder.svg"}
+                        unoptimized={!isOptimizableImage(image || "/placeholder.svg")}
                         alt={`${barber.name}'s work`}
                         width={32}
                         height={32}
@@ -139,7 +93,18 @@ export function BarberCard({ barber, className }: BarberCardProps) {
                   {barber.businessName && (
                     <p className="text-muted-foreground text-base font-medium">{barber.businessName}</p>
                   )}
-                  <div className="text-primary text-lg font-semibold">@{barber.username || barber.name?.toLowerCase().replace(/\s+/g, '') || 'username'}</div>
+                  {barber.username && <div className="text-primary text-lg font-semibold">@{barber.username}</div>}
+                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                    {barber.reviewCount ? (
+                      <>
+                        <Star className="h-4 w-4 text-secondary fill-secondary" aria-hidden="true" />
+                        <span className="font-semibold text-foreground">{(barber.rating ?? 0).toFixed(1)}</span>
+                        <span>({barber.reviewCount} review{barber.reviewCount === 1 ? '' : 's'})</span>
+                      </>
+                    ) : (
+                      <span>New on Talii</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Location */}
@@ -147,30 +112,11 @@ export function BarberCard({ barber, className }: BarberCardProps) {
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4 flex-shrink-0 text-primary" />
                     <span className="truncate">{barber.location}</span>
-                    {barber.distance && (
+                    {barber.distance != null && (
                       <Badge variant="outline" className="text-xs bg-primary/20 text-primary border-primary/30 ml-2">
                         {barber.distance.toFixed(1)} mi
                       </Badge>
                     )}
-                  </div>
-                )}
-
-                {/* Total Likes */}
-                <div className="flex items-center justify-center gap-1">
-                  <Heart className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">{barber.totalLikes || 0}</span>
-                </div>
-
-                {/* Price Range */}
-                {barber.priceRange && (
-                  <div className="flex justify-center">
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${getPriceRangeColor(barber.priceRange)}`}
-                    >
-                      {getPriceRangeIcon(barber.priceRange)}
-                      <span className="ml-1">{barber.priceRange} Pricing</span>
-                    </Badge>
                   </div>
                 )}
 
@@ -204,7 +150,7 @@ export function BarberCard({ barber, className }: BarberCardProps) {
                 )}
 
                 {/* Social Media Links */}
-                {(barber.instagram || barber.twitter || barber.tiktok || barber.facebook) && (
+                {(barber.instagram || barber.tiktok) && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-center gap-2">
                       <Globe className="h-4 w-4 text-primary" />
@@ -213,9 +159,7 @@ export function BarberCard({ barber, className }: BarberCardProps) {
                     <div className="flex justify-center">
                       <SocialMediaLinks
                         instagram={barber.instagram}
-                        twitter={barber.twitter}
                         tiktok={barber.tiktok}
-                        facebook={barber.facebook}
                         size="sm"
                         className="justify-center"
                       />
@@ -227,13 +171,13 @@ export function BarberCard({ barber, className }: BarberCardProps) {
               <div className="pt-4">
                 <Button
                   asChild
-                  className="w-full bg-secondary text-primary-foreground font-semibold hover:bg-secondary/90 rounded-xl py-3"
+                  className="w-full bg-button text-button-foreground font-semibold hover:bg-button/90 rounded-xl py-3"
                 >
                   <Link 
                     href={`/book/${barber.username}`} 
                     className="flex items-center justify-center w-full h-full"
                   >
-                    Book Now
+                    Book Now<span className="sr-only"> with {barber.businessName || barber.name}</span>
                   </Link>
                 </Button>
               </div>

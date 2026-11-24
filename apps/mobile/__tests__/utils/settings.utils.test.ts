@@ -1,4 +1,4 @@
-import { extractHandle, BARBER_SPECIALTIES, PRICE_RANGES, CARRIER_OPTIONS } from '@/utils/settings.utils';
+import { extractHandle, BARBER_SPECIALTIES, PRICE_RANGES } from '@/utils/settings.utils';
 
 describe('settings.utils', () => {
   describe('extractHandle', () => {
@@ -68,29 +68,6 @@ describe('settings.utils', () => {
         expect(typeof range.value).toBe('string');
         expect(typeof range.label).toBe('string');
       });
-    });
-  });
-
-  describe('CARRIER_OPTIONS', () => {
-    it('should contain major carriers', () => {
-      const carriers = CARRIER_OPTIONS.map((c: { value: string; label: string }) => c.value);
-      expect(carriers).toContain('verizon');
-      expect(carriers).toContain('att');
-      expect(carriers).toContain('tmobile');
-      expect(carriers).toContain('sprint');
-    });
-
-    it('should have value and label for each carrier', () => {
-      CARRIER_OPTIONS.forEach((carrier: { value: string; label: string }) => {
-        expect(carrier).toHaveProperty('value');
-        expect(carrier).toHaveProperty('label');
-        expect(typeof carrier.value).toBe('string');
-        expect(typeof carrier.label).toBe('string');
-      });
-    });
-
-    it('should have at least 9 carrier options', () => {
-      expect(CARRIER_OPTIONS.length).toBeGreaterThanOrEqual(9);
     });
   });
 });

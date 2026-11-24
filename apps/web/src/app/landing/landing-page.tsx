@@ -5,7 +5,6 @@ import { useTheme } from "next-themes";
 import {
   HeroSection,
   FeatureGrid,
-  TestimonialSection,
   RevenueCalculator,
   CTASection,
   LandingNavbar,
@@ -65,7 +64,6 @@ export default function LandingPage() {
   const navItems = [
     { href: "#calculator", label: "Calculator" },
     { href: "#features", label: "Features" },
-    { href: "#testimonials", label: "Success Stories" },
     { href: "/browse", label: "Browse" },
     { href: "/login", label: "Login" },
   ];
@@ -73,61 +71,35 @@ export default function LandingPage() {
   const features: Feature[] = [
     {
       number: "01",
-      title: "Social Media Integration",
+      title: "Your Own Booking Page",
       description:
-        "Connect your Instagram, Twitter, and Facebook to showcase your best work, share your portfolio, and attract new clients directly from your profile.",
+        "Show your services, add-ons, photos and reviews on one page, link your Instagram and TikTok, and share your booking link anywhere.",
       icon: Star,
       iconColor: "bg-secondary/20 text-secondary",
     },
     {
       number: "02",
-      title: "Revenue Optimization",
+      title: "Services and Add-ons",
       description:
-        "Boost your earnings with smart pricing, service add-ons, and analytics that help you maximize every booking.",
+        "Set your own prices and durations, offer add-ons, and see what you have earned from every booking.",
       icon: DollarSign,
       iconColor: "bg-secondary/20 text-secondary",
     },
     {
       number: "03",
-      title: "Reach System",
+      title: "Get Discovered",
       description:
-        "Get discovered by clients through our on-demand marketplace—customers browse, book, and you get paid for every service delivered.",
+        "Clients search for barbers near them, pick an open time from your hours, and book in a few taps.",
       icon: Zap,
       iconColor: "bg-secondary/20 text-secondary",
-      badge: "Alpha",
     },
     {
       number: "04",
-      title: "Client Management",
+      title: "Your Calendar",
       description:
-        "Easily manage client profiles, preferences, and booking history to deliver a personalized experience every time.",
+        "See every booking in your time zone, block off days, and mark appointments completed or missed. Add walk-ins from the Talii app.",
       icon: Users,
       iconColor: "bg-secondary/20 text-secondary",
-    },
-  ];
-
-  const testimonials = [
-    {
-      name: "Chance Robenson",
-      role: "Barber",
-      location: "Princeton, NJ",
-      revenue: "$50K/year",
-      image: "/api/placeholder/60/60",
-      quote:
-        "Talii made running my business so much easier. My clients love the booking experience, and I've seen my revenue grow every month.",
-      rating: 5,
-      metric: "+300% Revenue Growth",
-    },
-    {
-      name: "Caleb Bock",
-      role: "Barber",
-      location: "Blacksburg, VA",
-      revenue: "$65K/year",
-      image: "/api/placeholder/60/60",
-      quote:
-        "Since switching to Talii, I spend less time on admin and more time with my clients. The reminders and scheduling are a game changer!",
-      rating: 5,
-      metric: "95% Booking Rate",
     },
   ];
 
@@ -175,10 +147,9 @@ export default function LandingPage() {
           href: "/register",
         }}
         secondaryCta={{
-          label: "See Real Results",
-          href: "#testimonials",
+          label: "See Features",
+          href: "#features",
         }}
-        proof="Loved by independent stylists and barbers across the country"
         visual={heroVisual}
       />
 
@@ -198,22 +169,13 @@ export default function LandingPage() {
         features={features}
         columns={3}
         title="Everything You Need to Scale"
-        subtitle="From booking automation to revenue optimization, Talii gives you the tools to transform your cosmetology business."
-      />
-
-      {/* Testimonials Section */}
-      <TestimonialSection
-        id="testimonials"
-        testimonials={testimonials}
-        title="Success Stories"
-        subtitle="See how cosmetologists are transforming their businesses with Talii."
-        columns={2}
+        subtitle="From your booking page to your calendar and payouts, Talii gives you the tools to run your business."
       />
 
       {/* Final CTA Section */}
       <CTASection
         title="Ready to Transform Your Business?"
-        subtitle="Join cosmetologists who are already growing their business with Talii. Start your journey today."
+        subtitle="Set up your booking page and start taking bookings with Talii."
         primaryCta={{
           label: "Get Started Free",
           href: "/register",
@@ -222,7 +184,6 @@ export default function LandingPage() {
           label: "Browse Stylists",
           href: "/browse",
         }}
-        guarantee="30-day money-back guarantee • No setup fees • Cancel anytime"
         variant="card"
       />
 
@@ -232,16 +193,19 @@ export default function LandingPage() {
           <div className="text-center space-y-6">
             {/* Support Button */}
             <div className="flex justify-center">
-              <Link href="/support">
-                <Button className="bg-muted border border-border text-foreground hover:bg-muted/80 hover:border-primary/30 transition-all duration-300 rounded-xl px-6 py-3 font-semibold">
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Need Help? Contact Support
-                </Button>
-              </Link>
+              <Button href="/support" className="bg-muted border border-border text-foreground hover:bg-muted/80 hover:border-primary/30 transition-all duration-300 rounded-xl px-6 py-3 font-semibold">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Need Help? Contact Support
+              </Button>
             </div>
 
+            <nav aria-label="Legal" className="flex justify-center gap-6 text-sm">
+              <Link href="/privacy" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">Privacy</Link>
+              <Link href="/terms" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">Terms</Link>
+            </nav>
+
             <p className="text-muted-foreground text-sm">
-              © 2025 Talii. All rights reserved. The future of booking.
+              © {new Date().getFullYear()} Talii. All rights reserved.
             </p>
           </div>
         </div>

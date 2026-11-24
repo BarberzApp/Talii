@@ -4,7 +4,6 @@ import React from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { ArrowRight, Play } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/shared/lib/utils";
 import { AnimatedSection } from "@/shared/components/ui/animated-section";
 import { motion } from "framer-motion";
@@ -86,7 +85,7 @@ export function HeroSection({
               <Button
                 href={primaryCta.href}
                 size="lg"
-                className="bg-secondary text-primary-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:bg-secondary/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-secondary/25"
+                className="bg-button text-button-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:bg-button/90 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-secondary/25"
               >
                 {primaryCta.label}
                 <ArrowRight className="ml-2 h-5 w-5" />

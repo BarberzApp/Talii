@@ -8,7 +8,6 @@ import Animated, {
   withDelay,
   Easing 
 } from 'react-native-reanimated';
-import { theme } from '../../lib/theme';
 
 type AnimationType = 'fade' | 'slideUp' | 'slideDown' | 'scale' | 'bounce';
 
@@ -66,6 +65,7 @@ export function AnimatedSection({
         stiffness: 100,
       }));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the animation starts once on mount
   }, [type, delay, duration, spring]);
 
   const animatedStyle = useAnimatedStyle(() => ({

@@ -54,12 +54,6 @@ export const ROUTE_MAPPING: RouteMapping[] = [
     requiresAuth: true,
     description: 'Calendar page'
   },
-  // {
-  //   nextjs: '/reels',
-  //   reactNavigation: 'Cuts',
-  //   requiresAuth: true,
-  //   description: 'Cuts/Reels page'
-  // }, // Commented out - TikTok-style feed disabled
   {
     nextjs: '/profile',
     reactNavigation: 'Profile',
@@ -106,17 +100,6 @@ export const ROUTE_MAPPING: RouteMapping[] = [
   }
 ];
 
-// Helper functions for route mapping
-export const getReactNavigationRoute = (nextjsRoute: string): string | null => {
-  const mapping = ROUTE_MAPPING.find(route => route.nextjs === nextjsRoute);
-  return mapping?.reactNavigation || null;
-};
-
-export const getNextjsRoute = (reactNavigationRoute: string): string | null => {
-  const mapping = ROUTE_MAPPING.find(route => route.reactNavigation === reactNavigationRoute);
-  return mapping?.nextjs || null;
-};
-
 export const isRouteProtected = (route: string): boolean => {
   const mapping = ROUTE_MAPPING.find(r => r.reactNavigation === route || r.nextjs === route);
   return mapping?.requiresAuth || false;
@@ -129,7 +112,7 @@ export const getRouteRole = (route: string): 'client' | 'barber' | 'admin' | und
 
 // Deep linking configuration
 export const DEEP_LINKING_CONFIG = {
-  prefixes: ['bocm://', 'https://bocm.app'],
+  prefixes: ['talii://'],
   config: {
     screens: {
       Home: '',
@@ -139,7 +122,6 @@ export const DEEP_LINKING_CONFIG = {
       Terms: 'terms',
       Browse: 'browse',
       Calendar: 'calendar',
-      Cuts: 'reels',
       Profile: 'profile',
       Settings: 'settings',
       BookingCalendar: 'book',

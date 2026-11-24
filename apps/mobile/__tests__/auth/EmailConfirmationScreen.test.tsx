@@ -1,10 +1,3 @@
-// Mock Platform before any imports
-jest.mock('react-native/Libraries/Utilities/Platform', () => ({
-  OS: 'ios',
-  Version: '15.0',
-  select: jest.fn((obj) => obj.ios || obj.default),
-}));
-
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import EmailConfirmationScreen from '@/pages/EmailConfirmationScreen';
@@ -45,7 +38,8 @@ jest.mock('@/lib/supabase', () => ({
 // Mock Alert
 const mockAlert = jest.fn();
 jest.mock('react-native/Libraries/Alert/Alert', () => ({
-  alert: (...args: any[]) => mockAlert(...args),
+  __esModule: true,
+  default: { alert: (...args: any[]) => mockAlert(...args) },
 }));
 
 // Mock AnimatedBackground to simple view

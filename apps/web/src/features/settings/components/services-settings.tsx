@@ -1,25 +1,40 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
+import { formatCents, type ServiceRow } from '@barber-app/shared'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
-import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Loader2, Plus, Edit, Trash2, Scissors, AlertCircle, CheckCircle, Sparkles, Clock, DollarSign, Package } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
+import { Switch } from '@/shared/components/ui/switch'
 import { logger } from '@/shared/lib/logger'
 
+/** A service as edited here: price in dollars for the form, cents on the wire. */
 interface Service {
-  id?: string
+  id: string
   name: string
-  duration: number // in minutes
-  price: number
+  duration: number // minutes
+  price: number // dollars
+  priceCents: number
   description?: string
-  barber_id: string
+  isActive: boolean
+}
+
+function fromRow(row: ServiceRow): Service {
+  return {
+    id: row.id,
+    name: row.name,
+    duration: row.duration_minutes,
+    price: row.price_cents / 100,
+    priceCents: row.price_cents,
+    description: row.description ?? undefined,
+    isActive: row.is_active,
+  }
 }
 
 interface ServiceFormData {
@@ -27,6 +42,7 @@ interface ServiceFormData {
   price: number
   duration: number
   description: string
+  isActive: boolean
 }
 
 interface ServicesSettingsProps {
@@ -41,67 +57,43 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
   const { toast } = useToast()
   const { user } = useAuth()
-  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm<ServiceFormData>()
+  const { register, handleSubmit, reset, setValue, watch } = useForm<ServiceFormData>({ defaultValues: { isActive: true } })
+  const isActive = watch('isActive')
 
-  // Load barber ID and services
-  useEffect(() => {
-    if (user) {
-      loadBarberId()
-    }
-  }, [user])
-
-  const loadBarberId = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single()
-
-      if (error) throw error
-      if (data) {
-        setBarberId(data.id)
-        loadServices(data.id)
-      }
-    } catch (error) {
-      logger.error('Error loading barber ID', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load barber information. Please try again.',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const loadServices = async (barberId: string) => {
+  // Load the barber's services (GET /api/me/services)
+  const loadServices = useCallback(async () => {
     try {
       setIsLoading(true)
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .eq('barber_id', barberId)
-        .order('name')
-
-      if (error) throw error
-      if (data) setServices(data)
+      const { services: rows } = await api.services.list()
+      setServices(rows.map(fromRow).sort((a, b) => a.name.localeCompare(b.name)))
     } catch (error) {
       logger.error('Error loading services', error)
       toast({
         title: 'Error',
-        description: 'Failed to load services. Please try again.',
+        description: errorMessage(error, 'Failed to load services. Please try again.'),
         variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [toast])
+
+  const userId = user?.id
+  const userBarberId = user?.barberId
+
+  useEffect(() => {
+    if (userId) {
+      setBarberId(userBarberId ?? null)
+      loadServices()
+    }
+  }, [userId, userBarberId, loadServices])
 
   const validateForm = (data: ServiceFormData): boolean => {
     const errors: {[key: string]: string} = {}
     
     if (!data.name?.trim()) errors.name = 'Service name is required'
-    if (!data.duration || data.duration < 1) errors.duration = 'Duration must be at least 1 minute'
-    if (!data.price || data.price < 0) errors.price = 'Price must be at least $0'
+    if (!data.duration || data.duration < 5 || data.duration > 480) errors.duration = 'Duration must be between 5 and 480 minutes'
+    if (data.price === undefined || Number.isNaN(data.price) || data.price < 0 || data.price > 1000) errors.price = 'Price must be between $0 and $1,000'
     
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
@@ -130,60 +122,29 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
 
     try {
       setIsLoading(true)
+      const body = {
+        name: data.name.trim(),
+        priceCents: Math.round(data.price * 100),
+        durationMinutes: Math.round(data.duration),
+        description: data.description?.trim() || null,
+        isActive: data.isActive !== false,
+      }
       if (editingService) {
-        // Update existing service
-        const { error: updateError } = await supabase
-          .from('services')
-          .update({
-            name: data.name,
-            price: data.price,
-            duration: data.duration,
-            description: data.description,
-          })
-          .eq('id', editingService.id)
-
-        if (updateError) {
-          logger.error('Error updating service', updateError)
-          toast({
-            title: 'Error',
-            description: 'Failed to update service. Please try again.',
-            variant: 'destructive',
-          })
-          return
-        }
+        await api.services.update(editingService.id, body)
         toast({
           title: 'Success',
           description: 'Service updated successfully',
         })
       } else {
-        // Add new service
-        const { error: insertError } = await supabase
-          .from('services')
-          .insert({
-            barber_id: barberId,
-            name: data.name,
-            price: data.price,
-            duration: data.duration,
-            description: data.description,
-          })
-
-        if (insertError) {
-          logger.error('Error creating service', insertError)
-          toast({
-            title: 'Error',
-            description: 'Failed to create service. Please try again.',
-            variant: 'destructive',
-          })
-          return
-        }
+        await api.services.create(body)
         toast({
           title: 'Success',
           description: 'Service added successfully',
         })
       }
       
-      await loadServices(barberId)
-      reset()
+      await loadServices()
+      reset({ name: '', description: '', isActive: true })
       setEditingService(null)
       
       // Call onUpdate to refresh settings data
@@ -192,7 +153,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
       logger.error('Error saving service', error)
       toast({
         title: 'Error',
-        description: 'Failed to save service. Please try again.',
+        description: errorMessage(error, 'Failed to save service. Please try again.'),
         variant: 'destructive',
       })
     } finally {
@@ -202,29 +163,26 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
 
   // Delete service
   const deleteService = async (serviceId: string) => {
-    if (!confirm('Are you sure you want to delete this service?')) return
+    if (!confirm('Delete this service? If clients have booked it before, it is hidden instead so their history stays intact.')) return
 
     try {
       setIsLoading(true)
-      const { error } = await supabase
-        .from('services')
-        .delete()
-        .eq('id', serviceId)
-
-      if (error) throw error
+      const result = await api.services.remove(serviceId)
 
       toast({
         title: 'Success',
-        description: 'Service deleted successfully',
+        description: result.deactivated
+          ? 'This service has bookings, so it was hidden instead of deleted.'
+          : 'Service deleted successfully',
       })
       
-      await loadServices(barberId!)
+      await loadServices()
       onUpdate?.()
     } catch (error) {
       logger.error('Error deleting service', error)
       toast({
         title: 'Error',
-        description: 'Failed to delete service. Please try again.',
+        description: errorMessage(error, 'Failed to delete service. Please try again.'),
         variant: 'destructive',
       })
     } finally {
@@ -238,11 +196,13 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
     setValue('price', service.price)
     setValue('duration', service.duration)
     setValue('description', service.description || '')
+    setValue('isActive', service.isActive)
+    document.getElementById('service-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const cancelEdit = () => {
     setEditingService(null)
-    reset()
+    reset({ name: '', description: '', isActive: true })
     setValidationErrors({})
   }
 
@@ -332,7 +292,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
         </CardHeader>
         
         <CardContent className="p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form id="service-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6 scroll-mt-24">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="name" className="text-foreground font-semibold text-lg flex items-center gap-2">
@@ -413,11 +373,25 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
               </div>
             </div>
             
-            <div className="flex gap-4 pt-6">
+            <div className="flex items-center gap-3 p-4 bg-black/5 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10">
+              <Switch
+                id="service-active"
+                checked={isActive !== false}
+                onCheckedChange={(checked: boolean) => setValue('isActive', checked)}
+              />
+              <div>
+                <Label htmlFor="service-active" className="text-foreground font-semibold cursor-pointer">
+                  Show to clients
+                </Label>
+                <p className="text-muted-foreground text-sm">Turn off to hide this service without deleting it.</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4 pt-6">
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                className="bg-button hover:bg-button/90 text-button-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -469,7 +443,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                 </div>
                 <Button
                   onClick={() => document.getElementById('name')?.focus()}
-                  className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  className="bg-button hover:bg-button/90 text-button-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Add Your First Service
@@ -484,10 +458,10 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-3">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3">
                         <h4 className="text-xl font-bebas text-foreground tracking-wide">{service.name}</h4>
                         <Badge variant="secondary" className="text-sm px-3 py-1 bg-secondary/20 text-secondary border-secondary/30">
-                          ${service.price}
+                          {formatCents(service.priceCents)}{!service.isActive && ' · hidden'}
                         </Badge>
                         <div className="flex items-center gap-2 text-foreground/60 text-sm bg-black/5 dark:bg-white/5 px-3 py-1 rounded-full">
                           <Clock className="h-4 w-4" />
@@ -499,10 +473,11 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                       )}
                     </div>
                     
-                    <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="flex gap-1 sm:gap-3 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                       <Button
                         size="sm"
                         variant="ghost"
+                        aria-label={`Edit ${service.name}`}
                         onClick={() => editService(service)}
                         className="text-foreground/70 hover:text-foreground hover:bg-black/5 dark:bg-white/10 rounded-xl p-3"
                       >
@@ -511,9 +486,10 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => deleteService(service.id!)}
+                        aria-label={`Delete ${service.name}`}
+                        onClick={() => deleteService(service.id)}
                         disabled={isLoading}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl p-3"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded-xl p-3"
                       >
                         <Trash2 className="h-5 w-5" />
                       </Button>

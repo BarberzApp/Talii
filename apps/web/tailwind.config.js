@@ -3,7 +3,6 @@ module.exports = {
   darkMode: "class",
   content: [
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
     "./node_modules/@tamagui/**/*.{js,ts,jsx,tsx}",
@@ -27,6 +26,10 @@ module.exports = {
         primary: {
           DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
+        },
+        button: {
+          DEFAULT: "hsl(var(--button) / <alpha-value>)",
+          foreground: "hsl(var(--button-foreground) / <alpha-value>)",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary) / <alpha-value>)",

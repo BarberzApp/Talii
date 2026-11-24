@@ -5,10 +5,10 @@ This document provides a high-level overview of the Talii platform's architectur
 ## Architecture Overview
 - **Frontend (Web):** Next.js 15.3 (TypeScript, Tailwind CSS, Shadcn UI)
 - **Frontend (Mobile):** React Native & Expo SDK 53 (twrnc)
-- **API Gateway & Backend:** Next.js API Routes, Supabase PostgreSQL, Supabase Auth, Deno Edge Functions
+- **API Gateway & Backend:** Next.js API Routes, Supabase PostgreSQL, Supabase Auth (no edge functions)
 - **Payments:** Stripe Connect (Express) & Stripe Payment Intents
 - **Shared Logic:** Workspace library (`packages/shared`) containing canonical fees, availability slots engine, and Stripe metadata schemas.
-- **Database Schema:** See [database-schema.txt](../database/database-schema.txt)
+- **Database Schema:** See [database-schema.txt](../database/SCHEMA.md)
 
 ## Main Flows
 
@@ -18,15 +18,15 @@ This document provides a high-level overview of the Talii platform's architectur
  - Web: `apps/web/src/app/barber/onboarding/page.tsx`
  - Mobile: `apps/mobile/app/pages/BarberOnboardingPage.tsx`
 - **DB Tables:** `barbers`, `profiles`, `services`
-- **Stripe Connect:** Handled via the Edge Function at `supabase/functions/stripe-connect`
+- **Stripe Connect:** `POST /api/stripe/connect/onboarding`, `POST /api/stripe/connect/dashboard`, `GET /api/stripe/connect/status` (`apps/web/src/server/stripe/connect.ts`)
 - **Logic:**
  - Checks for required fields and Stripe account status before marking onboarding as complete.
- - RLS policies restrict permissions to only the profile owner (see [rowlevelsecurity.txt](../database/rowlevelsecurity.txt)).
+ - RLS policies restrict permissions to only the profile owner (see [rowlevelsecurity.txt](../database/SCHEMA.md)).
 
 ### 2. Booking Flow
 - **Purpose:** Clients browse profiles, view availability slots, choose service add-ons, and book appointments.
 - **Key Files:**
- - Gateway: `/api/mobile/bookings` and `/api/mobile/availability/slots`
+ - API: `GET /api/barbers/:id/availability`, `GET|POST /api/bookings`, `PATCH /api/bookings/:id`, `POST /api/bookings/manual` (`apps/web/src/server/bookings/`)
  - Web Client: `apps/web/src/app/book/[username]/page.tsx`
  - Mobile Client: `apps/mobile/app/shared/components/BookingForm.tsx`
 - **DB Tables:** `bookings`, `services`, `barbers`, `profiles`, `service_addons`
@@ -36,19 +36,19 @@ This document provides a high-level overview of the Talii platform's architectur
 ### 3. Payments
 - **Purpose:** Handle split payments via Stripe destination charges, transferring payouts to barbers and platform fees to Talii.
 - **Key Files:**
- - Webhook Fulfillment: `apps/web/src/app/api/webhooks/stripe/route.ts`
+ - Webhook: `apps/web/src/server/stripe/webhook.ts` (route `apps/web/src/app/api/webhooks/stripe/route.ts`)
  - Shared Fee Calculations: `packages/shared/src/domain/fees.ts`
-- **DB Tables:** `payments`, `bookings`, `barbers`
+- **DB Tables:** `payments`, `bookings`, `barber_billing`, `stripe_events`
 - **Logic:**
  - Calculates fees ($3.40 total user fee, platform absorbs $0.40 Stripe transaction fee, remaining $3.00 net split 60% platform / 40% barber).
- - Stripe webhook listener automatically matches `payment_intent.succeeded` events, parses metadata contract, and inserts database records.
+ - `POST /api/bookings` places a pending hold and creates the PaymentIntent (metadata `{ bookingId }` only); the webhook confirms the booking on `payment_intent.succeeded` and refunds automatically if the hold was lost.
 
 ## Where to Find Key Logic
-- **Authentication:** `packages/shared/src/domain/auth/` & `apps/web/src/shared/lib/api-auth.ts`
+- **Authentication:** `packages/shared/src/domain/auth/` & `apps/web/src/server/route.ts` (`defineRoute`)
 - **Profile Management:** `apps/web/src/features/profile/` & `apps/mobile/app/pages/UserProfilePage.tsx`
-- **RLS Policies:** [rowlevelsecurity.txt](../database/rowlevelsecurity.txt)
+- **RLS Policies:** [rowlevelsecurity.txt](../database/SCHEMA.md)
 
 ## Additional References
 - [README.md](../../README.md)
-- [Database Schema](../database/database-schema.txt)
+- [Database Schema](../database/SCHEMA.md)
 - [Local Development Guide](LOCAL_DEVELOPMENT.md)

@@ -110,7 +110,7 @@ export function FeatureGrid({
                     {feature.title}
                   </h3>
                   {feature.badge && (
-                    <Badge className="bg-secondary/90 text-primary-foreground border-secondary/50 dark:border-secondary/40 animate-pulse">
+                    <Badge className="bg-button/90 text-button-foreground border-secondary/50 dark:border-secondary/40 animate-pulse">
                       {feature.badge}
                     </Badge>
                   )}

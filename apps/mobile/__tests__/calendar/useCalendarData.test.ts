@@ -1,430 +1,295 @@
 /**
- * Tests for useCalendarData hook
- * 
- * Tests data fetching and operations
+ * Tests for useCalendarData: loads bookings through calendarDataService and
+ * turns them into events; actions reload on success.
  */
 
 import { renderHook, act } from '@testing-library/react-native';
 import { useCalendarData } from '@/hooks/useCalendarData';
-import { useCalendarState } from '@/hooks/useCalendarState';
 import * as calendarDataService from '@/lib/calendar/calendarDataService';
 import { logger } from '@/lib/logger';
 
-// Mock dependencies
 jest.mock('@/lib/calendar/calendarDataService');
 jest.mock('@/lib/logger');
 
-const mockCalendarDataService = calendarDataService as jest.Mocked<typeof calendarDataService>;
+const svc = calendarDataService as jest.Mocked<typeof calendarDataService>;
+
+const booking = {
+  id: 'booking-1',
+  barber_id: 'barber-123',
+  client_id: 'client-1',
+  customer_name: null,
+  service_id: 'service-1',
+  starts_at: '2026-12-15T15:00:00Z',
+  ends_at: '2026-12-15T15:30:00Z',
+  hold_expires_at: null,
+  service_price_cents: 3000,
+  addon_total_cents: 500,
+  booking_fee_cents: 340,
+  notes: null,
+  cancelled_at: null,
+  cancellation_reason: null,
+  created_at: '2026-12-01T00:00:00Z',
+  updated_at: '2026-12-01T00:00:00Z',
+  source: 'app' as const,
+  status: 'confirmed' as const,
+  payment_status: 'succeeded' as const,
+  service: { id: 'service-1', name: 'Haircut', duration_minutes: 30 },
+  addons: [{ addon_id: 'a1', name: 'Beard', price_cents: 500 }],
+  barber: {
+    id: 'barber-123',
+    business_name: 'Fade Co',
+    timezone: 'America/New_York',
+    city: null,
+    state: null,
+    profile: { name: 'Ann', username: 'ann', avatar_url: null },
+  },
+  client: { name: 'Chris', username: 'chris', avatar_url: null },
+};
+
+function makeState(overrides: Record<string, unknown> = {}) {
+  return {
+    setEvents: jest.fn(),
+    setLoading: jest.fn(),
+    setRefreshing: jest.fn(),
+    userRole: 'barber',
+    setUserRole: jest.fn(),
+    barberViewMode: 'appointments',
+    setBarberId: jest.fn(),
+    barberTimeZone: 'America/New_York',
+    setBarberTimeZone: jest.fn(),
+    currentDate: new Date(2026, 11, 10),
+    setLoadError: jest.fn(),
+    setServices: jest.fn(),
+    setTimeSlots: jest.fn(),
+    setLoadingTimeSlots: jest.fn(),
+    ...overrides,
+  } as any;
+}
 
 describe('useCalendarData', () => {
-  let mockState: any;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Create mock state
-    mockState = {
-      setEvents: jest.fn(),
-      setLoading: jest.fn(),
-      setRefreshing: jest.fn(),
-      userRole: 'barber',
-      setUserRole: jest.fn(),
-      barberViewMode: 'appointments',
-      setBarberId: jest.fn(),
-      setServices: jest.fn(),
-      setTimeSlots: jest.fn(),
-      setLoadingTimeSlots: jest.fn(),
-      manualFormData: {
-        clientName: '',
-        serviceId: '',
-        price: '',
-        time: '',
-        date: new Date(),
-      },
-    };
+    svc.fetchCalendarBookings.mockResolvedValue([booking]);
+    // The month-range math is pure; use the real one.
+    svc.calendarMonthRange.mockImplementation(
+      jest.requireActual('@/lib/calendar/calendarDataService').calendarMonthRange
+    );
   });
 
   describe('initialize', () => {
-    it('should initialize with user role and fetch bookings', async () => {
-      mockCalendarDataService.fetchUserRole.mockResolvedValue('barber');
-      mockCalendarDataService.fetchBarberId.mockResolvedValue('barber-123');
-      mockCalendarDataService.fetchBarberBookings.mockResolvedValue([]);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
+    it('loads identity then bookings', async () => {
+      svc.fetchCalendarIdentity.mockResolvedValue({
+        role: 'barber',
+        barberId: 'barber-123',
+        timeZone: 'America/New_York',
+        onboardingComplete: true,
+      });
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
 
       await act(async () => {
         await result.current.initialize();
       });
 
-      expect(mockCalendarDataService.fetchUserRole).toHaveBeenCalledWith('user-123');
-      expect(mockState.setUserRole).toHaveBeenCalledWith('barber');
-      expect(mockState.setLoading).toHaveBeenCalledWith(true);
-      expect(mockState.setLoading).toHaveBeenCalledWith(false);
+      expect(state.setUserRole).toHaveBeenCalledWith('barber');
+      expect(state.setBarberId).toHaveBeenCalledWith('barber-123');
+      expect(state.setBarberTimeZone).toHaveBeenCalledWith('America/New_York');
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('barber', expect.objectContaining({ from: expect.any(String) }));
+      expect(state.setLoading).toHaveBeenCalledWith(true);
+      expect(state.setLoading).toHaveBeenLastCalledWith(false);
     });
 
-    it('should not initialize without user ID', async () => {
-      const { result } = renderHook(() => useCalendarData(mockState, undefined));
-
+    it('does nothing without a user', async () => {
+      const { result } = renderHook(() => useCalendarData(makeState(), undefined));
       await act(async () => {
         await result.current.initialize();
       });
-
-      expect(mockCalendarDataService.fetchUserRole).not.toHaveBeenCalled();
+      expect(svc.fetchCalendarIdentity).not.toHaveBeenCalled();
     });
 
-    it('should handle initialization errors', async () => {
-      mockCalendarDataService.fetchUserRole.mockRejectedValue(new Error('Network error'));
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
+    it('handles errors', async () => {
+      svc.fetchCalendarIdentity.mockRejectedValue(new Error('Network error'));
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
       await act(async () => {
         await result.current.initialize();
       });
-
-      expect(mockState.setLoading).toHaveBeenCalledWith(false);
+      expect(state.setLoading).toHaveBeenLastCalledWith(false);
       expect(logger.error).toHaveBeenCalled();
     });
   });
 
   describe('loadBookings', () => {
-    it('should load barber appointments', async () => {
-      mockState.userRole = 'barber';
-      mockCalendarDataService.fetchBarberId.mockResolvedValue('barber-123');
-      mockCalendarDataService.fetchBarberBookings.mockResolvedValue([
-        {
-          id: 'booking-1',
-          barber_id: 'barber-123',
-          service_id: 'service-1',
-          date: '2024-12-15T10:00:00Z',
+    it('loads a barber’s appointments as the barber and builds events in cents', async () => {
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
+
+      await act(async () => {
+        await result.current.loadBookings('barber');
+      });
+
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('barber', {
+        from: '2026-11-24T05:00:00.000Z',
+        to: '2027-01-08T05:00:00.000Z',
+      });
+      expect(state.setLoadError).toHaveBeenCalledWith(null);
+      const [events] = state.setEvents.mock.calls[0];
+      expect(events[0]).toMatchObject({
+        id: 'booking-1',
+        title: 'Haircut - Chris',
+        start: '2026-12-15T15:00:00Z',
+        end: '2026-12-15T15:30:00Z',
+        extendedProps: {
+          status: 'confirmed',
+          servicePriceCents: 3000,
+          addonTotalCents: 500,
+          bookingFeeCents: 340,
+          addonNames: ['Beard'],
+          timeZone: 'America/New_York',
         },
-      ]);
-      mockCalendarDataService.fetchServiceById.mockResolvedValue({
-        name: 'Haircut',
-        duration: 30,
-        price: 50,
       });
-      mockCalendarDataService.fetchClientProfile.mockResolvedValue(null);
-      mockCalendarDataService.fetchBookingAddons.mockResolvedValue({
-        calculatedAddonTotal: 0,
-        addonNames: [],
+    });
+
+    it('loads a barber’s own bookings (as client) in the bookings view', async () => {
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
+      await act(async () => {
+        await result.current.loadBookings('barber', 'bookings');
       });
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('client', expect.any(Object));
+      expect(state.setEvents.mock.calls[0][0][0].title).toBe('Haircut with Fade Co');
+    });
 
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
+    it('loads client bookings', async () => {
+      const state = makeState({ userRole: 'client' });
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
+      await act(async () => {
+        await result.current.loadBookings();
+      });
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('client', expect.any(Object));
+    });
 
+    it('loads another month when asked', async () => {
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
+      await act(async () => {
+        await result.current.loadBookings('barber', 'appointments', { month: new Date(2027, 1, 1) });
+      });
+      expect(svc.fetchCalendarBookings).toHaveBeenCalledWith('barber', {
+        from: '2027-01-25T05:00:00.000Z',
+        to: '2027-03-08T05:00:00.000Z',
+      });
+    });
+
+    it('shows an error and keeps the events when loading fails', async () => {
+      svc.fetchCalendarBookings.mockRejectedValue(Object.assign(new Error('Server down'), { name: 'ApiError', code: 'INTERNAL', status: 500 }));
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
       await act(async () => {
         await result.current.loadBookings('barber');
       });
-
-      expect(mockCalendarDataService.fetchBarberId).toHaveBeenCalledWith('user-123');
-      expect(mockCalendarDataService.fetchBarberBookings).toHaveBeenCalledWith(
-        'barber-123',
-        'user-123',
-        'appointments'
-      );
-      expect(mockState.setEvents).toHaveBeenCalled();
+      expect(state.setEvents).not.toHaveBeenCalled();
+      expect(state.setLoadError).toHaveBeenCalledWith('Server down');
     });
 
-    it('should load client bookings', async () => {
-      mockState.userRole = 'client';
-      mockCalendarDataService.fetchClientBookings.mockResolvedValue([
-        {
-          id: 'booking-1',
-          client_id: 'user-123',
-          service_id: 'service-1',
-          barber_id: 'barber-1',
-          date: '2024-12-15T10:00:00Z',
-        },
-      ]);
-      mockCalendarDataService.fetchServiceById.mockResolvedValue({
-        name: 'Haircut',
-        duration: 30,
-        price: 50,
-      });
-      mockCalendarDataService.fetchBarberProfile.mockResolvedValue({
-        name: 'Barber Name',
-      });
-      mockCalendarDataService.fetchBookingAddons.mockResolvedValue({
-        calculatedAddonTotal: 0,
-        addonNames: [],
-      });
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
+    it('does nothing without a role', async () => {
+      const state = makeState({ userRole: null });
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
       await act(async () => {
-        await result.current.loadBookings('client');
+        await result.current.loadBookings();
       });
-
-      expect(mockCalendarDataService.fetchClientBookings).toHaveBeenCalledWith('user-123');
-      expect(mockState.setEvents).toHaveBeenCalled();
-    });
-
-    it('should not load bookings without user ID', async () => {
-      const { result } = renderHook(() => useCalendarData(mockState, undefined));
-
-      await act(async () => {
-        await result.current.loadBookings('barber');
-      });
-
-      expect(mockCalendarDataService.fetchBarberId).not.toHaveBeenCalled();
-    });
-
-    it('should handle errors when barber not found', async () => {
-      mockState.userRole = 'barber';
-      mockCalendarDataService.fetchBarberId.mockResolvedValue(null);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
-      await act(async () => {
-        await result.current.loadBookings('barber');
-      });
-
-      expect(mockCalendarDataService.fetchBarberBookings).not.toHaveBeenCalled();
+      expect(svc.fetchCalendarBookings).not.toHaveBeenCalled();
     });
   });
 
   describe('refresh', () => {
-    it('should refresh bookings', async () => {
-      mockState.userRole = 'client';
-      mockCalendarDataService.fetchClientBookings.mockResolvedValue([]);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
+    it('toggles refreshing around a reload', async () => {
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
       await act(async () => {
         await result.current.refresh();
       });
-
-      expect(mockState.setRefreshing).toHaveBeenCalledWith(true);
-      expect(mockState.setRefreshing).toHaveBeenCalledWith(false);
-    });
-
-    it('should handle refresh errors', async () => {
-      mockState.userRole = 'client';
-      mockCalendarDataService.fetchClientBookings.mockRejectedValue(new Error('Network error'));
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
-      await act(async () => {
-        await result.current.refresh();
-      });
-
-      expect(mockState.setRefreshing).toHaveBeenCalledWith(false);
-      expect(logger.error).toHaveBeenCalled();
+      expect(state.setRefreshing).toHaveBeenCalledWith(true);
+      expect(state.setRefreshing).toHaveBeenLastCalledWith(false);
+      expect(svc.fetchCalendarBookings).toHaveBeenCalled();
     });
   });
 
-  describe('loadServices', () => {
-    it('should load barber services', async () => {
-      const mockServices = [
-        { id: '1', name: 'Haircut', price: 50, duration: 30 },
-        { id: '2', name: 'Shave', price: 30, duration: 20 },
-      ];
-      mockCalendarDataService.fetchBarberServices.mockResolvedValue(mockServices);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
+  describe('walk-in form', () => {
+    it('loads services', async () => {
+      const services = [{ id: 's1', name: 'Cut', price_cents: 3000, duration_minutes: 30 }];
+      svc.fetchBarberServices.mockResolvedValue(services);
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
       await act(async () => {
-        await result.current.loadServices('barber-123');
+        await result.current.loadServices();
       });
-
-      expect(mockCalendarDataService.fetchBarberServices).toHaveBeenCalledWith('barber-123');
-      expect(mockState.setServices).toHaveBeenCalledWith(mockServices);
+      expect(state.setServices).toHaveBeenCalledWith(services);
     });
 
-    it('should handle service loading errors', async () => {
-      mockCalendarDataService.fetchBarberServices.mockRejectedValue(new Error('Error'));
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
+    it('loads walk-in times for a local date', async () => {
+      const slots = [{ startsAt: '2026-12-15T14:00:00.000Z', time: '09:00', available: true }];
+      svc.fetchWalkInTimeSlots.mockResolvedValue(slots);
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
       await act(async () => {
-        await result.current.loadServices('barber-123');
+        await result.current.loadTimeSlots('2026-12-15', 30, 'America/New_York');
       });
-
-      expect(mockState.setServices).toHaveBeenCalledWith([]);
-      expect(logger.error).toHaveBeenCalled();
-    });
-  });
-
-  describe('loadTimeSlots', () => {
-    it('should load available time slots', async () => {
-      const mockSlots = [
-        { time: '09:00', available: true },
-        { time: '10:00', available: false },
-      ];
-      mockCalendarDataService.fetchAvailableTimeSlots.mockResolvedValue(mockSlots);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-      const testDate = new Date('2024-12-15');
-
-      await act(async () => {
-        await result.current.loadTimeSlots('barber-123', testDate, 30);
-      });
-
-      expect(mockCalendarDataService.fetchAvailableTimeSlots).toHaveBeenCalledWith(
-        'barber-123',
-        testDate,
-        30
-      );
-      expect(mockState.setLoadingTimeSlots).toHaveBeenCalledWith(true);
-      expect(mockState.setTimeSlots).toHaveBeenCalledWith(mockSlots);
-      expect(mockState.setLoadingTimeSlots).toHaveBeenCalledWith(false);
+      expect(svc.fetchWalkInTimeSlots).toHaveBeenCalledWith('2026-12-15', 30, 'America/New_York');
+      expect(state.setTimeSlots).toHaveBeenCalledWith(slots);
+      expect(state.setLoadingTimeSlots).toHaveBeenLastCalledWith(false);
     });
 
-    it('should handle time slot loading errors', async () => {
-      mockCalendarDataService.fetchAvailableTimeSlots.mockRejectedValue(new Error('Error'));
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
+    it('creates an appointment and reloads', async () => {
+      svc.createManualAppointment.mockResolvedValue({ ok: true, booking: { id: 'm1' } });
+      const state = makeState();
+      const { result } = renderHook(() => useCalendarData(state, 'user-123'));
+      let outcome: unknown;
       await act(async () => {
-        await result.current.loadTimeSlots('barber-123', new Date(), 30);
-      });
-
-      expect(mockState.setTimeSlots).toHaveBeenCalledWith([]);
-      expect(mockState.setLoadingTimeSlots).toHaveBeenCalledWith(false);
-    });
-  });
-
-  describe('createAppointment', () => {
-    it('should create manual appointment successfully', async () => {
-      mockCalendarDataService.createManualAppointment.mockResolvedValue({
-        booking: { id: 'booking-123', status: 'confirmed' },
-        conflict: false,
-      });
-      mockState.userRole = 'barber';
-      mockCalendarDataService.fetchBarberId.mockResolvedValue('barber-123');
-      mockCalendarDataService.fetchBarberBookings.mockResolvedValue([]);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
-      const appointmentData = {
-        clientName: 'John Doe',
-        serviceId: 'service-1',
-        date: new Date('2024-12-15'),
-        time: '14:00',
-        price: 50,
-      };
-
-      let resultValue;
-      await act(async () => {
-        resultValue = await result.current.createAppointment('barber-123', appointmentData);
-      });
-
-      expect(mockCalendarDataService.createManualAppointment).toHaveBeenCalledWith({
-        barberId: 'barber-123',
-        ...appointmentData,
-      });
-      expect(resultValue).toEqual({ success: true, conflict: false });
-    });
-
-    it('should return false when appointment creation fails', async () => {
-      mockCalendarDataService.createManualAppointment.mockResolvedValue({
-        booking: null,
-        conflict: false,
-      });
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
-      let resultValue;
-      await act(async () => {
-        resultValue = await result.current.createAppointment('barber-123', {
-          clientName: 'John Doe',
-          serviceId: 'service-1',
-          date: new Date(),
-          time: '14:00',
-          price: 50,
+        outcome = await result.current.createAppointment({
+          serviceId: 's1',
+          startsAt: '2026-12-15T14:00:00.000Z',
+          customerName: 'Walk In',
         });
       });
+      expect(outcome).toEqual({ ok: true, booking: { id: 'm1' } });
+      expect(svc.fetchCalendarBookings).toHaveBeenCalled();
+    });
 
-      expect(resultValue).toEqual({ success: false, conflict: false });
+    it('does not reload when the appointment conflicts', async () => {
+      svc.createManualAppointment.mockResolvedValue({ ok: false, code: 'SLOT_TAKEN', message: 'Taken' });
+      const { result } = renderHook(() => useCalendarData(makeState(), 'user-123'));
+      await act(async () => {
+        await result.current.createAppointment({ serviceId: 's1', startsAt: 'x', customerName: 'A' });
+      });
+      expect(svc.fetchCalendarBookings).not.toHaveBeenCalled();
     });
   });
 
-  describe('markCompleted', () => {
-    it('should mark booking as completed', async () => {
-      mockCalendarDataService.updateBookingStatus.mockResolvedValue(true);
-      mockState.userRole = 'barber';
-      mockCalendarDataService.fetchBarberId.mockResolvedValue('barber-123');
-      mockCalendarDataService.fetchBarberBookings.mockResolvedValue([]);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
-      let success;
+  describe('booking actions', () => {
+    it.each([
+      ['markCompleted', 'completeBooking'],
+      ['markMissed', 'markNoShow'],
+      ['cancelBooking', 'cancelBooking'],
+    ] as const)('%s calls %s and reloads on success', async (hookFn, serviceFn) => {
+      (svc[serviceFn] as jest.Mock).mockResolvedValue({ ok: true, refundCents: null });
+      const { result } = renderHook(() => useCalendarData(makeState(), 'user-123'));
       await act(async () => {
-        success = await result.current.markCompleted('booking-123');
+        await result.current[hookFn]('booking-1');
       });
-
-      expect(mockCalendarDataService.updateBookingStatus).toHaveBeenCalledWith(
-        'booking-123',
-        'completed'
-      );
-      expect(success).toBe(true);
+      expect(svc[serviceFn]).toHaveBeenCalledWith('booking-1');
+      expect(svc.fetchCalendarBookings).toHaveBeenCalled();
     });
 
-    it('should return false when marking completed fails', async () => {
-      mockCalendarDataService.updateBookingStatus.mockResolvedValue(false);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
-      let success;
+    it('returns the failure without reloading', async () => {
+      svc.cancelBooking.mockResolvedValue({ ok: false, code: 'TOO_LATE_TO_CANCEL', message: 'Too late' });
+      const { result } = renderHook(() => useCalendarData(makeState(), 'user-123'));
+      let outcome: unknown;
       await act(async () => {
-        success = await result.current.markCompleted('booking-123');
+        outcome = await result.current.cancelBooking('booking-1');
       });
-
-      expect(success).toBe(false);
-    });
-  });
-
-  describe('markMissed', () => {
-    it('should mark booking as missed', async () => {
-      mockCalendarDataService.updateBookingStatus.mockResolvedValue(true);
-      mockState.userRole = 'barber';
-      mockCalendarDataService.fetchBarberId.mockResolvedValue('barber-123');
-      mockCalendarDataService.fetchBarberBookings.mockResolvedValue([]);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
-      let success;
-      await act(async () => {
-        success = await result.current.markMissed('booking-123');
-      });
-
-      expect(mockCalendarDataService.updateBookingStatus).toHaveBeenCalledWith(
-        'booking-123',
-        'missed'
-      );
-      expect(success).toBe(true);
-    });
-  });
-
-  describe('cancelBooking', () => {
-    it('should cancel booking successfully', async () => {
-      mockCalendarDataService.cancelBooking.mockResolvedValue(true);
-      mockState.userRole = 'client';
-      mockCalendarDataService.fetchClientBookings.mockResolvedValue([]);
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
-      let success;
-      await act(async () => {
-        success = await result.current.cancelBooking('booking-123');
-      });
-
-      expect(mockCalendarDataService.cancelBooking).toHaveBeenCalledWith('booking-123');
-      expect(success).toBe(true);
-    });
-
-    it('should handle cancellation errors', async () => {
-      mockCalendarDataService.cancelBooking.mockRejectedValue(new Error('Network error'));
-
-      const { result } = renderHook(() => useCalendarData(mockState, 'user-123'));
-
-      let success;
-      await act(async () => {
-        success = await result.current.cancelBooking('booking-123');
-      });
-
-      expect(success).toBe(false);
-      expect(logger.error).toHaveBeenCalled();
+      expect(outcome).toEqual({ ok: false, code: 'TOO_LATE_TO_CANCEL', message: 'Too late' });
+      expect(svc.fetchCalendarBookings).not.toHaveBeenCalled();
     });
   });
 });
-

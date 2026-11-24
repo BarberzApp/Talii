@@ -1,122 +1,293 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/shared/components/ui/use-toast"
+import React, { useEffect, useRef, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { CalendarPlus, Clock, Loader2, MapPin } from "lucide-react"
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
-import { supabaseAdmin } from "@/shared/lib/supabase"
+import { useAuth } from '@/shared/hooks/use-auth-zustand'
+import { api, errorMessage } from "@/shared/lib/api"
 import { logger } from "@/shared/lib/logger"
+import { storeRedirectUrl } from '@/shared/lib/redirect-utils'
+import { paymentIntentStatus } from '@/shared/components/payment/booking-payment'
+import { formatBookingDate, formatBookingTime, formatCents, timeZoneAbbreviation, type BookingListItem } from '@barber-app/shared'
+import { downloadIcs } from '@/shared/lib/ical-export'
 
-export default function BookingSuccessPage({
-  searchParams,
-}: {
-  searchParams: { session_id?: string }
-}) {
+const POLL_INTERVAL_MS = 2000
+const POLL_ATTEMPTS = 15
+
+type View =
+  | { kind: 'loading' }
+  | { kind: 'signed-out' }
+  | { kind: 'confirmed'; booking: BookingListItem }
+  | { kind: 'processing'; booking: BookingListItem | null }
+  | { kind: 'still-processing'; booking: BookingListItem | null }
+  | { kind: 'failed'; message: string }
+
+/**
+ * Landing page after booking. Stripe's Payment Element returns here with
+ * ?booking_id=…&payment_intent=…&payment_intent_client_secret=…&redirect_status=…;
+ * fee-exempt bookings come here with only booking_id. The client secret is read
+ * once and removed from the address bar. The booking is read with
+ * GET /api/bookings and polled briefly until the Stripe webhook confirms it.
+ */
+function BookingSuccessContent() {
+  const searchParams = useSearchParams()
   const router = useRouter()
-  const { toast } = useToast()
-  const sessionId = searchParams.session_id
-  const { push: safePush } = useSafeNavigation();
+  const pathname = usePathname()
+  const bookingId = searchParams.get('booking_id')
+  const redirectStatus = searchParams.get('redirect_status')
+  // Read the client secret once, then keep it out of the URL (history, logs, referrers).
+  const clientSecretRef = useRef<string | null>(searchParams.get('payment_intent_client_secret'))
+  const { push: safePush } = useSafeNavigation()
+  const { status } = useAuth()
+  const [view, setView] = useState<View>({ kind: 'loading' })
+  /** Stripe's own word on the payment (null when there was none, or it could not be read). */
+  const [intentStatus, setIntentStatus] = useState<string | null>(null)
 
   useEffect(() => {
-    const handleSuccess = async () => {
-      if (!sessionId) {
-        toast({
-          title: "Error",
-          description: "No session ID provided",
-          variant: "destructive",
-        })
-        safePush('/')
-        return
-      }
+    if (!searchParams.get('payment_intent_client_secret') && !searchParams.get('payment_intent')) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('payment_intent_client_secret')
+    params.delete('payment_intent')
+    router.replace(`${pathname}?${params.toString()}`)
+  }, [searchParams, router, pathname])
 
-      try {
-        logger.debug('Payment successful', { sessionId })
-        
-        // Verify the session was successful
-        const response = await fetch(`/api/payments/session?session_id=${sessionId}`)
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(`Failed to verify payment: ${errorData.error || response.statusText}`)
-        }
-        
-        const session = await response.json()
-        logger.debug('Payment verified', {
-          id: session.id,
-          payment_status: session.payment_status,
-          amount_total: session.amount_total
-        })
-
-        // Check if booking was created by webhook
-        const { data: existingBooking } = await supabaseAdmin
-          .from('bookings')
-          .select('id, status, payment_status')
-          .eq('payment_intent_id', session.payment_intent)
-          .single()
-
-        if (existingBooking) {
-          logger.debug('Booking created by webhook', { bookingId: existingBooking.id })
-          toast({
-            title: "Payment Successful!",
-            description: "Your booking has been confirmed and you'll receive a confirmation shortly.",
-          })
-        } else {
-          logger.debug('Booking being created by webhook')
-          toast({
-            title: "Payment Successful!",
-            description: "Your payment was processed successfully. Your booking will be confirmed shortly.",
-          })
-        }
-
-      } catch (error) {
-        logger.error('Error verifying payment', error)
-        // Don't show error to user since payment was successful
-        // The webhook will handle booking creation
-        toast({
-          title: "Payment Successful!",
-          description: "Your payment was processed successfully. Your booking will be confirmed shortly.",
-        })
-      }
+  useEffect(() => {
+    if (status === 'loading') return
+    if (!bookingId) {
+      setView({ kind: 'failed', message: 'No booking was given.' })
+      return
+    }
+    if (status === 'unauthenticated') {
+      setView({ kind: 'signed-out' })
+      return
     }
 
-    handleSuccess()
-  }, [sessionId, router, toast])
+    let cancelled = false
+
+    const findBooking = async (): Promise<BookingListItem | null> => {
+      // The booking starts in the future; a client has at most a handful of upcoming ones.
+      const { bookings } = await api.bookings.list({
+        as: 'client',
+        from: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        order: 'asc',
+        limit: 100,
+      })
+      return bookings.find((b) => b.id === bookingId) ?? null
+    }
+
+    const run = async () => {
+      const secret = clientSecretRef.current
+      const piStatus = secret ? await paymentIntentStatus(secret) : null
+      if (cancelled) return
+      setIntentStatus(piStatus)
+
+      // Payment failed: release the hold so the slot frees up. Only when Stripe itself
+      // says so (the URL's redirect_status alone can be stale or hand-made, and the
+      // secret is gone after a reload) and the booking is still an unpaid hold.
+      if (redirectStatus === 'failed' && (piStatus === 'requires_payment_method' || piStatus === 'canceled')) {
+        let released = false
+        try {
+          const booking = await findBooking()
+          if (booking?.status === 'pending') {
+            await api.bookings.cancel(bookingId, 'Payment failed')
+            released = true
+          }
+        } catch (error) {
+          logger.warn('Could not release the hold after a failed payment', error)
+        }
+        if (cancelled) return
+        if (released) {
+          setView({ kind: 'failed', message: 'Your payment did not go through, so the time was released. Please try booking again.' })
+          return
+        }
+        // Otherwise show whatever the booking's real status is (below).
+      }
+
+      let last: BookingListItem | null = null
+      for (let attempt = 0; attempt < POLL_ATTEMPTS && !cancelled; attempt++) {
+        try {
+          const booking = await findBooking()
+          if (cancelled) return
+          last = booking
+          if (booking?.status === 'confirmed' || booking?.status === 'completed') {
+            setView({ kind: 'confirmed', booking })
+            return
+          }
+          if (booking?.status === 'cancelled') {
+            setView({
+              kind: 'failed',
+              message:
+                booking.cancellation_reason === 'hold_expired'
+                  ? 'The time you picked was released before payment finished. Any charge will be refunded.'
+                  : 'This booking was cancelled.',
+            })
+            return
+          }
+          setView({ kind: 'processing', booking })
+        } catch (error) {
+          logger.error('Error loading booking', error)
+          if (!cancelled) setView({ kind: 'failed', message: errorMessage(error, 'Could not load your booking.') })
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+      }
+      if (!cancelled) setView({ kind: 'still-processing', booking: last })
+    }
+
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [bookingId, redirectStatus, status])
+
+  const booking =
+    view.kind === 'confirmed' || view.kind === 'processing' || view.kind === 'still-processing' ? view.booking : null
+  const timeZone = booking?.barber?.timezone ?? 'America/New_York'
+  const paid = intentStatus === 'succeeded'
+  const paying = intentStatus === 'processing'
+
+  const barberName = booking?.barber?.business_name || booking?.barber?.profile?.name || 'your barber'
+  const place = [booking?.barber?.city, booking?.barber?.state].filter(Boolean).join(', ')
+  const mapsUrl = place ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}` : null
+  const canAddToCalendar = !!booking && (booking.status === 'confirmed' || booking.status === 'pending')
+
+  const addToCalendar = () => {
+    if (!booking) return
+    downloadIcs(
+      [{
+        id: booking.id,
+        start: booking.starts_at,
+        end: booking.ends_at,
+        summary: `${booking.service?.name ?? 'Appointment'} with ${barberName}`,
+        description: [
+          booking.service?.name,
+          ...booking.addons.map((a) => a.name),
+          `Pay ${formatCents(booking.service_price_cents + booking.addon_total_cents)} at the appointment.`,
+          booking.barber?.profile?.username ? `${window.location.origin}/book/${booking.barber.profile.username}` : '',
+        ].filter(Boolean).join('\n'),
+        location: place || undefined,
+      }],
+      `talii-booking-${booking.id}.ics`,
+    )
+  }
+
+  const signIn = () => {
+    storeRedirectUrl(`/booking/success?booking_id=${encodeURIComponent(bookingId ?? '')}`)
+    safePush('/login')
+  }
 
   return (
-    <div className="container max-w-2xl py-10">
+    <div className="container max-w-2xl px-4 py-10 pb-36 md:pb-10">
       <Card>
         <CardHeader>
-          <CardTitle>Payment Successful! 🎉</CardTitle>
+          <CardTitle>
+            {view.kind === 'confirmed' && 'Booking confirmed'}
+            {view.kind === 'processing' && 'Confirming your booking…'}
+            {view.kind === 'still-processing' && 'Still processing'}
+            {view.kind === 'loading' && 'Loading your booking…'}
+            {view.kind === 'signed-out' && 'Sign in to see your booking'}
+            {view.kind === 'failed' && 'Booking not completed'}
+          </CardTitle>
           <CardDescription>
-            Your payment has been processed and your booking will be confirmed shortly.
+            {view.kind === 'confirmed' && 'You are all set. See your bookings on your profile.'}
+            {view.kind === 'processing' &&
+              (paid
+                ? 'Your payment was received. We are waiting for the confirmation, which usually takes a few seconds.'
+                : paying
+                  ? 'Your payment is processing. This usually takes a few seconds.'
+                  : 'We are confirming your booking. This usually takes a few seconds.')}
+            {view.kind === 'still-processing' &&
+              'This is taking longer than usual. Check your bookings on your profile in a few minutes; if the booking does not go through, any charge is refunded automatically.'}
+            {view.kind === 'signed-out' &&
+              'Your session ended on this device. Sign in to check the status of your booking.'}
+            {view.kind === 'failed' && view.message}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-800">
-              ✅ Your payment was successful! 
-            </p>
-            <p className="text-green-700 text-sm mt-2">
-              Your booking is being processed automatically. You'll receive a confirmation email and SMS shortly.
-            </p>
+          {(view.kind === 'loading' || (view.kind === 'processing' && !booking)) && (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+            </div>
+          )}
+
+          {booking && (
+            <div className="rounded-lg border p-4 space-y-2 text-sm">
+              <p className="font-medium text-base">{booking.service?.name}{booking.addons.length > 0 && ` + ${booking.addons.map((a) => a.name).join(', ')}`}</p>
+              <p>{barberName}</p>
+              <p className="flex items-start gap-2">
+                <Clock className="h-4 w-4 mt-0.5 flex-shrink-0 text-secondary" aria-hidden="true" />
+                <span>
+                  {formatBookingDate(booking.starts_at, timeZone)} at {formatBookingTime(booking.starts_at, timeZone)}{' '}
+                  {timeZoneAbbreviation(timeZone, booking.starts_at)}
+                  <span className="block text-xs text-muted-foreground">Barber&apos;s local time</span>
+                </span>
+              </p>
+              {place && (
+                <p className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-secondary" aria-hidden="true" />
+                  <span>
+                    {place}
+                    {mapsUrl && (
+                      <>
+                        {' · '}
+                        <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline">
+                          Open in Maps
+                        </a>
+                      </>
+                    )}
+                  </span>
+                </p>
+              )}
+              <p>
+                Service {formatCents(booking.service_price_cents + booking.addon_total_cents)} (paid at the appointment)
+                {booking.booking_fee_cents > 0 && ` · booking fee ${formatCents(booking.booking_fee_cents)}`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {booking.booking_fee_cents > 0
+                  ? 'Cancel more than 24 hours before your appointment and the booking fee is refunded in full. If the barber cancels, it is always refunded.'
+                  : 'You can cancel from My bookings any time before the appointment starts.'}
+              </p>
+              {canAddToCalendar && (
+                <Button variant="outline" size="sm" onClick={addToCalendar} className="mt-1">
+                  <CalendarPlus className="h-4 w-4" aria-hidden="true" />
+                  Add to calendar
+                </Button>
+              )}
+              {view.kind === 'processing' && (
+                <p className="text-muted-foreground flex items-center gap-2 pt-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Waiting for confirmation
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            {view.kind === 'signed-out' ? (
+              <Button onClick={signIn} className="flex-1">
+                Sign in
+              </Button>
+            ) : (
+              <Button onClick={() => safePush('/profile')} className="flex-1">
+                My bookings
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => safePush('/browse')} className="flex-1">
+              Browse barbers
+            </Button>
           </div>
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800 font-medium">What happens next?</p>
-            <ul className="text-blue-700 text-sm mt-2 space-y-1">
-              <li>• Your booking will be created automatically</li>
-              <li>• You'll receive a confirmation email</li>
-              <li>• You'll get an SMS notification</li>
-              <li>• The barber will be notified of your appointment</li>
-            </ul>
-          </div>
-          
-          <Button onClick={() => safePush('/')} className="w-full">
-            Return to Home
-          </Button>
         </CardContent>
       </Card>
     </div>
   )
-} 
+}
+
+export default function BookingSuccessPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <BookingSuccessContent />
+    </React.Suspense>
+  )
+}

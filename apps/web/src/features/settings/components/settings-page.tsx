@@ -1,26 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ProfileSettings } from './profile-settings'
 import { ServicesSettings } from './services-settings'
 import { AddonsSettings } from './addons-settings'
 import { ShareSettings } from './share-settings'
+import { DeleteAccountSection } from './delete-account-section'
+import { BlockedUsersSection } from './blocked-users-section'
 import { EnhancedBarberProfileSettings } from './enhanced-barber-profile-settings'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Card, CardContent } from '@/shared/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
-import { User, Scissors, Share2, Calendar, DollarSign, Lock, Settings as SettingsIcon, AlertCircle, Sparkles, Package, RefreshCw } from 'lucide-react'
+import { User, Scissors, Calendar, DollarSign, Settings as SettingsIcon, AlertCircle, Sparkles, Package } from 'lucide-react'
 import { AvailabilityManager } from '@/shared/components/booking/availability-manager'
 import { EarningsDashboard } from '@/shared/components/payment/earnings-dashboard'
 import { PaymentHistory } from '@/shared/components/payment/payment-history'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
-import { Progress } from '@/shared/components/ui/progress'
 import { supabase } from '@/shared/lib/supabase'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
+import { api } from '@/shared/lib/api'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Button } from '@/shared/components/ui/button'
-import { useRouter } from 'next/navigation'
 import { Badge } from '@/shared/components/ui/badge'
-import { Switch } from '@/shared/components/ui/switch'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import { logger } from '@/shared/lib/logger'
 
@@ -32,7 +33,6 @@ interface SettingsData {
   servicesComplete: boolean
   availabilityComplete: boolean
   stripeConnected: boolean
-  notificationsConfigured: boolean
 }
 
 export function SettingsPage() {
@@ -43,14 +43,12 @@ export function SettingsPage() {
     servicesComplete: false,
     availabilityComplete: false,
     stripeConnected: false,
-    notificationsConfigured: false
   })
   const [barberId, setBarberId] = useState<string>('')
   const [showVerifyBanner, setShowVerifyBanner] = useState(true)
-  const [latestUser, setLatestUser] = useState<any>(null)
+  const [latestUser, setLatestUser] = useState<SupabaseUser | null>(null)
   const { user, status, logout } = useAuth()
   const { toast } = useToast()
-  const router = useRouter()
   const { push: safePush } = useSafeNavigation();
 
   // Fetch latest user on mount and after resend
@@ -61,7 +59,60 @@ export function SettingsPage() {
 
   useEffect(() => {
     fetchLatestUser()
+    // Deep link: /settings?tab=services (used by the profile page and onboarding).
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    if (tab && ['profile', 'services', 'addons', 'availability', 'earnings'].includes(tab)) {
+      setActiveTab(tab as Tab)
+    }
   }, [])
+
+  // Only barbers have the services, add-ons, hours and earnings tabs.
+  useEffect(() => {
+    if (user && user.role !== 'barber' && activeTab !== 'profile') setActiveTab('profile')
+  }, [user, activeTab])
+
+  // `initial` shows the full-page loader; refreshes after a save run quietly so
+  // the open tab and scroll position stay put.
+  const loadSettingsData = useCallback(async (initial = false) => {
+    if (!user) return
+
+    try {
+      if (initial) setIsLoading(true)
+      
+      const me = await api.me.get()
+      const profileComplete = !!(me.profile.name && me.profile.email)
+
+      if (me.profile.role === 'barber' && me.barber) {
+        setBarberId(me.barber.id)
+        const [{ services }, { availability }] = await Promise.all([
+          api.services.list(),
+          api.schedule.getWeek(),
+        ])
+        setSettingsData({
+          profileComplete,
+          servicesComplete: services.some((s) => s.is_active),
+          availabilityComplete: availability.length > 0,
+          stripeConnected: !!(me.billing?.charges_enabled || me.billing?.fee_exempt),
+        })
+      } else {
+        setSettingsData({
+          profileComplete,
+          servicesComplete: false,
+          availabilityComplete: false,
+          stripeConnected: false,
+        })
+      }
+    } catch (error) {
+      logger.error('Error loading settings data', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to load settings data. Please refresh the page.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user, toast])
 
   useEffect(() => {
     if (status === 'loading') return
@@ -77,153 +128,15 @@ export function SettingsPage() {
     }
 
     if (user) {
-      loadSettingsData()
+      loadSettingsData(true)
     }
-  }, [user, status])
+  }, [user, status, loadSettingsData, toast, safePush])
 
-  const loadSettingsData = async () => {
-    if (!user) return
-
-    try {
-      setIsLoading(true)
-      
-      // Fetch profile data
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('name, email, phone, location, bio, is_public, email_notifications, sms_notifications')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        logger.error('Error fetching profile', profileError)
-      }
-
-      logger.debug('Profile data loaded', { userId: user.id })
-
-      // Check if user is a barber
-      if (user.role === 'barber') {
-        const { data: barber, error: barberError } = await supabase
-          .from('barbers')
-          .select('id, business_name, bio, specialties, stripe_account_status')
-          .eq('user_id', user.id)
-          .single()
-
-        if (barberError && barberError.code !== 'PGRST116') {
-          logger.error('Error fetching barber data', barberError)
-        }
-
-        logger.debug('Barber data loaded', { barberId: barber?.id })
-
-        if (barber) {
-          setBarberId(barber.id)
-          logger.debug('Settings: Barber ID set', { barberId: barber.id })
-          
-          // Check services
-          const { data: services, error: servicesError } = await supabase
-            .from('services')
-            .select('id')
-            .eq('barber_id', barber.id)
-
-          if (servicesError) {
-            logger.error('Error fetching services', servicesError)
-          }
-
-          logger.debug('Services data loaded', { count: services?.length })
-
-          // Check availability
-          const { data: availability, error: availabilityError } = await supabase
-            .from('availability')
-            .select('id')
-            .eq('barber_id', barber.id)
-
-          if (availabilityError && availabilityError.code !== 'PGRST116') {
-            logger.error('Error fetching availability', availabilityError)
-          }
-
-          logger.debug('Availability data loaded', { hasData: !!availability })
-
-          // More realistic completion logic
-          const profileComplete = !!(profile?.name && profile?.email)
-          const servicesComplete = !!(services && services.length > 0)
-          const availabilityComplete = !!(availability && availability.length > 0)
-          const stripeConnected = barber?.stripe_account_status === 'active'
-          const notificationsConfigured = true // Default to true since these are optional
-
-          logger.debug('Completion status', {
-            profileComplete,
-            servicesComplete,
-            availabilityComplete,
-            stripeConnected,
-            notificationsConfigured
-          })
-
-          setSettingsData({
-            profileComplete,
-            servicesComplete,
-            availabilityComplete,
-            stripeConnected,
-            notificationsConfigured
-          })
-        } else {
-          // Barber row doesn't exist yet
-          setSettingsData({
-            profileComplete: !!(profile?.name && profile?.email),
-            servicesComplete: false,
-            availabilityComplete: false,
-            stripeConnected: false,
-            notificationsConfigured: true
-          })
-        }
-      } else {
-        // For non-barbers - simpler requirements
-        const profileComplete = !!(profile?.name && profile?.email)
-        const notificationsConfigured = true // Default to true for non-barbers
-
-        logger.debug('Non-barber completion status', {
-          profileComplete,
-          notificationsConfigured
-        })
-
-        setSettingsData({
-          profileComplete,
-          servicesComplete: false,
-          availabilityComplete: false,
-          stripeConnected: false,
-          notificationsConfigured
-        })
-      }
-    } catch (error) {
-      logger.error('Error loading settings data', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load settings data. Please refresh the page.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+  // Setup progress is a barber thing (profile, services, hours, payouts); clients have nothing to complete.
   const getCompletionPercentage = () => {
-    const totalSections = user?.role === 'barber' ? 5 : 3
+    if (user?.role !== 'barber') return 100
     const completedSections = Object.values(settingsData).filter(Boolean).length
-    return Math.round((completedSections / totalSections) * 100)
-  }
-
-  const getTabStatus = (tab: Tab) => {
-    switch (tab) {
-      case 'profile':
-        return settingsData.profileComplete ? 'complete' : 'incomplete'
-      case 'services':
-        return settingsData.servicesComplete ? 'complete' : 'incomplete'
-      case 'availability':
-        return settingsData.availabilityComplete ? 'complete' : 'incomplete'
-      case 'earnings':
-        return settingsData.stripeConnected ? 'complete' : 'incomplete'
-
-      default:
-        return 'neutral'
-    }
+    return Math.round((completedSections / Object.keys(settingsData).length) * 100)
   }
 
   const handleTabChange = (value: string) => {
@@ -244,7 +157,7 @@ export function SettingsPage() {
       })
       // Refetch latest user after resend
       fetchLatestUser()
-    } catch (err) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to resend verification email.',
@@ -377,8 +290,13 @@ export function SettingsPage() {
                       />
                     </div>
                   </div>
-                  <p className="text-sm text-foreground/50 text-center font-medium">
-                    Complete all sections to optimize your profile and reach more clients
+                  <p className="text-sm text-muted-foreground text-center font-medium">
+                    {[
+                      !settingsData.profileComplete && 'your profile',
+                      !settingsData.servicesComplete && 'an active service',
+                      !settingsData.availabilityComplete && 'your weekly hours',
+                      !settingsData.stripeConnected && 'Stripe payouts',
+                    ].filter(Boolean).join(', ').replace(/^./, (c) => c.toUpperCase())} still to set up. Finish these so clients can find and book you.
                   </p>
                   {user?.role === 'barber' && (
                     <div className="flex justify-center pt-2">
@@ -407,7 +325,7 @@ export function SettingsPage() {
                       value="profile" 
                       className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                         activeTab === 'profile' 
-                          ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                          ? 'bg-button text-button-foreground shadow-xl' 
                           : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                       }`}
                     >
@@ -421,7 +339,7 @@ export function SettingsPage() {
                           value="services" 
                           className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'services' 
-                              ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                              ? 'bg-button text-button-foreground shadow-xl' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
@@ -433,7 +351,7 @@ export function SettingsPage() {
                           value="earnings" 
                           className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'earnings' 
-                              ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                              ? 'bg-button text-button-foreground shadow-xl' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
@@ -444,7 +362,7 @@ export function SettingsPage() {
                           value="addons" 
                           className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'addons' 
-                              ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                              ? 'bg-button text-button-foreground shadow-xl' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
@@ -456,7 +374,7 @@ export function SettingsPage() {
                           value="availability" 
                           className={`relative flex items-center gap-2.5 px-6 py-4 rounded-2xl transition-all duration-300 text-sm font-bold snap-start ${
                             activeTab === 'availability' 
-                              ? 'bg-secondary text-primary shadow-xl scale-[1.02] translate-y-[-1px]' 
+                              ? 'bg-button text-button-foreground shadow-xl' 
                               : 'text-foreground/60 hover:text-foreground hover:bg-white/5'
                           }`}
                         >
@@ -472,25 +390,25 @@ export function SettingsPage() {
               <div className="p-6">
                 <TabsContent value="profile" className="mt-0">
                   {user?.role === 'barber' ? (
-                    <EnhancedBarberProfileSettings onSave={loadSettingsData} />
+                    <EnhancedBarberProfileSettings onSave={() => loadSettingsData()} />
                   ) : (
-                    <ProfileSettings onUpdate={loadSettingsData} />
+                    <ProfileSettings onUpdate={() => loadSettingsData()} />
                   )}
                 </TabsContent>
 
                 {user?.role === 'barber' && (
                   <>
                     <TabsContent value="services" className="mt-0">
-                      <ServicesSettings onUpdate={loadSettingsData} />
+                      <ServicesSettings onUpdate={() => loadSettingsData()} />
                     </TabsContent>
                     
                     <TabsContent value="addons" className="mt-0">
-                      <AddonsSettings onUpdate={loadSettingsData} />
+                      <AddonsSettings onUpdate={() => loadSettingsData()} />
                     </TabsContent>
                     
                     <TabsContent value="availability" className="mt-0">
                       <div className="space-y-6">
-                        <AvailabilityManager barberId={barberId} onUpdate={loadSettingsData} />
+                        <AvailabilityManager barberId={barberId} onUpdate={() => loadSettingsData()} />
                       </div>
                     </TabsContent>
                     
@@ -524,19 +442,18 @@ export function SettingsPage() {
           </Card>
         </div>
       </div>
+      <div className="container max-w-6xl mx-auto px-4 mt-8 relative z-10 space-y-6">
+        <BlockedUsersSection />
+        <DeleteAccountSection isBarber={user?.role === 'barber'} />
+      </div>
       {/* Logout Button at the bottom */}
       <div className="container max-w-6xl mx-auto px-4 mt-8 mb-8 flex justify-center relative z-10">
         <Button
           onClick={async () => {
             try {
               await logout();
-              toast({
-                title: 'Logged out',
-                description: 'You have been logged out successfully.',
-                variant: 'success',
-              });
               safePush('/login');
-            } catch (error) {
+            } catch {
               toast({
                 title: 'Logout failed',
                 description: 'There was a problem logging out. Please try again.',

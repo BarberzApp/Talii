@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
-import { supabase } from '@/shared/lib/supabase'
+import { api, errorMessage } from '@/shared/lib/api'
+import { formatCents, type AddonRow } from '@barber-app/shared'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { Button } from '@/shared/components/ui/button'
@@ -9,9 +10,8 @@ import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Switch } from '@/shared/components/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
-import { Loader2, Plus, Edit, Trash2, Package, AlertCircle, CheckCircle, DollarSign, Sparkles, ToggleLeft } from 'lucide-react'
+import { Loader2, Plus, Edit, Trash2, Package, AlertCircle, CheckCircle, DollarSign, Sparkles } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
-import { ServiceAddon, CreateServiceAddonInput, UpdateServiceAddonInput } from '@/shared/types/addon'
 import { logger } from '@/shared/lib/logger'
 
 interface AddonsSettingsProps {
@@ -28,9 +28,9 @@ interface AddonFormData {
 export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [addons, setAddons] = useState<ServiceAddon[]>([])
+  const [addons, setAddons] = useState<AddonRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [editingAddon, setEditingAddon] = useState<ServiceAddon | null>(null)
+  const [editingAddon, setEditingAddon] = useState<AddonRow | null>(null)
   const [barberId, setBarberId] = useState<string | null>(null)
 
   const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<AddonFormData>({
@@ -44,57 +44,29 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
 
   const isActive = watch('is_active')
 
-  useEffect(() => {
-    if (user) {
-      loadBarberId()
-    }
-  }, [user])
-
-  useEffect(() => {
-    if (barberId) {
-      loadAddons(barberId)
-    }
-  }, [barberId])
-
-  const loadBarberId = async () => {
+  const loadAddons = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single()
-
-      if (error) throw error
-      setBarberId(data.id)
-    } catch (error) {
-      logger.error('Error loading barber ID', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load barber information.',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const loadAddons = async (barberId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('service_addons')
-        .select('*')
-        .eq('barber_id', barberId)
-        .order('name')
-
-      if (error) throw error
-      setAddons(data || [])
+      const { addons: rows } = await api.addons.list()
+      setAddons([...rows].sort((a, b) => a.name.localeCompare(b.name)))
     } catch (error) {
       logger.error('Error loading add-ons', error)
       toast({
         title: 'Error',
-        description: 'Failed to load add-ons. Please try again.',
+        description: errorMessage(error, 'Failed to load add-ons. Please try again.'),
         variant: 'destructive',
       })
     }
-  }
+  }, [toast])
+
+  const userId = user?.id
+  const userBarberId = user?.barberId
+
+  useEffect(() => {
+    if (userId) {
+      setBarberId(userBarberId ?? null)
+      loadAddons()
+    }
+  }, [userId, userBarberId, loadAddons])
 
   const onSubmit = async (data: AddonFormData) => {
     if (!barberId) {
@@ -108,58 +80,27 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
 
     try {
       setIsLoading(true)
+      const body = {
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
+        priceCents: Math.round(Number(data.price) * 100),
+        isActive: data.is_active,
+      }
       if (editingAddon) {
-        const { error: updateError } = await supabase
-          .from('service_addons')
-          .update({
-            name: data.name,
-            description: data.description,
-            price: data.price,
-            is_active: data.is_active,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingAddon.id)
-
-        if (updateError) {
-          logger.error('Error updating add-on', updateError)
-          toast({
-            title: 'Error',
-            description: 'Failed to update add-on. Please try again.',
-            variant: 'destructive',
-          })
-          return
-        }
+        await api.addons.update(editingAddon.id, body)
         toast({
           title: 'Success',
           description: 'Add-on updated successfully',
         })
       } else {
-        const { error: insertError } = await supabase
-          .from('service_addons')
-          .insert({
-            barber_id: barberId,
-            name: data.name,
-            description: data.description,
-            price: data.price,
-            is_active: data.is_active,
-          })
-
-        if (insertError) {
-          logger.error('Error creating add-on', insertError)
-          toast({
-            title: 'Error',
-            description: 'Failed to create add-on. Please try again.',
-            variant: 'destructive',
-          })
-          return
-        }
+        await api.addons.create(body)
         toast({
           title: 'Success',
           description: 'Add-on added successfully',
         })
       }
 
-      await loadAddons(barberId)
+      await loadAddons()
       reset()
       setEditingAddon(null)
       onUpdate?.()
@@ -167,7 +108,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
       logger.error('Error saving add-on', error)
       toast({
         title: 'Error',
-        description: 'Failed to save add-on. Please try again.',
+        description: errorMessage(error, 'Failed to save add-on. Please try again.'),
         variant: 'destructive',
       })
     } finally {
@@ -175,36 +116,34 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
     }
   }
 
-  const handleEdit = (addon: ServiceAddon) => {
+  const handleEdit = (addon: AddonRow) => {
     setEditingAddon(addon)
     setValue('name', addon.name)
     setValue('description', addon.description || '')
-    setValue('price', addon.price)
+    setValue('price', addon.price_cents / 100)
     setValue('is_active', addon.is_active)
+    document.getElementById('addon-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this add-on?')) return
+    if (!confirm('Delete this add-on? If clients have booked it before, it is hidden instead so their history stays intact.')) return
 
     try {
-      const { error } = await supabase
-        .from('service_addons')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
+      const result = await api.addons.remove(id)
 
       toast({
         title: 'Success',
-        description: 'Add-on deleted successfully',
+        description: result.deactivated
+          ? 'This add-on has bookings, so it was turned off instead of deleted.'
+          : 'Add-on deleted successfully',
       })
 
-      await loadAddons(barberId!)
+      await loadAddons()
     } catch (error) {
       logger.error('Error deleting add-on', error)
       toast({
         title: 'Error',
-        description: 'Failed to delete add-on. Please try again.',
+        description: errorMessage(error, 'Failed to delete add-on. Please try again.'),
         variant: 'destructive',
       })
     }
@@ -260,7 +199,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
         </CardHeader>
 
         <CardContent className="p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form id="addon-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6 scroll-mt-24">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label htmlFor="addon-name" className="text-foreground font-semibold text-lg flex items-center gap-2">
@@ -335,7 +274,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
               </div>
               <Badge
                 variant="secondary"
-                className={`ml-auto ${isActive ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}
+                className={`ml-auto ${isActive ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' : 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30'}`}
               >
                 {isActive ? 'Active' : 'Inactive'}
               </Badge>
@@ -345,7 +284,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                className="bg-button hover:bg-button/90 text-button-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -397,7 +336,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                 </div>
                 <Button
                   onClick={() => document.getElementById('addon-name')?.focus()}
-                  className="bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  className="bg-button hover:bg-button/90 text-button-foreground font-semibold shadow-xl rounded-xl px-10 py-4 text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Add Your First Add-on
@@ -421,13 +360,13 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                           variant="secondary"
                           className="text-sm px-3 py-1 bg-secondary/20 text-secondary border-secondary/30"
                         >
-                          ${addon.price.toFixed(2)}
+                          {formatCents(addon.price_cents)}
                         </Badge>
                         <Badge
                           variant={addon.is_active ? 'default' : 'secondary'}
                           className={addon.is_active
-                            ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                            : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}
+                            ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30'
+                            : 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30'}
                         >
                           {addon.is_active ? 'Active' : 'Inactive'}
                         </Badge>
@@ -437,10 +376,11 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                       )}
                     </div>
 
-                    <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="flex gap-1 sm:gap-3 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200">
                       <Button
                         size="sm"
                         variant="ghost"
+                        aria-label={`Edit ${addon.name}`}
                         onClick={() => handleEdit(addon)}
                         className="text-foreground/70 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 rounded-xl p-3"
                       >
@@ -449,8 +389,9 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                       <Button
                         size="sm"
                         variant="ghost"
+                        aria-label={`Delete ${addon.name}`}
                         onClick={() => handleDelete(addon.id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl p-3"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded-xl p-3"
                       >
                         <Trash2 className="h-5 w-5" />
                       </Button>
@@ -475,7 +416,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
               <ul className="text-foreground/70 space-y-3">
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-base">Offer premium products clients can't easily get themselves</span>
+                  <span className="text-base">Offer premium products clients can&apos;t easily get themselves</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>
@@ -483,7 +424,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>
-                  <span className="text-base">Use descriptive names so clients know exactly what they're getting</span>
+                  <span className="text-base">Use descriptive names so clients know exactly what they&apos;re getting</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>

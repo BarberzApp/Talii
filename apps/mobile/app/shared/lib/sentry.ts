@@ -225,35 +225,5 @@ export const setRouteContext = (routeName: string) => {
   }
 };
 
-/**
- * Wrap a function with Sentry error boundary
- */
-export const withSentry = <T extends (...args: any[]) => any>(fn: T): T => {
-  return ((...args: any[]) => {
-    try {
-      const result = fn(...args);
-      
-      // Handle promises
-      if (result instanceof Promise) {
-        return result.catch((error) => {
-          captureException(error, {
-            function: fn.name,
-            args,
-          });
-          throw error;
-        });
-      }
-      
-      return result;
-    } catch (error) {
-      captureException(error as Error, {
-        function: fn.name,
-        args,
-      });
-      throw error;
-    }
-  }) as T;
-};
-
 export default Sentry;
 

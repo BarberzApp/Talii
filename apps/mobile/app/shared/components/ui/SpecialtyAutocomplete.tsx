@@ -1,13 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  Modal,
-  FlatList,
-} from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Modal, FlatList } from 'react-native';
 import tw from 'twrnc';
 import { Check, X, ChevronDown } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeProvider';

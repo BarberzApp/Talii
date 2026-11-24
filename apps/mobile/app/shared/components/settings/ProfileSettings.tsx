@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { geocodeAddress } from '../../lib/geocode';
+import { parseCityState } from '../../lib/geocode';
 import {
   View,
   Text,
@@ -12,34 +12,14 @@ import {
 } from 'react-native';
 import tw from 'twrnc';
 import { useTheme } from '../theme/ThemeProvider';
-import { supabase } from '../../lib/supabase';
+import type { UpdateMeBody } from '@barber-app/shared';
+import { api, errorMessage, hasErrorCode } from '../../lib/api';
+import { bookingPageUrl } from '../../lib/api-factory';
 import { useAuth } from '../../hooks/useAuth';
-import { Button, Card, CardContent, LoadingSpinner, LocationInput, Input, Textarea } from '../ui';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Building2, 
-  Save, 
-  AlertCircle,
-  Instagram,
-  Twitter,
-  Facebook,
-  Music,
-  Sparkles,
-  Check,
-  Info,
-  Camera
-} from 'lucide-react-native';
+import { Card, CardContent, LoadingSpinner, LocationInput, Input, Textarea } from '../ui';
+import { User, Mail, Phone, MapPin, Building2, Save, AlertCircle, Instagram, Music, Sparkles } from 'lucide-react-native';
 import { ProfileFormData } from '../../types/settings.types';
-import { 
-  CARRIER_OPTIONS, 
-  PRICE_RANGES, 
-  BARBER_SPECIALTIES, 
-  extractHandle 
-} from '../../utils/settings.utils';
-import { notificationService } from '../../lib/notifications';
+import { BARBER_SPECIALTIES, extractHandle } from '../../utils/settings.utils';
 import { logger } from '../../lib/logger';
 
 
@@ -49,10 +29,9 @@ interface ProfileSettingsProps {
 
 export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isBarber, setIsBarber] = useState(false);
-  const [barberId, setBarberId] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [formData, setFormData] = useState<ProfileFormData>({
     name: '',
@@ -71,81 +50,45 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       tiktok: '',
       facebook: ''
     },
-    sms_notifications: false,
   });
 
   useEffect(() => {
     if (user) {
       fetchProfile();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [user]);
 
+  /** GET /api/me: profile plus, for barbers, the listing. */
   const fetchProfile = async () => {
     if (!user) return;
 
     try {
       setIsLoading(true);
-      
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.role === 'barber') {
-        setIsBarber(true);
-        const { data: barber } = await supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-
-        if (barber) {
-          setBarberId(barber.id);
-          setFormData({
-            name: profile.name || '',
-            username: profile.username || '',
-            email: profile.email || '',
-            phone: profile.phone || '',
-            bio: barber.bio || profile.bio || '',
-            location: profile.location || '',
-            description: profile.description || '',
-            specialties: barber.specialties || [],
-            businessName: barber.business_name || '',
-            isPublic: profile.is_public ?? true,
-            socialMedia: {
-              instagram: barber.instagram || '',
-              twitter: barber.twitter || '',
-              tiktok: barber.tiktok || '',
-              facebook: barber.facebook || ''
-            },
-            sms_notifications: profile.sms_notifications || false,
-          });
-        }
-      } else {
-        setFormData({
-          name: profile.name || '',
-          username: profile.username || '',
-          email: profile.email || '',
-          phone: profile.phone || '',
-          bio: profile.bio || '',
-          location: profile.location || '',
-          description: profile.description || '',
-          specialties: [],
-          businessName: '',
-          isPublic: profile.is_public || false,
-          socialMedia: {
-            instagram: '',
-            twitter: '',
-            tiktok: '',
-            facebook: ''
-          },
-          sms_notifications: profile.sms_notifications || false,
-        });
-      }
+      const me = await api.me.get();
+      const barber = me.profile.role === 'barber' ? me.barber : null;
+      setIsBarber(!!barber);
+      setFormData({
+        name: me.profile.name || '',
+        username: me.profile.username || '',
+        email: me.profile.email || me.user.email || '',
+        phone: me.profile.phone || '',
+        bio: barber?.bio || '',
+        location: [barber?.city, barber?.state].filter(Boolean).join(', '),
+        description: '',
+        specialties: barber?.specialties || [],
+        businessName: barber?.business_name || '',
+        isPublic: barber?.is_public ?? true,
+        socialMedia: {
+          instagram: barber?.instagram || '',
+          twitter: '',
+          tiktok: barber?.tiktok || '',
+          facebook: ''
+        },
+      });
     } catch (error) {
       logger.error('Error fetching profile:', error);
-      Alert.alert('Error', 'Failed to load profile data');
+      Alert.alert('Error', errorMessage(error, 'Failed to load profile data'));
     } finally {
       setIsLoading(false);
     }
@@ -158,10 +101,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     if (!formData.username?.trim()) errors.username = 'Username is required';
     if (formData.username && !/^[a-zA-Z0-9_]{3,30}$/.test(formData.username)) {
       errors.username = 'Username must be 3-30 characters, letters, numbers, and underscores only';
-    }
-    if (!formData.email?.trim()) errors.email = 'Email is required';
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
     }
 
     if (isBarber && !formData.businessName?.trim()) {
@@ -181,75 +120,44 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       return;
     }
 
+    // PATCH /api/me. Listing fields only for barbers (the server geocodes city/state).
+    const handle = (v: string) => (v ? extractHandle(v).replace(/^@/, '') || null : null);
+    const body: UpdateMeBody = {
+      name: formData.name.trim() || null,
+      username: formData.username.trim(),
+      phone: formData.phone.trim() || null,
+    };
+    if (isBarber) {
+      const { city, state } = parseCityState(formData.location);
+      Object.assign(body, {
+        businessName: formData.businessName.trim() || null,
+        bio: formData.bio.trim() || null,
+        specialties: formData.specialties,
+        instagram: handle(formData.socialMedia.instagram),
+        tiktok: handle(formData.socialMedia.tiktok),
+        city,
+        state,
+        isPublic: formData.isPublic,
+      });
+    }
+
     try {
       setIsLoading(true);
-      
-      // Update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          name: formData.name,
-          username: formData.username,
-          email: formData.email,
-          phone: formData.phone,
-          bio: formData.bio,
-          location: formData.location,
-          description: formData.description,
-          is_public: formData.isPublic,
-          sms_notifications: formData.sms_notifications,
-        })
-        .eq('id', user?.id);
-
-      if (profileError) throw profileError;
-
-      // If user is a barber and location changed, geocode and save coordinates
-      if (isBarber && formData.location) {
-        try {
-          const coords = await geocodeAddress(formData.location);
-          if (coords) {
-            const { error: barberError } = await supabase
-              .from('barbers')
-              .update({
-                latitude: coords.lat,
-                longitude: coords.lon,
-                updated_at: new Date().toISOString()
-              })
-              .eq('user_id', user?.id);
-            if (barberError) {
-              logger.error('Error updating barber coordinates:', barberError);
-            } else {
-              logger.log('✅ Barber coordinates updated:', coords);
-            }
-          }
-        } catch (geocodeError) {
-          logger.error('Geocoding error:', geocodeError);
-          // Don't fail the save if geocoding fails
-        }
-      }
-
-      // Update barber data if applicable
-      if (isBarber && barberId) {
-        const { error: barberError } = await supabase
-          .from('barbers')
-          .update({
-            business_name: formData.businessName,
-            bio: formData.bio,
-            specialties: formData.specialties,
-            instagram: extractHandle(formData.socialMedia.instagram),
-            twitter: extractHandle(formData.socialMedia.twitter),
-            tiktok: extractHandle(formData.socialMedia.tiktok),
-            facebook: extractHandle(formData.socialMedia.facebook),
-          })
-          .eq('id', barberId);
-
-        if (barberError) throw barberError;
-      }
-
-      Alert.alert('Success', 'Profile updated successfully!');
+      const res = await api.me.update(body);
+      await refreshProfile();
+      Alert.alert(
+        'Success',
+        res.location && !res.location.geocoded
+          ? 'Profile updated. We could not find that location on the map, so you may not appear in nearby searches.'
+          : 'Profile updated successfully!'
+      );
       onUpdate?.();
     } catch (error) {
       logger.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
+      if (hasErrorCode(error, 'USERNAME_TAKEN')) {
+        setValidationErrors({ username: 'That username is taken' });
+      }
+      Alert.alert('Error', errorMessage(error, 'Failed to update profile'));
     } finally {
       setIsLoading(false);
     }
@@ -261,46 +169,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
       ? currentSpecialties.filter(s => s !== specialty)
       : [...currentSpecialties, specialty];
     setFormData({ ...formData, specialties: newSpecialties });
-  };
-
-  const handlePushNotificationToggle = async () => {
-    try {
-      if (!formData.sms_notifications) {
-        // Enable push notifications
-        logger.log('🔔 Requesting push notification permissions...');
-        
-        // Initialize notifications and request permissions
-        await notificationService.initialize();
-        
-        // Update local state
-        setFormData({ ...formData, sms_notifications: true });
-        
-        Alert.alert(
-          'Push Notifications Enabled',
-          'You will now receive notifications for bookings, payments, and other important updates.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        // Disable push notifications
-        logger.log('🔕 Disabling push notifications...');
-        
-        // Update local state
-        setFormData({ ...formData, sms_notifications: false });
-        
-        Alert.alert(
-          'Push Notifications Disabled',
-          'You will no longer receive push notifications. You can re-enable them anytime.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error) {
-      logger.error('Error toggling push notifications:', error);
-      Alert.alert(
-        'Error',
-        'Failed to update push notification settings. Please try again.',
-        [{ text: 'OK' }]
-      );
-    }
   };
 
   return (
@@ -335,7 +203,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               placeholder="your_username"
               icon={User}
               error={validationErrors.username}
-              description={`bocmstyle.com/book/${formData.username || 'your_username'}`}
+              description={bookingPageUrl(formData.username || 'your_username') ?? undefined}
             />
 
             {isBarber && (
@@ -350,12 +218,13 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
             )}
 
             <Input
-              label="Email *"
+              label="Email"
               value={formData.email}
-              onChangeText={(text: string) => setFormData({ ...formData, email: text })}
+              editable={false}
               placeholder="your@email.com"
               keyboardType="email-address"
               icon={Mail}
+              description="Your sign-in email"
               error={validationErrors.email}
             />
 
@@ -369,6 +238,8 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               error={validationErrors.phone}
             />
 
+            {isBarber && (
+              <>
             <View style={tw`mb-4`}>
               <View style={tw`flex-row items-center mb-2`}>
                 <MapPin size={16} color={colors.primary} style={tw`mr-2`} />
@@ -392,6 +263,8 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               error={validationErrors.bio}
               description={`${formData.bio.length}/500 characters`}
             />
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -462,17 +335,6 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               />
 
               <Input
-                label="Twitter/X"
-                value={formData.socialMedia.twitter}
-                onChangeText={(text: string) => setFormData({ 
-                  ...formData, 
-                  socialMedia: { ...formData.socialMedia, twitter: text }
-                })}
-                placeholder="@yourusername"
-                icon={Twitter}
-              />
-
-              <Input
                 label="TikTok"
                 value={formData.socialMedia.tiktok}
                 onChangeText={(text: string) => setFormData({ 
@@ -482,50 +344,12 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
                 placeholder="@yourusername"
                 icon={Music}
               />
-
-              <Input
-                label="Facebook"
-                value={formData.socialMedia.facebook}
-                onChangeText={(text: string) => setFormData({ 
-                  ...formData, 
-                  socialMedia: { ...formData.socialMedia, facebook: text }
-                })}
-                placeholder="yourpagename"
-                icon={Facebook}
-              />
             </CardContent>
           </Card>
         )}
 
-        {/* Notifications */}
-        <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
-          <CardContent style={tw`p-4`}>
-            <View style={tw`flex-row items-center mb-4`}>
-              <AlertCircle size={20} color={colors.primary} style={tw`mr-2`} />
-              <Text style={[tw`text-lg font-semibold`, { color: colors.foreground }]}>
-                Push Notifications
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={handlePushNotificationToggle}
-              style={[
-                tw`px-4 py-2 rounded-xl flex-row items-center justify-center`,
-                { backgroundColor: formData.sms_notifications ? colors.primary : colors.input }
-              ]}
-            >
-              {formData.sms_notifications ? (
-                <>
-                  <Check size={16} color={colors.primaryForeground} style={tw`mr-2`} />
-                  <Text style={[tw`font-medium`, { color: colors.primaryForeground }]}>Push Notifications Enabled</Text>
-                </>
-              ) : (
-                <Text style={[tw`font-medium`, { color: colors.foreground }]}>Enable Push Notifications</Text>
-              )}
-            </TouchableOpacity>
-          </CardContent>
-        </Card>
-
+        {isBarber && (
+          <>
         {/* Visibility Settings */}
         <Card style={[tw`mb-6`, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
           <CardContent style={tw`p-4`}>
@@ -557,6 +381,9 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
               </Text>
             </View>
           </View>
+        )}
+
+          </>
         )}
 
         {/* Save Button */}

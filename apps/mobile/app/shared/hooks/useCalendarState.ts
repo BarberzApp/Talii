@@ -17,8 +17,10 @@ import type { CalendarEvent, Service, TimeSlot } from '../lib/calendar';
 export interface ManualFormData {
   clientName: string;
   serviceId: string;
+  /** Display only: the service price, formatted. */
   price: string;
-  time: string;
+  /** The chosen slot's ISO start instant. */
+  startsAt: string;
   date: Date;
 }
 
@@ -62,6 +64,8 @@ export function useCalendarState() {
   const [isMarkingCompleted, setIsMarkingCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  /** Message shown when the month's bookings could not be loaded. */
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // User role and view mode
   const [userRole, setUserRole] = useState<'client' | 'barber' | null>(null);
@@ -72,11 +76,13 @@ export function useCalendarState() {
     clientName: '',
     serviceId: '',
     price: '',
-    time: '',
+    startsAt: '',
     date: new Date()
   });
   const [services, setServices] = useState<Service[]>([]);
   const [barberId, setBarberId] = useState<string | null>(null);
+  /** The barber's IANA time zone (barbers only); walk-in times use it. */
+  const [barberTimeZone, setBarberTimeZone] = useState<string | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
 
   // Review form state
@@ -122,7 +128,7 @@ export function useCalendarState() {
       clientName: '',
       serviceId: '',
       price: '',
-      time: '',
+      startsAt: '',
       date: selectedDate || new Date()
     });
     setTimeSlots([]);
@@ -164,16 +170,18 @@ export function useCalendarState() {
     setIsMarkingCompleted(false);
     setIsSubmitting(false);
     setLoadingTimeSlots(false);
+    setLoadError(null);
     // Reset user-specific state
     setUserRole(null);
     setBarberId(null);
+    setBarberTimeZone(null);
     setBarberViewMode('appointments');
     // Reset form data
     setManualFormData({
       clientName: '',
       serviceId: '',
       price: '',
-      time: '',
+      startsAt: '',
       date: new Date()
     });
     setServices([]);
@@ -223,6 +231,8 @@ export function useCalendarState() {
     setIsSubmitting,
     loadingTimeSlots,
     setLoadingTimeSlots,
+    loadError,
+    setLoadError,
 
     // User role
     userRole,
@@ -239,6 +249,8 @@ export function useCalendarState() {
     setServices,
     barberId,
     setBarberId,
+    barberTimeZone,
+    setBarberTimeZone,
     timeSlots,
     setTimeSlots,
     openManualAppointmentForm,

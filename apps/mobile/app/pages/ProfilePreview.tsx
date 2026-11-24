@@ -14,29 +14,22 @@ import {
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../shared/types';
-import { ArrowLeft, Calendar, MapPin, Star, Video as VideoIcon, Heart, Users, History, Camera, Loader2, Eye, Clock, Share2, Flag, Ban, MoreVertical } from 'lucide-react-native';
+import { ArrowLeft, Heart, History, Clock, MoreVertical } from 'lucide-react-native';
 import tw from 'twrnc';
 import { useTheme } from '../shared/components/theme';
-import { supabase } from '../shared/lib/supabase';
+import { formatCents, type PublicService } from '@barber-app/shared';
+import { api, errorMessage, hasErrorCode } from '../shared/lib/api';
 import { logger } from '../shared/lib/logger';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useReporting } from '../shared/hooks/useReporting';
 import { ReportContentModal } from '../shared/components/ReportContentModal';
-import VideoPreview from '../shared/components/VideoPreview';
-import {
-  Button,
-  Card,
-  CardContent,
-  Badge,
-  Avatar,
-  Dialog,
-  DialogContent,
-} from '../shared/components/ui';
+import { Button, Dialog, DialogContent } from '../shared/components/ui';
+import BookingFeeNote from '../shared/components/BookingFeeNote';
 import { GlassyCard } from '../shared/components/ui/GlassyCard';
 import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 // Helper function to get initials from name
 const getInitials = (name: string) => {
@@ -45,55 +38,14 @@ const getInitials = (name: string) => {
 };
 
 interface UserProfile {
+  /** profiles.id (the barber's user id; reports and blocks use it). */
   id: string;
   name: string;
-  email: string;
-  username?: string;
-  avatar_url?: string;
-  bio?: string;
-  location?: string;
-  phone?: string;
-  coverphoto?: string;
-  role?: 'client' | 'barber';
-}
-
-interface BarberProfile {
-  id: string;
-  user_id: string;
-  bio?: string;
-  business_name?: string;
-  specialties?: string[];
-  instagram?: string;
-  twitter?: string;
-  facebook?: string;
-  portfolio?: string[];
-  featured_portfolio?: string;
-  services?: Array<{
-    id: string;
-    name: string;
-    price: number;
-    duration: string;
-    description: string;
-  }>;
-}
-
-interface Cut {
-  id: string;
-  title: string;
-  description?: string;
-  url: string;
-  thumbnail?: string;
-  views: number;
-  likes: number;
-  shares: number;
-  created_at: string;
-  is_public: boolean;
-  is_featured: boolean;
-  barber: {
-    id: string;
-    name: string;
-    image: string;
-  };
+  username: string;
+  avatar_url: string | null;
+  cover_photo_url: string | null;
+  /** "City, State" from the listing. */
+  location: string | null;
 }
 
 type ProfilePreviewNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ProfilePreview'>;
@@ -111,22 +63,18 @@ export default function ProfilePreview() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const isOwnProfile = user?.id === profile?.id;
-  const [barberProfile, setBarberProfile] = useState<BarberProfile | null>(null);
-  const [allCuts, setAllCuts] = useState<Cut[]>([]);
-  const [cuts, setCuts] = useState<Cut[]>([]);
-  const [services, setServices] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [services, setServices] = useState<PublicService[]>([]);
+  const [posts, setPosts] = useState<{ id: string; url: string; title: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [openDialog, setOpenDialog] = useState<null | 'video'>(null);
-  const [activeTab, setActiveTab] = useState('cuts');
-  const [selectedVideo, setSelectedVideo] = useState<Cut | null>(null);
+  const [activeTab, setActiveTab] = useState('portfolio');
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string } | null>(null);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
-  const [cutsPage, setCutsPage] = useState(0);
-  const CUTS_PER_PAGE = 12;
 
   useEffect(() => {
     fetchProfileData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [barberId]);
 
   const promptAuth = (context: string = 'continue') => {
@@ -141,176 +89,38 @@ export default function ProfilePreview() {
     );
   };
 
+  /** GET /api/barbers/:id: public listing, profile, active services and add-ons. */
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      
-      // barberId could be:
-      // 1. barbers.id (most common - passed from BrowsePage)
-      // 2. barbers.user_id (which is profiles.id)
-      // 3. profiles.id (direct profile ID)
-      
-      // First, try to fetch barber by ID (most common case - barberId is barbers.id)
-      let { data: barberData, error: barberError } = await supabase
-        .from('barbers')
-        .select('*')
-        .eq('id', barberId)
-        .maybeSingle();
-
-      // If not found by ID, try by user_id (in case barberId is a profile ID)
-      if (!barberData && !barberError) {
-        const { data: barberByUserId, error: errorByUserId } = await supabase
-          .from('barbers')
-          .select('*')
-          .eq('user_id', barberId)
-          .maybeSingle();
-        if (barberByUserId) {
-          logger.log('Found barber by user_id:', barberId);
-        }
-        barberData = barberByUserId;
-        barberError = errorByUserId;
-      } else if (barberData) {
-        logger.log('Found barber by id:', barberId);
-      }
-
-      // Fetch profile data
-      let profileData = null;
-      let profileError = null;
-
-      if (barberData) {
-        // We have barber data, fetch profile using barber's user_id
-        const { data: profile, error: error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', barberData.user_id)
-          .maybeSingle();
-        profileData = profile;
-        profileError = error;
-      } else {
-        // No barber found, try to fetch profile directly (might be a client profile or barberId is a profile ID)
-        const { data: profile, error: error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', barberId)
-          .maybeSingle();
-        profileData = profile;
-        profileError = error;
-      }
-
-      // Handle profile fetch errors
-      if (profileError) {
-        // Check if it's a "no rows" error (PGRST116)
-        if (profileError.code === 'PGRST116') {
-          logger.error('Profile not found:', barberId);
-          Alert.alert(
-            'Profile Not Found',
-            'The profile you are looking for does not exist or has been removed.',
-            [{ text: 'OK', onPress: () => navigation.goBack() }]
-          );
-          return;
-        }
-        logger.error('Error fetching profile:', profileError);
-        Alert.alert(
-          'Error',
-          'Failed to load profile. Please try again.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      if (!profileData) {
-        logger.error('Profile data is null');
+      const data = await api.barbers.get(barberId);
+      setProfile({
+        id: data.profile.id,
+        name: data.barber.business_name || data.profile.name || data.profile.username,
+        username: data.profile.username,
+        avatar_url: data.profile.avatar_url,
+        cover_photo_url: data.profile.cover_photo_url,
+        location: [data.barber.city, data.barber.state].filter(Boolean).join(', ') || null,
+      });
+      setServices(data.services);
+      setPosts(
+        data.barber.portfolio.map((url, index) => ({
+          id: `portfolio-${index}`,
+          url,
+          title: `Portfolio Image ${index + 1}`,
+        }))
+      );
+    } catch (error) {
+      if (hasErrorCode(error, 'BARBER_NOT_FOUND', 'NOT_FOUND')) {
         Alert.alert(
           'Profile Not Found',
-          'The profile you are looking for does not exist.',
+          'The profile you are looking for does not exist or has been removed.',
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
         return;
       }
-
-      setProfile(profileData);
-
-      // Handle barber data (might not exist if it's a client profile)
-      if (barberError && barberError.code !== 'PGRST116') {
-        logger.error('Error fetching barber data:', barberError);
-      }
-
-      if (barberData) {
-        setBarberProfile(barberData);
-
-        // Fetch cuts with barber info
-        const { data: cutsData, error: cutsError } = await supabase
-          .from('cuts')
-          .select(`
-            *,
-            barbers:barber_id(
-              id,
-              user_id,
-              profiles:user_id(name, avatar_url)
-            )
-          `)
-          .eq('barber_id', barberData.id)
-          .eq('is_public', true)
-          .order('created_at', { ascending: false });
-
-        if (cutsError) {
-          logger.error('Error fetching cuts:', cutsError);
-        } else if (cutsData) {
-          const formattedCuts = (cutsData || []).map((cut: any) => ({
-            ...cut,
-            barber: {
-              id: cut.barbers?.id,
-              name: cut.barbers?.profiles?.name || 'Unknown',
-              image: cut.barbers?.profiles?.avatar_url
-            }
-          }));
-          setAllCuts(formattedCuts);
-          // Load first page
-          setCutsPage(0);
-          setCuts(formattedCuts.slice(0, CUTS_PER_PAGE));
-        }
-
-        // Fetch services
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select('*')
-          .eq('barber_id', barberData.id)
-          .order('name');
-
-        if (servicesError) {
-          logger.error('Error fetching services:', servicesError);
-        } else if (servicesData) {
-          setServices(servicesData);
-        }
-      }
-
-      // Convert portfolio array to posts format for display
-      if (barberData?.portfolio && Array.isArray(barberData.portfolio) && barberData.portfolio.length > 0) {
-        const portfolioPosts = barberData.portfolio.map((url: string, index: number) => ({
-          id: `portfolio-${index}`,
-          url: url,
-          title: `Portfolio Image ${index + 1}`,
-        }));
-        setPosts(portfolioPosts);
-      } else {
-        setPosts([]);
-      }
-
-      // If no barber data, set empty arrays for barber-specific content
-      if (!barberData) {
-        setAllCuts([]);
-        setCuts([]);
-        setServices([]);
-        setPosts([]);
-      }
-
-    } catch (error) {
       logger.error('Error fetching profile data:', error);
-      Alert.alert(
-        'Error',
-        'An unexpected error occurred while loading the profile. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', errorMessage(error, 'Failed to load profile. Please try again.'), [{ text: 'OK' }]);
     } finally {
       setLoading(false);
     }
@@ -318,98 +128,12 @@ export default function ProfilePreview() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setCutsPage(0);
     await fetchProfileData();
     setRefreshing(false);
   };
 
-  // Load more cuts when scrolling
-  const loadMoreCuts = () => {
-    const nextPage = cutsPage + 1;
-    const startIndex = nextPage * CUTS_PER_PAGE;
-    const endIndex = startIndex + CUTS_PER_PAGE;
-    
-    if (startIndex < allCuts.length) {
-      const newCuts = allCuts.slice(startIndex, endIndex);
-      setCuts(prev => [...prev, ...newCuts]);
-      setCutsPage(nextPage);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'cuts':
-        return (
-          <View style={tw`flex-1 px-4`}>
-            {cuts.length === 0 ? (
-              <View style={tw`flex-1 justify-center items-center py-8`}>
-                <VideoIcon size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
-                <Text style={[tw`font-bold text-xl mb-2 text-center`, { color: colors.foreground }]}>
-                  No cuts yet
-                </Text>
-                <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
-                  Check back later for new content
-                </Text>
-              </View>
-            ) : (
-              <ScrollView
-                style={tw`py-4`}
-                onScroll={(event) => {
-                  const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-                  const paddingToBottom = 20;
-                  if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
-                    loadMoreCuts();
-                  }
-                }}
-                scrollEventThrottle={400}
-              >
-                {/* Grid Layout for Cuts */}
-                <View style={tw`flex-row flex-wrap justify-between`}>
-                  {cuts.map((cut) => (
-                    <VideoPreview
-                      key={cut.id}
-                      videoUrl={cut.url}
-                      barberName={cut.barber?.name || 'Unknown'}
-                      barberAvatar={cut.barber?.image || undefined}
-                      onPress={() => {
-                        // Navigate to cuts page for this specific video from this barber
-                        if (barberProfile?.id) {
-                          if (isGuest) {
-                            promptAuth('view cuts');
-                            return;
-                          }
-                          navigation.navigate('Cuts', { cutId: cut.id, barberId: barberProfile.id });
-                        }
-                      }}
-                    />
-                  ))}
-                </View>
-                {cuts.length < allCuts.length && (
-                  <View style={tw`py-4 items-center`}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  </View>
-                )}
-              </ScrollView>
-            )}
-          </View>
-        );
-
       case 'portfolio':
         return (
           <View style={tw`flex-1 px-4`}>
@@ -520,6 +244,7 @@ export default function ProfilePreview() {
               </View>
             ) : (
               <View style={tw`space-y-4`}>
+                <BookingFeeNote />
                 {services.map((service) => (
                   <GlassyCard
                     key={service.id}
@@ -547,7 +272,7 @@ export default function ProfilePreview() {
                         ]}
                       >
                         <Text style={[tw`font-bold text-sm`, { color: colors.primary }]}>
-                          ${service.price + 1}
+                          {formatCents(service.price_cents)}
                         </Text>
                       </View>
                     </View>
@@ -556,7 +281,7 @@ export default function ProfilePreview() {
                       <View style={tw`flex-row items-center`}>
                         <Clock size={14} color={colors.mutedForeground} />
                         <Text style={[tw`ml-2 text-sm`, { color: colors.mutedForeground }]}>
-                          {service.duration} minutes
+                          {service.duration_minutes} minutes
                         </Text>
                       </View>
                       
@@ -633,9 +358,9 @@ export default function ProfilePreview() {
       <View style={tw`relative w-full overflow-hidden`}>
         {/* Cover Photo */}
         <View style={[tw`h-40 w-full relative`, { backgroundColor: colors.primarySubtle }]}>
-          {profile.coverphoto ? (
+          {profile.cover_photo_url ? (
             <Image
-              source={{ uri: profile.coverphoto }}
+              source={{ uri: profile.cover_photo_url }}
               style={tw`absolute inset-0 w-full h-full`}
               resizeMode="cover"
             />
@@ -755,22 +480,6 @@ export default function ProfilePreview() {
 
         {/* Tabs Under Avatar */}
         <View style={[tw`flex-row border-b`, { borderColor: colors.glassBorder, backgroundColor: colors.background }]}>
-          <TouchableOpacity
-            style={tw`flex-1 py-3 items-center`}
-            onPress={() => setActiveTab('cuts')}
-          >
-            <VideoIcon 
-              size={20} 
-              color={activeTab === 'cuts' ? colors.primary : colors.mutedForeground} 
-            />
-            <Text style={[
-              tw`text-xs mt-1`, 
-              { color: activeTab === 'cuts' ? colors.primary : colors.mutedForeground }
-            ]}>
-              Cuts
-            </Text>
-          </TouchableOpacity>
-          
           <TouchableOpacity
             style={tw`flex-1 py-3 items-center`}
             onPress={() => setActiveTab('portfolio')}

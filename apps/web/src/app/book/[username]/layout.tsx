@@ -1,6 +1,10 @@
 import { Metadata } from 'next'
-import { supabase } from '@/shared/lib/supabase'
+import { getBarberProfile } from '@/server/discovery'
 import { logger } from '@/shared/lib/logger'
+
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '')
+const DEFAULT_OG_IMAGE = `${APP_URL}/brand/talii-logo.png`
+const GENERIC_DESCRIPTION = 'Book your next haircut with a professional barber on Talii.'
 
 export async function generateMetadata({
   params,
@@ -11,59 +15,53 @@ export async function generateMetadata({
   try {
     const resolvedParams = await params
     username = resolvedParams.username
-    // Fetch barber details
-    const { data: barberData, error } = await supabase
-      .from('barbers')
-      .select(`
-        id,
-        bio,
-        specialties,
-        profiles (
-          name,
-          username,
-          location,
-          avatar_url,
-          coverphoto
-        )
-      `)
-      .eq('profiles.username', username)
-      .single()
-
+    // Server component: read the public profile with the same code as
+    // GET /api/barbers/by-username/:username (no caller, so no block filtering).
+    let found: Awaited<ReturnType<typeof getBarberProfile>> | null = null
+    let error: unknown = null
+    if (/^[A-Za-z0-9_]{3,30}$/.test(username)) {
+      try {
+        found = await getBarberProfile({ username }, null)
+      } catch (e) {
+        error = e
+      }
+    }
+    const barberData = found
     const atUsername = username ? `@${username}` : 'Barber'
 
     if (error || !barberData) {
        return {
-        title: `${atUsername} - BOCM Style`,
-        description: 'Book your next haircut with a professional barber on BOCM Style.',
+        title: `${atUsername} on Talii`,
+        description: GENERIC_DESCRIPTION,
         openGraph: {
-          title: `${atUsername} - BOCM Style`,
-          description: 'Book your next haircut with a professional barber on BOCM Style.',
+          title: `${atUsername} on Talii`,
+          description: GENERIC_DESCRIPTION,
           type: 'website',
-          url: `https://bocmstyle.com/book/${username}`,
+          url: `${APP_URL}/book/${username}`,
           images: [
             {
-              url: 'https://bocmstyle.com/BocmLogo.png',
+              url: DEFAULT_OG_IMAGE,
               width: 1200,
               height: 630,
-              alt: 'BOCM Style - Professional Barber Booking',
+              alt: 'Talii - barber booking',
             },
           ],
         },
         twitter: {
           card: 'summary_large_image',
-          title: `${atUsername} - BOCM Style`,
-          description: 'Book your next haircut with a professional barber on BOCM Style.',
-          images: ['https://bocmstyle.com/BocmLogo.png'],
+          title: `${atUsername} on Talii`,
+          description: GENERIC_DESCRIPTION,
+          images: [DEFAULT_OG_IMAGE],
         },
       }
     }
 
-    const barber = barberData
-    const profile = barber.profiles?.[0]
-    const barberName = profile?.name || atUsername
+    const barber = barberData.barber
+    const profile = barberData.profile
+    const barberName = profile.name || barber.business_name || atUsername
     const barberBio = barber.bio || 'Professional barber offering quality haircuts and styling services.'
-    const barberLocation = profile?.location || ''
-    const barberImage = profile?.avatar_url || profile?.coverphoto || 'https://bocmstyle.com/BocmLogo.png'
+    const barberLocation = [barber.city, barber.state].filter(Boolean).join(', ')
+    const barberImage = profile.avatar_url || profile.cover_photo_url || DEFAULT_OG_IMAGE
     
     // Create specialties text
     const specialtiesText = barber.specialties && barber.specialties.length > 0 
@@ -73,13 +71,13 @@ export async function generateMetadata({
     const fullDescription = `${barberBio}${barberLocation ? ` Located in ${barberLocation}.` : ''} ${specialtiesText} Book your appointment today!`
 
     return {
-      title: `${atUsername} - BOCM Style`,
+      title: `${atUsername} on Talii`,
       description: fullDescription,
       openGraph: {
-        title: `${atUsername} - BOCM Style`,
+        title: `${atUsername} on Talii`,
         description: fullDescription,
         type: 'website',
-        url: `https://bocmstyle.com/book/${username}`,
+        url: `${APP_URL}/book/${username}`,
         images: [
           {
             url: barberImage,
@@ -88,21 +86,14 @@ export async function generateMetadata({
             alt: `${barberName} - Professional Barber`,
           },
         ],
-        siteName: 'BOCM Style',
+        siteName: 'Talii',
         locale: 'en_US',
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${atUsername} - BOCM Style`,
+        title: `${atUsername} on Talii`,
         description: fullDescription,
         images: [barberImage],
-        creator: '@bocmstyle',
-      },
-      other: {
-        'theme-color': '#FF6B35', // Saffron color
-        'msapplication-TileColor': '#FF6B35',
-        'apple-mobile-web-app-capable': 'yes',
-        'apple-mobile-web-app-status-bar-style': 'black-translucent',
       },
     }
   } catch (error) {
@@ -111,27 +102,27 @@ export async function generateMetadata({
     // Fallback metadata
     const atUsername = username ? `@${username}` : 'Barber'
     return {
-      title: `${atUsername} - BOCM Style`,
-      description: 'Book your next haircut with a professional barber on BOCM Style.',
+      title: `${atUsername} on Talii`,
+      description: GENERIC_DESCRIPTION,
       openGraph: {
-        title: `${atUsername} - BOCM Style`,
-        description: 'Book your next haircut with a professional barber on BOCM Style.',
+        title: `${atUsername} on Talii`,
+        description: GENERIC_DESCRIPTION,
         type: 'website',
-        url: `https://bocmstyle.com/book/${username}`,
+        url: `${APP_URL}/book/${username}`,
         images: [
           {
-            url: 'https://bocmstyle.com/BocmLogo.png',
+            url: DEFAULT_OG_IMAGE,
             width: 1200,
             height: 630,
-            alt: 'BOCM Style - Professional Barber Booking',
+            alt: 'Talii - barber booking',
           },
         ],
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${atUsername} - BOCM Style`,
-        description: 'Book your next haircut with a professional barber on BOCM Style.',
-        images: ['https://bocmstyle.com/BocmLogo.png'],
+        title: `${atUsername} on Talii`,
+        description: GENERIC_DESCRIPTION,
+        images: [DEFAULT_OG_IMAGE],
       },
     }
   }

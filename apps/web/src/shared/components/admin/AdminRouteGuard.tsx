@@ -60,7 +60,7 @@ export function AdminRouteGuard({
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-white/60">
-              You don't have permission to access this page. Admin privileges are required.
+              You don&apos;t have permission to access this page. Admin privileges are required.
             </p>
             <div className="flex gap-2">
               <Button 
@@ -131,7 +131,7 @@ export function AdminRouteGuard({
               <div>
                 <h1 className="text-white font-bold text-lg">Admin Dashboard</h1>
                 <p className="text-white/60 text-sm">
-                  {adminUser?.name} ({adminUser?.role === 'super_admin' ? 'Super Admin' : 'Admin'})
+                  {adminUser?.name} (Admin)
                 </p>
               </div>
             </div>

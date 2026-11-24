@@ -1,24 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    ScrollView,
-    SafeAreaView,
-    TouchableOpacity,
-    Alert,
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    StatusBar,
-    AppState,
-} from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, StatusBar, AppState } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as WebBrowser from 'expo-web-browser';
 import tw from 'twrnc';
 import { RootStackParamList } from '../shared/types';
-import { supabase } from '../shared/lib/supabase';
+import { api, errorMessage, isApiError } from '../shared/lib/api';
+import { fetchConnectStatus, isStripeReady, openStripeConnect } from '../shared/lib/stripeConnect';
+import { parseCityState } from '../shared/lib/geocode';
 import { useAuth } from '../shared/hooks/useAuth';
 import { useTheme } from '../shared/components/theme';
 import { logger } from '../shared/lib/logger';
@@ -46,17 +34,19 @@ import {
     Info
 } from 'lucide-react-native';
 import { SpecialtyAutocomplete } from '../shared/components/ui/SpecialtyAutocomplete';
-import { SocialMediaLinks } from '../shared/components/ui/SocialMediaLinks';
 import { LocationInput } from '../shared/components/ui/LocationInput';
-import { BARBER_SPECIALTIES } from '../shared/utils/settings.utils';
 import { runBarberPrefillOnce } from '../shared/helpers/barberPrefillHelper';
-import { handleStripeConnect, checkStripeStatusOnce } from '../shared/helpers/barberStripeHelper';
-import { addService as addServiceHelper, removeService as removeServiceHelper, updateService as updateServiceHelper, validateServices } from '../shared/helpers/barberServicesHelper';
+import { checkStripeStatusOnce } from '../shared/helpers/barberStripeHelper';
+import {
+    addService as addServiceHelper,
+    removeService as removeServiceHelper,
+    updateService as updateServiceHelper,
+    syncServices,
+    type Service as ServiceInput,
+} from '../shared/helpers/barberServicesHelper';
 import { validateStep as validateStepHelper } from '../shared/helpers/barberValidationHelper';
 import { extractHandle } from '../shared/helpers/socialHandleHelper';
 import { formatPhoneNumber } from '../shared/helpers/phoneFormatHelper';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "https://www.bocmstyle.com";
 
 type BarberOnboardingNavigationProp = NativeStackNavigationProp<RootStackParamList, 'BarberOnboarding'>;
 
@@ -90,7 +80,7 @@ interface FormData {
     location: string;
     bio: string;
     specialties: string[];
-    services: Array<{ name: string; price: number; duration: number }>;
+    services: ServiceInput[];
     stripeConnected: boolean;
     socialMedia: {
         instagram: string;
@@ -105,18 +95,16 @@ interface ValidationErrors {
 }
 
 export default function BarberOnboardingPage() {
-    const { theme, colors } = useTheme();
+    const { colors } = useTheme();
     const navigation = useNavigation<BarberOnboardingNavigationProp>();
-    const { user, userProfile } = useAuth();
+    const { user, userProfile, refreshProfile } = useAuth();
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [stripeLoading, setStripeLoading] = useState(false);
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-    const [stripeStatus, setStripeStatus] = useState<string | null>(null);
+    const [, setStripeStatus] = useState<string | null>(null);
     const [onboardingComplete, setOnboardingComplete] = useState(false);
     const [showCompleteBanner, setShowCompleteBanner] = useState(true);
-    const [showStripeWebView, setShowStripeWebView] = useState(false);
-    const [stripeUrl, setStripeUrl] = useState('');
     const prefillDoneRef = useRef(false);
     const phoneDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -147,7 +135,6 @@ export default function BarberOnboardingPage() {
         const prefill = async () => {
             if (!user || prefillDoneRef.current) return;
             await runBarberPrefillOnce({
-                userId: user.id,
                 userProfile,
                 setFormData,
                 setStripeStatus,
@@ -168,45 +155,6 @@ export default function BarberOnboardingPage() {
         };
     }, []);
 
-    // // Check if onboarding is already complete
-    // useEffect(() => {
-    //     const checkOnboardingComplete = async () => {
-    //         if (!user) return;
-            
-    //         try {
-    //             // Checking if onboarding is already complete
-                
-    //             // Fetch barber data to check completion
-    //             const { data: barberData, error: barberError } = await supabase
-    //                 .from('barbers')
-    //                 .select('onboarding_complete, business_name, bio, specialties')
-    //                 .eq('user_id', user.id)
-    //                 .single();
-
-    //             if (barberError) {
-    //                 logger.error('Error checking onboarding status:', barberError);
-    //                 return;
-    //             }
-
-    //             // Onboarding completion check
-
-    //             // If onboarding is marked as complete, skip to main app
-    //             if (barberData?.onboarding_complete) {
-    //                 logger.log('Onboarding is already complete - redirecting to main app');
-    //                 setOnboardingComplete(true);
-    //                 navigation.navigate('MainTabs' as any);
-    //                 return;
-    //             }
-    //         } catch (error) {
-    //             logger.error('Error checking onboarding completion:', error);
-    //         }
-    //     };
-
-    //     if (user) {
-    //         checkOnboardingComplete();
-    //     }
-    // }, [user, navigation]);
-
     // Check if user is a barber
     useEffect(() => {
         if (user && userProfile?.role !== 'barber') {
@@ -220,7 +168,7 @@ export default function BarberOnboardingPage() {
         useCallback(() => {
             const checkStatus = async () => {
                 if (!user) return;
-                await checkStripeStatusOnce(user.id, setFormData, setStripeStatus);
+                await checkStripeStatusOnce(setFormData, setStripeStatus);
             };
             checkStatus();
             const delayedCheck = setTimeout(checkStatus, 2000);
@@ -232,7 +180,7 @@ export default function BarberOnboardingPage() {
     useEffect(() => {
         const handleAppStateChange = (nextAppState: string) => {
             if (nextAppState === 'active' && user) {
-                checkStripeStatusOnce(user.id, setFormData, setStripeStatus);
+                checkStripeStatusOnce(setFormData, setStripeStatus);
             }
         };
 
@@ -289,6 +237,39 @@ export default function BarberOnboardingPage() {
         }));
     };
 
+    /**
+     * Saves what the barber has entered so far: PATCH /api/me (profile + listing;
+     * the server geocodes city/state, and the device time zone becomes the
+     * barber's) and the services. Does not mark onboarding complete.
+     */
+    const saveProgress = async () => {
+        const handle = (v: string) => (v ? extractHandle(v).replace(/^@/, '') || null : null);
+        const { city, state } = parseCityState(formData.location);
+        let deviceTimeZone: string | undefined;
+        try {
+            deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+        } catch {
+            deviceTimeZone = undefined;
+        }
+
+        await api.me.update({
+            phone: formData.phone || null,
+            businessName: formData.businessName || null,
+            bio: formData.bio || null,
+            specialties: formData.specialties,
+            city,
+            state,
+            instagram: handle(formData.socialMedia.instagram),
+            tiktok: handle(formData.socialMedia.tiktok),
+            ...(deviceTimeZone ? { timezone: deviceTimeZone } : {}),
+        });
+
+        if (formData.services.length > 0) {
+            const saved = await syncServices(formData.services);
+            setFormData(prev => ({ ...prev, services: saved }));
+        }
+    };
+
     const handleSubmit = async () => {
         if (loading) return;
 
@@ -303,369 +284,92 @@ export default function BarberOnboardingPage() {
             return;
         }
 
-        // Final submission
+        // Final submission: PATCH /api/me (profile + listing; the server geocodes
+        // city/state), then the services, then mark onboarding complete.
         setLoading(true);
         try {
-            // Verify user is authenticated
             if (!user?.id) {
                 throw new Error('User not authenticated. Please log in again.');
             }
-
-            // Verify user session is active
-            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError || !sessionData?.session) {
-                logger.error('Session check failed:', sessionError);
-                throw new Error('Session expired. Please log in again.');
-            }
-
-            logger.log('Submitting onboarding data', {
-                userId: user.id,
-                userRole: userProfile?.role,
-                businessName: formData.businessName,
-                servicesCount: formData.services.length
-            });
-
-            // Verify user is a barber
             if (userProfile?.role !== 'barber') {
-                logger.error('User is not a barber:', { role: userProfile?.role });
                 throw new Error('Only barbers can complete this onboarding process.');
             }
 
-            // Upsert barber profile
-            logger.log('Upserting barber profile...');
-            const { data: upsertData, error: upsertError } = await supabase
-                .from('barbers')
-                .upsert({
-                    user_id: user.id,
-                    business_name: formData.businessName,
-                    bio: formData.bio,
-                    specialties: formData.specialties,
-                    instagram: extractHandle(formData.socialMedia.instagram),
-                    twitter: extractHandle(formData.socialMedia.twitter),
-                    tiktok: extractHandle(formData.socialMedia.tiktok),
-                    facebook: extractHandle(formData.socialMedia.facebook),
-                    onboarding_complete: true,
-                    updated_at: new Date().toISOString(),
-                }, { 
-                    onConflict: 'user_id',
-                    ignoreDuplicates: false 
-                })
-                .select();
+            await saveProgress();
 
-            if (upsertError) {
-                logger.error('Failed to upsert barber profile during onboarding:', {
-                    error: upsertError,
-                    code: upsertError.code,
-                    message: upsertError.message,
-                    details: upsertError.details,
-                    hint: upsertError.hint
-                });
-                throw new Error(`Failed to save barber profile: ${upsertError.message || 'Unknown error'}`);
-            }
+            await api.me.update({ onboardingComplete: true });
+            await refreshProfile();
 
-            if (!upsertData || upsertData.length === 0) {
-                logger.error('Upsert returned no data');
-                throw new Error('Failed to save barber profile: No data returned');
-            }
-
-            logger.log('Barber profile upserted successfully:', upsertData[0]?.id);
-
-            // Update phone and location in profiles table
-            logger.log('Updating profile information...');
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .update({
-                    phone: formData.phone,
-                    location: formData.location,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', user.id);
-
-            if (profileError) {
-                logger.error('Profile update error:', {
-                    error: profileError,
-                    code: profileError.code,
-                    message: profileError.message
-                });
-                throw new Error(`Failed to update profile: ${profileError.message || 'Unknown error'}`);
-            }
-
-            logger.log('Profile updated successfully');
-
-            // Handle services
-            if (formData.services.length > 0) {
-                logger.log('Updating services...', { count: formData.services.length });
-                
-                // Get barber ID for services
-                const { data: barberData, error: barberError } = await supabase
-                    .from('barbers')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .single();
-
-                if (barberError || !barberData) {
-                    logger.error('Error getting barber ID for services:', barberError);
-                    throw new Error(`Failed to get barber ID: ${barberError?.message || 'Unknown error'}`);
-                }
-
-                logger.log('Barber ID retrieved:', barberData.id);
-
-                // Delete existing services
-                const { error: deleteError } = await supabase
-                    .from('services')
-                    .delete()
-                    .eq('barber_id', barberData.id);
-
-                if (deleteError) {
-                    logger.error('Error deleting existing services:', deleteError);
-                    // Don't throw here - we can still insert new services
-                    logger.warn('Continuing despite delete error');
-                } else {
-                    logger.log('Existing services deleted successfully');
-                }
-
-                // Insert new services
-                const servicesToInsert = formData.services.map(service => ({
-                    barber_id: barberData.id,
-                    name: service.name,
-                    price: service.price,
-                    duration: service.duration
-                }));
-
-                const { data: insertedServices, error: servicesError } = await supabase
-                    .from('services')
-                    .insert(servicesToInsert)
-                    .select();
-
-                if (servicesError) {
-                    logger.error('Error inserting services:', {
-                        error: servicesError,
-                        code: servicesError.code,
-                        message: servicesError.message,
-                        services: servicesToInsert
-                    });
-                    throw new Error(`Failed to save services: ${servicesError.message || 'Unknown error'}`);
-                }
-
-                logger.log('Services inserted successfully:', insertedServices?.length || 0);
-            } else {
-                logger.warn('No services to save');
-            }
-
-            logger.log('Onboarding completed successfully');
             setOnboardingComplete(true);
-            
-            // Check if Stripe is connected to determine navigation
+
             if (formData.stripeConnected) {
-                // If Stripe is connected, show completion message and go to settings
                 Alert.alert(
                     'Onboarding Complete!',
                     'Your profile is fully set up and ready to receive payments. Welcome to the platform!',
-                    [
-                        {
-                            text: 'Go to Main App',
-                            onPress: () => {
-                                navigation.navigate('MainTabs' as any);
-                            }
-                        }
-                    ]
+                    [{ text: 'Go to Main App', onPress: () => navigation.navigate('MainTabs' as any) }]
                 );
             } else {
-                // If Stripe is not connected, go to main app
                 navigation.navigate('MainTabs' as any);
             }
-            
-        } catch (error: any) {
-            logger.error('Error during onboarding submission:', {
-                error,
-                message: error?.message,
-                code: error?.code,
-                details: error?.details,
-                hint: error?.hint,
-                stack: error?.stack
-            });
-            
-            // Show detailed error message to user
-            const errorMessage = error?.message || 'Failed to save your information. Please try again.';
+        } catch (error) {
+            logger.error('Error during onboarding submission', { code: isApiError(error) ? error.code : 'UNKNOWN' });
             Alert.alert(
-                'Error', 
-                errorMessage,
-                [
-                    {
-                        text: 'OK',
-                        style: 'default'
-                    }
-                ]
+                'Error',
+                isApiError(error)
+                    ? error.message
+                    : error instanceof Error && error.message
+                        ? error.message
+                        : 'Failed to save your information. Please try again.'
             );
         } finally {
             setLoading(false);
         }
     };
 
+    /**
+     * POST /api/stripe/connect/onboarding (creates the Express account if needed),
+     * opens the link in the browser, then reads GET /api/stripe/connect/status
+     * once the website sends the barber back with the talii://stripe-connect link.
+     */
     const handleStripeConnect = async () => {
         if (stripeLoading) return;
-        
         setStripeLoading(true);
-        
-        // Add a timeout to prevent infinite loading
-        const timeoutId = setTimeout(() => {
-            logger.log('Stripe Connect timeout - resetting loading state');
-            setStripeLoading(false);
-        }, 30000); // 30 second timeout
-        
         try {
-            logger.log('Starting Stripe Connect process');
-            
-            // First, get the barber ID for this user
-            const { data: barber, error: barberError } = await supabase
-                .from('barbers')
-                .select('id')
-                .eq('user_id', user?.id)
-                .single();
-            
-            if (barberError || !barber) {
-                throw new Error('Barber profile not found. Please complete your profile first.');
-            }
-            
-            const requestBody = { 
-                barberId: barber.id,
-                email: user?.email
-            };
-            
-            // Call the Supabase Edge Function directly with user session
-            const { data: stripeResponse, error } = await supabase.functions.invoke('stripe-connect', {
-                body: requestBody,
-                headers: {
-                    Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-                }
-            });
-            
-            if (error) {
-                logger.error('Supabase function error:', error);
-                throw new Error(error.message || 'Failed to connect Stripe account');
-            }
-            
-            // Use the response data directly
-            const data = stripeResponse;
+            // Save the business details and services first: the barber may not come
+            // back to this screen from Stripe (or the app may be closed meanwhile).
+            await saveProgress();
 
-            if (data.url) {
-                // Open Stripe onboarding in browser
-                const result = await WebBrowser.openBrowserAsync(data.url);
-                
-                // After browser closes, check if Stripe account is now active
-                // Check the Stripe account status directly from database
-                try {
-                    
-                    const { data: updatedBarber, error: statusError } = await supabase
-                        .from('barbers')
-                        .select('stripe_account_id, stripe_account_status, stripe_account_ready')
-                        .eq('id', barber.id)
-                        .single();
-                    
-                    if (statusError) {
-                        logger.error('Error checking barber status:', statusError);
-                        throw new Error('Could not check Stripe account status');
-                    }
-                    
-                    if (updatedBarber?.stripe_account_id) {
-                        // Stripe account ID exists in database
-                        // Check if account is ready (you can add more sophisticated checks here)
-                        if (updatedBarber.stripe_account_ready || updatedBarber.stripe_account_status === 'active') {
-                            logger.log('Stripe account is ready and active');
-                            
-                            // Mark onboarding as complete
-                            setFormData(prev => ({ ...prev, stripeConnected: true }));
-                            setOnboardingComplete(true);
-                            
-                            // Show success message
-                            Alert.alert(
-                                'Payment Setup Complete!',
-                                'Your Stripe account has been successfully connected. You can now receive payments.',
-                                [
-                                    {
-                                        text: 'Go to Main App',
-                                        onPress: () => {
-                                            // Navigate to main app
-                                            navigation.navigate('MainTabs' as any);
-                                        }
-                                    }
-                                ]
-                            );
-                        } else {
-                            // Stripe account exists but not fully set up
-                            logger.log('Stripe account exists but not fully set up');
-                            Alert.alert(
-                                'Setup In Progress',
-                                'Your Stripe account has been created but setup is still in progress. You can complete it later in your settings.',
-                                [
-                                    {
-                                        text: 'Continue',
-                                        onPress: () => {
-                                            setFormData(prev => ({ ...prev, stripeConnected: false }));
-                                        }
-                                    }
-                                ]
-                            );
-                        }
-                    } else {
-                        // No Stripe account ID found
-                        logger.log('No Stripe account ID found in database');
-                        Alert.alert(
-                            'Setup In Progress',
-                            'Your Stripe account setup is in progress. You can complete it later in your settings.',
-                            [
-                                {
-                                    text: 'Continue',
-                                    onPress: () => {
-                                        setFormData(prev => ({ ...prev, stripeConnected: false }));
-                                    }
-                                }
-                            ]
-                        );
-                    }
-                } catch (statusError) {
-                    logger.error('Error checking Stripe status:', statusError);
-                    Alert.alert(
-                        'Setup In Progress',
-                        'Your Stripe account setup is in progress. You can complete it later in your settings.',
-                        [
-                            {
-                                text: 'Continue',
-                                onPress: () => {
-                                    setFormData(prev => ({ ...prev, stripeConnected: false }));
-                                }
-                            }
-                        ]
-                    );
-                }
+            const current = await fetchConnectStatus();
+            if (isStripeReady(current)) {
+                setFormData(prev => ({ ...prev, stripeConnected: true }));
+                setStripeStatus('active');
+                Alert.alert('Stripe Account Active', 'Your Stripe account is already active and ready to accept payments!');
+                return;
+            }
+
+            const { status, needsNewLink } = await openStripeConnect('onboarding');
+            if (isStripeReady(status)) {
+                setFormData(prev => ({ ...prev, stripeConnected: true }));
+                setStripeStatus('active');
+                Alert.alert(
+                    'Payment Setup Complete!',
+                    'Your Stripe account has been connected. You can now receive payments.'
+                );
             } else {
-                throw new Error('No redirect URL received from Stripe');
+                setStripeStatus(status?.hasAccount ? 'pending' : null);
+                Alert.alert(
+                    'Setup In Progress',
+                    needsNewLink
+                        ? 'The setup link expired. Tap Connect again to continue where you left off.'
+                        : 'Your Stripe setup is not finished yet. You can complete it now or later in your settings.'
+                );
             }
         } catch (error) {
-            logger.error('Error creating Stripe account:', error);
-            Alert.alert('Error', error instanceof Error ? error.message : 'Failed to connect Stripe account. Please try again.');
+            logger.error('Error connecting Stripe', { code: isApiError(error) ? error.code : 'UNKNOWN' });
+            Alert.alert('Error', errorMessage(error, 'Failed to connect Stripe account. Please try again.'));
         } finally {
-            clearTimeout(timeoutId);
             setStripeLoading(false);
         }
-    };
-
-    const handleSkip = async () => {
-        Alert.alert(
-            'Skip Payment Setup?',
-            'You can always set up payments later in your settings. Are you sure you want to skip this step?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Skip',
-                    style: 'destructive',
-                    onPress: () => {
-                        setFormData(prev => ({ ...prev, stripeConnected: false }));
-                        handleSubmit();
-                    }
-                }
-            ]
-        );
     };
 
     const getProgressPercentage = () => {
@@ -679,7 +383,6 @@ export default function BarberOnboardingPage() {
 
     const renderStep = () => {
         const step = steps[currentStep];
-        const Icon = step.icon;
 
         switch (step.id) {
             case 'business':
@@ -798,17 +501,6 @@ export default function BarberOnboardingPage() {
                                     />
 
                                     <OnboardingInputField
-                                        label="Twitter/X"
-                                        value={formData.socialMedia.twitter}
-                                        onChangeText={(text: string) => handleSocialMediaUpdate({
-                                            ...formData.socialMedia,
-                                            twitter: text
-                                        })}
-                                        placeholder="@yourusername"
-                                        description="Only your handle (e.g., @yourusername)"
-                                    />
-
-                                    <OnboardingInputField
                                         label="TikTok"
                                         value={formData.socialMedia.tiktok}
                                         onChangeText={(text: string) => handleSocialMediaUpdate({
@@ -817,17 +509,6 @@ export default function BarberOnboardingPage() {
                                         })}
                                         placeholder="@yourusername"
                                         description="Only your handle (e.g., @yourusername)"
-                                    />
-
-                                    <OnboardingInputField
-                                        label="Facebook"
-                                        value={formData.socialMedia.facebook}
-                                        onChangeText={(text: string) => handleSocialMediaUpdate({
-                                            ...formData.socialMedia,
-                                            facebook: text
-                                        })}
-                                        placeholder="yourpagename"
-                                        description="Only your page name (e.g., yourpagename)"
                                     />
                                 </View>
                             </CardContent>

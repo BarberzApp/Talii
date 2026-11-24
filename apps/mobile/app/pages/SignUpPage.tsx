@@ -15,15 +15,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Haptics from 'expo-haptics';
 import { Scissors, User, ArrowLeft, Eye, EyeOff, Check } from 'lucide-react-native';
 import { RootStackParamList } from '../shared/types';
-import { supabase } from '../shared/lib/supabase';
+import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
 import { useTheme } from '../shared/components/theme';
 import { AnimatedBackground } from '../shared/components/AnimatedBackground';
 import { ActionButton } from '../shared/components/ActionButton';
-import { Card } from '../shared/components/ui/Card';
 import Input from '../shared/components/ui/Input';
 import { theme } from '../shared/lib/theme';
-import { GlassyCard } from '../shared/components/ui/GlassyCard';
 import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 
@@ -34,6 +32,7 @@ type UserType = 'client' | 'barber';
 export default function SignUpPage() {
     const { colors, colorScheme } = useTheme();
     const navigation = useNavigation<SignUpScreenNavigationProp>();
+    const { register } = useAuth();
     const [userType, setUserType] = useState<UserType>('client');
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
@@ -93,125 +92,71 @@ export default function SignUpPage() {
 
         setIsLoading(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        logger.log('=== Registration Process Started ===');
-        logger.log('Registration Data:', { name: fullName, email, role: userType });
 
         try {
-            // Create auth user with metadata
-            logger.log('Creating auth user...');
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email,
+            // The database creates the profile (and, for barbers, the business rows)
+            // from the sign-up metadata; nothing is inserted from the app.
+            const result = await register({
+                name: fullName.trim(),
+                email: email.trim(),
                 password,
-                options: {
-                    data: {
-                        name: fullName,
-                        role: userType,
-                    },
-                },
+                role: userType,
             });
 
-            if (authError) {
-                logger.error('Auth Error:', authError);
-                
-                // Check for user already registered error
-                if (authError.message?.includes('User already registered')) {
-                    Alert.alert(
-                        'Account Exists',
-                        'An account with this email already exists. Please sign in instead.',
-                        [
-                            { text: 'Go to Login', onPress: () => navigation.navigate('Login' as any) }
-                        ]
-                    );
-                    return;
-                }
-                
-                setErrors({ general: authError.message || 'Registration failed' });
+            if (result.alreadyExists) {
+                Alert.alert(
+                    'Account Exists',
+                    'An account with this email already exists. Please sign in instead.',
+                    [
+                        { text: 'Go to Login', onPress: () => navigation.navigate('Login' as any) }
+                    ]
+                );
                 return;
             }
 
-            logger.log('Auth Data:', authData);
+            if (!result.ok) {
+                setErrors({
+                    general:
+                        result.reason === 'auth-error'
+                            ? result.errorMessage || 'Registration failed'
+                            : 'Your account was created, but your profile could not be loaded. Please sign in.',
+                });
+                return;
+            }
 
-            // Check if email confirmation is required
-            if (authData.user && !authData.session) {
-                logger.log('Email confirmation required');
+            if (result.needsConfirmation) {
                 Alert.alert(
                     'Check Your Email',
                     'We\'ve sent you a confirmation email. Please verify your email address to complete registration.',
                     [
                         {
                             text: 'OK',
-                            onPress: () => navigation.navigate('EmailConfirmation' as any)
+                            onPress: () =>
+                                navigation.navigate('EmailConfirmation' as any, { email: email.trim(), userType })
                         }
                     ]
                 );
                 return;
             }
 
-            if (!authData.user) {
-                logger.error('No user returned from signup');
-                setErrors({ general: 'Registration failed. Please try again.' });
-                return;
-            }
-
-            // Try to create/update profile
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .upsert({
-                    id: authData.user.id,
-                    email: authData.user.email,
-                    name: fullName,
-                    username: email.split('@')[0], // Generate username from email
-                    role: userType,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                });
-
-            if (profileError) {
-                logger.error('Profile creation error:', profileError);
-                // Don't fail registration, profile will be created on first login
-            }
-
-            // For barbers, try to create business profile
-            if (userType === 'barber') {
-                logger.log('Creating business profile...');
-                const { error: businessError } = await supabase
-                    .from('barbers')
-                    .insert({
-                        user_id: authData.user.id,
-                        status: 'pending',
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                    });
-
-                if (businessError) {
-                    logger.error('Business Profile Creation Failed:', businessError);
-                    // Don't fail registration, barber row will be created on first login
-                }
-            }
-
-            logger.log('Registration completed successfully');
-            
-            // Navigate based on user type
-            if (authData.session) {
-                Alert.alert(
-                    'Registration Successful',
-                    userType === 'barber' 
-                        ?                                 'Welcome to Talii! Please complete your business profile setup.'
-                        : 'Welcome to Talii!',
-                    [
-                        {
-                            text: 'OK',
-                            onPress: () => {
-                                if (userType === 'barber') {
-                                    navigation.navigate('BarberOnboarding' as any);
-                                } else {
-                                    navigation.navigate('MainTabs' as any);
-                                }
+            Alert.alert(
+                'Registration Successful',
+                userType === 'barber'
+                    ? 'Welcome to Talii! Please complete your business profile setup.'
+                    : 'Welcome to Talii!',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => {
+                            if (userType === 'barber') {
+                                navigation.navigate('BarberOnboarding' as any);
+                            } else {
+                                navigation.navigate('MainTabs' as any);
                             }
                         }
-                    ]
-                );
-            }
+                    }
+                ]
+            );
 
         } catch (error) {
             logger.error('Registration Process Failed:', error);
@@ -229,13 +174,6 @@ export default function SignUpPage() {
     const handleTermsPress = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         navigation.navigate('Terms' as any);
-    };
-
-    const handleGoogleSignUp = async () => {
-        // Google Sign-Up is not yet implemented
-        // This function is kept for future implementation
-        // For now, Google Sign-Up button is hidden from the UI
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     };
 
     const handleBack = () => {

@@ -1,585 +1,275 @@
 /**
  * Calendar Data Service
- * 
- * Handles all data fetching and mutations for the calendar feature.
- * Follows Single Responsibility Principle - only handles data layer.
- * 
+ *
+ * Data access for the calendar feature, through the Talii API only.
+ * Money is integer cents; times are ISO instants shown in the barber's time zone.
+ *
  * @module calendarDataService
  */
 
-import { Platform } from 'react-native';
-import { format } from 'date-fns';
+import {
+  addDays as addCalendarDays,
+  isApiError,
+  localDayBounds,
+  localTimeInTimeZone,
+  zonedTimeToUtc,
+  type BookingListItem,
+  type BookingPaymentStatus,
+  type BookingSource,
+  type BookingStatus,
+  type ListBookingsQuery,
+} from '@barber-app/shared';
+import { api } from '../api';
 import { logger } from '../logger';
-import { supabase } from '../supabase';
 
-/**
- * Calendar event interface
- */
+/** A booking as the calendar shows it. */
 export interface CalendarEvent {
   id: string;
   title: string;
+  /** ISO instants. */
   start: string;
   end: string;
   backgroundColor: string;
   borderColor: string;
   textColor: string;
   extendedProps: {
-    status: string;
+    status: BookingStatus;
+    paymentStatus: BookingPaymentStatus;
+    source: BookingSource;
     serviceName: string;
     clientName: string;
     barberName: string;
     barberId: string;
-    price: number;
-    basePrice: number;
-    addonTotal: number;
-    platformFee: number;
-    barberPayout: number;
-    totalCharged: number;
+    /** The barber's IANA time zone; show times in it. */
+    timeZone: string;
+    /** Paid to the barber at the appointment. */
+    servicePriceCents: number;
+    addonTotalCents: number;
+    /** Booking fee the client paid in the app (0 for walk-ins and fee-exempt barbers). */
+    bookingFeeCents: number;
     addonNames: string[];
-    isGuest: boolean;
-    guestEmail: string;
-    guestPhone: string;
+    notes: string | null;
   };
 }
 
-/**
- * Service interface
- */
+/** One of the barber's own services, for the walk-in form. */
 export interface Service {
   id: string;
   name: string;
-  price: number;
-  duration: number;
+  price_cents: number;
+  duration_minutes: number;
 }
 
-/**
- * Time slot interface
- */
+/** A start time on the walk-in form. */
 export interface TimeSlot {
+  /** ISO instant to send as startsAt. */
+  startsAt: string;
+  /** Local "HH:MM" in the barber's time zone. */
   time: string;
   available: boolean;
 }
 
-/**
- * Fetch user role from profiles table
- * 
- * @param userId - The user ID to fetch role for
- * @returns User role ('client' or 'barber') or null if error
- */
-export async function fetchUserRole(userId: string): Promise<'client' | 'barber' | null> {
-  try {
-    logger.log('🔍 [CALENDAR] Fetching user role for user ID:', userId);
-    
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-    
-    if (error) {
-      logger.error('Error fetching user role:', error);
-      return null;
-    }
-    
-    logger.log('✅ [CALENDAR] User role detected:', profile.role);
-    return profile.role as 'client' | 'barber';
-  } catch (error) {
-    logger.error('Error fetching user role:', error);
-    return null;
-  }
+/** Who the calendar belongs to: role, barber row id and time zone (from GET /api/me). */
+export interface CalendarIdentity {
+  role: 'client' | 'barber';
+  barberId: string | null;
+  timeZone: string | null;
+  onboardingComplete: boolean;
 }
 
-/**
- * Fetch barber ID for a given user ID
- * 
- * @param userId - The user ID
- * @returns Barber ID or null if not found
- */
-export async function fetchBarberId(userId: string): Promise<string | null> {
+/** Statuses the calendar shows (unpaid holds are left out). */
+const CALENDAR_STATUSES: BookingStatus[] = ['confirmed', 'completed', 'cancelled', 'no_show'];
+const PAGE_SIZE = 100;
+/** Safety stop for paging (10,000 bookings in one range). */
+const MAX_PAGES = 100;
+/** Days added on each side of the month: the grid shows the neighbouring weeks too. */
+const RANGE_PADDING_DAYS = 7;
+/** Grid for walk-in start times, in minutes. */
+const WALK_IN_STEP_MINUTES = 15;
+
+export async function fetchCalendarIdentity(): Promise<CalendarIdentity | null> {
   try {
-    logger.log('🔍 [CALENDAR] Fetching barber data for user ID:', userId);
-    
-    const { data: barberData, error: barberError } = await supabase
-      .from('barbers')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
-    
-    logger.log('📊 [CALENDAR] Barber data result:', { barberData, barberError });
-    
-    if (barberError || !barberData) {
-      logger.log('❌ [CALENDAR] No barber found for user');
-      return null;
-    }
-
-    logger.log('✅ [CALENDAR] Barber ID found:', barberData.id);
-    return barberData.id;
-  } catch (error) {
-    logger.error('Error fetching barber ID:', error);
-    return null;
-  }
-}
-
-/**
- * Fetch bookings for a barber (appointments or bookings mode)
- * 
- * @param barberId - The barber ID
- * @param userId - The user ID
- * @param mode - 'appointments' (clients coming to barber) or 'bookings' (barber going somewhere)
- * @returns Array of bookings
- */
-export async function fetchBarberBookings(
-  barberId: string,
-  userId: string,
-  mode: 'appointments' | 'bookings'
-): Promise<any[]> {
-  try {
-    if (mode === 'appointments') {
-      // Fetch appointments where barber is providing service (clients coming to barber)
-      logger.log('📅 [CALENDAR] Fetching barber appointments (clients coming in)');
-      
-      const { data: appointmentsData, error: appointmentsError } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('barber_id', barberId)
-        .order('date', { ascending: true });
-
-      if (appointmentsError) {
-        logger.error('❌ [CALENDAR] Error fetching barber appointments:', appointmentsError);
-        return [];
-      }
-      
-      logger.log('✅ [CALENDAR] Found', appointmentsData?.length || 0, 'appointments for barber');
-      return appointmentsData || [];
-    } else {
-      // Fetch bookings where barber is the client (barber going somewhere)
-      logger.log('📅 [CALENDAR] Fetching barber bookings (barber going somewhere)');
-      
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('client_id', userId)
-        .eq('payment_status', 'succeeded') // Only show successful payments
-        .order('date', { ascending: true });
-
-      if (bookingsError) {
-        logger.error('❌ [CALENDAR] Error fetching barber bookings:', bookingsError);
-        return [];
-      }
-      
-      logger.log('✅ [CALENDAR] Found', bookingsData?.length || 0, 'bookings for barber as client');
-      return bookingsData || [];
-    }
-  } catch (error) {
-    logger.error('Error fetching barber bookings:', error);
-    return [];
-  }
-}
-
-/**
- * Fetch bookings for a client
- * 
- * @param userId - The client user ID
- * @returns Array of bookings
- */
-export async function fetchClientBookings(userId: string): Promise<any[]> {
-  try {
-    logger.log('🔍 [CALENDAR] Fetching client bookings for user ID:', userId);
-    
-    const { data: bookings, error } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('client_id', userId)
-      .eq('payment_status', 'succeeded') // Only show successful payments
-      .order('date', { ascending: true });
-
-    logger.log('📊 [CALENDAR] Client bookings query result:', { bookings, error });
-
-    if (error || !bookings) {
-      logger.error('❌ [CALENDAR] Error fetching client bookings:', error);
-      return [];
-    }
-
-    logger.log('✅ [CALENDAR] Found', bookings.length, 'bookings for client');
-    return bookings;
-  } catch (error) {
-    logger.error('Error fetching client bookings:', error);
-    return [];
-  }
-}
-
-/**
- * Fetch service details by ID
- * 
- * @param serviceId - The service ID
- * @returns Service details or null if not found
- */
-export async function fetchServiceById(serviceId: string): Promise<any | null> {
-  try {
-    const { data: service, error } = await supabase
-      .from('services')
-      .select('name, duration, price')
-      .eq('id', serviceId)
-      .single();
-
-    if (error) {
-      logger.error('Error fetching service:', error);
-      return null;
-    }
-
-    return service;
-  } catch (error) {
-    logger.error('Error fetching service:', error);
-    return null;
-  }
-}
-
-/**
- * Fetch client profile by ID
- * 
- * @param clientId - The client ID
- * @returns Client profile or null if not found
- */
-export async function fetchClientProfile(clientId: string): Promise<any | null> {
-  try {
-    const { data: clientData, error } = await supabase
-      .from('profiles')
-      .select('name')
-      .eq('id', clientId)
-      .single();
-
-    if (error) {
-      logger.error('Error fetching client profile:', error);
-      return null;
-    }
-
-    return clientData;
-  } catch (error) {
-    logger.error('Error fetching client profile:', error);
-    return null;
-  }
-}
-
-/**
- * Fetch barber profile by barber ID
- * 
- * @param barberId - The barber ID
- * @returns Barber profile or null if not found
- */
-export async function fetchBarberProfile(barberId: string): Promise<any | null> {
-  try {
-    const { data: barberData, error: barberError } = await supabase
-      .from('barbers')
-      .select('user_id')
-      .eq('id', barberId)
-      .single();
-    
-    if (barberError || !barberData) {
-      logger.error('Error fetching barber:', barberError);
-      return null;
-    }
-    
-    const { data: barberProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('name')
-      .eq('id', barberData.user_id)
-      .single();
-
-    if (profileError) {
-      logger.error('Error fetching barber profile:', profileError);
-      return null;
-    }
-
-    return barberProfile;
-  } catch (error) {
-    logger.error('Error fetching barber profile:', error);
-    return null;
-  }
-}
-
-/**
- * Fetch add-ons for a booking
- * 
- * @param bookingId - The booking ID
- * @returns Object with addon total and names
- */
-export async function fetchBookingAddons(bookingId: string): Promise<{
-  calculatedAddonTotal: number;
-  addonNames: string[];
-}> {
-  try {
-    const { data: bookingAddons } = await supabase
-      .from('booking_addons')
-      .select('addon_id, price')
-      .eq('booking_id', bookingId);
-
-    if (!bookingAddons || bookingAddons.length === 0) {
-      return { calculatedAddonTotal: 0, addonNames: [] };
-    }
-
-    // Use the stored addon prices from booking_addons table
-    const calculatedAddonTotal = bookingAddons.reduce((sum, ba) => sum + (ba.price || 0), 0);
-    
-    // Get addon names from service_addons table
-    const addonIds = bookingAddons.map((ba) => ba.addon_id);
-    const { data: addons } = await supabase
-      .from('service_addons')
-      .select('id, name')
-      .in('id', addonIds);
-
-    const addonNames = addons ? addons.map(a => a.name) : [];
-
-    return { calculatedAddonTotal, addonNames };
-  } catch (error) {
-    logger.error('Error fetching booking addons:', error);
-    return { calculatedAddonTotal: 0, addonNames: [] };
-  }
-}
-
-/**
- * Fetch services for a barber
- * 
- * @param barberId - The barber ID
- * @returns Array of services
- */
-export async function fetchBarberServices(barberId: string): Promise<Service[]> {
-  try {
-    const { data: services, error } = await supabase
-      .from('services')
-      .select('id, name, price, duration')
-      .eq('barber_id', barberId)
-      .eq('is_active', true);
-
-    if (error) {
-      logger.error('Error fetching services:', error);
-      return [];
-    }
-
-    return services || [];
-  } catch (error) {
-    logger.error('Error fetching services:', error);
-    return [];
-  }
-}
-
-/**
- * Fetch available time slots for a given date and service
- * 
- * @param barberId - The barber ID
- * @param date - The date to check
- * @param serviceDuration - The service duration in minutes
- * @returns Array of time slots with availability
- */
-export async function fetchAvailableTimeSlots(
-  barberId: string,
-  date: Date,
-  serviceDuration: number
-): Promise<TimeSlot[]> {
-  try {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    
-    const { data: bookings, error } = await supabase
-      .from('bookings')
-      .select('date')
-      .eq('barber_id', barberId)
-      .gte('date', `${dateStr}T00:00:00`)
-      .lte('date', `${dateStr}T23:59:59`)
-      .neq('status', 'cancelled');
-
-    if (error) {
-      logger.error('Error fetching bookings for time slots:', error);
-      return [];
-    }
-
-    // Generate time slots
-    const slots: TimeSlot[] = [];
-    const bookedTimestamps = new Set((bookings || []).map(b => new Date(b.date).getTime()));
-
-    // Calculate slot interval based on service duration (minimum 10 minutes)
-    const slotInterval = Math.max(serviceDuration, 10);
-    
-    // Business hours: 9 AM to 6 PM
-    const startHour = 9;
-    const endHour = 18;
-    
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += slotInterval) {
-        const slotTime = new Date(date);
-        slotTime.setHours(hour, minute, 0, 0);
-        
-        // Skip if service would go past 6 PM
-        const endTime = new Date(slotTime);
-        endTime.setMinutes(endTime.getMinutes() + serviceDuration);
-        if (endTime.getHours() >= endHour && endTime.getMinutes() > 0) {
-          continue;
-        }
-        
-        const slotTimestamp = slotTime.getTime();
-        const isBooked = bookedTimestamps.has(slotTimestamp);
-        
-        // Check if there's enough time for the service
-        let hasEnoughTime = true;
-        if (!isBooked) {
-          const serviceEndTime = new Date(slotTime);
-          serviceEndTime.setMinutes(serviceEndTime.getMinutes() + serviceDuration);
-          
-          for (const bookedTimestamp of bookedTimestamps) {
-            if (bookedTimestamp >= slotTimestamp && bookedTimestamp < serviceEndTime.getTime()) {
-              hasEnoughTime = false;
-              break;
-            }
-          }
-        }
-
-        slots.push({
-          time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-          available: !isBooked && hasEnoughTime && slotTime > new Date()
-        });
-      }
-    }
-
-    return slots;
-  } catch (error) {
-    logger.error('Error fetching time slots:', error);
-    return [];
-  }
-}
-
-/**
- * Create a manual appointment
- * 
- * @param appointmentData - The appointment data
- * @returns Created booking or null if error
- */
-export async function createManualAppointment(appointmentData: {
-  barberId: string;
-  clientName: string;
-  serviceId: string;
-  date: Date;
-  time: string;
-  price: number;
-}): Promise<{ booking: any | null; conflict: boolean }> {
-  try {
-    const [timeValue, period] = appointmentData.time.split(' ');
-    const [hours, minutes] = timeValue.split(':');
-    let hour = parseInt(hours);
-    if (period === 'PM' && hour !== 12) hour += 12;
-    if (period === 'AM' && hour === 12) hour = 0;
-    const appointmentDate = new Date(appointmentData.date);
-    appointmentDate.setHours(hour, parseInt(minutes), 0, 0);
-
-    const service = await fetchServiceById(appointmentData.serviceId);
-    const duration = service?.duration || 60;
-    const endTime = new Date(appointmentDate.getTime() + duration * 60000);
-
-    const { data: conflicts, error: conflictError } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('barber_id', appointmentData.barberId)
-      .neq('status', 'cancelled')
-      .or(`and(date.lt.${endTime.toISOString()},end_time.gt.${appointmentDate.toISOString()})`);
-
-    if (conflictError) {
-      logger.error('Error checking appointment conflicts:', conflictError);
-      return { booking: null, conflict: false };
-    }
-
-    if (conflicts && conflicts.length > 0) {
-      logger.warn('Manual appointment conflict detected');
-      return { booking: null, conflict: true };
-    }
-
-    const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL || 'https://www.bocmstyle.com';
-    
-    // Get the current session to pass the Bearer token (required by backend)
-    const { data: { session } } = await supabase.auth.getSession();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'expo-platform': Platform.OS,
+    const me = await api.me.get();
+    const role = me.profile.role === 'barber' ? 'barber' : 'client';
+    return {
+      role,
+      barberId: role === 'barber' ? me.barber?.id ?? null : null,
+      timeZone: me.barber?.timezone ?? null,
+      onboardingComplete: !!me.barber?.onboarding_complete,
     };
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
-    }
+  } catch (error) {
+    logger.error('Error loading calendar identity', { code: isApiError(error) ? error.code : 'UNKNOWN' });
+    return null;
+  }
+}
 
-    const response = await fetch(`${apiBaseUrl}/api/bookings/create`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        barber_id: appointmentData.barberId,
-        service_id: appointmentData.serviceId,
-        date: appointmentDate.toISOString(),
-        end_time: endTime.toISOString(),
-        status: 'confirmed',
-        payment_status: 'succeeded',
-        price: appointmentData.price,
-        guest_name: appointmentData.clientName,
-        guest_email: '',
-        guest_phone: '',
-        notes: 'Manual appointment created by barber',
-      }),
+/** All pages of GET /api/bookings for a query. Throws ApiError on failure. */
+async function listAllBookings(query: ListBookingsQuery): Promise<BookingListItem[]> {
+  const all: BookingListItem[] = [];
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const { bookings, pagination } = await api.bookings.list({
+      ...query,
+      limit: PAGE_SIZE,
+      offset: page * PAGE_SIZE,
     });
+    all.push(...bookings);
+    if (bookings.length === 0 || all.length >= pagination.total) break;
+  }
+  return all;
+}
 
-    if (!response.ok) {
-      const data = await response.json();
-      logger.error('Error creating manual appointment:', data?.error || 'Unknown error');
-      return { booking: null, conflict: false };
-    }
+const pad2 = (n: number) => String(n).padStart(2, '0');
 
-    return { booking: await response.json(), conflict: false };
+/**
+ * Instants bounding the calendar month shown for `month` (its year and month
+ * on the device calendar), in `timeZone`, padded by a week on each side.
+ */
+export function calendarMonthRange(month: Date, timeZone: string): { from: string; to: string } {
+  const year = month.getFullYear();
+  const m = month.getMonth() + 1;
+  const first = `${year}-${pad2(m)}-01`;
+  const last = `${year}-${pad2(m)}-${pad2(new Date(year, m, 0).getDate())}`;
+  return {
+    from: localDayBounds(addCalendarDays(first, -RANGE_PADDING_DAYS), timeZone).start.toISOString(),
+    to: localDayBounds(addCalendarDays(last, RANGE_PADDING_DAYS), timeZone).end.toISOString(),
+  };
+}
+
+/**
+ * Bookings for the calendar in [from, to), every page.
+ * - as 'barber': appointments clients (and walk-ins) booked with the caller;
+ * - as 'client': bookings the caller made (a barber can book other barbers too).
+ * Throws ApiError when the API fails, so the screen can show an error instead of an empty month.
+ */
+export async function fetchCalendarBookings(
+  as: 'client' | 'barber',
+  range: { from: string; to: string }
+): Promise<BookingListItem[]> {
+  return listAllBookings({ as, status: CALENDAR_STATUSES, from: range.from, to: range.to, order: 'asc' });
+}
+
+/** The caller's active services (barber only). */
+export async function fetchBarberServices(): Promise<Service[]> {
+  try {
+    const { services } = await api.services.list();
+    return services
+      .filter((service) => service.is_active)
+      .map(({ id, name, price_cents, duration_minutes }) => ({ id, name, price_cents, duration_minutes }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    logger.error('Error creating manual appointment:', error);
-    return { booking: null, conflict: false };
+    logger.error('Error fetching services', { code: isApiError(error) ? error.code : 'UNKNOWN' });
+    return [];
   }
 }
 
 /**
- * Update booking status
- * 
- * @param bookingId - The booking ID
- * @param status - The new status
- * @returns True if successful, false otherwise
+ * Start times for a walk-in on one local date: a 15-minute grid over the
+ * barber's whole day (walk-ins are not limited to weekly hours), minus past
+ * times and times that would overlap the barber's own pending or confirmed
+ * bookings. The server still enforces overlap (409 SLOT_TAKEN).
  */
-export async function updateBookingStatus(bookingId: string, status: string): Promise<boolean> {
+export async function fetchWalkInTimeSlots(
+  date: string,
+  durationMinutes: number,
+  timeZone: string,
+  now: Date = new Date()
+): Promise<TimeSlot[]> {
+  const { start, end } = localDayBounds(date, timeZone);
+  let busy: { start: number; end: number }[] = [];
   try {
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status })
-      .eq('id', bookingId);
-
-    if (error) {
-      logger.error('Error updating booking status:', error);
-      return false;
-    }
-
-    return true;
+    const bookings = await listAllBookings({
+      as: 'barber',
+      status: ['pending', 'confirmed'],
+      // Include bookings that started before the day but run into it.
+      from: new Date(start.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+      to: end.toISOString(),
+      order: 'asc',
+    });
+    busy = bookings
+      // An unpaid hold whose expiry has passed no longer blocks the slot (the next booking releases it).
+      .filter((b) => !(b.status === 'pending' && b.hold_expires_at && Date.parse(b.hold_expires_at) <= now.getTime()))
+      .map((b) => ({ start: Date.parse(b.starts_at), end: Date.parse(b.ends_at) }));
   } catch (error) {
-    logger.error('Error updating booking status:', error);
-    return false;
+    logger.error('Error fetching bookings for walk-in times', { code: isApiError(error) ? error.code : 'UNKNOWN' });
+    return [];
+  }
+
+  const slots: TimeSlot[] = [];
+  const seen = new Set<number>();
+  for (let minutes = 0; minutes < 24 * 60; minutes += WALK_IN_STEP_MINUTES) {
+    const slotStart = zonedTimeToUtc(date, minutes, timeZone);
+    const startMs = slotStart.getTime();
+    // Daylight-saving gaps map two local times to one instant; keep it once.
+    if (startMs < start.getTime() || startMs >= end.getTime() || seen.has(startMs)) continue;
+    seen.add(startMs);
+    const endMs = startMs + durationMinutes * 60_000;
+    const overlaps = busy.some((b) => b.start < endMs && b.end > startMs);
+    slots.push({
+      startsAt: slotStart.toISOString(),
+      time: localTimeInTimeZone(slotStart, timeZone),
+      available: !overlaps && startMs > now.getTime(),
+    });
+  }
+  return slots;
+}
+
+export type ManualAppointmentResult =
+  | { ok: true; booking: { id: string } }
+  | { ok: false; code: string; message: string };
+
+/** POST /api/bookings/manual: a confirmed walk-in on the caller's calendar (no payment). */
+export async function createManualAppointment(input: {
+  serviceId: string;
+  startsAt: string;
+  customerName: string;
+  notes?: string;
+}): Promise<ManualAppointmentResult> {
+  try {
+    const { booking } = await api.bookings.createManual({
+      serviceId: input.serviceId,
+      startsAt: input.startsAt,
+      customerName: input.customerName.trim(),
+      notes: input.notes?.trim() || undefined,
+    });
+    return { ok: true, booking: { id: booking.id } };
+  } catch (error) {
+    logger.error('Error creating manual appointment', { code: isApiError(error) ? error.code : 'UNKNOWN' });
+    return {
+      ok: false,
+      code: isApiError(error) ? error.code : 'UNKNOWN',
+      message: isApiError(error) ? error.message : 'Failed to create appointment.',
+    };
   }
 }
 
-/**
- * Cancel a booking
- * 
- * @param bookingId - The booking ID
- * @returns True if successful, false otherwise
- */
-export async function cancelBooking(bookingId: string): Promise<boolean> {
+export type BookingActionResult = { ok: true; refundCents: number | null } | { ok: false; code: string; message: string };
+
+async function runAction(
+  bookingId: string,
+  action: 'cancel' | 'complete' | 'no_show',
+  reason?: string
+): Promise<BookingActionResult> {
   try {
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelled' })
-      .eq('id', bookingId);
-
-    if (error) {
-      logger.error('Error cancelling booking:', error);
-      return false;
-    }
-
-    return true;
+    const res =
+      action === 'cancel'
+        ? await api.bookings.cancel(bookingId, reason)
+        : action === 'complete'
+          ? await api.bookings.complete(bookingId)
+          : await api.bookings.noShow(bookingId);
+    return { ok: true, refundCents: res.refund?.amountCents ?? null };
   } catch (error) {
-    logger.error('Error cancelling booking:', error);
-    return false;
+    logger.error(`Error applying booking action ${action}`, { code: isApiError(error) ? error.code : 'UNKNOWN' });
+    return {
+      ok: false,
+      code: isApiError(error) ? error.code : 'UNKNOWN',
+      message: isApiError(error) ? error.message : 'Something went wrong. Please try again.',
+    };
   }
 }
 
+/** Barber, confirmed booking, after its start. */
+export const completeBooking = (bookingId: string) => runAction(bookingId, 'complete');
+/** Barber, confirmed booking, after its start. */
+export const markNoShow = (bookingId: string) => runAction(bookingId, 'no_show');
+/** Client or barber, before the start; the server applies the refund policy. */
+export const cancelBooking = (bookingId: string, reason?: string) => runAction(bookingId, 'cancel', reason);

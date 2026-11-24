@@ -1,43 +1,24 @@
-import { useState, useEffect } from 'react'
 import { Checkbox } from '@/shared/components/ui/checkbox'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
-import { Package, DollarSign, Plus } from 'lucide-react'
-import { ServiceAddon } from '@/shared/types/addon'
-import { AddonService } from '@/shared/lib/addon-service'
-import { logger } from '@/shared/lib/logger'
+import { Package, DollarSign } from 'lucide-react'
+import { formatCents, type PublicAddon } from '@barber-app/shared'
 
 interface AddonSelectorProps {
-  barberId: string
+  /** Active add-ons from GET /api/barbers/:id. */
+  addons: PublicAddon[]
   selectedAddonIds: string[]
   onAddonChange: (addonIds: string[]) => void
   className?: string
 }
 
 export function AddonSelector({ 
-  barberId, 
+  addons,
   selectedAddonIds, 
   onAddonChange, 
   className = "" 
 }: AddonSelectorProps) {
-  const [addons, setAddons] = useState<ServiceAddon[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadAddons()
-  }, [barberId])
-
-  const loadAddons = async () => {
-    try {
-      setLoading(true)
-      const barberAddons = await AddonService.getBarberAddons(barberId)
-      setAddons(barberAddons)
-    } catch (error) {
-      logger.error('Error loading add-ons', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = false
 
   const handleAddonToggle = (addonId: string, checked: boolean) => {
     if (checked) {
@@ -52,7 +33,7 @@ export function AddonSelector({
   }
 
   const getTotalAddonCost = () => {
-    return getSelectedAddons().reduce((total, addon) => total + addon.price, 0)
+    return getSelectedAddons().reduce((total, addon) => total + addon.price_cents, 0)
   }
 
   if (loading) {
@@ -92,7 +73,7 @@ export function AddonSelector({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-4 mb-2">
                 <h4 className="text-lg sm:text-xl font-bebas text-foreground tracking-wide flex-1">{addon.name}</h4>
-                <Badge variant="glassy-secondary" className="text-sm px-3 py-1">${addon.price.toFixed(2)}</Badge>
+                <Badge variant="glassy-secondary" className="text-sm px-3 py-1">{formatCents(addon.price_cents)}</Badge>
               </div>
               {addon.description && (
                 <p className="text-muted-foreground text-base leading-relaxed" style={{ whiteSpace: 'pre-line' }}>{addon.description}</p>
@@ -113,14 +94,14 @@ export function AddonSelector({
             </div>
             <div className="flex items-center gap-1 text-secondary font-semibold text-lg">
               <DollarSign className="h-5 w-5" />
-              <span>+{getTotalAddonCost().toFixed(2)}</span>
+              <span>+{(getTotalAddonCost() / 100).toFixed(2)}</span>
             </div>
           </div>
           <div className="mt-2 space-y-1">
             {getSelectedAddons().map((addon) => (
               <div key={addon.id} className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{addon.name}</span>
-                <span className="text-secondary">+${addon.price.toFixed(2)}</span>
+                <span className="text-secondary">+{formatCents(addon.price_cents)}</span>
               </div>
             ))}
           </div>

@@ -1,8 +1,11 @@
+import type { MeResponse } from '../../api/types'
 import {
   AuthAdapter,
   AuthLoginResult,
   AuthProfile,
+  AuthProfilePatch,
   AuthRegisterResult,
+  AuthSignUpInput,
   AuthState,
   AuthUser,
 } from './auth-types'
@@ -10,12 +13,42 @@ import {
 const DEFAULT_RETRY_ATTEMPTS = 3
 const DEFAULT_RETRY_DELAY_MS = 1000
 
+/**
+ * Error codes worth retrying while loading the profile: the signup trigger has
+ * not committed yet (NO_PROFILE), or the API/auth service was briefly unreachable.
+ * PGRST116 is kept for adapters that still read the table directly.
+ */
+const RETRYABLE_PROFILE_ERRORS = new Set(['NO_PROFILE', 'PGRST116', 'AUTH_UNAVAILABLE', 'NETWORK_ERROR', 'TIMEOUT'])
+
+const PATCHABLE_KEYS = ['name', 'phone', 'username', 'avatar_url', 'cover_photo_url'] as const
+
 function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 function isProfileComplete(profile: AuthProfile) {
   return !!profile.role && !!profile.username
+}
+
+/** Maps GET /api/me to the AuthProfile both apps keep in their auth state. */
+export function profileFromMe(me: MeResponse): AuthProfile {
+  const role = me.profile.role === 'barber' ? 'barber' : 'client'
+  return {
+    id: me.profile.id,
+    name: me.profile.name,
+    email: me.profile.email ?? me.user.email,
+    role,
+    phone: me.profile.phone,
+    username: me.profile.username,
+    avatar_url: me.profile.avatar_url,
+    cover_photo_url: me.profile.cover_photo_url,
+    created_at: me.profile.created_at,
+    updated_at: me.profile.updated_at,
+    is_admin: me.isAdmin,
+    barber_id: role === 'barber' ? me.barber?.id ?? null : null,
+    business_name: role === 'barber' ? me.barber?.business_name ?? null : null,
+    onboarding_complete: role === 'barber' ? me.barber?.onboarding_complete ?? false : null,
+  }
 }
 
 function authenticatedState(user: AuthUser, profile: AuthProfile): AuthState {
@@ -57,7 +90,7 @@ export async function fetchProfileWithRetry(
     }
 
     lastErrorCode = result.errorCode
-    if (result.errorCode && result.errorCode !== 'PGRST116') {
+    if (result.errorCode && !RETRYABLE_PROFILE_ERRORS.has(result.errorCode)) {
       break
     }
 
@@ -67,15 +100,6 @@ export async function fetchProfileWithRetry(
   }
 
   return { profile, lastErrorCode }
-}
-
-export async function ensureBarberRowIfNeeded(adapter: AuthAdapter, profile: AuthProfile) {
-  if (profile.role !== 'barber') return
-
-  const { exists } = await adapter.getBarberRow(profile.id)
-  if (exists) return
-
-  await adapter.createBarberRow(profile.id, profile.business_name || '')
 }
 
 export class AuthController {
@@ -89,30 +113,24 @@ export class AuthController {
     this.retryDelayMs = options?.delayMs ?? DEFAULT_RETRY_DELAY_MS
   }
 
-  async initialize(): Promise<AuthState> {
-    const { user } = await this.adapter.getSession()
-    if (!user) return unauthenticatedState()
-
-    const { profile } = await fetchProfileWithRetry(this.adapter, user.id, {
+  private loadProfile(userId: string) {
+    return fetchProfileWithRetry(this.adapter, userId, {
       attempts: this.retryAttempts,
       delayMs: this.retryDelayMs,
     })
-    if (!profile) return unauthenticatedState()
+  }
 
-    await ensureBarberRowIfNeeded(this.adapter, profile)
-    return authenticatedState(user, profile)
+  async initialize(): Promise<AuthState> {
+    const { user } = await this.adapter.getSession()
+    return this.handleAuthChange(user)
   }
 
   async handleAuthChange(user: AuthUser | null): Promise<AuthState> {
     if (!user) return unauthenticatedState()
 
-    const { profile } = await fetchProfileWithRetry(this.adapter, user.id, {
-      attempts: this.retryAttempts,
-      delayMs: this.retryDelayMs,
-    })
+    const { profile } = await this.loadProfile(user.id)
     if (!profile) return unauthenticatedState()
 
-    await ensureBarberRowIfNeeded(this.adapter, profile)
     return authenticatedState(user, profile)
   }
 
@@ -122,13 +140,10 @@ export class AuthController {
   }> {
     const { user, errorMessage } = await this.adapter.signInWithPassword(email, password)
     if (!user || errorMessage) {
-      return { state: unauthenticatedState(), result: { ok: false, reason: 'auth-error' } }
+      return { state: unauthenticatedState(), result: { ok: false, reason: 'auth-error', errorMessage } }
     }
 
-    const { profile } = await fetchProfileWithRetry(this.adapter, user.id, {
-      attempts: this.retryAttempts,
-      delayMs: this.retryDelayMs,
-    })
+    const { profile } = await this.loadProfile(user.id)
     if (!profile) {
       return { state: unauthenticatedState(), result: { ok: false, reason: 'profile-missing' } }
     }
@@ -137,56 +152,35 @@ export class AuthController {
       return { state: unauthenticatedState(), result: { ok: false, reason: 'profile-incomplete' } }
     }
 
-    await ensureBarberRowIfNeeded(this.adapter, profile)
     return { state: authenticatedState(user, profile), result: { ok: true } }
   }
 
-  async register(input: {
-    name: string
-    email: string
-    password: string
-    role: 'client' | 'barber'
-    businessName?: string
-  }): Promise<{ state: AuthState; result: AuthRegisterResult }> {
+  /**
+   * Signs up with role, name, username and business name in the auth metadata;
+   * the database creates the profile (and the barber rows for barbers).
+   */
+  async register(input: AuthSignUpInput): Promise<{ state: AuthState; result: AuthRegisterResult }> {
     const signUp = await this.adapter.signUp(input)
     if (signUp.errorMessage) {
-      return { state: unauthenticatedState(), result: { ok: false, reason: 'auth-error' } }
-    }
-
-    if (signUp.needsConfirmation) {
-      return { state: unauthenticatedState(), result: { ok: true, needsConfirmation: true } }
+      return {
+        state: unauthenticatedState(),
+        result: { ok: false, reason: 'auth-error', alreadyExists: signUp.alreadyExists, errorMessage: signUp.errorMessage },
+      }
     }
 
     if (signUp.alreadyExists) {
       return { state: unauthenticatedState(), result: { ok: false, alreadyExists: true } }
     }
 
+    if (signUp.needsConfirmation) {
+      return { state: unauthenticatedState(), result: { ok: true, needsConfirmation: true } }
+    }
+
     if (!signUp.user) {
       return { state: unauthenticatedState(), result: { ok: false, reason: 'auth-error' } }
     }
 
-    let { profile } = await fetchProfileWithRetry(this.adapter, signUp.user.id, {
-      attempts: this.retryAttempts,
-      delayMs: this.retryDelayMs,
-    })
-
-    if (!profile && this.adapter.createProfile) {
-      const username = input.email.split('@')[0]
-      await this.adapter.createProfile({
-        id: signUp.user.id,
-        name: input.name,
-        email: input.email,
-        role: input.role,
-        username,
-        businessName: input.businessName,
-      })
-      const retry = await fetchProfileWithRetry(this.adapter, signUp.user.id, {
-        attempts: this.retryAttempts,
-        delayMs: this.retryDelayMs,
-      })
-      profile = retry.profile
-    }
-
+    const { profile } = await this.loadProfile(signUp.user.id)
     if (!profile) {
       return { state: unauthenticatedState(), result: { ok: false, reason: 'profile-missing' } }
     }
@@ -195,7 +189,6 @@ export class AuthController {
       return { state: unauthenticatedState(), result: { ok: false, reason: 'profile-incomplete' } }
     }
 
-    await ensureBarberRowIfNeeded(this.adapter, profile)
     return { state: authenticatedState(signUp.user, profile), result: { ok: true } }
   }
 
@@ -205,49 +198,43 @@ export class AuthController {
   }
 
   async refreshProfile(userId: string): Promise<AuthState> {
-    const { profile } = await fetchProfileWithRetry(this.adapter, userId, {
-      attempts: this.retryAttempts,
-      delayMs: this.retryDelayMs,
-    })
+    const { profile } = await this.loadProfile(userId)
     if (!profile) return unauthenticatedState()
 
     const user: AuthUser = { id: userId, email: profile.email || undefined }
-    await ensureBarberRowIfNeeded(this.adapter, profile)
     return authenticatedState(user, profile)
   }
 
-  async updateProfile(
-    state: AuthState,
-    patch: Partial<AuthProfile>
-  ): Promise<AuthState> {
+  /**
+   * PATCH /api/me through the adapter. Only name, phone, username, avatar_url and
+   * cover_photo_url are sent; other keys are ignored. Throws with the server's
+   * message when it fails.
+   */
+  async updateProfile(state: AuthState, input: Partial<AuthProfile>): Promise<AuthState> {
     if (!state.user || !state.profile) return state
 
-    const updatedAt = new Date().toISOString()
-    const update = { ...patch, updated_at: updatedAt }
-    await this.adapter.updateProfile(state.user.id, update)
+    const patch: AuthProfilePatch = {}
+    for (const key of PATCHABLE_KEYS) {
+      if (input[key] !== undefined) (patch as Record<string, unknown>)[key] = input[key]
+    }
+    if (Object.keys(patch).length === 0) return state
+
+    const result = await this.adapter.updateProfile(state.user.id, patch)
+    if (result.errorMessage) throw new Error(result.errorMessage)
 
     return {
       ...state,
-      profile: {
-        ...state.profile,
-        ...update,
-      },
+      profile: result.profile ?? { ...state.profile, ...patch },
     }
   }
 
-  async addToFavorites(state: AuthState, barberId: string): Promise<AuthState> {
-    if (!state.profile) return state
-    const current = state.profile.favorites || []
-    if (current.includes(barberId)) return state
-
-    return this.updateProfile(state, { favorites: [...current, barberId] })
+  /** @deprecated Favorites were removed from the schema; returns the state unchanged. */
+  async addToFavorites(state: AuthState, _barberId: string): Promise<AuthState> {
+    return state
   }
 
-  async removeFromFavorites(state: AuthState, barberId: string): Promise<AuthState> {
-    if (!state.profile?.favorites) return state
-    return this.updateProfile(state, {
-      favorites: state.profile.favorites.filter(id => id !== barberId),
-    })
+  /** @deprecated Favorites were removed from the schema; returns the state unchanged. */
+  async removeFromFavorites(state: AuthState, _barberId: string): Promise<AuthState> {
+    return state
   }
 }
-

@@ -1,22 +1,21 @@
 "use client"
 
 import type * as React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
-  Card,
   CardContent as CardContentBase,
   CardDescription as CardDescriptionBase,
   CardHeader as CardHeaderBase,
-  CardTitle as CardTitleBase,
+  CardTitle as CardTitleBase
 } from "@/shared/components/ui/card"
 import { useToast } from "@/shared/components/ui/use-toast"
 import { Loader2, DollarSign, TrendingUp, TrendingDown, CreditCard, Sparkles } from "lucide-react"
 import { Button as ButtonBase } from "@/shared/components/ui/button"
 import { Badge } from "@/shared/components/ui/badge"
-import { LoadingSpinner } from "@/shared/components/ui/loading-spinner"
 import { cn } from "@/shared/lib/utils"
-import { supabase } from "@/shared/lib/supabase"
+import { api, errorMessage } from "@/shared/lib/api"
 import { logger } from "@/shared/lib/logger"
+import { formatCents } from "@barber-app/shared"
 
 // React 19 JSX compatibility: cast to valid component types
 const CardHeader = CardHeaderBase as React.ComponentType<React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }>
@@ -37,24 +36,20 @@ interface MonthlyEarnings {
   }
 }
 
-interface BarberProfile {
-  id: string
-  profiles: {
-    email: string
-    name: string
-  }
-}
-
-/** Fake data for landing page preview (amounts in cents) */
+/**
+ * Example month for the landing page preview (cents), labelled as an example:
+ * 120 bookings at about $42 paid in person, plus the barber's $1.20 share of
+ * each booking fee. Previous month: 100 bookings.
+ */
 const PREVIEW_EARNINGS: MonthlyEarnings = {
-  current: 1245000, // $12,450
-  previous: 925000,
+  current: 518400, // $5,040 services + $144 booking-fee share
+  previous: 432000, // $4,200 + $120
   trend: "up",
-  percentage: 40,
+  percentage: 20,
   breakdown: {
-    serviceFees: 982000,
-    platformFees: 263000,
-    totalEarnings: 1245000,
+    serviceFees: 504000,
+    platformFees: 14400,
+    totalEarnings: 518400,
   },
 }
 
@@ -72,6 +67,71 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
   const [isLoading, setIsLoading] = useState(!preview)
   const [isSettingUp, setIsSettingUp] = useState(false)
   const [hasStripeAccount, setHasStripeAccount] = useState(false)
+  const [feeExempt, setFeeExempt] = useState(false)
+
+  /** Fee-exempt barbers (GET /api/me billing.fee_exempt) take no online payments, so there is no Stripe setup. */
+  const checkFeeExempt = useCallback(async () => {
+    try {
+      const me = await api.me.get()
+      setFeeExempt(!!me.billing?.fee_exempt)
+    } catch (error) {
+      logger.error('Error checking fee exemption', error)
+    }
+  }, [])
+
+  /** GET /api/stripe/connect/status (refreshes the flags from Stripe). */
+  const checkStripeAccount = useCallback(async () => {
+    if (preview) return
+    try {
+      const status = await api.connect.status()
+      setHasStripeAccount(status.hasAccount && status.detailsSubmitted)
+    } catch (error) {
+      logger.error('Error checking Stripe account', error)
+    }
+  }, [preview])
+
+  /**
+   * This month vs last month from GET /api/earnings. "Service" is what clients
+   * paid in person for completed appointments; "booking fees" is the barber's
+   * net share of the online booking fee.
+   */
+  const loadEarnings = useCallback(async () => {
+    if (preview || !barberId) return
+    setIsLoading(true)
+    try {
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const [thisMonth, lastMonth] = await Promise.all([
+        api.earnings.get({ from: monthStart.toISOString(), to: now.toISOString(), limit: 1 }),
+        api.earnings.get({ from: prevStart.toISOString(), to: monthStart.toISOString(), limit: 1 }),
+      ])
+      const total = (t: typeof thisMonth.totals) => t.serviceRevenueCents + t.netFeeShareCents
+      const current = total(thisMonth.totals)
+      const previous = total(lastMonth.totals)
+      const change = previous > 0 ? Math.round(((current - previous) / previous) * 100) : current > 0 ? 100 : 0
+      setEarnings({
+        current,
+        previous,
+        trend: change >= 0 ? 'up' : 'down',
+        percentage: Math.abs(change),
+        breakdown: {
+          serviceFees: thisMonth.totals.serviceRevenueCents,
+          platformFees: thisMonth.totals.netFeeShareCents,
+          totalEarnings: current,
+        },
+      })
+    } catch (error) {
+      logger.error("Error loading earnings", error)
+      toast({
+        title: "Error",
+        description: errorMessage(error, "Failed to load earnings data. Please try again."),
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [preview, barberId, toast])
 
   useEffect(() => {
     if (preview) return
@@ -79,207 +139,20 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
     logger.debug('EarningsDashboard mounted', { barberId })
     loadEarnings()
     checkStripeAccount()
-  }, [barberId, preview])
+    checkFeeExempt()
+  }, [barberId, preview, loadEarnings, checkStripeAccount, checkFeeExempt])
 
-  const checkStripeAccount = async () => {
-    if (preview) return
-    logger.debug('Checking Stripe account for barber', { barberId })
-    try {
-      // First, try to refresh the account status from Stripe
-      const refreshResponse = await fetch('/api/connect/refresh-account-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: barberId }),
-      });
-
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json();
-        logger.debug('Stripe account refresh result', { 
-          hasAccount: refreshData.success && refreshData.data.hasStripeAccount,
-          needsReconnect: refreshData.data?.needsReconnect
-        });
-        
-        if (refreshData.success && refreshData.data.hasStripeAccount) {
-          setHasStripeAccount(true);
-          return;
-        }
-
-        // If the account needs re-connecting (e.g. invalid key/account deleted)
-        // explicitly set hasStripeAccount to false to show the setup button
-        if (refreshData.data?.needsReconnect) {
-          logger.warn('Stripe account needs re-connect', { barberId });
-          setHasStripeAccount(false);
-          return;
-        }
-      }
-
-      // Fallback to checking the database directly
-      const { data, error } = await supabase
-        .from('barbers')
-        .select('stripe_account_id')
-        .eq('id', barberId)
-        .single()
-
-      if (error) {
-        logger.error('Error fetching Stripe account', error)
-        throw error
-      }
-
-      logger.debug('Stripe account check result', {
-        hasAccount: !!data?.stripe_account_id,
-        accountId: data?.stripe_account_id
-      })
-      setHasStripeAccount(!!data?.stripe_account_id)
-    } catch (error) {
-      logger.error('Error checking Stripe account', error)
-    }
-  }
-
-  const loadEarnings = async () => {
-    if (preview || !barberId) return
-    logger.debug('Loading earnings for barber', { barberId })
-    setIsLoading(true)
-    try {
-      const response = await fetch(`/api/earnings/monthly?barberId=${barberId}`)
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch earnings')
-      }
-      
-      const data = await response.json()
-      logger.debug('Earnings data loaded', { hasData: !!data })
-      
-      // Validate the data structure
-      if (!data || typeof data.current !== 'number') {
-        throw new Error('Invalid earnings data received')
-      }
-      
-      setEarnings(data)
-    } catch (error) {
-      logger.error("Error loading earnings", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load earnings data. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
+  /** POST /api/stripe/connect/onboarding: creates the Express account if needed and returns the link. */
   const handleSetupPayments = async () => {
-    logger.debug('Starting payment setup for barber', { barberId })
     setIsSettingUp(true)
     try {
-      // First, check if there's already a Stripe account and refresh its status
-      const refreshResponse = await fetch('/api/connect/refresh-account-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: barberId }),
-      });
-
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json();
-        
-        if (refreshData.success && refreshData.data.hasStripeAccount) {
-          // Update the local state to reflect the refreshed status
-          setHasStripeAccount(true);
-          
-          if (refreshData.data.currentStatus === 'active') {
-            toast({
-              title: 'Stripe Account Active',
-              description: 'Your Stripe account is already active and ready to accept payments!',
-            });
-            return;
-          } else if (refreshData.data.currentStatus === 'pending') {
-            toast({
-              title: 'Account Pending',
-              description: 'Your Stripe account is being reviewed. This usually takes 1-2 business days.',
-            });
-            return;
-          }
-        }
-      }
-
-      // Get barber's email and name
-      logger.debug('Fetching barber details')
-      const { data: barber, error: barberError } = await supabase
-        .from('barbers')
-        .select(`
-          id,
-          profiles (
-            email,
-            name
-          )
-        `)
-        .eq('id', barberId)
-        .single() as { data: BarberProfile | null, error: any }
-
-      if (barberError) {
-        logger.error('Error fetching barber details', barberError)
-        throw new Error(`Failed to fetch barber details: ${barberError.message}`)
-      }
-
-      if (!barber?.profiles?.email || !barber?.profiles?.name) {
-        throw new Error('Barber email or name is missing')
-      }
-
-      logger.debug('Barber details fetched', {
-        email: barber.profiles.email,
-        name: barber.profiles.name
-      })
-
-      // Create Stripe Connect account
-      logger.debug('Creating Stripe Connect account')
-      const response = await fetch('/api/connect/create-account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          barberId,
-          email: barber.profiles.email,
-          name: barber.profiles.name,
-        }),
-      }).catch(error => {
-        logger.error('Network error during fetch', error)
-        throw new Error(`Network error: ${error.message}`)
-      })
-
-      if (!response) {
-        throw new Error('No response received from server')
-      }
-
-      let responseData
-      try {
-        responseData = await response.json()
-      } catch (error) {
-        logger.error('Error parsing response', error)
-        throw new Error('Invalid response from server')
-      }
-
-      if (!response.ok) {
-        logger.error('Failed to create Stripe account', { error: responseData.error })
-        throw new Error(responseData.error || 'Failed to create Stripe account')
-      }
-
-      const redirectUrl = responseData.url || responseData.accountLink
-      if (!redirectUrl) {
-        throw new Error('No redirect URL received from Stripe')
-      }
-
-      logger.debug('Stripe account created, redirecting', { redirectUrl })
-      window.location.href = redirectUrl
+      const { url } = await api.connect.onboarding()
+      window.location.href = url
     } catch (error) {
       logger.error('Error setting up payments', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to set up payments. Please try again.",
+        description: errorMessage(error, "Failed to set up payments. Please try again."),
         variant: "destructive",
       })
     } finally {
@@ -287,33 +160,16 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
     }
   }
 
+  /** POST /api/stripe/connect/dashboard: Express dashboard (or onboarding when details are missing). */
   const handleAccessDashboard = async () => {
-    logger.debug('Accessing Stripe dashboard for barber', { barberId })
     try {
-      const response = await fetch('/api/connect/create-dashboard-link', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ barberId }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to access Stripe dashboard')
-      }
-
-      if (!data.url) {
-        throw new Error('No dashboard URL received')
-      }
-
-      window.location.href = data.url
+      const { url } = await api.connect.dashboard()
+      window.location.href = url
     } catch (error) {
       logger.error('Error accessing Stripe dashboard', error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to access Stripe dashboard. Please try again.",
+        description: errorMessage(error, "Failed to access Stripe dashboard. Please try again."),
         variant: "destructive",
       })
     }
@@ -368,7 +224,7 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
           </div>
           <CardTitle className={titleCls}>Monthly Earnings</CardTitle>
         </div>
-        <CardDescription className={descCls}>Your earnings breakdown for this month</CardDescription>
+        <CardDescription className={descCls}>{preview ? "Example: a barber with 120 bookings this month" : "Your earnings breakdown for this month"}</CardDescription>
       </CardHeader>
       <CardContent className="p-8">
         <div className="flex flex-col space-y-8">
@@ -380,7 +236,7 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
               )}
               <div className={cn("relative rounded-2xl p-8", mainBoxCls)}>
                 <div className="text-5xl font-bebas font-bold text-secondary mb-2">
-                  ${earnings?.current ? (earnings.current / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  {formatCents(earnings?.current ?? 0)}
                 </div>
                 <div className="flex items-center justify-center space-x-2">
                   {earnings?.trend === "up" ? (
@@ -404,24 +260,32 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className={smallCardCls}>
-                <div className={smallLabelCls}>Service Fees</div>
+                <div className={smallLabelCls}>Services</div>
                 <div className={smallValueCls}>
-                  ${earnings?.breakdown?.serviceFees ? (earnings.breakdown.serviceFees / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  {formatCents(earnings?.breakdown.serviceFees ?? 0)}
                 </div>
-                <div className={smallHintCls}>From haircut services</div>
+                <div className={smallHintCls}>Completed appointments (paid in person)</div>
               </div>
               <div className={smallCardCls}>
-                <div className={smallLabelCls}>Platform Fees</div>
+                <div className={smallLabelCls}>Booking Fees</div>
                 <div className={smallValueCls}>
-                  ${earnings?.breakdown?.platformFees ? (earnings.breakdown.platformFees / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                  {formatCents(earnings?.breakdown.platformFees ?? 0)}
                 </div>
-                <div className={smallHintCls}>Processing fees</div>
+                <div className={smallHintCls}>Your share of online booking fees</div>
               </div>
             </div>
           </div>
 
           {/* Payment Setup Section - hidden in preview */}
-          {!preview && !hasStripeAccount && (
+          {!preview && feeExempt && (
+            <div className={cn("text-center border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
+              <p className={cn("text-base", descCls)}>
+                You don&apos;t pay booking fees, so there&apos;s nothing to set up. Clients pay you in person.
+              </p>
+            </div>
+          )}
+
+          {!preview && !feeExempt && !hasStripeAccount && (
             <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
               <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl backdrop-blur-md"}>
                 <p className={cn("mb-6 text-lg", descCls)}>
@@ -430,7 +294,7 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
                 <Button
                   onClick={handleSetupPayments}
                   disabled={isSettingUp}
-                  className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary/80 text-primary font-bold shadow-xl rounded-xl px-10 py-6 text-lg transition-all duration-300 hover:scale-105 active:scale-95"
+                  className="bg-button hover:bg-button/90 text-button-foreground font-bold shadow-xl rounded-xl px-10 py-6 text-lg transition-all duration-300 hover:scale-105 active:scale-95"
                 >
                   {isSettingUp ? (
                     <Loader2 className="h-5 w-5 animate-spin mr-3" />
@@ -444,7 +308,7 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
           )}
 
           {/* Stripe Dashboard Access - hidden in preview */}
-          {!preview && hasStripeAccount && (
+          {!preview && !feeExempt && hasStripeAccount && (
             <div className={cn("text-center space-y-4 border-t pt-8", isLight ? "border-border" : "border-black/10 dark:border-white/10")}>
               <div className={isLight ? "p-6 bg-muted rounded-xl border border-border" : "p-6 bg-white/5 border border-black/10 dark:border-white/10 rounded-2xl backdrop-blur-md"}>
                 <Button

@@ -7,11 +7,12 @@ import { Input } from '@/shared/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Alert, AlertDescription } from '@/shared/components/ui/alert'
 import { useToast } from '@/shared/components/ui/use-toast'
-import { Copy, Share2, Link, QrCode, ExternalLink, CheckCircle, AlertCircle, Loader2, Download, Sparkles, Globe } from 'lucide-react'
-import { supabase } from '@/shared/lib/supabase'
+import { Copy, Share2, QrCode, ExternalLink, CheckCircle, AlertCircle, Download, Sparkles } from 'lucide-react'
+import { api } from '@/shared/lib/api'
 import { Label } from '@/shared/components/ui/label'
 import QRCode from 'react-qr-code'
 import { Badge } from '@/shared/components/ui/badge'
+import { appBaseUrl } from '@/shared/lib/app-url'
 import { logger } from '@/shared/lib/logger'
 
 interface ProfileData {
@@ -40,37 +41,14 @@ export function ShareSettings() {
     try {
       setIsLoading(true)
       
-      // Fetch profile data including username
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('name, is_public, username')
-        .eq('id', user?.id)
-        .single()
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        logger.error('Error fetching profile', profileError)
-      }
-
-      // Fetch barber data if user is a barber
-      let barberData = {}
-      if (user?.role === 'barber') {
-        const { data: barber, error: barberError } = await supabase
-          .from('barbers')
-          .select('id, business_name')
-          .eq('user_id', user.id)
-          .single()
-
-        if (barberError && barberError.code !== 'PGRST116') {
-          logger.error('Error fetching barber data', barberError)
-        }
-
-        if (barber) {
-          barberData = { business_name: barber.business_name }
-          setBarberId(barber.id)
-        }
-      }
-
-      setProfileData({ ...profile, ...barberData })
+      const me = await api.me.get()
+      setBarberId(me.barber?.id ?? null)
+      setProfileData({
+        name: me.profile.name ?? undefined,
+        username: me.profile.username,
+        business_name: me.barber?.business_name ?? undefined,
+        is_public: me.barber ? me.barber.is_public && !me.barber.listing_suspended : false,
+      })
     } catch (error) {
       logger.error('Error loading profile data', error)
     } finally {
@@ -79,9 +57,9 @@ export function ShareSettings() {
   }
 
   // Use username for the booking link if available, otherwise use barber ID as fallback
-  // Use production domain to ensure the link is publicly accessible
+  // NEXT_PUBLIC_APP_URL in production, the current origin otherwise
   const getBookingLink = () => {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bocmstyle.com'
+    const baseUrl = appBaseUrl()
     
     // Use username if available, as it's more user-friendly
     if (profileData.username) {
@@ -120,7 +98,7 @@ export function ShareSettings() {
         description: "Your booking link has been copied to clipboard.",
       })
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
+    } catch {
       toast({
         title: "Failed to copy",
         description: "Please try copying the link manually.",
@@ -271,7 +249,7 @@ export function ShareSettings() {
           <Button
             onClick={shareLink}
             disabled={!isLinkValid}
-            className="flex-1 bg-secondary hover:bg-secondary/90 text-primary-foreground font-semibold shadow-lg"
+            className="flex-1 bg-button hover:bg-button/90 text-button-foreground font-semibold shadow-lg"
           >
             <Share2 className="h-4 w-4 mr-2" />
             Share Link

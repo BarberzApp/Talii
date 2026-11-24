@@ -29,7 +29,6 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   
   const isPrimary = variant === 'primary';
   const isSecondary = variant === 'secondary';
-  const isTertiary = variant === 'tertiary';
 
   const handlePressIn = () => {
     if (disabled) return;

@@ -15,7 +15,7 @@ function getSentryModule(): SentryModule | null {
   if (sentryModule) return sentryModule
   try {
     // Lazy require to avoid circular import with sentry.ts
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     sentryModule = require('./sentry') as SentryModule
     return sentryModule
   } catch {

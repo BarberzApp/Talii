@@ -53,35 +53,6 @@ export function getColorFromString(str?: string | null): string {
 }
 
 /**
- * Gets gradient colors for cover photo based on name
- * @param name - Name to generate gradient from
- * @returns Tuple of two color strings for gradient
- */
-export function getCoverGradientColors(name?: string | null): [string, string] {
-  // Create a darker and lighter variant for gradient
-  // Simple approach: use theme gradients or create variations
-  const gradients: [string, string][] = [
-    [theme.colors.primary, theme.colors.accent],
-    ['#272a2f', '#2d2a26'],
-    ['#c78e3f', '#8d7250'],
-    ['#8d7250', '#c78e3f'],
-    ['#2d2a26', '#272a2f'],
-  ];
-
-  if (!name) {
-    return gradients[0];
-  }
-
-  // Use hash to select gradient
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % gradients.length;
-  return gradients[index];
-}
-
-/**
  * Avatar fallback props for rendering
  */
 export interface AvatarFallbackProps {
@@ -102,22 +73,3 @@ export function getAvatarFallbackProps(name?: string | null): AvatarFallbackProp
     textColor: theme.colors.foreground,
   };
 }
-
-/**
- * Cover photo fallback props
- */
-export interface CoverFallbackProps {
-  gradientColors: [string, string];
-}
-
-/**
- * Gets cover photo fallback props
- * @param name - User name
- * @returns Cover photo fallback props
- */
-export function getCoverFallbackProps(name?: string | null): CoverFallbackProps {
-  return {
-    gradientColors: getCoverGradientColors(name),
-  };
-}
-

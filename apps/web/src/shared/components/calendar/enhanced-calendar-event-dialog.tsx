@@ -1,22 +1,16 @@
-import { format } from 'date-fns'
+import { formatBookingDate, formatCents, formatTimeRange, timeZoneAbbreviation } from '@barber-app/shared'
 import {
-  Calendar as CalendarIcon,
   Clock,
   DollarSign,
-  ExternalLink,
-  Loader2,
-  Mail,
-  Phone,
-  Scissors,
-  User,
-  X,
-  DownloadIcon,
+  Loader2, Scissors,
+  User, DownloadIcon
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/shared/components/ui/dialog'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
-import { cn } from '@/lib/utils'
-import { addToGoogleCalendar, downloadICalFile } from '@/shared/lib/google-calendar-utils'
+import { cn } from '@/shared/lib/utils'
+import { downloadIcs } from '@/shared/lib/ical-export'
 import { logger } from '@/shared/lib/logger'
 import type { CalendarEvent } from './enhanced-calendar'
 
@@ -33,11 +27,23 @@ interface EnhancedCalendarEventDialogProps {
   selectedEvent: CalendarEvent | null
   onMarkAsMissed: () => Promise<void> | void
   isMarkingMissed: boolean
+  onMarkCompleted: () => Promise<void> | void
+  onCancel: () => Promise<void> | void
+  actionPending: null | 'complete' | 'cancel'
   user: CalendarUser | null
 }
 
-const formatTime = (date: Date) => format(date, 'h:mm a')
-const formatDate = (date: Date) => format(date, 'MMM d, yyyy')
+/** What cancelling does to the booking fee, per the API's refund policy. */
+function refundPreview(event: CalendarEvent): string {
+  const p = event.extendedProps
+  const paid = p.bookingFeeCents > 0 && (p.paymentStatus === 'succeeded' || p.paymentStatus === 'partially_refunded')
+  if (!paid) return 'No booking fee was charged, so nothing is refunded.'
+  if (p.isBarberView) return `The client's ${formatCents(p.bookingFeeCents)} booking fee will be refunded in full.`
+  const hours = (Date.parse(event.start) - Date.now()) / 3_600_000
+  return hours > 24
+    ? `Your ${formatCents(p.bookingFeeCents)} booking fee will be refunded in full.`
+    : `This is less than 24 hours away, so the ${formatCents(p.bookingFeeCents)} booking fee is not refunded.`
+}
 
 export function EnhancedCalendarEventDialog({
   open,
@@ -45,40 +51,30 @@ export function EnhancedCalendarEventDialog({
   selectedEvent,
   onMarkAsMissed,
   isMarkingMissed,
-  user,
+  onMarkCompleted,
+  onCancel,
+  actionPending,
 }: EnhancedCalendarEventDialogProps) {
-  const handleAddToGoogleCalendar = () => {
-    if (!selectedEvent) return
-    try {
-      addToGoogleCalendar(
-        selectedEvent,
-        selectedEvent.extendedProps.isBarberView ? 'barber' : 'client',
-        {
-          name:
-            user?.user_metadata?.full_name ||
-            (selectedEvent.extendedProps.isBarberView ? 'Barber' : 'Client'),
-          email: user?.email || '',
-          location: '',
-        },
-      )
-    } catch (error) {
-      logger.error('Error adding to Google Calendar', error)
-    }
-  }
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  useEffect(() => setConfirmCancel(false), [selectedEvent?.id, open])
+  const started = !!selectedEvent && Date.parse(selectedEvent.start) <= Date.now()
+  const status = selectedEvent?.extendedProps.status
+  const canComplete = !!selectedEvent?.extendedProps.isBarberView && status === 'confirmed' && started
+  const canCancel = !!selectedEvent && (status === 'pending' || status === 'confirmed') && !started
+  const tz = selectedEvent?.extendedProps.timeZone ?? 'America/New_York'
 
   const handleDownloadICal = () => {
     if (!selectedEvent) return
     try {
-      downloadICalFile(
-        [selectedEvent],
-        selectedEvent.extendedProps.isBarberView ? 'barber' : 'client',
-        {
-          name:
-            user?.user_metadata?.full_name ||
-            (selectedEvent.extendedProps.isBarberView ? 'Barber' : 'Client'),
-          email: user?.email || '',
-          location: '',
-        },
+      const p = selectedEvent.extendedProps
+      downloadIcs(
+        [{
+          id: selectedEvent.id,
+          start: selectedEvent.start,
+          end: selectedEvent.end,
+          summary: p.isBarberView ? `${p.serviceName} with ${p.clientName}` : `${p.serviceName} with ${p.barberName}`,
+          description: [p.serviceName, ...p.addonNames].join(', '),
+        }],
         `appointment-${selectedEvent.id}.ics`,
       )
     } catch (error) {
@@ -88,7 +84,7 @@ export function EnhancedCalendarEventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md w-full max-h-[90vh] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl p-8 overflow-hidden ring-1 ring-white/10">
+      <DialogContent className="max-w-md w-full max-h-[90vh] bg-background border border-border rounded-[2rem] shadow-2xl p-6 sm:p-8 overflow-hidden">
         <DialogHeader className="pb-6 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -113,7 +109,7 @@ export function EnhancedCalendarEventDialog({
                     : 'My Appointment'}
                 </DialogTitle>
                 <DialogDescription className="text-foreground/50 text-base font-medium italic mt-1">
-                  {selectedEvent && formatDate(new Date(selectedEvent.start))}
+                  {selectedEvent && formatBookingDate(selectedEvent.start, tz)}
                 </DialogDescription>
               </div>
             </div>
@@ -142,17 +138,12 @@ export function EnhancedCalendarEventDialog({
                   <h3 className="text-foreground font-bebas text-4xl mb-1 tracking-wide leading-none">
                     {selectedEvent.extendedProps.serviceName}
                   </h3>
-                  <p className="text-foreground/40 text-[10px] font-black uppercase tracking-[0.2em] pl-0.5">
-                    {selectedEvent.extendedProps.isBarberView
-                      ? 'Inbound Request'
-                      : 'Premium Session'}
-                  </p>
                 </div>
                 <div className="text-right">
                   <div className="text-4xl font-bold text-secondary tracking-tighter drop-shadow-sm">
-                    ${selectedEvent.extendedProps.price}
+                    ${selectedEvent.extendedProps.price.toFixed(2)}
                   </div>
-                  <div className="text-foreground/40 text-[9px] font-bold uppercase tracking-widest leading-none">Total Value</div>
+                  <div className="text-foreground/40 text-[9px] font-bold uppercase tracking-widest leading-none">Paid in person</div>
                 </div>
               </div>
 
@@ -168,7 +159,7 @@ export function EnhancedCalendarEventDialog({
                         {selectedEvent.extendedProps.clientName}
                       </p>
                       {selectedEvent.extendedProps.isGuest && (
-                        <Badge variant="outline" className="mt-1 bg-secondary/5 text-secondary border-secondary/20 text-[9px] font-black uppercase tracking-tighter">Guest</Badge>
+                        <Badge variant="outline" className="mt-1 bg-secondary/5 text-secondary border-secondary/20 text-[9px] font-black uppercase tracking-tighter">Walk-in</Badge>
                       )}
                     </div>
                   </div>
@@ -178,7 +169,7 @@ export function EnhancedCalendarEventDialog({
                       <Scissors className="w-5 h-5 text-secondary" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-0.5">Artisan</p>
+                      <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-0.5">Barber</p>
                       <p className="text-foreground font-bold text-lg tracking-tight leading-tight">
                         {selectedEvent.extendedProps.barberName}
                       </p>
@@ -193,7 +184,7 @@ export function EnhancedCalendarEventDialog({
                   <div className="flex-1">
                     <p className="text-foreground/30 text-[9px] uppercase font-black tracking-widest mb-0.5">Time Slot</p>
                     <p className="text-foreground font-bold text-lg tracking-tight leading-tight">
-                      {formatTime(new Date(selectedEvent.start))} - {formatTime(new Date(selectedEvent.end))}
+                      {formatTimeRange(selectedEvent.start, selectedEvent.end, tz)} {timeZoneAbbreviation(tz, selectedEvent.start)}
                     </p>
                   </div>
                 </div>
@@ -210,15 +201,15 @@ export function EnhancedCalendarEventDialog({
                 <div className="space-y-4">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-foreground/40 font-medium italic">Base Service</span>
-                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.basePrice}</span>
+                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.basePrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-foreground/40 font-medium italic">Enhancements</span>
-                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.addonTotal}</span>
+                    <span className="text-foreground/40 font-medium italic">Add-ons</span>
+                    <span className="text-foreground font-bold">${selectedEvent.extendedProps.addonTotal.toFixed(2)}</span>
                   </div>
                   <div className="pt-4 border-t border-foreground/5 flex justify-between items-center">
                     <span className="text-foreground font-bebas text-3xl tracking-wide uppercase opacity-70">Total</span>
-                    <span className="text-secondary font-bold text-4xl tracking-tighter">${selectedEvent.extendedProps.price}</span>
+                    <span className="text-secondary font-bold text-4xl tracking-tighter">${selectedEvent.extendedProps.price.toFixed(2)}</span>
                   </div>
                 </div>
                 
@@ -234,10 +225,52 @@ export function EnhancedCalendarEventDialog({
 
             {/* Actions */}
             <div className="space-y-4">
-              {selectedEvent.extendedProps.isBarberView && selectedEvent.extendedProps.status !== 'cancelled' && (
+              {canComplete && (
+                <Button
+                  onClick={onMarkCompleted}
+                  disabled={actionPending !== null}
+                  className="w-full bg-green-500/10 hover:bg-green-600 text-green-600 hover:text-white font-bold py-7 rounded-2xl border border-green-500/20 transition-all active:scale-[0.98]"
+                >
+                  {actionPending === 'complete' ? <Loader2 className="animate-spin" /> : 'Mark Completed'}
+                </Button>
+              )}
+
+              {canCancel && !confirmCancel && (
+                <Button
+                  onClick={() => setConfirmCancel(true)}
+                  variant="outline"
+                  className="w-full border-red-500/30 text-red-500 hover:bg-red-500/10 font-bold py-6 rounded-2xl"
+                >
+                  Cancel Booking
+                </Button>
+              )}
+
+              {canCancel && confirmCancel && selectedEvent && (
+                <div className="rounded-2xl border border-red-500/20 p-4 space-y-3">
+                  <p className="text-sm text-foreground/80">{refundPreview(selectedEvent)}</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setConfirmCancel(false)} disabled={actionPending !== null}>
+                      Keep it
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      disabled={actionPending !== null}
+                      onClick={async () => {
+                        await onCancel()
+                        setConfirmCancel(false)
+                      }}
+                    >
+                      {actionPending === 'cancel' ? <Loader2 className="animate-spin" /> : 'Yes, cancel'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {canComplete && (
                 <Button
                   onClick={onMarkAsMissed}
-                  disabled={isMarkingMissed}
+                  disabled={isMarkingMissed || actionPending !== null}
                   variant="destructive"
                   className="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-bold py-7 rounded-2xl border border-red-500/20 transition-all active:scale-[0.98]"
                 >
@@ -245,22 +278,14 @@ export function EnhancedCalendarEventDialog({
                 </Button>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  onClick={handleAddToGoogleCalendar}
-                  variant="outline"
-                  className="bg-foreground/[0.02] border-foreground/5 text-foreground/70 hover:bg-foreground/5 font-bold py-6 rounded-2xl transition-all"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2 opacity-40" />
-                  Google
-                </Button>
+              <div className="grid grid-cols-1 gap-3">
                 <Button
                   onClick={handleDownloadICal}
                   variant="outline"
                   className="bg-foreground/[0.02] border-foreground/5 text-foreground/70 hover:bg-foreground/5 font-bold py-6 rounded-2xl transition-all"
                 >
                   <DownloadIcon className="w-4 h-4 mr-2 opacity-40" />
-                  Offline
+                  Add to calendar
                 </Button>
               </div>
             </div>
@@ -270,7 +295,7 @@ export function EnhancedCalendarEventDialog({
         <DialogFooter className="pt-6 flex-shrink-0">
           <Button
             onClick={() => onOpenChange(false)}
-            className="w-full bg-secondary text-primary-foreground hover:bg-secondary/90 font-bold py-7 rounded-2xl text-lg shadow-xl shadow-secondary/20 transition-all active:scale-95"
+            className="w-full bg-button text-button-foreground hover:bg-button/90 font-bold py-7 rounded-2xl text-lg shadow-xl shadow-secondary/20 transition-all active:scale-95"
           >
             Close
           </Button>

@@ -1,46 +1,18 @@
 /**
- * Types for user reporting and blocking functionality
+ * Types for user reporting and blocking (POST /api/reports, /api/blocks).
  */
+import type { ApiReportContentType, ApiReportReason, BlockEntry, OwnReport } from '@barber-app/shared';
 
-export type ReportType = 'user' | 'review' | 'video' | 'image' | 'comment' | 'profile';
-
-export type ReportReason = 
-  | 'spam'
-  | 'harassment'
-  | 'hate_speech'
-  | 'inappropriate_content'
-  | 'fraud'
-  | 'fake_profile'
-  | 'violence'
-  | 'sexual_content'
-  | 'other';
-
-export interface Report {
-  id: string;
-  reporter_id: string;
-  reported_user_id?: string;
-  content_type: ReportType;
-  content_id: string;
-  reason: ReportReason;
-  description?: string;
-  status: 'pending' | 'reviewed' | 'resolved' | 'dismissed';
-  created_at: string;
-  updated_at: string;
-  reviewed_at?: string;
-  reviewed_by?: string;
-}
-
-export interface BlockedUser {
-  id: string;
-  user_id: string; // User who is blocking
-  blocked_user_id: string; // User who is blocked
-  created_at: string;
-}
+/** What can be reported: a user or profile (user id), a review (review id) or an image (its URL). */
+export type ReportType = ApiReportContentType;
+export type ReportReason = ApiReportReason;
+/** A report as its author sees it (never reported_user_id). */
+export type Report = OwnReport;
+export type BlockedUser = BlockEntry;
 
 export interface ReportSubmission {
   contentType: ReportType;
   contentId: string;
-  reportedUserId?: string;
   reason: ReportReason;
   description?: string;
 }
@@ -48,4 +20,3 @@ export interface ReportSubmission {
 export interface BlockUserParams {
   userIdToBlock: string;
 }
-

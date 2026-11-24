@@ -1,5 +1,7 @@
 "use client"
 import Link from "next/link"
+import Image from "next/image"
+import { isOptimizableImage } from '@/shared/lib/image'
 import { useTheme } from "next-themes"
 import { useAuth } from "@/shared/hooks/use-auth-zustand"
 import { logger } from "@/shared/lib/logger"
@@ -12,7 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar"
 import { ModeToggle } from "@/shared/components/theme/mode-toggle"
 import { MobileNav } from "@/shared/components/layout/mobile-nav"
 import { useMobile } from "@/shared/hooks/use-mobile"
@@ -20,17 +21,9 @@ import {
   User,
   LogOut,
   Settings,
-  Calendar,
-  Scissors,
-  Search,
-  UserCircle,
-  Video,
-  Compass,
-  Bell,
+  Calendar, Compass
 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
-import { UpdatesBadge } from "@/shared/components/updates/updates-badge"
-import { NotificationBell } from "@/shared/notifications/notification-bell"
 import { useCurrentPathname } from "@/shared/hooks/use-current-pathname"
 
 export function Navbar() {
@@ -101,7 +94,7 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center group">
             <div className="relative flex items-center shrink-0">
-              <img src={logoSrc} alt="Talii Logo" className="h-8 w-auto sm:h-10 transition-transform duration-300 group-hover:scale-110 object-contain" width={120} height={40} />
+              <Image src={logoSrc} alt="Talii Logo" priority className="h-8 w-auto sm:h-10 transition-transform duration-300 group-hover:scale-110 object-contain" width={71} height={40} />
               <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
           </Link>
@@ -158,10 +151,9 @@ export function Navbar() {
               )}
             </Link>
             
-            {/* Theme toggle and Notification Bell */}
+            {/* Theme toggle */}
             <div className="flex items-center gap-2">
               <ModeToggle />
-              <NotificationBell />
               
               {/* User dropdown menu */}
               <DropdownMenu>
@@ -172,9 +164,12 @@ export function Navbar() {
                     className="p-0 h-10 w-10 rounded-full bg-muted hover:bg-muted/80 border border-border transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/20"
                   >
                     {user?.avatar_url ? (
-                      <img 
-                        src={user.avatar_url} 
-                        alt="Profile" 
+                      <Image
+                        src={user.avatar_url}
+                        unoptimized={!isOptimizableImage(user.avatar_url)}
+                        alt="Profile"
+                        width={40}
+                        height={40}
                         className="h-10 w-10 rounded-full object-cover"
                       />
                     ) : (
@@ -223,7 +218,7 @@ export function Navbar() {
             <Link href="/login" className="text-muted-foreground hover:text-primary transition-all duration-300 font-medium px-4 py-2 rounded-xl hover:bg-muted">
               Login
             </Link>
-            <Link href="/register" className="bg-secondary text-primary-foreground px-6 py-2 rounded-xl font-semibold hover:bg-secondary/90 shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-primary/20">
+            <Link href="/register" className="bg-button text-button-foreground px-6 py-2 rounded-xl font-semibold hover:bg-button/90 shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-primary/20">
               Get Started
             </Link>
           </nav>

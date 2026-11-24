@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, type ChangeEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import Link from 'next/link'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
-import { useToast } from '@/shared/components/ui/use-toast'
+import { useAuthStore } from '@/shared/stores/auth-store'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
@@ -12,9 +12,24 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Scissors, Loader2, AlertCircle } from 'lucide-react'
 import { supabase } from '@/shared/lib/supabase'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/components/ui/tooltip'
-import { getAndClearRedirectUrl } from '@/shared/lib/redirect-utils'
+import { clearPendingSignupRole, getAndClearRedirectUrl } from '@/shared/lib/redirect-utils'
 import { getRedirectPath } from '@/shared/hooks/use-auth-zustand'
 import { logger } from '@/shared/lib/logger'
+
+/** Turns Supabase's sign-in error into something a person can act on. */
+function loginErrorText(message: string | null): string {
+  const m = (message ?? '').toLowerCase()
+  if (m.includes('not confirmed')) {
+    return 'Please confirm your email first. Check your inbox for the link we sent when you signed up.'
+  }
+  if (m.includes('banned') || m.includes('disabled')) {
+    return 'This account has been disabled. Contact support if you think this is a mistake.'
+  }
+  if (m.includes('fetch') || m.includes('network')) {
+    return 'Could not reach Talii. Check your connection and try again.'
+  }
+  return 'Invalid email or password.'
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -23,11 +38,14 @@ export default function LoginPage() {
   const [redirecting, setRedirecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { push } = useSafeNavigation()
-  const { login, user, status, isInitialized } = useAuth()
-  const { toast } = useToast()
+  const { login, user, isInitialized } = useAuth()
+
+  const redirectStarted = useRef(false)
 
   // Function to handle redirect with proper error handling
-  const handleRedirect = async (userId: string) => {
+  const handleRedirect = useCallback(async (userId: string) => {
+    if (redirectStarted.current) return
+    redirectStarted.current = true
     setRedirecting(true)
     setError(null)
     
@@ -60,14 +78,14 @@ export default function LoginPage() {
         }
       }, 3000)
     }
-  }
+  }, [push])
 
   // Use global auth state for session check and redirect
   useEffect(() => {
     if (isInitialized && user) {
       handleRedirect(user.id)
     }
-  }, [isInitialized, user])
+  }, [isInitialized, user, handleRedirect])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,18 +97,11 @@ export default function LoginPage() {
       const success = await login(email, password)
       
       if (success) {
-        logger.debug('Login successful, getting session')
-        // Use global auth state for redirect
-        if (user) {
-          logger.debug('Session confirmed, redirecting')
-          await handleRedirect(user.id)
-        } else {
-          logger.error('No user after successful login')
-          setError('Login successful but user not found. Please try again.')
-        }
+        // The auth store now holds the user; the effect above redirects.
+        logger.debug('Login successful')
       } else {
         logger.debug('Login failed')
-        setError('Invalid email or password')
+        setError(loginErrorText(useAuthStore.getState().loginError))
       }
     } catch (error) {
       logger.error('Login error', error)
@@ -102,6 +113,8 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setError(null)
+    // Signing in, not signing up: a role left over from the sign-up page must not apply.
+    clearPendingSignupRole()
     try {
       logger.debug('Starting Google OAuth login')
       
@@ -152,7 +165,7 @@ export default function LoginPage() {
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <div className="text-foreground text-xl font-semibold mb-2">Redirecting...</div>
           {error && (
-            <div className="text-red-400 text-sm mt-2">
+            <div role="alert" className="text-red-600 dark:text-red-400 text-sm mt-2">
               {error}
             </div>
           )}
@@ -191,9 +204,9 @@ export default function LoginPage() {
           <CardContent>
             {/* Error Display */}
             {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
-                <p className="text-red-400 text-sm">{error}</p>
+              <div role="alert" className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
               </div>
             )}
             
@@ -204,6 +217,7 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   placeholder="name@example.com"
+                  autoComplete="email"
                   value={email}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                   required
@@ -214,7 +228,7 @@ export default function LoginPage() {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-medium text-foreground">Password</Label>
                   <Link 
-                    href="/forgot-password" 
+                    href="/forgot-password"
                     className="text-sm text-primary hover:underline"
                   >
                     Forgot password?
@@ -223,6 +237,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   required
@@ -231,7 +246,7 @@ export default function LoginPage() {
               </div>
               <Button 
                 type="submit" 
-                className="w-full bg-secondary text-primary-foreground font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-secondary/90 transition-all text-lg font-bebas" 
+                className="w-full bg-button text-button-foreground font-bold px-8 py-4 rounded-xl shadow-lg shadow-secondary/25 hover:bg-button/90 transition-all text-lg font-bebas" 
                 disabled={isLoading}
               >
                 {isLoading ? (

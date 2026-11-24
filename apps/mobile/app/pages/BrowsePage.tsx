@@ -1,179 +1,89 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  SafeAreaView,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  RefreshControl,
-  Dimensions,
-  Alert,
-  Image,
-  PermissionsAndroid,
-  Platform,
-  Linking,
-} from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, ScrollView, SafeAreaView, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl, Alert, Image } from 'react-native';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import tw from 'twrnc';
 import { useTheme } from '../shared/components/theme';
-import { supabase } from '../shared/lib/supabase';
+import type { BarberCard, PublicReview, RatingStats } from '@barber-app/shared';
+import { api, errorMessage } from '../shared/lib/api';
 import { useAuth } from '../shared/hooks/useAuth';
 import { logger } from '../shared/lib/logger';
-import ProfilePreview from './ProfilePreview';
 import {
   ChevronLeft,
   Search,
   MapPin,
   Filter,
   X,
-  Grid3X3,
-  Heart,
   Scissors,
+  Star,
 } from 'lucide-react-native';
-import { Avatar } from '../shared/components/ui';
 import { GlassyCard } from '../shared/components/ui/GlassyCard';
-import { AnimatedSection } from '../shared/components/ui/AnimatedSection';
 import { AnimatedPressable } from '../shared/components/ui/AnimatedPressable';
 import { RootStackParamList } from '../shared/types';
-import StaircaseGrid from '../shared/components/StaircaseGrid';
 import BookingForm from '../shared/components/BookingForm';
-import { useReviews } from '../shared/hooks/useReviews';
 import { useLocationManager } from '../shared/hooks/useLocationManager';
 import { ReviewCard } from '../shared/components/ReviewCard';
 import { ReviewForm } from '../shared/components/ReviewForm';
-import { Star } from 'lucide-react-native';
-import { getDistanceToItem, sortByDistance, formatDistance } from '../shared/lib/locationUtils';
-import {
-  getLocationPreferences,
-  setLocationEnabled,
-  updateLastLocation,
-  getLastLocation,
-} from '../shared/lib/locationPreferences';
-import { geocodeAddress as geocodeAddressHelper } from '../shared/lib/geocode';
+import { formatDistance } from '../shared/lib/locationUtils';
 
-const { width } = Dimensions.get('window');
 
 type BrowseNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-// Types matching the database structure
-type BarberFromDB = {
-  id: string;
-  user_id: string;
-  business_name?: string;
-  specialties: string[];
-  price_range?: string;
-  stripe_account_status?: string;
-  instagram?: string;
-  twitter?: string;
-  tiktok?: string;
-  facebook?: string;
-  latitude?: number;
-  longitude?: number;
-  city?: string;
-  state?: string;
-}
-
-type ProfileFromDB = {
-  id: string;
-  name: string;
-  username?: string;
-  location?: string;
-  bio?: string;
-  avatar_url?: string;
-  is_public?: boolean;
-}
-
-// Type for the transformed data used in the UI
+// A barber card as the Browse list shows it (from GET /api/barbers).
 type Barber = {
+  /** barbers.id */
   id: string;
+  /** profiles.id */
   userId: string;
   name: string;
-  username?: string;
+  username: string;
   businessName?: string;
+  /** "City, State" */
   location?: string;
   specialties: string[];
   bio?: string;
-  priceRange?: string;
   avatarUrl?: string;
+  /** Cover photos are not part of the list response. */
   coverPhotoUrl?: string;
-  isPublic?: boolean;
-  isStripeReady?: boolean;
-  instagram?: string;
-  twitter?: string;
-  tiktok?: string;
-  facebook?: string;
-  latitude?: number;
-  longitude?: number;
+  priceRange?: string;
   city?: string;
   state?: string;
+  /** Miles, when the list was loaded near a location. */
   distance?: number;
+  rating: RatingStats;
 }
 
-type SortOption = 'name' | 'location' | 'price' | 'distance';
-type SortOrder = 'asc' | 'desc';
+function toBarber(card: BarberCard): Barber {
+  const location = [card.city, card.state].filter(Boolean).join(', ');
+  return {
+    id: card.id,
+    userId: card.user_id,
+    name: card.name || card.username,
+    username: card.username,
+    businessName: card.business_name || card.name || undefined,
+    location: location || undefined,
+    specialties: card.specialties || [],
+    bio: card.bio || undefined,
+    avatarUrl: card.avatar_url || undefined,
+    city: card.city || undefined,
+    state: card.state || undefined,
+    distance: card.distance_miles ?? undefined,
+    rating: card.rating,
+  };
+}
 
-// Star Rating Component
-function BarberRating({ barberId }: { barberId: string }) {
+// Star Rating Component (stats come with the barber card)
+function BarberRating({ rating }: { rating: RatingStats }) {
   const { colors } = useTheme();
-  const { stats, loading } = useReviews(barberId);
-  const [likesCount, setLikesCount] = useState(0);
-  const [likesLoading, setLikesLoading] = useState(true);
-
-  // Fetch likes count for this barber
-  useEffect(() => {
-    const fetchLikesCount = async () => {
-      try {
-        setLikesLoading(true);
-        const { data, error } = await supabase
-          .from('cuts')
-          .select('likes')
-          .eq('barber_id', barberId)
-          .eq('is_public', true);
-
-        if (error) {
-          logger.error('Error fetching likes:', error);
-          return;
-        }
-
-        const totalLikes = data?.reduce((sum, cut) => sum + (cut.likes || 0), 0) || 0;
-        setLikesCount(totalLikes);
-      } catch (error) {
-        logger.error('Error fetching likes count:', error);
-      } finally {
-        setLikesLoading(false);
-      }
-    };
-
-    fetchLikesCount();
-  }, [barberId]);
-
-  if (loading || likesLoading) {
-    return (
-      <View style={tw`flex-row items-center`}>
-        <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>Loading...</Text>
-      </View>
-    );
-  }
-
-  if (!stats || stats.total_reviews === 0) {
+  if (rating.review_count === 0 || rating.average_rating === null) {
     return (
       <View style={tw`flex-row items-center justify-between`}>
         <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>No reviews yet</Text>
-        {likesCount > 0 && (
-          <View style={tw`flex-row items-center`}>
-            <Heart size={12} color={colors.mutedForeground} style={tw`mr-1`} />
-            <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-              {likesCount}
-            </Text>
-          </View>
-        )}
       </View>
     );
   }
+  const stats = { average_rating: rating.average_rating, total_reviews: rating.review_count };
 
   return (
     <View style={tw`flex-row items-center justify-between`}>
@@ -191,14 +101,6 @@ function BarberRating({ barberId }: { barberId: string }) {
           {stats.average_rating.toFixed(1)} ({stats.total_reviews})
         </Text>
       </View>
-      {likesCount > 0 && (
-        <View style={tw`flex-row items-center`}>
-          <Heart size={12} color={colors.mutedForeground} style={tw`mr-1`} />
-          <Text style={[tw`text-sm`, { color: colors.mutedForeground }]}>
-            {likesCount}
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -212,7 +114,7 @@ function ReviewsList({
   onAddReview: () => void;
 }) {
   const { colors } = useTheme();
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   
@@ -223,54 +125,19 @@ function ReviewsList({
     if (barberId && !hasLoaded) {
       fetchReviews();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [barberId, hasLoaded]);
 
   const fetchReviews = async () => {
     if (!barberId) return;
-    
-    logger.log('Fetching reviews for barber ID:', barberId);
     setLoading(true);
-    
     try {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select(`
-          *,
-          client:client_id(
-            id,
-            name,
-            avatar_url,
-            username
-          ),
-          barber:barber_id(
-            id,
-            user_id,
-            business_name
-          ),
-          booking:booking_id(
-            id,
-            date,
-            service_id,
-            service:service_id(
-              name
-            )
-          )
-        `)
-        .eq('barber_id', barberId)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        logger.error('Error fetching reviews:', error);
-        Alert.alert('Error', 'Failed to load reviews.');
-        return;
-      }
-
-      setReviews(data || []);
+      const res = await api.barbers.reviews(barberId, { limit: 50 });
+      setReviews(res.reviews);
       setHasLoaded(true);
     } catch (error) {
       logger.error('Error fetching reviews:', error);
-      Alert.alert('Error', 'Failed to load reviews.');
+      Alert.alert('Error', errorMessage(error, 'Failed to load reviews.'));
     } finally {
       setLoading(false);
     }
@@ -368,19 +235,16 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [postsLoading, setPostsLoading] = useState(false);
-  const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
   
   // Barber list state
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [barbersLoading, setBarbersLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
   const [filteredBarbers, setFilteredBarbers] = useState<Barber[]>([]);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [allSpecialties, setAllSpecialties] = useState<string[]>([]);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<any>(null);
-  const [viewMode, setViewMode] = useState<'explore' | 'cosmetologists'>('cosmetologists');
   
   // Batch loading state
   const [barbersPage, setBarbersPage] = useState(0);
@@ -391,21 +255,19 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   // Location management using custom hook
   const {
     userLocation,
-    locationPermission,
     locationLoading,
     useLocation,
     toggleLocation: toggleLocationHook,
-    getUserLocation,
     loadLocationPreferences,
   } = useLocationManager();
   
   // Review system state
   const [selectedBarberForReviews, setSelectedBarberForReviews] = useState<string | null>(null);
-  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [, setShowReviewForm] = useState(false);
   const [showReviews, setShowReviews] = useState(false);
   const [reviewFormData, setReviewFormData] = useState<{
     barberId: string;
-    bookingId: string | null; // Can be null for reviews not tied to a booking
+    bookingId: string | null;
     isEditing?: boolean;
     reviewId?: string;
     initialRating?: number;
@@ -414,6 +276,21 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   
   // Location accuracy state
   const [locationAccuracy, setLocationAccuracy] = useState<'high' | 'medium' | 'low' | 'error' | null>(null);
+
+  /** The newest completed booking with this barber that has no review yet. */
+  const findReviewableBooking = async (barberId: string): Promise<string | null> => {
+    try {
+      const [{ bookings }, { reviews: own }] = await Promise.all([
+        api.bookings.list({ as: 'client', status: ['completed'], order: 'desc', limit: 100 }),
+        api.reviews.listOwn(),
+      ]);
+      const reviewed = new Set(own.map(r => r.booking_id));
+      return bookings.find(b => b.barber_id === barberId && !reviewed.has(b.id))?.id ?? null;
+    } catch (error) {
+      logger.error('Error finding a booking to review:', error);
+      return null;
+    }
+  };
 
   const promptAuth = useCallback((context: string = 'continue') => {
     Alert.alert(
@@ -428,9 +305,8 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   }, [navigation]);
 
   useEffect(() => {
-    fetchPosts();
+    // The first page is loaded by the search effect below (empty query).
     loadLocationPreferences();
-    fetchBarbers(0); // Load first batch
   }, [loadLocationPreferences]);
 
   // Debounce search query
@@ -496,253 +372,67 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     }, 500);
 
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
   }, [useLocation, userLocation?.coords?.accuracy]);
 
-  // Wrapper for toggleLocation that refreshes barbers
+  // The list reloads by itself when location turns on or off (see the effect below).
   const toggleLocation = async () => {
-    const wasUsingLocation = useLocation;
     await toggleLocationHook();
-    
-    // Refresh barbers after toggling
-    // If turning OFF location, refresh entire page (barbers and posts)
-    if (wasUsingLocation) {
-      // Reset pagination state
-      setBarbersPage(0);
-      setHasMoreBarbers(true);
-      
-      // Refresh everything when turning location off
-      await Promise.all([
-        fetchBarbers(0, false, true), // Skip nearby fetch when turning off
-        fetchPosts() // Refresh posts as well
-      ]);
-    } else {
-      fetchBarbers(0, false, false); // Use nearby fetch when turning on
-    }
   };
 
+  // Only the newest list request may update the list (typing fires several).
+  const listSeq = useRef(0);
 
-  const fetchBarbers = async (page = 0, append = false, skipNearbyFetch = false) => {
+  /**
+   * GET /api/barbers, one page at a time. The search text goes to the server as
+   * `q`; with location on, lat/lng make it the nearby list (nearest first, with
+   * distance_miles, within 25 miles). Page 0 replaces the list.
+   */
+  const fetchBarbers = async (
+    page = 0,
+    append = false,
+    skipNearbyFetch = false,
+    query: string = debouncedSearchQuery
+  ) => {
+    const coords = useLocation && !skipNearbyFetch ? userLocation?.coords : undefined;
+    const seq = ++listSeq.current;
     try {
-      if (page === 0) {
-        setBarbersLoading(true);
-      } else {
-        setBarbersLoadingMore(true);
-      }
-      
-      // If location is enabled and we have coordinates, use the nearby endpoint
-      // BUT skip if this is a fallback call to prevent infinite loop
-      if (useLocation && userLocation?.coords && page === 0 && !skipNearbyFetch) {
-        await fetchNearbyBarbers(userLocation.coords.latitude, userLocation.coords.longitude);
-        return;
-      }
-      
-      const from = page * BATCH_SIZE;
-      const to = from + BATCH_SIZE - 1;
-      
-      logger.log(`Fetching barbers batch ${page + 1} (${from}-${to})`);
-      
-      // Fetch barbers with their profiles and ratings
-      const { data: barbersData, error: barbersError } = await supabase
-        .from('barbers')
-        .select(`
-          id,
-          user_id,
-          bio,
-          specialties,
-          price_range,
-          stripe_account_status,
-          business_name,
-          instagram,
-          twitter,
-          tiktok,
-          facebook,
-          latitude,
-          longitude,
-          city,
-          state,
-          created_at,
-          updated_at
-        `)
-        .range(from, to)
-        .order('created_at', { ascending: false });
+      if (page === 0) setBarbersLoading(true);
+      else setBarbersLoadingMore(true);
+      setListError(null);
 
-      if (barbersError) {
-        logger.error('Error fetching barbers:', barbersError);
-        return;
-      }
-
-      // Fetch profiles for barbers (only public profiles)
-      const userIds = barbersData?.map(barber => barber.user_id) || [];
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          name,
-          username,
-          location,
-          bio,
-          avatar_url,
-          coverphoto,
-          is_public
-        `)
-        .in('id', userIds)
-        .eq('is_public', true);
-
-      if (profilesError) {
-        logger.error('Error fetching profiles:', profilesError);
-        return;
-      }
-
-      // Transform barbers data (only include barbers with public profiles)
-      const transformedBarbers: Barber[] = [];
-      
-      (barbersData || []).forEach(barber => {
-        const profile = profilesData?.find(p => p.id === barber.user_id);
-        
-        // Only include barbers that have a public profile
-        if (profile) {
-          // Calculate distance if user location is available
-          const distance = useLocation && userLocation?.coords
-            ? getDistanceToItem(
-                { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
-                barber.latitude && barber.longitude
-                  ? { latitude: barber.latitude, longitude: barber.longitude }
-                  : undefined
-              )
-            : undefined;
-          
-          transformedBarbers.push({
-            id: barber.id,
-            userId: barber.user_id,
-            name: profile.name || 'Unknown',
-            username: profile.username || 'username',
-            businessName: barber.business_name || profile.name,
-            location: profile.location || barber.city || 'Location',
-            specialties: barber.specialties || [],
-            bio: barber.bio || profile.bio,
-            priceRange: barber.price_range,
-            avatarUrl: processAvatarUrl(profile.avatar_url),
-            coverPhotoUrl: profile.coverphoto,
-            isPublic: profile.is_public ?? true,
-            isStripeReady: barber.stripe_account_status === 'active',
-            instagram: barber.instagram,
-            twitter: barber.twitter,
-            tiktok: barber.tiktok,
-            facebook: barber.facebook,
-            latitude: barber.latitude,
-            longitude: barber.longitude,
-            city: barber.city,
-            state: barber.state,
-            distance,
-          });
-        }
+      const { barbers: cards, pagination } = await api.barbers.list({
+        q: query.trim() || undefined,
+        limit: BATCH_SIZE,
+        offset: page * BATCH_SIZE,
+        ...(coords ? { lat: coords.latitude, lng: coords.longitude } : {}),
       });
+      if (seq !== listSeq.current) return;
+      const transformed = cards.map(toBarber);
+      setHasMoreBarbers(pagination.hasMore);
 
-      // Sort by distance if location is enabled, and filter out barbers without coordinates
-      if (useLocation && userLocation && userLocation.coords) {
-        // Filter out barbers without valid distances
-        const barbersWithLocation = transformedBarbers.filter(barber => 
-          barber.distance !== undefined && 
-          isFinite(barber.distance) && 
-          barber.distance >= 0
-        );
-        
-        // Sort by distance (closest first) - ensure numeric comparison
-        const sorted = barbersWithLocation.sort((a, b) => {
-          const distA = a.distance ?? Infinity;
-          const distB = b.distance ?? Infinity;
-          return distA - distB;
-        });
-        
-        transformedBarbers.length = 0;
-        transformedBarbers.push(...sorted);
-        
-        logger.log(`Sorted ${sorted.length} barbers by distance`, {
-          firstFew: sorted.slice(0, 3).map(b => ({
-            name: b.name,
-            distance: b.distance?.toFixed(2) + ' mi'
-          }))
-        });
-      }
-      
-      // Check if we have more barbers to load
-      const hasMore = transformedBarbers.length === BATCH_SIZE;
-      setHasMoreBarbers(hasMore);
-      
-      if (page === 0) {
-        // First load - replace all barbers
-        setBarbers(transformedBarbers);
-        setFilteredBarbers(transformedBarbers);
-        setBarbersPage(0);
-        
-        // Geocode barber locations in the background (don't wait for it)
-        geocodeBarberLocations(transformedBarbers).catch((err) => logger.error('Geocoding error:', err));
+      if (page === 0 || !append) {
+        setBarbers(transformed);
+        setBarbersPage(page);
       } else {
-        // Append new barbers to existing list
-        setBarbers(prevBarbers => {
-          const newBarbers = [...prevBarbers, ...transformedBarbers];
-          setFilteredBarbers(newBarbers);
-          return newBarbers;
-        });
+        setBarbers(prev => [...prev, ...transformed.filter(b => !prev.some(p => p.id === b.id))]);
         setBarbersPage(page);
       }
-      
-      logger.log(`Loaded ${transformedBarbers.length} barbers (batch ${page + 1})`);
-      if (!hasMore) {
-        logger.log('No more barbers to load');
-      }
     } catch (error) {
+      if (seq !== listSeq.current) return;
       logger.error('Error fetching barbers:', error);
-    } finally {
-      if (page === 0) {
-        setBarbersLoading(false);
-      } else {
-        setBarbersLoadingMore(false);
+      if (coords) {
+        // Nearby search failed: fall back to the plain list.
+        await fetchBarbers(page, append, true, query);
+        return;
       }
-    }
-  };
-
-
-  // Geocode a location string to coordinates using the shared helper (Google Maps backed)
-  const geocodeLocation = async (locationText: string): Promise<{lat: number, lng: number} | null> => {
-    try {
-      const coords = await geocodeAddressHelper(locationText);
-      if (coords) return { lat: coords.lat, lng: coords.lon };
-      return null;
-    } catch (error) {
-      logger.error('Geocoding error:', error);
-      return null;
-    }
-  };
-
-  // Geocode barber locations that don't have coordinates
-  const geocodeBarberLocations = async (barbers: any[]) => {
-    const barbersToGeocode = barbers.filter(barber => 
-      !barber.latitude && !barber.longitude && barber.location
-    );
-    
-    logger.log(`Geocoding ${barbersToGeocode.length} barber locations...`);
-    
-    for (const barber of barbersToGeocode) {
-      try {
-        const coordinates = await geocodeLocation(barber.location);
-        if (coordinates) {
-          // Update the barber in the database with coordinates
-          const { error } = await supabase
-            .from('barbers')
-            .update({
-              latitude: coordinates.lat,
-              longitude: coordinates.lng,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', barber.userId);
-            
-          if (!error) {
-            logger.log(`Geocoded and saved coordinates for ${barber.name}`);
-          }
-        }
-      } catch (error) {
-        logger.error(`Failed to geocode ${barber.name}:`, error);
+      const message = errorMessage(error, 'Could not load stylists. Check your connection and try again.');
+      if (page === 0) setListError(message);
+      else Alert.alert('Error', message);
+    } finally {
+      if (seq === listSeq.current) {
+        if (page === 0) setBarbersLoading(false);
+        else setBarbersLoadingMore(false);
       }
     }
   };
@@ -750,259 +440,28 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
   // Check if location is available and working
   const isLocationAvailable = useLocation && userLocation && userLocation.coords;
 
-  // Fetch nearby barbers using the edge function
-  const fetchNearbyBarbers = async (lat: number, lon: number, limit: number = 20) => {
-    try {
-      setBarbersLoading(true);
-      
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
-        logger.error('Missing Supabase environment variables');
-        // Fallback to regular fetch (skip nearby fetch to prevent infinite loop)
-        await fetchBarbers(0, false, true);
-        return;
-      }
-
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/get-nearby-barbers?lat=${lat}&lon=${lon}&limit=${limit}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch nearby barbers: ${response.statusText}`);
-      }
-
-      const { barbers } = await response.json();
-
-      // Transform to match existing Barber type
-      const transformedBarbers: Barber[] = (barbers || [])
-        .map((barber: any) => {
-          // Calculate distance if not provided by edge function (fallback)
-          // Convert meters to miles: 1 meter = 0.000621371 miles
-          let distance: number | undefined = barber.distance_m 
-            ? barber.distance_m * 0.000621371 // Convert meters to miles
-            : undefined;
-          
-          // If distance not provided but we have coordinates, calculate it
-          if (!distance && userLocation?.coords && barber.latitude && barber.longitude) {
-            distance = getDistanceToItem(
-              { latitude: userLocation.coords.latitude, longitude: userLocation.coords.longitude },
-              { latitude: barber.latitude, longitude: barber.longitude }
-            );
-          }
-          
-          return {
-            id: barber.id,
-            userId: barber.user_id,
-            name: barber.name || 'Unknown',
-            username: barber.username || 'username',
-            businessName: barber.business_name || barber.name,
-            location: barber.location || barber.city || 'Location',
-            specialties: barber.specialties || [],
-            bio: barber.bio,
-            priceRange: barber.price_range,
-            avatarUrl: processAvatarUrl(barber.avatar_url),
-            coverPhotoUrl: barber.coverphoto,
-            isPublic: barber.is_public ?? true,
-            isStripeReady: false, // Would need to check stripe_account_status
-            instagram: barber.instagram,
-            twitter: barber.twitter,
-            tiktok: barber.tiktok,
-            facebook: barber.facebook,
-            latitude: barber.latitude,
-            longitude: barber.longitude,
-            city: barber.city,
-            state: barber.state,
-            distance,
-          };
-        })
-        .filter((barber: Barber) => barber.distance !== undefined && isFinite(barber.distance ?? Infinity)) // Only include barbers with valid distances
-        .sort((a: Barber, b: Barber) => {
-          // Sort by distance (closest first)
-          const distA = a.distance ?? Infinity;
-          const distB = b.distance ?? Infinity;
-          return distA - distB;
-        });
-
-      setBarbers(transformedBarbers);
-      setFilteredBarbers(transformedBarbers);
-      setBarbersPage(0);
-      setHasMoreBarbers(transformedBarbers.length === limit);
-      
-      logger.log(`Loaded ${transformedBarbers.length} nearby barbers`, {
-        distances: transformedBarbers.slice(0, 5).map(b => ({ 
-          name: b.name, 
-          distance: b.distance?.toFixed(2) + ' mi',
-          lat: b.latitude,
-          lon: b.longitude
-        })),
-        userLocation: userLocation?.coords ? {
-          lat: userLocation.coords.latitude,
-          lon: userLocation.coords.longitude
-        } : null
-      });
-    } catch (error) {
-      logger.error('Error fetching nearby barbers:', error);
-      // Fallback to regular fetch (skip nearby fetch to prevent infinite loop)
-      await fetchBarbers(0, false, true);
-    } finally {
-      setBarbersLoading(false);
-    }
-  };
-
   const loadMoreBarbers = async () => {
     if (!hasMoreBarbers || barbersLoadingMore) return;
-    
-    // If using location, we can't load more from the endpoint easily
-    // For now, just disable load more when location is enabled
-    if (isLocationAvailable) {
-      logger.log('Load more not supported when location sorting is enabled');
-      return;
-    }
-    
-    const nextPage = barbersPage + 1;
-    logger.log(`Loading more barbers (page ${nextPage + 1})`);
-    await fetchBarbers(nextPage, true);
+    await fetchBarbers(barbersPage + 1, true);
   };
 
-  const fetchPosts = async () => {
-    try {
-      setPostsLoading(true);
-      
-      // Fetch cuts (videos) and portfolio images
-      const { data: cutsData, error: cutsError } = await supabase
-        .from('cuts')
-        .select(`
-          id,
-          barber_id,
-          title,
-          url,
-          thumbnail,
-          views,
-          likes,
-          duration,
-          created_at
-        `)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (cutsError) {
-        logger.error('Error fetching cuts:', cutsError);
-        return;
-      }
-
-      // Fetch barber info for cuts
-      const barberIds = cutsData?.map(cut => cut.barber_id) || [];
-      const { data: barbersData } = await supabase
-        .from('barbers')
-        .select('id, user_id')
-        .in('id', barberIds);
-
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, name, avatar_url')
-        .in('id', barbersData?.map(b => b.user_id) || [])
-        .eq('is_public', true);
-
-      // Transform cuts to posts
-      const videoPosts = (cutsData || []).map(cut => {
-        const barber = barbersData?.find(b => b.id === cut.barber_id);
-        const profile = profilesData?.find(p => p.id === barber?.user_id);
-        
-        return {
-          id: cut.id,
-          type: 'video' as const,
-          url: cut.url,
-          thumbnail: cut.thumbnail,
-          barberName: profile?.name || 'Unknown',
-          barberAvatar: processAvatarUrl(profile?.avatar_url),
-          barberId: barber?.user_id,
-          views: cut.views || 0,
-          duration: cut.duration,
-          aspectRatio: 9 / 16, // Default video aspect ratio
-        };
-      });
-
-      // Only use real video posts from the database
-      setPosts(videoPosts);
-      setFilteredPosts(videoPosts);
-      
-      // Set real beauty/barber professions
-      const specialties = [
-        'Barber',
-        'Braider',
-        'Stylist',
-        'Nails',
-        'Lash',
-        'Brow',
-        'Tattoo',
-        'Piercings',
-        'Dyeing'
-      ];
-      setAllSpecialties(specialties);
-    } catch (error) {
-      logger.error('Error fetching posts:', error);
-    } finally {
-      setPostsLoading(false);
-    }
-  };
-
-  // Filter posts based on selected criteria
+  // A new search, or location turning on/off (or moving), starts again from the first page.
+  const coordsKey =
+    useLocation && userLocation?.coords
+      ? `${userLocation.coords.latitude.toFixed(3)},${userLocation.coords.longitude.toFixed(3)}`
+      : 'off';
   useEffect(() => {
-    let filtered = posts;
-
-    // Filter by search query (using debounced value)
-    if (debouncedSearchQuery.trim()) {
-      const query = debouncedSearchQuery.toLowerCase().trim();
-      filtered = filtered.filter(post => {
-        // Search in post title, barber name, and other relevant fields
-        return (
-          (post.title && post.title.toLowerCase().includes(query)) ||
-          (post.barberName && post.barberName.toLowerCase().includes(query)) ||
-          (post.barberId && post.barberId.toLowerCase().includes(query))
-        );
-      });
-    }
-
-    // Filter by specialty
-    if (selectedSpecialties.length > 0) {
-      // For now, we'll filter by barber specialties
-      // In a real implementation, you'd need to fetch barber specialties
-      filtered = filtered.filter(post => {
-        // This is a placeholder - you'd need to match against actual barber specialties
-        return true; // For now, show all posts
-      });
-    }
-
-    setFilteredPosts(filtered);
-  }, [posts, selectedSpecialties, debouncedSearchQuery]);
+    setBarbersPage(0);
+    setHasMoreBarbers(true);
+    fetchBarbers(0, false, false, debouncedSearchQuery);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- it reloads only when the listed keys change; the callback reads the current render
+  }, [debouncedSearchQuery, coordsKey]);
 
   // Filter barbers based on search query and selected specialties
   useEffect(() => {
     let filtered = barbers;
 
-    // Filter by search query
-    if (debouncedSearchQuery) {
-      filtered = filtered.filter(barber =>
-        barber.name?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        barber.username?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        barber.businessName?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        barber.location?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        barber.specialties?.some(specialty => 
-          specialty.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-        )
-      );
-    }
-
+    // The search text is applied by the server (q); specialties are filtered here.
     // Filter by selected specialties
     if (selectedSpecialties.length > 0) {
       filtered = filtered.filter(barber =>
@@ -1013,7 +472,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     }
 
     setFilteredBarbers(filtered);
-  }, [barbers, debouncedSearchQuery, selectedSpecialties]);
+  }, [barbers, selectedSpecialties]);
 
   // Update specialties when barbers are loaded
   useEffect(() => {
@@ -1051,82 +510,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
     setFilteredBarbers(barbers);
   };
 
-  // Navigation handlers
-  const handleVideoPress = (post: any) => {
-    if (guestMode) {
-      // Guests can view barber profiles/portfolios, but should not enter protected tools/tabs.
-      if (post?.barberId) {
-        navigation.navigate('ProfilePreview', { barberId: post.barberId });
-        return;
-      }
-      promptAuth('view this content');
-      return;
-    }
-    // Navigate to CutsPage with the specific video
-    // Store the selected cut ID in a global way that CutsPage can access
-    (global as any).selectedCutId = post.id;
-    // Use the tab navigation to switch to the Cuts tab
-    navigation.navigate('Cuts' as never);
-  };
-
-  const handleImagePress = (post: any) => {
-    // Navigate to ProfilePreview with the barber's profile
-    if (post.barberId) {
-      navigation.navigate('ProfilePreview', { barberId: post.barberId });
-    }
-  };
-
-  const handleBookBarber = (post: any) => {
-    if (guestMode) {
-      // Guests should be able to view the barber profile, but booking is blocked in ProfilePreview.
-      if (post?.barberId) {
-        navigation.navigate('ProfilePreview', { barberId: post.barberId });
-        return;
-      }
-      return;
-    }
-    if (post.barberId) {
-      setSelectedBarber(post);
-      setShowBookingForm(true);
-    }
-  };
-
-  // Function to render star ratings
-  const renderStarRating = (rating: number, size: number = 14) => {
-    return Array.from({ length: 5 }, (_, index) => (
-      <Star
-        key={index}
-        size={size}
-        fill={index < rating ? colors.premium : 'transparent'}
-        color={index < rating ? colors.premium : colors.mutedForeground}
-        style={tw`mr-0.5`}
-      />
-    ));
-  };
-
-  // Function to process avatar URL
-  const processAvatarUrl = (url?: string) => {
-    if (!url) return undefined;
-    
-    // If it's already a full URL, return as is
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    
-    // If it's a relative path, construct the full URL
-    if (url.startsWith('/')) {
-      return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars${url}`;
-    }
-    
-    // If it's just a filename, construct the full URL
-    return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${url}`;
-  };
-
-
-
-
-  
-
   return (
     <SafeAreaView style={[tw`flex-1`, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -1152,48 +535,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
               Browse
             </Text>
           </View>
-
-          {/* View Toggle Buttons - Explore tab hidden but code preserved */}
-          <View style={[tw`flex-row rounded-lg p-1`, { backgroundColor: colors.muted }]}>
-            {/* Explore tab - hidden but code preserved for future use */}
-            {/* <TouchableOpacity
-              style={[
-                tw`px-4 py-2 rounded-md`,
-                viewMode === 'explore' 
-                  ? { backgroundColor: colors.background }
-                  : { backgroundColor: 'transparent' }
-              ]}
-              onPress={() => setViewMode('explore')}
-            >
-              <Text style={[
-                tw`font-medium text-sm`,
-                viewMode === 'explore'
-                  ? { color: colors.foreground }
-                  : { color: colors.mutedForeground }
-              ]}>
-                Explore
-              </Text>
-            </TouchableOpacity> */}
-            
-            <TouchableOpacity
-              style={[
-                tw`px-4 py-2 rounded-md`,
-                viewMode === 'cosmetologists' 
-                  ? { backgroundColor: colors.background }
-                  : { backgroundColor: 'transparent' }
-              ]}
-              onPress={() => setViewMode('cosmetologists')}
-            >
-              <Text style={[
-                tw`font-medium text-sm`,
-                viewMode === 'cosmetologists'
-                  ? { color: colors.foreground }
-                  : { color: colors.mutedForeground }
-              ]}>
-                Cosmetologists
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
         
         {/* Search Bar */}
@@ -1202,7 +543,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
             <Search size={20} color={colors.mutedForeground} style={tw`mr-2`} />
             <TextInput
               style={[tw`flex-1 text-base`, { color: colors.foreground }]}
-              placeholder={viewMode === 'explore' ? "Search styles..." : "Search stylists..."}
+              placeholder="Search stylists..."
               placeholderTextColor={colors.mutedForeground}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -1340,37 +681,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
       {/* Main Content Area */}
       <View style={tw`flex-1`}>
-        {viewMode === 'explore' ? (
-          // Explore View - Grid of videos/pictures
-          <>
-            {postsLoading ? (
-              <View style={tw`flex-1 justify-center items-center`}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={[tw`mt-4 text-lg`, { color: colors.foreground }]}>
-                  Loading posts...
-                </Text>
-              </View>
-            ) : filteredPosts.length === 0 ? (
-              <View style={tw`flex-1 justify-center items-center py-8`}>
-                <Grid3X3 size={48} style={[tw`mb-4`, { color: colors.mutedForeground }]} />
-                <Text style={[tw`text-lg font-bold text-center mb-2`, { color: colors.foreground }]}>
-                  No posts found
-                </Text>
-                <Text style={[tw`text-sm text-center`, { color: colors.mutedForeground }]}>
-                  {posts.length === 0 ? 'Check back later for new content' : 'Try adjusting your filters'}
-                </Text>
-              </View>
-            ) : (
-              <StaircaseGrid 
-                posts={filteredPosts} 
-                onVideoPress={handleVideoPress}
-                onImagePress={handleImagePress}
-                onBookPress={handleBookBarber}
-              />
-            )}
-          </>
-        ) : (
-          // Cosmetologists View - List of barbers
           <>
             {barbersLoading ? (
               <View style={tw`flex-1 justify-center items-center`}>
@@ -1378,6 +688,21 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                 <Text style={[tw`mt-4 text-lg`, { color: colors.foreground }]}>
                   Loading stylists...
                 </Text>
+              </View>
+            ) : listError ? (
+              <View style={tw`flex-1 justify-center items-center py-8 px-6`}>
+                <Text style={[tw`text-lg font-bold text-center mb-2`, { color: colors.foreground }]}>
+                  Could not load stylists
+                </Text>
+                <Text style={[tw`text-sm text-center mb-4`, { color: colors.mutedForeground }]}>
+                  {listError}
+                </Text>
+                <AnimatedPressable
+                  style={[tw`px-5 py-2 rounded-lg`, { backgroundColor: colors.glass }]}
+                  onPress={() => fetchBarbers(0)}
+                >
+                  <Text style={[tw`text-sm font-medium`, { color: colors.foreground }]}>Try again</Text>
+                </AnimatedPressable>
               </View>
             ) : filteredBarbers.length === 0 ? (
               <View style={tw`flex-1 justify-center items-center py-8`}>
@@ -1479,7 +804,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
                         {barber.location && (
                           <View style={tw`flex-row items-center justify-center mb-3`}>
                             <MapPin size={16} color={colors.primary} />
-                            <Text style={[tw`text-sm ml-2`, { color: colors.mutedForeground }]}>
+                            <Text style={[tw`text-sm ml-2 flex-shrink`, { color: colors.mutedForeground }]} numberOfLines={2}>
                               {barber.location}
                               {useLocation && barber.distance !== undefined && (
                                 <Text style={[tw`ml-2 font-semibold`, { color: colors.primary }]}>
@@ -1492,7 +817,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
                         {/* Star Rating - Centered */}
                         <View style={tw`items-center mb-3`}>
-                          <BarberRating barberId={barber.id} />
+                          <BarberRating rating={barber.rating} />
                         </View>
 
                         {/* Price Range */}
@@ -1514,7 +839,7 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
 
                         {/* Bio */}
                         {barber.bio && (
-                          <Text style={[tw`text-sm text-center mb-4 leading-relaxed`, { color: colors.mutedForeground }]}>
+                          <Text style={[tw`text-sm text-center mb-4 leading-relaxed`, { color: colors.mutedForeground }]} numberOfLines={4}>
                             {barber.bio}
                           </Text>
                         )}
@@ -1659,7 +984,6 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
               </ScrollView>
             )}
           </>
-        )}
       </View>
 
 
@@ -1686,12 +1010,23 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
             <ScrollView style={tw`flex-1 px-4`}>
               <ReviewsList 
                 barberId={selectedBarberForReviews} 
-                onAddReview={() => {
-                  // For reviews from browse page, no booking ID (null)
-                  // These reviews are unverified since they're not tied to a booking
+                onAddReview={async () => {
+                  if (guestMode) {
+                    promptAuth('write a review');
+                    return;
+                  }
+                  // A review needs one of your completed bookings with this barber.
+                  const bookingId = await findReviewableBooking(selectedBarberForReviews);
+                  if (!bookingId) {
+                    Alert.alert(
+                      'Review not available',
+                      'You can review a barber after a completed appointment with them (one review per appointment).'
+                    );
+                    return;
+                  }
                   setReviewFormData({
                     barberId: selectedBarberForReviews,
-                    bookingId: null, // Null for reviews not tied to a booking
+                    bookingId,
                     isEditing: false,
                   });
                   setShowReviews(false);
@@ -1731,14 +1066,10 @@ export default function BrowsePage({ isGuest }: { isGuest?: boolean } = {}) {
           }}
           barberId={selectedBarber.barberId}
           barberName={selectedBarber.barberName || selectedBarber.name}
-          onBookingCreated={(booking) => {
+          onBookingCreated={() => {
+            // BookingForm has already told the client the outcome.
             setShowBookingForm(false);
             setSelectedBarber(null);
-            Alert.alert(
-              'Booking Created!',
-              'Your appointment has been scheduled successfully.',
-              [{ text: 'OK' }]
-            );
           }}
         />
       )}

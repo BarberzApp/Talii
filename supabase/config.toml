@@ -1,6 +1,6 @@
 # A string used to distinguish different Supabase projects on the same host. Defaults to the working
 # directory name when running `supabase init`.
-project_id = "barber-app"
+project_id = "talii"
 
 [api]
 # Port to use for the API URL.
@@ -22,6 +22,11 @@ port = 54322
 # server_version;` on the remote database to check.
 major_version = 15
 
+[db.seed]
+# Local development data, loaded by `supabase db reset` / `supabase start`.
+enabled = true
+sql_paths = ["./seed.sql"]
+
 [studio]
 # Port to use for Supabase Studio.
 port = 54323
@@ -41,11 +46,11 @@ file_size_limit = "270MiB"
 [auth]
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "https://www.bocmstyle.com"
+site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
-  "https://www.bocmstyle.com/auth/callback",
-  "https://3d6b1eb7b7c8.ngrok-free.app/auth/callback"
+  "http://localhost:3000/auth/callback",
+  "talii://**"
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 seconds (one
 # week).
@@ -78,6 +83,13 @@ max_frequency = "1m0s"
 otp_length = 6
 otp_expiry = 86400
 
+# Password reset: the link carries a token hash that /reset-password verifies itself
+# (works on any device, unlike the PKCE ?code= link). Set the same template in the
+# Supabase dashboard for the live project.
+[auth.email.template.recovery]
+subject = "Reset your Talii password"
+content_path = "./supabase/templates/recovery.html"
+
 [auth.sms]
 enable_signup = false
 
@@ -103,13 +115,3 @@ redirect_uri = ""
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
 # or any other third-party OIDC providers.
 url = "" 
-[functions.stripe-connect]
-enabled = true
-verify_jwt = true
-import_map = "./functions/stripe-connect/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/stripe-connect/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/stripe-connect/*.html" ]

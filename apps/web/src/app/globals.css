@@ -20,6 +20,9 @@
     /* Secondary accent - Talii orange */
     --secondary: 22 86% 54%;
     --secondary-foreground: 0 0% 100%;
+    /* Button fill: darker than the #EE6D23 accent so white text passes WCAG AA (4.69:1, #C2510F) */
+    --button: 22 86% 41%;
+    --button-foreground: 0 0% 100%;
     
     /* Surface colors for cards and elevated elements */
     --surface: 0 0% 96%;
@@ -34,22 +37,22 @@
     --accent-foreground: 0 0% 100%;
     
     /* Semantic colors */
-    --destructive: #ff4d4f;
-    --destructive-foreground: #fff;
+    --destructive: 0 72% 51%; /* #dc2626: 4.8:1 with white text and on white */
+    --destructive-foreground: 0 0% 100%; /* #fff */
     --success: 142 71% 45%;
-    --success-foreground: #fff;
+    --success-foreground: 0 0% 100%; /* #fff */
     --warning: 38 92% 50%;
-    --warning-foreground: #272a2f;
+    --warning-foreground: 218 9% 17%; /* #272a2f */
     --info: 199 89% 48%;
-    --info-foreground: #fff;
+    --info-foreground: 0 0% 100%; /* #fff */
     
     /* UI element colors */
-    --border: #e4e4e7;
-    --input: #e5e7eb;
+    --border: 240 6% 90%; /* #e4e4e7 */
+    --input: 220 13% 91%; /* #e5e7eb */
     --ring: 22 86% 54%; /* Talii orange focus ring */
     --radius: 0.5rem;
     
-    /* Talii brand (replaces BOCM saffron) - same as primary #EE6D23 */
+    /* Talii brand orange (legacy "saffron" name) - same as primary #EE6D23 */
     --saffron: #EE6D23;
     /* RGB for rgba() usage (e.g. calendar) - Talii #EE6D23 = 238, 109, 35 */
     --primary-rgb: 238, 109, 35;
@@ -64,7 +67,7 @@
     --social-tiktok: #000000;
     --social-facebook: #1877f3;
 
-    /* Landing spacing (BOCM React values) – single source of truth */
+    /* Landing spacing – single source of truth */
     --landing-section-py: 4rem;      /* 64px – section vertical (py-16) */
     --landing-section-py-sm: 5rem;  /* 80px – section vertical @ sm+ (py-20) */
     --landing-hero-pt: 6rem;        /* 96px – hero top (pt-24) */
@@ -95,20 +98,23 @@
     --primary-foreground: 0 0% 100%;
     --secondary: 22 86% 54%;
     --secondary-foreground: 0 0% 100%;
+    /* Button fill: darker than the #EE6D23 accent so white text passes WCAG AA (4.69:1, #C2510F) */
+    --button: 22 86% 41%;
+    --button-foreground: 0 0% 100%;
     --surface: 220 15% 14%;
     --surface-foreground: 0 0% 98%;
     --muted: 220 15% 18%;
     --muted-foreground: 240 4% 65%;
     --accent: 22 86% 54%;
     --accent-foreground: 0 0% 100%;
-    --destructive: #ff4d4f;
-    --destructive-foreground: #fff;
+    --destructive: 0 84% 60%; /* #ef4444: 4.7:1 as text on the dark background */
+    --destructive-foreground: 0 0% 100%; /* #fff */
     --success: 142 71% 45%;
-    --success-foreground: #fff;
+    --success-foreground: 0 0% 100%; /* #fff */
     --warning: 38 92% 50%;
-    --warning-foreground: #272a2f;
+    --warning-foreground: 218 9% 17%; /* #272a2f */
     --info: 199 89% 48%;
-    --info-foreground: #fff;
+    --info-foreground: 0 0% 100%; /* #fff */
     --border: 220 15% 22%;
     --input: 220 15% 20%;
     --ring: 22 86% 54%;
@@ -400,10 +406,10 @@
     disabled:opacity-50;
   }
   .btn-primary {
-    @apply bg-primary text-primary-foreground shadow hover:bg-primary/90;
+    @apply bg-button text-button-foreground shadow hover:bg-button/90;
   }
   .btn-secondary {
-    @apply bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80;
+    @apply bg-button text-button-foreground shadow-sm hover:bg-button/80;
   }
   .input {
     @apply flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm 
@@ -526,3 +532,15 @@
 }
 
 /* Landing root override removed - base colors are now applied globally */ 
+/* Loading spinner glow (was a styled-jsx block in loading-spinner.tsx) */
+@keyframes talii-glow {
+  0% { opacity: 0.7; filter: blur(16px); }
+  50% { opacity: 1; filter: blur(32px); }
+  100% { opacity: 0.7; filter: blur(16px); }
+}
+.animate-talii-glow {
+  animation: talii-glow 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-talii-glow { animation: none; }
+}
