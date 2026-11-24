@@ -1,0 +1,84 @@
+# Checks every change before it can reach main (required by branch protection).
+# No secrets are needed: the build uses placeholder public values and the
+# database tests run against a throwaway local Postgres.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  web:
+    name: Website and shared package
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit -p apps/web
+      - name: Lint (no warnings allowed)
+        run: npm -w apps/web run lint -- --max-warnings=0
+      - name: Unit tests
+        run: npm -w apps/web run test:ci
+      - name: Shared package tests
+        run: npm run test:shared
+      - name: Production build
+        run: npm -w apps/web run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_placeholder
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+  mobile:
+    name: Phone app
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit -p apps/mobile
+      - name: Lint
+        run: npm -w apps/mobile run lint
+      - name: Unit tests
+        run: npm -w apps/mobile run test:ci
+
+  database:
+    name: Database (pgTAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.111.0
+      - name: Start Postgres with the migrations and seed
+        run: supabase db start
+      - name: Database tests
+        run: supabase test db

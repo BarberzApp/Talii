@@ -1,0 +1,40 @@
+# Manual EAS build of the phone app. Run it from the Actions tab (needs the
+# EXPO_TOKEN secret and EAS credentials for com.yaskhalil.talii). It never runs
+# on push, so merging does not start paid builds.
+name: Build phone app (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform
+        type: choice
+        options: [ios, android, all]
+        default: ios
+      profile:
+        description: EAS build profile (apps/mobile/eas.json)
+        type: string
+        default: production
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: EAS build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Install
+        run: npm ci
+      - name: Build
+        working-directory: apps/mobile
+        run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive

@@ -1,0 +1,26 @@
+# Manual production deploy of the website and API to Vercel.
+# Run it from the Actions tab once hosting is set up (needs VERCEL_TOKEN,
+# VERCEL_ORG_ID and VERCEL_PROJECT_ID secrets, and the server env vars set in
+# the Vercel project). It never runs on push.
+name: Deploy website (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Vercel (production)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
