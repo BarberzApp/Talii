@@ -191,9 +191,16 @@ Removed in Phase 1. Notes for rebuilding it later:
 
 ## Status (2026-11-24)
 
-The rebuild is complete. Backend, database, website and phone app are done and tested; the live
-Supabase project runs the new schema. What is left is deployment and launch setup, below. The work
-is on the `refactor/backend-rebuild` branch (pushed to GitHub); `main` still has the old code.
+The rebuild is complete and merged into `main` (PR #14). Backend, database, website and phone app are
+done and tested; the live Supabase project runs the new schema. What is left is deployment and launch
+setup, below.
+
+**How changes reach `main`:** through a pull request only. The "Protect main" ruleset requires the three
+CI checks in `.github/workflows/ci.yml` to pass (Website and shared package, Phone app, Database (pgTAP))
+with the branch up to date, and blocks force-pushes and deletion; it has no bypass list. The older
+"Auth" ruleset additionally limits branch creation and updates to admins, so merging a PR needs an admin.
+The Vercel deploy (`deploy-web.yml`) and EAS builds (`eas-build.yml`) run only when started by hand
+from the Actions tab.
 
 ## Before launch (in order)
 
@@ -204,7 +211,7 @@ is on the `refactor/backend-rebuild` branch (pushed to GitHub); `main` still has
    and add-to-calendar, cancel and refund message, barber setup (profile, services, hours), Stripe Connect
    onboarding returning to the app (`talii://stripe-connect`), photo upload, walk-in, Today view,
    account deletion.
-2. **Merge the branch.** Open a pull request from `refactor/backend-rebuild` into `main`.
+2. ~~**Merge the branch.**~~ Done 2026-11-24 (PR #14).
 3. **Domain.** `bocmstyle.com` no longer serves this app (it redirects to an unrelated site).
 4. **Hosting.** Deploy `apps/web` (website + API; Vercel fits Next.js). Server env: `NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
@@ -254,3 +261,4 @@ is on the `refactor/backend-rebuild` branch (pushed to GitHub); `main` still has
   unexpected avatar URL cannot crash a page). Edge cases: a service hidden mid-booking now reloads the barber and
   returns to the service step with a clear message; red buttons darkened for contrast; the landing page's
   earnings preview uses a realistic, labelled example.
+- 2026-11-24: merged into `main` (PR #14); CI on every pull request; `main` protected (ruleset "Protect main").
