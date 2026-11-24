@@ -1,7 +1,9 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Image from 'next/image'
+import { isOptimizableImage } from '@/shared/lib/image'
 import { api, errorMessage, hasErrorCode } from '@/shared/lib/api'
 import { formatCents, type BarberProfileResponse, type PublicService } from '@barber-app/shared'
 import { logger } from '@/shared/lib/logger'
@@ -196,13 +198,30 @@ function BookPageContent() {
   // Safely extract identifier from params (could be username or barber ID)
   const identifier = params && params.username ? (Array.isArray(params.username) ? params.username[0] : params.username) : undefined;
 
-  useEffect(() => {
-    if (identifier) {
-      fetchBarberDetails()
+  const fetchReviews = useCallback(async (barberId: string) => {
+    try {
+      setLoadingReviews(true)
+      const { reviews: rows } = await api.barbers.reviews(barberId, { limit: 10 })
+      setReviews(
+        rows.map((review) => ({
+          id: review.id,
+          rating: review.rating,
+          comment: review.comment || undefined,
+          created_at: review.created_at,
+          client: {
+            name: review.reviewer_name || 'Anonymous',
+            avatar_url: review.reviewer_avatar_url || undefined,
+          },
+        }))
+      )
+    } catch (err) {
+      logger.error('Error fetching reviews', err)
+    } finally {
+      setLoadingReviews(false)
     }
-  }, [identifier])
+  }, [])
 
-  const fetchBarberDetails = async () => {
+  const fetchBarberDetails = useCallback(async () => {
     if (!identifier) {
       setLoading(false)
       setError('Invalid identifier')
@@ -249,30 +268,13 @@ function BookPageContent() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [identifier, fetchReviews])
 
-  const fetchReviews = async (barberId: string) => {
-    try {
-      setLoadingReviews(true)
-      const { reviews: rows } = await api.barbers.reviews(barberId, { limit: 10 })
-      setReviews(
-        rows.map((review) => ({
-          id: review.id,
-          rating: review.rating,
-          comment: review.comment || undefined,
-          created_at: review.created_at,
-          client: {
-            name: review.reviewer_name || 'Anonymous',
-            avatar_url: review.reviewer_avatar_url || undefined,
-          },
-        }))
-      )
-    } catch (err) {
-      logger.error('Error fetching reviews', err)
-    } finally {
-      setLoadingReviews(false)
+  useEffect(() => {
+    if (identifier) {
+      fetchBarberDetails()
     }
-  }
+  }, [identifier, fetchBarberDetails])
 
   /** Report and block need an account; signed-out visitors go to sign in and come back. */
   const requireSignIn = () => {
@@ -486,10 +488,13 @@ function BookPageContent() {
 
       <div className="relative h-48 md:h-64 overflow-hidden">
         {barber.cover_photo_url ? (
-          <img
+          <Image
             src={barber.cover_photo_url}
+            unoptimized={!isOptimizableImage(barber.cover_photo_url)}
             alt="Cover photo"
-            className="w-full h-full object-cover"
+            fill
+            sizes="100vw"
+            className="object-cover"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-secondary/20 via-purple-500/20 to-secondary/20 relative">
@@ -718,10 +723,13 @@ function BookPageContent() {
                     className="group relative aspect-square bg-black/5 dark:bg-white/5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => setSelectedImage(item)}
                   >
-                    <img
+                    <Image
                       src={item}
+                      unoptimized={!isOptimizableImage(item)}
                       alt={`Portfolio item ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="(min-width: 1024px) 400px, 33vw"
+                      className="object-cover"
                     />
                     
                     {/* Overlay */}
@@ -836,10 +844,14 @@ function BookPageContent() {
               </button>
             </div>
             <div className="w-full flex-1 flex items-center justify-center p-4">
-              <img
+              <Image
                 src={selectedImage || ''}
+                unoptimized={!isOptimizableImage(selectedImage || '')}
                 alt="Portfolio item"
-                className="max-h-[70vh] w-auto max-w-full object-contain rounded-2xl shadow-lg"
+                width={1600}
+                height={1200}
+                sizes="(min-width: 768px) 800px, 95vw"
+                className="max-h-[70vh] h-auto w-auto max-w-full object-contain rounded-2xl shadow-lg"
                 draggable={false}
               />
             </div>

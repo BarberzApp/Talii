@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { NumberTicker } from "@/shared/components/ui/magic/number-ticker";
@@ -56,7 +56,11 @@ export function RevenueCalculator({
   const [platformFeeBonus, setPlatformFeeBonus] = useState(0);
   const [extraAnnual, setExtraAnnual] = useState(0);
 
-  const updateCalculator = () => {
+  // Read through a ref so a parent passing a new callback each render does not re-run the calculation.
+  const onCalculateRef = useRef(onCalculate);
+  onCalculateRef.current = onCalculate;
+
+  const updateCalculator = useCallback(() => {
     const monthlyAmount = parseFloat(averageMonthlyAmount) || 0;
     const servicePrice = parseFloat(cutCost) || 0;
     const cuts = servicePrice > 0 ? Math.round(monthlyAmount / servicePrice) : 0;
@@ -68,8 +72,8 @@ export function RevenueCalculator({
     setPlatformFeeBonus(bonus);
     setExtraAnnual(annual);
 
-    if (onCalculate) {
-      onCalculate({
+    if (onCalculateRef.current) {
+      onCalculateRef.current({
         monthlyRevenue: monthlyAmount,
         cutCost: servicePrice,
         numberOfCuts: cuts,
@@ -77,11 +81,11 @@ export function RevenueCalculator({
         extraAnnual: annual,
       });
     }
-  };
+  }, [averageMonthlyAmount, cutCost]);
 
   useEffect(() => {
     updateCalculator();
-  }, [averageMonthlyAmount, cutCost]);
+  }, [updateCalculator]);
 
   const handleInputChange = (
     value: string,

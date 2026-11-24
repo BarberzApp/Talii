@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme } from "next-themes";
 import { Button } from "@/shared/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/shared/components/ui/sheet";
@@ -88,10 +89,11 @@ export function LandingNavbar({
           >
             {logoSrc ? (
               <span className="inline-block h-12 w-[140px] sm:h-14 sm:w-[160px] items-center">
-                <img
+                <Image
                   src={logoSrc}
                   alt={`${logoText} Logo`}
-                  className="max-h-full max-w-full w-full object-contain object-left"
+                  className="max-h-full max-w-full w-full h-auto object-contain object-left"
+                  priority
                   width={160}
                   height={56}
                 />
@@ -123,7 +125,7 @@ export function LandingNavbar({
                   <div className="flex items-center justify-center mb-8 pt-2">
                     {logoSrc ? (
                       <span className="inline-flex h-14 w-[180px] items-center justify-center">
-                        <img
+                        <Image
                           src={logoSrc}
                           alt={`${logoText} Logo`}
                           className="max-h-full max-w-full object-contain"

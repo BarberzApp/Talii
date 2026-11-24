@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import Image from 'next/image'
+import { isOptimizableImage } from '@/shared/lib/image'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { logger } from '@/shared/lib/logger'
@@ -38,6 +40,7 @@ type ReviewView = OwnReview & { booking?: BookingListItem }
 export default function ClientPortfolio() {
   const { user } = useAuth()
   const { toast } = useToast()
+  const userId = user?.id
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [avatarLoading, setAvatarLoading] = useState(false)
@@ -84,7 +87,7 @@ export default function ClientPortfolio() {
   // Own profile (GET /api/me)
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user) return
+      if (!userId) return
 
       try {
         setProfileLoading(true)
@@ -106,11 +109,11 @@ export default function ClientPortfolio() {
     }
 
     fetchProfile()
-  }, [user?.id])
+  }, [userId])
 
   // Bookings (GET /api/bookings) and own reviews (GET /api/reviews)
-  const loadBookingsAndReviews = async () => {
-    if (!user) return;
+  const loadBookingsAndReviews = useCallback(async () => {
+    if (!userId) return;
     try {
       setReviewsLoading(true);
       setBookingsError(null);
@@ -127,11 +130,11 @@ export default function ClientPortfolio() {
     } finally {
       setReviewsLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     loadBookingsAndReviews();
-  }, [user?.id]);
+  }, [loadBookingsAndReviews]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -265,10 +268,13 @@ export default function ClientPortfolio() {
         {/* Cover Photo */}
         <div className="h-48 sm:h-72 w-full bg-gradient-to-br from-secondary/20 via-background to-secondary/10 flex items-end justify-center relative group rounded-3xl overflow-hidden">
           {profile?.cover_photo_url ? (
-            <img
+            <Image
               src={profile.cover_photo_url}
+              unoptimized={!isOptimizableImage(profile.cover_photo_url)}
               alt="Cover"
-              className="absolute inset-0 w-full h-full object-cover object-center z-0 transition-transform duration-700 group-hover:scale-105"
+              fill
+              sizes="(min-width: 1024px) 1024px, 100vw"
+              className="object-cover object-center z-0 transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
             <div className="absolute inset-0 w-full h-full bg-secondary/5 z-0" />

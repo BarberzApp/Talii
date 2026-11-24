@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { logger } from '@/shared/lib/logger'
 import { cn } from '@/shared/lib/utils'
 import { api, bookingErrorMessage } from '@/shared/lib/api'
@@ -337,25 +337,21 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
   const [actionPending, setActionPending] = useState<null | 'complete' | 'cancel'>(null)
   const [, setIsBarber] = useState(false)
   const { user } = useAuth()
+  const userId = user?.id
+  const userRole = user?.role
+  const onEventsLoadedRef = useRef(onEventsLoaded)
+  onEventsLoadedRef.current = onEventsLoaded
   /** Barbers open on today's agenda; the month grid is one tap away. Clients open on the month. */
   const [mode, setMode] = useState<'today' | 'month'>(user?.role === 'barber' ? 'today' : 'month')
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [now, setNow] = useState(() => Date.now())
+  const viewYear = currentDate.getFullYear()
+  const viewMonth = currentDate.getMonth()
   const { toast } = useToast()
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50
-
-  useEffect(() => {
-    logger.debug('EnhancedCalendar: User changed', { userId: user?.id })
-    if (!user) {
-      logger.debug('EnhancedCalendar: No user, skipping fetch')
-      return
-    }
-    logger.debug('EnhancedCalendar: Fetching bookings for user', { userId: user.id })
-    fetchBookings()
-  }, [user?.id, currentDate.getFullYear(), currentDate.getMonth()])
 
   // The role may only be known once auth has loaded; pick the default view then (once).
   const [defaultModeSet, setDefaultModeSet] = useState(!!user)
@@ -400,13 +396,14 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
    * time zones), every status, paged until complete. Unpaid holds that already
    * expired are left out. Refetched when the month changes.
    */
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     setLoadError(null)
     try {
-      const barberView = user?.role === 'barber'
+      const monthDate = new Date(viewYear, viewMonth, 1)
+      const barberView = userRole === 'barber'
       setIsBarber(barberView)
-      const gridStart = startOfWeek(startOfMonth(currentDate))
-      const gridEnd = endOfWeek(endOfMonth(currentDate))
+      const gridStart = startOfWeek(startOfMonth(monthDate))
+      const gridEnd = endOfWeek(endOfMonth(monthDate))
       const from = new Date(gridStart.getTime() - 86_400_000).toISOString()
       const to = new Date(gridEnd.getTime() + 2 * 86_400_000).toISOString()
 
@@ -465,12 +462,22 @@ export function EnhancedCalendar({ className, onEventClick, onDateSelect, onEven
         })
       setEvents(mapped)
       setLoaded(true)
-      onEventsLoaded?.(mapped.length)
+      onEventsLoadedRef.current?.(mapped.length)
     } catch (error) {
       logger.error('EnhancedCalendar: Error fetching bookings', error)
       setLoadError(bookingErrorMessage(error, 'Could not load your bookings.'))
     }
-  }
+  }, [userRole, viewYear, viewMonth])
+
+  useEffect(() => {
+    logger.debug('EnhancedCalendar: User changed', { userId })
+    if (!userId) {
+      logger.debug('EnhancedCalendar: No user, skipping fetch')
+      return
+    }
+    logger.debug('EnhancedCalendar: Fetching bookings for user', { userId })
+    fetchBookings()
+  }, [userId, fetchBookings])
 
   const getCalendarDays = () => {
     const start = startOfWeek(startOfMonth(currentDate))

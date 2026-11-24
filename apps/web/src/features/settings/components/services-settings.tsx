@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { api, errorMessage } from '@/shared/lib/api'
 import { formatCents, type ServiceRow } from '@barber-app/shared'
@@ -61,14 +61,7 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
   const isActive = watch('isActive')
 
   // Load the barber's services (GET /api/me/services)
-  useEffect(() => {
-    if (user) {
-      setBarberId(user.barberId ?? null)
-      loadServices()
-    }
-  }, [user?.id])
-
-  const loadServices = async (_barberId?: string) => {
+  const loadServices = useCallback(async () => {
     try {
       setIsLoading(true)
       const { services: rows } = await api.services.list()
@@ -83,7 +76,17 @@ export function ServicesSettings({ onUpdate }: ServicesSettingsProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [toast])
+
+  const userId = user?.id
+  const userBarberId = user?.barberId
+
+  useEffect(() => {
+    if (userId) {
+      setBarberId(userBarberId ?? null)
+      loadServices()
+    }
+  }, [userId, userBarberId, loadServices])
 
   const validateForm = (data: ServiceFormData): boolean => {
     const errors: {[key: string]: string} = {}

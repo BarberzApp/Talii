@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
@@ -41,7 +41,7 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
   const { toast } = useToast()
   const [timeZone, setTimeZone] = useState('America/New_York')
 
-  const loadPayments = async (pageNum: number = 0) => {
+  const loadPayments = useCallback(async (pageNum: number = 0) => {
     try {
       setLoading(true)
       setError(null)
@@ -76,7 +76,7 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   const loadEarningsData = async () => {
     try {
@@ -104,7 +104,7 @@ export function PaymentHistory({ barberId }: PaymentHistoryProps) {
       .catch(() => undefined)
     loadPayments()
     loadEarningsData()
-  }, [barberId])
+  }, [barberId, loadPayments])
 
   const loadMore = () => {
     if (!loading && hasMore) {

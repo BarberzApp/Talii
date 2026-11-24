@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '@/shared/components/ui/button'
 import { logger } from '@/shared/lib/logger'
 import { Label } from '@/shared/components/ui/label'
@@ -84,23 +84,14 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
 
   const selectedSlot = slots.find((s) => s.startsAt === formData.startsAt) || null
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchServices()
-      setCurrentStep(1)
-      setPayment(null)
-    }
-  }, [isOpen, barberId])
+  // The page's profile is read through a ref: it only seeds the first load and must not re-run the effect.
+  const profileRef = useRef(profile)
+  profileRef.current = profile
 
-  useEffect(() => {
-    if (isOpen && selectedService) {
-      fetchAvailability()
-    }
-  }, [isOpen, barberId, date, selectedService])
-
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     try {
-      const data = profile && profile.barber.id === barberId ? profile : await api.barbers.get(barberId)
+      const seed = profileRef.current
+      const data = seed && seed.barber.id === barberId ? seed : await api.barbers.get(barberId)
       setServices(data.services)
       setAddons(data.addons)
       setTimezone(data.barber.timezone)
@@ -112,9 +103,17 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
         variant: "destructive",
       })
     }
-  }
+  }, [barberId, toast])
 
-  const fetchAvailability = async () => {
+  useEffect(() => {
+    if (isOpen) {
+      fetchServices()
+      setCurrentStep(1)
+      setPayment(null)
+    }
+  }, [isOpen, fetchServices])
+
+  const fetchAvailability = useCallback(async () => {
     if (!selectedService) return
 
     setSlotsLoading(true)
@@ -136,6 +135,43 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
     } finally {
       setSlotsLoading(false)
     }
+  }, [selectedService, barberId, date, toast])
+
+  useEffect(() => {
+    if (isOpen && selectedService) {
+      fetchAvailability()
+    }
+  }, [isOpen, selectedService, fetchAvailability])
+
+  /**
+   * The barber hid or deleted a service or add-on after this page loaded: reload
+   * the lists (a fresh GET /api/barbers/:id, not the page's copy), drop what is
+   * gone from the selection and send the client back to the service step.
+   */
+  const recoverFromStaleOffer = async (code: 'INVALID_SERVICE' | 'INVALID_SELECTION') => {
+    let freshServices: PublicService[] = services
+    let freshAddons: PublicAddon[] = addons
+    try {
+      const data = await api.barbers.get(barberId)
+      freshServices = data.services
+      freshAddons = data.addons
+      setServices(data.services)
+      setAddons(data.addons)
+      setTimezone(data.barber.timezone)
+    } catch (refreshError) {
+      logger.warn('Could not reload services after a stale selection', refreshError)
+      if (code === 'INVALID_SERVICE') {
+        freshServices = services.filter((s) => s.id !== formData.serviceId)
+        setServices(freshServices)
+      }
+    }
+    const stillOffered =
+      code === 'INVALID_SERVICE' ? null : freshServices.find((s) => s.id === formData.serviceId) || null
+    setSelectedService(stillOffered)
+    setFormData((prev) => ({ ...prev, serviceId: stillOffered ? prev.serviceId : '', startsAt: '' }))
+    setSelectedAddonIds((prev) => prev.filter((id) => freshAddons.some((a) => a.id === id)))
+    setSlots([])
+    setCurrentStep(1)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -185,6 +221,9 @@ export function BookingForm({ isOpen, onClose, selectedDate, barberId, onBooking
         description: bookingErrorMessage(error, "Failed to create booking. Please try again."),
         variant: "destructive",
       })
+      if (hasErrorCode(error, 'INVALID_SERVICE', 'INVALID_SELECTION')) {
+        await recoverFromStaleOffer(hasErrorCode(error, 'INVALID_SERVICE') ? 'INVALID_SERVICE' : 'INVALID_SELECTION')
+      }
       if (hasErrorCode(error, 'SLOT_TAKEN', 'OUTSIDE_HOURS', 'SLOT_IN_PAST')) {
         setFormData((prev) => ({ ...prev, startsAt: '' }))
         setCurrentStep(2)

@@ -8,6 +8,7 @@ import { MapPin, Scissors, Globe, Star } from "lucide-react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
+import { isOptimizableImage } from '@/shared/lib/image'
 import { SocialMediaLinks } from "@/shared/components/social-media-links"
 
 type BarberCardBarber = {
@@ -57,6 +58,7 @@ export function BarberCard({ barber, className }: BarberCardProps) {
                     <div key={index} className="h-8 w-8 rounded-md overflow-hidden border-2 border-border shadow-lg backdrop-blur-sm">
                       <Image
                         src={image || "/placeholder.svg"}
+                        unoptimized={!isOptimizableImage(image || "/placeholder.svg")}
                         alt={`${barber.name}'s work`}
                         width={32}
                         height={32}

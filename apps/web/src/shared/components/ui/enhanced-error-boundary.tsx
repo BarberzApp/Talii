@@ -303,7 +303,7 @@ export function useErrorHandler() {
     logger.error('Error caught by useErrorHandler', error)
     Sentry.captureException(error)
     setError(error)
-  }, [retryCount])
+  }, [])
 
   const retryError = React.useCallback(() => {
     setRetryCount(prev => prev + 1)

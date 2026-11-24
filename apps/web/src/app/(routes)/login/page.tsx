@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, type ChangeEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useSafeNavigation } from '@/shared/hooks/use-safe-navigation'
 import Link from 'next/link'
 import { useAuth } from '@/shared/hooks/use-auth-zustand'
@@ -43,7 +43,7 @@ export default function LoginPage() {
   const redirectStarted = useRef(false)
 
   // Function to handle redirect with proper error handling
-  const handleRedirect = async (userId: string) => {
+  const handleRedirect = useCallback(async (userId: string) => {
     if (redirectStarted.current) return
     redirectStarted.current = true
     setRedirecting(true)
@@ -78,14 +78,14 @@ export default function LoginPage() {
         }
       }, 3000)
     }
-  }
+  }, [push])
 
   // Use global auth state for session check and redirect
   useEffect(() => {
     if (isInitialized && user) {
       handleRedirect(user.id)
     }
-  }, [isInitialized, user])
+  }, [isInitialized, user, handleRedirect])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

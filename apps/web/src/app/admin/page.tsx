@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AdminRouteGuard } from "@/shared/components/admin/AdminRouteGuard";
 import { ReviewModeration } from "@/shared/components/admin/ReviewModeration";
 import { UserProfileManager } from "@/shared/components/admin/UserProfileManager";
@@ -58,20 +58,11 @@ export default function AdminDashboard() {
   const [updating, setUpdating] = useState<string | null>(null);
   const { adminUser } = useAdminAuth();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (adminUser) fetchStats();
-  }, [adminUser?.id]);
-
-  // Search runs on the server, debounced.
-  useEffect(() => {
-    if (!adminUser) return;
-    const timer = setTimeout(() => fetchUsers(true), 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm, adminUser?.id]);
+  const usersCountRef = useRef(0);
+  usersCountRef.current = users.length;
 
   /** GET /api/admin/stats?days=1 ("today" = the last 24 hours); money shown in dollars. */
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const { stats: s } = await api.admin.stats(1);
       setStats({
@@ -88,17 +79,17 @@ export default function AdminDashboard() {
     } catch (error) {
       logger.error('Error fetching stats', error);
     }
-  };
+  }, []);
 
   /** GET /api/admin/users?role=barber&q=, searched on the server and paged. */
-  const fetchUsers = async (reset = true) => {
+  const fetchUsers = useCallback(async (reset = true) => {
     try {
       if (!reset) setLoadingMore(true);
       const { users: list, pagination } = await api.admin.listUsers({
         role: 'barber',
         q: searchTerm.trim() || undefined,
         limit: ADMIN_PAGE_SIZE,
-        offset: reset ? 0 : users.length,
+        offset: reset ? 0 : usersCountRef.current,
       });
       setUserTotal(pagination.total);
       const page = list.map((u): AdminUserRow => ({
@@ -121,7 +112,20 @@ export default function AdminDashboard() {
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [searchTerm, toast]);
+
+  const adminId = adminUser?.id;
+
+  useEffect(() => {
+    if (adminId) fetchStats();
+  }, [adminId, fetchStats]);
+
+  // Search runs on the server, debounced.
+  useEffect(() => {
+    if (!adminId) return;
+    const timer = setTimeout(() => fetchUsers(true), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, adminId, fetchUsers]);
 
   const patchRow = (userId: string, patch: Partial<AdminUserRow>) =>
     setUsers(prev => prev.map(u => (u.user_id === userId ? { ...u, ...patch } : u)));

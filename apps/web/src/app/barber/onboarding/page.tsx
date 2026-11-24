@@ -192,7 +192,7 @@ export default function BarberOnboardingPage() {
 
       checkOnboarding();
     }
-  }, [isRouterReady, user, router])
+  }, [isRouterReady, user, router, safePush])
 
   const [formData, setFormData] = useState<FormData>({
     businessName: '',

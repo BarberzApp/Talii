@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
+import { isOptimizableImage } from '@/shared/lib/image'
 import { useToast } from '@/shared/components/ui/use-toast'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
@@ -306,9 +308,12 @@ export function UserProfileManager() {
                         Avatar
                       </h4>
                       <div className="relative inline-block">
-                        <img
+                        <Image
                           src={userProfile.avatar_url}
+                          unoptimized={!isOptimizableImage(userProfile.avatar_url)}
                           alt="Avatar"
+                          width={96}
+                          height={96}
                           className="w-24 h-24 object-cover rounded-lg border-2 border-white/20"
                         />
                         <Button
@@ -336,9 +341,12 @@ export function UserProfileManager() {
                         Cover Photo
                       </h4>
                       <div className="relative inline-block">
-                        <img
+                        <Image
                           src={userProfile.cover_photo_url}
+                          unoptimized={!isOptimizableImage(userProfile.cover_photo_url)}
                           alt="Cover"
+                          width={192}
+                          height={128}
                           className="w-48 h-32 object-cover rounded-lg border-2 border-white/20"
                         />
                         <Button
@@ -367,11 +375,14 @@ export function UserProfileManager() {
                       </h4>
                       <div className="grid grid-cols-4 gap-4">
                         {userProfile.barber.portfolio.map((url, index) => (
-                          <div key={index} className="relative">
-                            <img
+                          <div key={index} className="relative h-32">
+                            <Image
                               src={url}
+                              unoptimized={!isOptimizableImage(url)}
                               alt={`Portfolio ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border-2 border-white/20"
+                              fill
+                              sizes="(min-width: 1024px) 200px, 25vw"
+                              className="object-cover rounded-lg border-2 border-white/20"
                             />
                             <Button
                               size="sm"

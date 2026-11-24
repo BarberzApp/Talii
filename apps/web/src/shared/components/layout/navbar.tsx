@@ -1,5 +1,7 @@
 "use client"
 import Link from "next/link"
+import Image from "next/image"
+import { isOptimizableImage } from '@/shared/lib/image'
 import { useTheme } from "next-themes"
 import { useAuth } from "@/shared/hooks/use-auth-zustand"
 import { logger } from "@/shared/lib/logger"
@@ -92,7 +94,7 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center group">
             <div className="relative flex items-center shrink-0">
-              <img src={logoSrc} alt="Talii Logo" className="h-8 w-auto sm:h-10 transition-transform duration-300 group-hover:scale-110 object-contain" width={120} height={40} />
+              <Image src={logoSrc} alt="Talii Logo" priority className="h-8 w-auto sm:h-10 transition-transform duration-300 group-hover:scale-110 object-contain" width={71} height={40} />
               <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
           </Link>
@@ -162,9 +164,12 @@ export function Navbar() {
                     className="p-0 h-10 w-10 rounded-full bg-muted hover:bg-muted/80 border border-border transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/20"
                   >
                     {user?.avatar_url ? (
-                      <img 
-                        src={user.avatar_url} 
-                        alt="Profile" 
+                      <Image
+                        src={user.avatar_url}
+                        unoptimized={!isOptimizableImage(user.avatar_url)}
+                        alt="Profile"
+                        width={40}
+                        height={40}
                         className="h-10 w-10 rounded-full object-cover"
                       />
                     ) : (

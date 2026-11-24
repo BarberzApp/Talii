@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ProfileSettings } from './profile-settings'
 import { ServicesSettings } from './services-settings'
 import { AddonsSettings } from './addons-settings'
@@ -71,27 +71,9 @@ export function SettingsPage() {
     if (user && user.role !== 'barber' && activeTab !== 'profile') setActiveTab('profile')
   }, [user, activeTab])
 
-  useEffect(() => {
-    if (status === 'loading') return
-    
-    if (status === 'unauthenticated') {
-      toast({
-        title: 'Authentication Required',
-        description: 'Please log in to access settings.',
-        variant: 'destructive',
-      })
-      safePush('/login')
-      return
-    }
-
-    if (user) {
-      loadSettingsData(true)
-    }
-  }, [user, status])
-
   // `initial` shows the full-page loader; refreshes after a save run quietly so
   // the open tab and scroll position stay put.
-  const loadSettingsData = async (initial = false) => {
+  const loadSettingsData = useCallback(async (initial = false) => {
     if (!user) return
 
     try {
@@ -130,7 +112,25 @@ export function SettingsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user, toast])
+
+  useEffect(() => {
+    if (status === 'loading') return
+    
+    if (status === 'unauthenticated') {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to access settings.',
+        variant: 'destructive',
+      })
+      safePush('/login')
+      return
+    }
+
+    if (user) {
+      loadSettingsData(true)
+    }
+  }, [user, status, loadSettingsData, toast, safePush])
 
   // Setup progress is a barber thing (profile, services, hours, payouts); clients have nothing to complete.
   const getCompletionPercentage = () => {

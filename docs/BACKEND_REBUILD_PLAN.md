@@ -189,15 +189,68 @@ Removed in Phase 1. Notes for rebuilding it later:
 - Rebuild shape: `cuts(id, barber_id, url, thumbnail, title, is_public)` with owner-only writes checked through `barbers.user_id`; `cut_likes(cut_id, user_id)` as a primary-key pair; counts from a view rather than triggers; uploads through a signed URL into the `media` bucket; all writes through `/api/cuts`.
 - The removed code is in git history before the Phase 1 commit on `refactor/backend-rebuild`.
 
-## Open items for the owner
+## Status (2026-11-24)
 
-- `bocmstyle.com` no longer serves this app (it redirects to an unrelated site). The mobile app no longer defaults to it (set `EXPO_PUBLIC_API_URL` per build); choose the new domain for the website and the API.
-- Change the Apple reviewer test account's password; it was committed in a migration.
-- Stripe (test and live): remove the old webhook endpoints (an ngrok tunnel and `barber-app-five.vercel.app`, which now serves a different app) and add the new deployment's `/api/webhooks/stripe` with the events listed in Phase 3a.
-- Google Cloud: restrict the Maps key to the Geocoding and Places APIs and your domains, and set a daily quota.
-- Align Stripe keys: the mobile app's publishable key is live while the server keys are test. Use test everywhere until launch.
-- Live database reset done 2026-11-22: all old data, accounts and storage removed; baseline applied; migration history in sync; generated types match. The owner's account is admin. Live auth settings point at `http://localhost:3000` (Site URL and redirect allow-list, plus `talii://**`) with the token-hash reset template; swap in the domain once chosen.
-- Website questions from the Phase 5 pass: decided 2026-11-23 (owner went with the recommendations): darker button orange, `/reach` and the waitlist route removed, one `/admin` page, unconfirmed support/landing claims removed, fee-exempt barbers not asked to set up Stripe. Still open: the contact address on the privacy and terms pages needs a real mailbox once the domain exists.
-- Once the domain is chosen: set `site_url` and add `<domain>/auth/callback`, `<domain>/reset-password` and `talii://**` to the Supabase redirect allow-list (config.toml and the dashboard).
-- Supabase dashboard (live project), Authentication → Email templates → Reset password: use the link from `supabase/templates/recovery.html` (`{{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery`). The website's reset page needs it, and it makes resets requested in the phone app open on the website.
-- Live smoke test 2026-11-23 (website on localhost:3000 against the live project, temporary accounts, all removed afterwards): sign-in, signup trigger, barber setup, RLS on billing and services, signed upload, public image URL, storage folder rules, availability, fee-exempt booking, SLOT_TAKEN, cancel, account deletion with file removal: 24/24 pass. The Stripe payment paths are covered by the local e2e harness (same code and schema).
+The rebuild is complete. Backend, database, website and phone app are done and tested; the live
+Supabase project runs the new schema. What is left is deployment and launch setup, below. The work
+is on the `refactor/backend-rebuild` branch (pushed to GitHub); `main` still has the old code.
+
+## Before launch (in order)
+
+1. **Phone app against the live project.** Run it in the iOS simulator (`cd apps/mobile && npx expo run:ios`;
+   Expo Go cannot load Stripe's native module) with `EXPO_PUBLIC_API_URL=http://localhost:3000` and the
+   website running locally against the live project. Check: sign up and confirm, browse, 3-step booking,
+   card `4242 4242 4242 4242` and 3-D Secure card `4000 0025 0000 3155` (returns to the app), success screen
+   and add-to-calendar, cancel and refund message, barber setup (profile, services, hours), Stripe Connect
+   onboarding returning to the app (`talii://stripe-connect`), photo upload, walk-in, Today view,
+   account deletion.
+2. **Merge the branch.** Open a pull request from `refactor/backend-rebuild` into `main`.
+3. **Domain.** `bocmstyle.com` no longer serves this app (it redirects to an unrelated site).
+4. **Hosting.** Deploy `apps/web` (website + API; Vercel fits Next.js). Server env: `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_APP_URL`, optional `GOOGLE_MAPS_API_KEY`,
+   `SLACK_WEBHOOK_URL`, Sentry DSN (see `apps/web/src/server/env.ts`).
+5. **Supabase auth settings (live project).** Site URL = the domain; redirect allow-list =
+   `<domain>/auth/callback`, `<domain>/reset-password`, `talii://**` (currently `http://localhost:3000`,
+   set 2026-11-22). The token-hash reset template is already set on the live project.
+6. **Email provider.** Supabase's built-in mailer sends only a few emails an hour and is not for production.
+   Connect an SMTP provider (Resend, Postmark, ...) under Authentication → SMTP, sending from the domain.
+   Put a real contact address on the privacy and terms pages (they still say support@talii.com).
+7. **Stripe.** Remove the old webhook endpoints (an ngrok tunnel and `barber-app-five.vercel.app`, which now
+   serves a different app). Add `<domain>/api/webhooks/stripe` with the events listed in Phase 3a, for test
+   and then live. At launch switch the server and both apps to live keys together (the mobile `.env`
+   currently holds the test publishable key).
+8. **Phone app build.** Set `EXPO_PUBLIC_API_URL` to the domain. Apple: register `com.yaskhalil.talii`, create
+   the App Store Connect record, new EAS credentials (optionally rename the Expo slug `BOCM` on expo.dev first).
+   Change the Apple reviewer test account's password (it was committed in an old migration).
+9. **Google Cloud.** Restrict the Maps key to the Geocoding and Places APIs and the domain; set a daily quota.
+10. **Housekeeping.** Revoke the Supabase access token in the root `.env` when not needed; delete the
+    pre-reset backup of the old data (in the session scratch folder) or move it somewhere safe.
+
+## Later (not needed for launch)
+
+- Booking confirmation email and iOS push (needs the email provider and Apple setup).
+- Exact fee note: a public `booking: { feeCents }` field on `GET /api/barbers/:id` so the note can say
+  "no booking fee" for fee-exempt barbers instead of "some barbers waive it".
+- Shared rate limiting (the current limiter is in memory, per server instance; bookings are already
+  capped in the database: 3 unpaid holds, 5 upcoming per barber, 10 overall).
+- Special-hours (closed days) screen on mobile; a walk-in screen on the website.
+- Cuts (parked feature, see above).
+
+## Record
+
+- 2026-11-22: live database reset. All old data, accounts and storage removed; baseline applied;
+  migration history in sync; generated types match. The owner's account is admin.
+- 2026-11-23: owner decisions on the website (darker button orange, `/reach` and the waitlist route removed,
+  one `/admin` page, unconfirmed support and landing claims removed, fee-exempt barbers not asked to set up
+  Stripe).
+- 2026-11-23: live smoke test (website on localhost:3000 against the live project, temporary accounts, all
+  removed afterwards): sign-in, signup trigger, barber setup, RLS on billing and services, signed upload,
+  public image URL, storage folder rules, availability, fee-exempt booking, SLOT_TAKEN, cancel, account
+  deletion with file removal: 24/24 pass. Stripe payment paths are covered by the local e2e harness.
+- 2026-11-24: branch pushed to GitHub.
+- 2026-11-24: website lint clean (0 errors, 0 warnings): hook dependencies fixed without refetch loops; images moved to
+  next/image (Supabase storage allowed via `remotePatterns`; user images on other hosts render unoptimised so an
+  unexpected avatar URL cannot crash a page). Edge cases: a service hidden mid-booking now reloads the barber and
+  returns to the service step with a clear message; red buttons darkened for contrast; the landing page's
+  earnings preview uses a realistic, labelled example.

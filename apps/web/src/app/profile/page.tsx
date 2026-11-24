@@ -17,7 +17,7 @@ export default function ProfilePage() {
     if (status === 'unauthenticated') {
       safePush('/login')
     }
-  }, [status, router])
+  }, [status, router, safePush])
 
   if (status === 'loading') {
     return (

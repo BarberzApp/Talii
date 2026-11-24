@@ -1,7 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   CardContent as CardContentBase,
   CardDescription as CardDescriptionBase,
@@ -36,16 +36,20 @@ interface MonthlyEarnings {
   }
 }
 
-/** Fake data for landing page preview (amounts in cents) */
+/**
+ * Example month for the landing page preview (cents), labelled as an example:
+ * 120 bookings at about $42 paid in person, plus the barber's $1.20 share of
+ * each booking fee. Previous month: 100 bookings.
+ */
 const PREVIEW_EARNINGS: MonthlyEarnings = {
-  current: 1245000, // $12,450
-  previous: 925000,
+  current: 518400, // $5,040 services + $144 booking-fee share
+  previous: 432000, // $4,200 + $120
   trend: "up",
-  percentage: 40,
+  percentage: 20,
   breakdown: {
-    serviceFees: 982000,
-    platformFees: 263000,
-    totalEarnings: 1245000,
+    serviceFees: 504000,
+    platformFees: 14400,
+    totalEarnings: 518400,
   },
 }
 
@@ -65,27 +69,18 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
   const [hasStripeAccount, setHasStripeAccount] = useState(false)
   const [feeExempt, setFeeExempt] = useState(false)
 
-  useEffect(() => {
-    if (preview) return
-    if (!barberId) return
-    logger.debug('EarningsDashboard mounted', { barberId })
-    loadEarnings()
-    checkStripeAccount()
-    checkFeeExempt()
-  }, [barberId, preview])
-
   /** Fee-exempt barbers (GET /api/me billing.fee_exempt) take no online payments, so there is no Stripe setup. */
-  const checkFeeExempt = async () => {
+  const checkFeeExempt = useCallback(async () => {
     try {
       const me = await api.me.get()
       setFeeExempt(!!me.billing?.fee_exempt)
     } catch (error) {
       logger.error('Error checking fee exemption', error)
     }
-  }
+  }, [])
 
   /** GET /api/stripe/connect/status (refreshes the flags from Stripe). */
-  const checkStripeAccount = async () => {
+  const checkStripeAccount = useCallback(async () => {
     if (preview) return
     try {
       const status = await api.connect.status()
@@ -93,14 +88,14 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
     } catch (error) {
       logger.error('Error checking Stripe account', error)
     }
-  }
+  }, [preview])
 
   /**
    * This month vs last month from GET /api/earnings. "Service" is what clients
    * paid in person for completed appointments; "booking fees" is the barber's
    * net share of the online booking fee.
    */
-  const loadEarnings = async () => {
+  const loadEarnings = useCallback(async () => {
     if (preview || !barberId) return
     setIsLoading(true)
     try {
@@ -136,7 +131,16 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [preview, barberId, toast])
+
+  useEffect(() => {
+    if (preview) return
+    if (!barberId) return
+    logger.debug('EarningsDashboard mounted', { barberId })
+    loadEarnings()
+    checkStripeAccount()
+    checkFeeExempt()
+  }, [barberId, preview, loadEarnings, checkStripeAccount, checkFeeExempt])
 
   /** POST /api/stripe/connect/onboarding: creates the Express account if needed and returns the link. */
   const handleSetupPayments = async () => {
@@ -220,7 +224,7 @@ export function EarningsDashboard({ barberId, preview = false, variant = "defaul
           </div>
           <CardTitle className={titleCls}>Monthly Earnings</CardTitle>
         </div>
-        <CardDescription className={descCls}>Your earnings breakdown for this month</CardDescription>
+        <CardDescription className={descCls}>{preview ? "Example: a barber with 120 bookings this month" : "Your earnings breakdown for this month"}</CardDescription>
       </CardHeader>
       <CardContent className="p-8">
         <div className="flex flex-col space-y-8">

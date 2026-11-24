@@ -107,11 +107,6 @@ export function EnhancedBarberProfileSettings({ onSave }: EnhancedBarberProfileS
     },
   })
 
-  useEffect(() => {
-    if (user) {
-      loadBarberProfile()
-    }
-  }, [user])
 
   // Debounced fetch suggestions
   const debouncedFetchSuggestions = useCallback(async (query: string) => {
@@ -189,7 +184,9 @@ export function EnhancedBarberProfileSettings({ onSave }: EnhancedBarberProfileS
     setTimeout(() => setShowSuggestions(false), 200);
   };
 
-  const loadBarberProfile = async () => {
+  const { reset: resetForm } = form
+
+  const loadBarberProfile = useCallback(async () => {
     if (!user) return
 
     try {
@@ -216,7 +213,7 @@ export function EnhancedBarberProfileSettings({ onSave }: EnhancedBarberProfileS
       }
 
       logger.debug('Setting form data', { hasData: !!formData.name })
-      form.reset(formData)
+      resetForm(formData)
       setLocationInput(location);
 
     } catch (error) {
@@ -229,7 +226,13 @@ export function EnhancedBarberProfileSettings({ onSave }: EnhancedBarberProfileS
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, resetForm, toast])
+
+  useEffect(() => {
+    if (user) {
+      loadBarberProfile()
+    }
+  }, [user, loadBarberProfile])
 
   const onSubmit = async (data: BarberProfileFormData) => {
     if (!user) return

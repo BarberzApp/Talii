@@ -70,6 +70,8 @@ type LocationFilter = {
 
 export default function BrowsePage() {
   const [barbers, setBarbers] = useState<Barber[]>([])
+  const barbersCountRef = useRef(0)
+  barbersCountRef.current = barbers.length
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [hasMore, setHasMore] = useState(false)
@@ -93,6 +95,10 @@ export default function BrowsePage() {
   const [showFilters, setShowFilters] = useState(false)
   const [showLocationFilter] = useState(false)
   const { toast } = useToast()
+  const useCurrentLocation = locationFilter.useCurrentLocation
+  const range = locationFilter.range
+  const userLat = userLocation?.lat
+  const userLng = userLocation?.lng
   const cityInputRef = useRef<HTMLInputElement>(null)
   const [locationSuggestions, setLocationSuggestions] = useState<GeocodeResult[]>([])
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false)
@@ -221,10 +227,6 @@ export default function BrowsePage() {
   }, [searchQuery])
 
   useEffect(() => {
-    fetchBarbers(true)
-  }, [debouncedQuery, locationFilter.useCurrentLocation, userLocation?.lat, userLocation?.lng, locationFilter.range])
-
-  useEffect(() => {
     // Filter and sort barbers
     const filtered = barbers.filter(barber => {
       if (!barber.isPublic) return false // Only show public profiles
@@ -303,14 +305,14 @@ export default function BrowsePage() {
    * "use current location" the server returns barbers within the range, nearest
    * first (distance_miles; nearby results stop at 200).
    */
-  const fetchBarbers = async (reset = true) => {
+  const fetchBarbers = useCallback(async (reset = true) => {
     try {
       if (reset) setLoading(true)
       else setLoadingMore(true)
       setError(null)
 
-      const offset = reset ? 0 : barbers.length
-      const nearby = locationFilter.useCurrentLocation && userLocation
+      const offset = reset ? 0 : barbersCountRef.current
+      const nearby = useCurrentLocation && userLat != null && userLng != null
       const limit = nearby ? Math.min(PAGE_SIZE, NEARBY_MAX - offset) : PAGE_SIZE
       if (limit <= 0) {
         setHasMore(false)
@@ -319,7 +321,7 @@ export default function BrowsePage() {
       const q = debouncedQuery.trim() || undefined
       const { barbers: cards, pagination } = await api.barbers.list(
         nearby
-          ? { lat: userLocation.lat, lng: userLocation.lng, radiusMiles: Math.min(locationFilter.range, 100), q, limit, offset }
+          ? { lat: userLat, lng: userLng, radiusMiles: Math.min(range, 100), q, limit, offset }
           : { q, limit, offset }
       )
 
@@ -350,7 +352,11 @@ export default function BrowsePage() {
       setLoadingMore(false)
       setHasLoadedOnce(true)
     }
-  }
+  }, [debouncedQuery, useCurrentLocation, userLat, userLng, range])
+
+  useEffect(() => {
+    fetchBarbers(true)
+  }, [fetchBarbers])
 
   // Clear location filters
   const clearLocationFilter = () => {

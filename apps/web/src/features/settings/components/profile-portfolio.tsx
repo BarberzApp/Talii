@@ -3,6 +3,8 @@ import { Button } from '@/shared/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 import { Badge } from '@/shared/components/ui/badge';
+import Image from 'next/image';
+import { isOptimizableImage } from '@/shared/lib/image';
 import { Upload, Plus, Loader2, MapPin, Camera, Star, Trash2, MessageCircle, Image as ImageIcon, Building, Pencil } from 'lucide-react';
 import { useAuth } from '@/shared/hooks/use-auth-zustand';
 import { api, errorMessage } from '@/shared/lib/api';
@@ -392,10 +394,13 @@ export default function ProfilePortfolio() {
         {/* Cover Photo */}
         <div className="h-48 sm:h-72 w-full bg-gradient-to-br from-secondary/20 via-background to-secondary/10 flex items-end justify-center relative group rounded-3xl overflow-hidden">
           {profile?.cover_photo_url ? (
-            <img
+            <Image
               src={profile.cover_photo_url}
+              unoptimized={!isOptimizableImage(profile.cover_photo_url)}
               alt="Cover"
-              className="absolute inset-0 w-full h-full object-cover object-center z-0 transition-transform duration-700 group-hover:scale-105"
+              fill
+              sizes="(min-width: 1024px) 1024px, 100vw"
+              className="object-cover object-center z-0 transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
             <div className="absolute inset-0 w-full h-full bg-secondary/5 z-0" />
@@ -614,7 +619,14 @@ export default function ProfilePortfolio() {
                       }}
                       aria-label="View photo"
                     >
-                      <img src={item.url} alt="Gallery photo" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                      <Image
+                        src={item.url}
+                        unoptimized={!isOptimizableImage(item.url)}
+                        alt="Gallery photo"
+                        fill
+                        sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
                     </button>
                     {isOwner && (
                       <button
@@ -819,7 +831,15 @@ export default function ProfilePortfolio() {
           <DialogDescription className="sr-only">A photo from your gallery</DialogDescription>
           {selectedMedia && (
             <div className="space-y-4">
-              <img src={selectedMedia.url} alt="Gallery photo" className="w-full max-h-[70vh] object-contain rounded-2xl" />
+              <Image
+                src={selectedMedia.url}
+                unoptimized={!isOptimizableImage(selectedMedia.url)}
+                alt="Gallery photo"
+                width={1600}
+                height={1200}
+                sizes="(min-width: 768px) 700px, 95vw"
+                className="w-full h-auto max-h-[70vh] object-contain rounded-2xl"
+              />
               {isOwner && (
                 <div className="flex justify-end">
                   <Button variant="outline" onClick={() => handleDeletePortfolio(selectedMedia)} className="text-red-700 border-red-300 hover:bg-red-50">

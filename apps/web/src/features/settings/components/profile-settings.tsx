@@ -276,7 +276,7 @@ export function ProfileSettings({ onUpdate }: ProfileSettingsProps) {
     if (user && isInitialLoad) {
       fetchProfile()
     }
-  }, [status, user, isInitialLoad, safePush])
+  }, [status, user, isInitialLoad, safePush, fetchProfile])
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!validateForm(data)) {

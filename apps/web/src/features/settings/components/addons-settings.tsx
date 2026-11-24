@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { api, errorMessage } from '@/shared/lib/api'
 import { formatCents, type AddonRow } from '@barber-app/shared'
@@ -44,14 +44,7 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
 
   const isActive = watch('is_active')
 
-  useEffect(() => {
-    if (user) {
-      setBarberId(user.barberId ?? null)
-      loadAddons()
-    }
-  }, [user?.id])
-
-  const loadAddons = async (_barberId?: string) => {
+  const loadAddons = useCallback(async () => {
     try {
       const { addons: rows } = await api.addons.list()
       setAddons([...rows].sort((a, b) => a.name.localeCompare(b.name)))
@@ -63,7 +56,17 @@ export function AddonsSettings({ onUpdate }: AddonsSettingsProps) {
         variant: 'destructive',
       })
     }
-  }
+  }, [toast])
+
+  const userId = user?.id
+  const userBarberId = user?.barberId
+
+  useEffect(() => {
+    if (userId) {
+      setBarberId(userBarberId ?? null)
+      loadAddons()
+    }
+  }, [userId, userBarberId, loadAddons])
 
   const onSubmit = async (data: AddonFormData) => {
     if (!barberId) {

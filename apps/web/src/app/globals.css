@@ -37,7 +37,7 @@
     --accent-foreground: 0 0% 100%;
     
     /* Semantic colors */
-    --destructive: 359 100% 65%; /* #ff4d4f */
+    --destructive: 0 72% 51%; /* #dc2626: 4.8:1 with white text and on white */
     --destructive-foreground: 0 0% 100%; /* #fff */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%; /* #fff */
@@ -107,7 +107,7 @@
     --muted-foreground: 240 4% 65%;
     --accent: 22 86% 54%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 359 100% 65%; /* #ff4d4f */
+    --destructive: 0 84% 60%; /* #ef4444: 4.7:1 as text on the dark background */
     --destructive-foreground: 0 0% 100%; /* #fff */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%; /* #fff */

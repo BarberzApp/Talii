@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
@@ -37,15 +37,11 @@ export function ReviewModeration() {
   const [editingComment, setEditingComment] = useState("");
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchPendingReviews();
-  }, []);
-
   /**
    * GET /api/admin/reviews. Reviews are public as soon as they pass the word
    * filter; moderation is hiding or restoring them (PATCH /api/admin/reviews/:id).
    */
-  const fetchPendingReviews = async () => {
+  const fetchPendingReviews = useCallback(async () => {
     try {
       setLoading(true);
       const { reviews: rows } = await api.admin.listReviews({ limit: 100 });
@@ -70,7 +66,11 @@ export function ReviewModeration() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchPendingReviews();
+  }, [fetchPendingReviews]);
 
   const setHidden = async (reviewId: string, hidden: boolean) => {
     try {
